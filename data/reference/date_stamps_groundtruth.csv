@@ -1,0 +1,101 @@
+﻿image;expected_date;has_stamp;source;note
+Screenshot_1.png;2026-07-15;yes;ocr_verified;
+Screenshot_2.png;;no;visual_check;штамп отсутствует
+Screenshot_3.png;;no;visual_check;штамп отсутствует
+Screenshot_4.png;;no;visual_check;штамп отсутствует
+Screenshot_5.png;;no;visual_check;штамп отсутствует
+Screenshot_6.png;;no;visual_check;штамп отсутствует
+Screenshot_7.png;;no;visual_check;штамп отсутствует
+Screenshot_8.png;;no;visual_check;штамп отсутствует
+Screenshot_9.png;;no;visual_check;штамп отсутствует
+Screenshot_10.png;;no;visual_check;штамп отсутствует
+Screenshot_11.png;;no;visual_check;штамп отсутствует
+Screenshot_12.png;;no;visual_check;штамп отсутствует
+Screenshot_13.png;;no;visual_check;штамп отсутствует
+Screenshot_14.png;;no;visual_check;штамп отсутствует
+Screenshot_15.png;;no;visual_check;штамп отсутствует
+Screenshot_16.png;;no;visual_check;штамп отсутствует
+Screenshot_17.png;;no;visual_check;штамп отсутствует
+Screenshot_18.png;2026-01-02;yes;ocr_verified;
+Screenshot_19.png;2026-02-02;yes;ocr_verified;
+Screenshot_20.png;2026-03-02;yes;ocr_verified;
+Screenshot_21.png;;no;visual_check;штамп отсутствует
+Screenshot_22.png;2024-01-24;yes;ocr_verified;
+Screenshot_23.png;2024-01-24;yes;ocr_verified;
+Screenshot_24.png;2024-01-24;yes;ocr_verified;
+Screenshot_25.png;2024-01-24;yes;ocr_verified;
+Screenshot_26.png;2024-01-24;yes;ocr_verified;
+Screenshot_27.png;2024-02-21;yes;ocr_verified;
+Screenshot_28.png;2024-02-21;yes;ocr_verified;
+Screenshot_29.png;2024-03-25;yes;ocr_verified;
+Screenshot_30.png;2024-03-25;yes;ocr_verified;
+Screenshot_31.png;2024-03-25;yes;ocr_verified;
+Screenshot_32.png;2024-03-25;yes;ocr_verified;
+Screenshot_33.png;2024-04-24;yes;ocr_verified;
+Screenshot_34.png;2024-04-24;yes;ocr_verified;
+Screenshot_35.png;2024-04-24;yes;ocr_verified;
+Screenshot_36.png;2024-04-24;yes;ocr_verified;
+Screenshot_37.png;2024-04-24;yes;ocr_verified;
+Screenshot_38.png;2024-04-24;yes;ocr_verified;
+Screenshot_39.png;2024-04-24;yes;ocr_verified;
+Screenshot_40.png;2024-04-24;yes;ocr_verified;
+Screenshot_41.png;2024-04-24;yes;ocr_verified;
+Screenshot_42.png;2024-05-27;yes;ocr_verified;
+Screenshot_43.png;2024-05-27;yes;ocr_verified;
+Screenshot_44.png;2024-05-27;yes;ocr_verified;
+Screenshot_45.png;2024-05-27;yes;ocr_verified;
+Screenshot_46.png;2024-05-27;yes;ocr_verified;
+Screenshot_47.png;2024-06-25;yes;manual_read;OCR не распознал: бледный красный штамп на грунте того же тона
+Screenshot_48.png;2024-06-25;yes;manual_read;OCR не распознал: бледный красный штамп на грунте того же тона
+Screenshot_49.png;;no;visual_check;штамп отсутствует
+Screenshot_50.png;;no;visual_check;штамп отсутствует
+Screenshot_51.png;;no;visual_check;штамп отсутствует
+Screenshot_52.png;;no;visual_check;штамп отсутствует
+Screenshot_53.png;;no;visual_check;штамп отсутствует
+Screenshot_54.png;;no;visual_check;штамп отсутствует
+Screenshot_55.png;;no;visual_check;штамп отсутствует
+Screenshot_56.png;;no;visual_check;штамп отсутствует
+Screenshot_57.png;;no;visual_check;штамп отсутствует
+Screenshot_58.png;;no;visual_check;штамп отсутствует
+Screenshot_59.png;;no;visual_check;штамп отсутствует
+Screenshot_60.png;2026-04-02;yes;ocr_verified;
+Screenshot_61.png;2026-05-20;yes;ocr_verified;
+Screenshot_62.png;2024-09-17;yes;ocr_verified;
+Screenshot_63.png;2024-10-24;yes;manual_read;OCR не распознал: оранжевый штамп на оранжевом грунте
+Screenshot_64.png;2024-11-26;yes;ocr_verified;
+Screenshot_65.png;2024-12-16;yes;ocr_verified;
+Screenshot_66.png;2024-12-16;yes;ocr_verified;
+Screenshot_67.png;2025-02-20;yes;ocr_verified;
+Screenshot_68.png;;no;visual_check;штамп отсутствует
+Screenshot_69.png;;no;visual_check;штамп отсутствует
+Screenshot_70.png;;no;visual_check;штамп отсутствует
+Screenshot_71.png;;no;visual_check;штамп отсутствует
+Screenshot_72.png;;no;visual_check;штамп отсутствует
+Screenshot_73.png;;no;visual_check;штамп отсутствует
+Screenshot_74.png;;no;visual_check;штамп отсутствует
+Screenshot_75.png;;no;visual_check;штамп отсутствует
+Screenshot_76.png;;no;visual_check;штамп отсутствует
+Screenshot_77.png;;no;visual_check;штамп отсутствует
+Screenshot_78.png;;no;visual_check;штамп отсутствует
+Screenshot_79.png;2023-10-18;yes;ocr_verified;
+Screenshot_80.png;2023-10-18;yes;ocr_verified;
+Screenshot_81.png;2023-10-18;yes;ocr_verified;
+Screenshot_82.png;2023-10-18;yes;ocr_verified;
+Screenshot_83.png;2023-11-27;yes;ocr_verified;
+Screenshot_84.png;2023-11-27;yes;ocr_verified;
+Screenshot_85.png;;no;visual_check;штамп отсутствует
+Screenshot_86.png;;no;visual_check;штамп отсутствует
+Screenshot_87.png;;no;visual_check;штамп отсутствует
+Screenshot_88.png;2024-01-21;yes;manual_read;OCR не распознал: распался на фрагменты
+Screenshot_89.png;2024-01-21;yes;manual_read;OCR прочитал 2022-01-21 — спутана последняя цифра
+Screenshot_90.png;2024-01-21;yes;ocr_verified;
+Screenshot_91.png;2024-02-14;yes;ocr_verified;
+Screenshot_92.png;2024-02-14;yes;ocr_verified;
+Screenshot_93.png;2024-02-14;yes;ocr_verified;
+Screenshot_94.png;2024-02-14;yes;ocr_verified;
+Screenshot_95.png;;no;visual_check;штамп отсутствует
+Screenshot_96.png;;no;visual_check;штамп отсутствует
+Screenshot_97.png;;no;visual_check;штамп отсутствует
+Screenshot_98.png;;no;visual_check;штамп отсутствует
+Screenshot_99.png;;no;visual_check;штамп отсутствует
+Screenshot_100.png;;no;visual_check;штамп отсутствует

@@ -1,0 +1,14 @@
+# Python 3.10+
+#
+# tools/parse_works_reference.py зависимостей не имеет: xlsx читается как zip + XML
+# средствами стандартной библиотеки. Запускается на голом интерпретаторе.
+#
+# Всё нижеперечисленное нужно только для tools/read_date_stamp.py.
+
+numpy==2.5.3
+opencv-python-headless==5.0.0.93
+pillow==12.3.0
+rapidocr-onnxruntime==1.2.3
+
+# rapidocr-onnxruntime тянет за собой onnxruntime (проверено на 1.30.0) и везёт
+# веса моделей внутри пакета — около 15 МБ. После установки обращений в сеть нет.

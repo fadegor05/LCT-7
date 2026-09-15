@@ -1,31 +1,15 @@
 # -*- coding: utf-8 -*-
-"""Распознавание даты, впечатанной в снимок строительной площадки.
+"""Распознавание даты, впечатанной камерой в правый нижний угол снимка.
 
-Зачем: без даты снимок невозможно сопоставить с календарным графиком. EXIF в
-выданном датасете отсутствует (PNG несёт только dpi/gamma/srgb), а дата вплавлена
-в правый нижний угол кадра фотофиксацией камеры. Это единственный источник
-временной привязки.
+EXIF в датасете отсутствует, поэтому штамп — единственный источник времени
+съёмки. Встречается в трёх начертаниях (тонкий красный, жирный оранжевый,
+белый) поверх произвольного фона, и один порог бинаризации их не покрывает:
+кадр прогоняется через несколько гипотез предобработки независимо.
 
-Сложность в том, что штамп встречается минимум в трёх начертаниях (тонкий
-красный, жирный оранжевый, белый) и лежит поверх произвольного фона — неба,
-снега, оранжевого грунта. Один порог бинаризации на все случаи не работает.
-
-Подход — многогипотезность с жёсткой проверкой результата:
-
-1. Снимок обрезается до правого нижнего угла и увеличивается — штамп мелкий.
-2. Строится несколько вариантов предобработки (оригинал и маски под каждое
-   начертание). Каждый прогоняется через OCR независимо.
-3. Фрагменты одной строки склеиваются по вертикальной близости: жирный штамп
-   часто распознаётся кусками («21.» + «.01:2024»).
-4. Результат нормализуется (типовые путаницы OCR: ':' вместо '.', 'O' вместо
-   '0') и проверяется на соответствие ДД.ММ.ГГГГ и на календарную валидность.
-5. Побеждает вариант с наибольшей уверенностью; при разногласии между
-   вариантами берётся дата, набравшая больше голосов.
-
-Структура ДД.ММ.ГГГГ и проверка даты работают как фильтр ложных срабатываний:
-текст, не складывающийся в реальную дату, отбрасывается целиком. Поэтому лучше
-вернуть None с причиной, чем правдоподобное, но выдуманное число — снимок без
-даты честнее показать оператору для ручной привязки.
+Результат принимается, только если складывается в ДД.ММ.ГГГГ и проходит
+проверку на календарную валидность. Это же отсекает ложные срабатывания на
+фактуре фона: снимок без даты честнее отдать оператору, чем подставить
+правдоподобное число.
 """
 
 from __future__ import annotations
@@ -44,14 +28,10 @@ import cv2
 import numpy as np
 from PIL import Image
 
-# Штамп всегда в правом нижнем углу; берём с запасом.
 ROI_TOP, ROI_LEFT = 0.84, 0.38
 UPSCALE = 2
-
-# Год вне этого диапазона — почти наверняка ошибка распознавания, а не съёмка.
 YEAR_MIN, YEAR_MAX = 2015, 2035
 
-# Типовые путаницы OCR на цифровом штампе.
 CONFUSIONS = str.maketrans({
     ":": ".", ";": ".", ",": ".", "·": ".", "•": ".",
     "O": "0", "o": "0", "Q": "0", "D": "0",
@@ -65,11 +45,11 @@ DATE_RE = re.compile(r"(\d{2})\.(\d{2})\.(\d{4})")
 @dataclass
 class StampResult:
     image: str
-    date: str | None          # ISO, если распознано
+    date: str | None
     confidence: float | None
-    variant: str | None       # какой вариант предобработки дал ответ
-    agreeing: int             # сколько независимых вариантов дали ту же дату
-    raw: str | None           # исходный текст до нормализации
+    variant: str | None
+    agreeing: int
+    raw: str | None
     note: str = ""
 
 
@@ -80,46 +60,41 @@ def _roi(img: np.ndarray) -> np.ndarray:
                       interpolation=cv2.INTER_LANCZOS4)
 
 
-def _variants(roi: np.ndarray):
-    """Оригинал плюс по маске на каждое известное начертание штампа.
+def _as_text_image(mask: np.ndarray) -> np.ndarray:
+    """Маска → чёрный текст на белом: OCR на таком устойчивее, чем на цвете."""
+    m = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
+    return cv2.cvtColor((1 - m) * 255, cv2.COLOR_GRAY2RGB)
 
-    Маски рендерятся как чёрный текст на белом — OCR на таком заметно
-    устойчивее, чем на цветном тексте поверх фактуры.
-    """
+
+def _variants(roi: np.ndarray):
     yield "raw", roi
 
     r, g, b = (roi[..., i].astype(np.int16) for i in range(3))
     mx, mn = roi.max(2).astype(np.int16), roi.min(2).astype(np.int16)
 
-    warmth = r - np.maximum(g, b)          # красный и оранжевый штампы
+    warmth = r - np.maximum(g, b)
     thr = float(max(30, min(75, np.percentile(warmth, 99.5) * 0.5)))
     yield "warm", _as_text_image(warmth > thr)
 
     yield "white", _as_text_image((mn > 185) & (mx - mn < 40))
 
-    # Top-hat по «теплоте»: снимает широкий фон и оставляет тонкие штрихи.
-    # Единственная гипотеза, которая берёт тёплый штамп на тёплом же грунте,
-    # где глобальный порог выделяет заодно и фон.
+    # Top-hat снимает широкий фон и оставляет тонкие штрихи — единственная
+    # гипотеза, берущая тёплый штамп на тёплом же грунте, где глобальный порог
+    # выделяет заодно и фон.
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (61, 61))
     hat = cv2.morphologyEx(np.clip(warmth, 0, 255).astype(np.uint8), cv2.MORPH_TOPHAT, kernel)
     hat = cv2.normalize(hat, None, 0, 255, cv2.NORM_MINMAX)
     _, binary = cv2.threshold(hat, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     yield "warm_tophat", cv2.cvtColor(255 - binary, cv2.COLOR_GRAY2RGB)
 
-    # Локальный контраст — на случай начертания, не покрытого двумя масками выше.
     grey = cv2.cvtColor(roi, cv2.COLOR_RGB2GRAY)
     yield "adaptive", cv2.cvtColor(
         cv2.adaptiveThreshold(grey, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                               cv2.THRESH_BINARY, 31, -12), cv2.COLOR_GRAY2RGB)
 
 
-def _as_text_image(mask: np.ndarray) -> np.ndarray:
-    m = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((2, 2), np.uint8))
-    return cv2.cvtColor((1 - m) * 255, cv2.COLOR_GRAY2RGB)
-
-
 def _join_fragments(det) -> list[tuple[str, float]]:
-    """Склеивает куски одной строки: жирный штамп часто рвётся на фрагменты."""
+    """Собирает куски одной строки: жирный штамп часто рвётся на фрагменты."""
     if not det:
         return []
     items = []
@@ -132,7 +107,7 @@ def _join_fragments(det) -> list[tuple[str, float]]:
     lines: list[list] = []
     for cy, x, text, conf in items:
         for ln in lines:
-            if abs(ln[0][0] - cy) < 14:     # та же строка по вертикали
+            if abs(ln[0][0] - cy) < 14:
                 ln.append((cy, x, text, conf))
                 break
         else:
@@ -148,14 +123,14 @@ def _join_fragments(det) -> list[tuple[str, float]]:
 def _parse(text: str) -> dt.date | None:
     cleaned = text.translate(CONFUSIONS)
     cleaned = re.sub(r"[^\d.]", "", cleaned)
-    # Склейка фрагментов даёт задвоенные разделители («21.» + «.01.2024»).
+    # Склейка фрагментов задваивает разделитель: «21.» + «.01.2024».
     cleaned = re.sub(r"\.{2,}", ".", cleaned)
     for d, m, y in DATE_RE.findall(cleaned):
         year = int(y)
         if not (YEAR_MIN <= year <= YEAR_MAX):
             continue
         try:
-            return dt.date(year, int(m), int(d))   # отсеивает 32.13.2024 и т.п.
+            return dt.date(year, int(m), int(d))
         except ValueError:
             continue
     return None
@@ -177,8 +152,7 @@ def read_stamp(path: Path, ocr) -> StampResult:
         return StampResult(path.name, None, None, None, 0, None,
                            "штамп не найден или не читается — нужна ручная привязка")
 
-    # Голосование между вариантами; внутри победившей даты берём лучший прогон.
-    # Голоса считаем по РАЗНЫМ вариантам: один вариант может дать несколько строк.
+    # Голоса считаются по разным гипотезам: одна может дать несколько строк.
     votes = Counter()
     for date, _, variant, _ in hits:
         votes[date] = len({v for d, _, v, _ in hits if d == date})

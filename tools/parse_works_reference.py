@@ -1,22 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Парсер справочника видов работ («Сводный перечень строительных работ_ЛТЦ.xlsx»).
+"""Разбор справочника видов работ в плоский список работ с иерархией.
 
-Справочник — источник плановой части системы: из него строится WBS, к которой
-затем привязываются даты календарного графика и правила «этап → техника».
-
-Две особенности исходного файла, ради которых написан отдельный парсер:
-
-1. Колонка «№ п/п» частично испорчена автоформатированием Excel. Номера вида
-   «10.1.» распознаны как даты и хранятся числовыми серийными значениями
-   (45667 → 10.01.2025 → исходное «10.1.»). Пострадали только подразделы 1–12:
-   «10.13.» уцелело, потому что месяца 13 не существует и Excel оставил текст.
-   Это же свойство служит проверкой гипотезы восстановления.
-
-2. Уровень вложенности не закодирован ни отступом, ни группировкой строк —
-   только форматированием (жирность + заливка). Поэтому уровень считается по
-   номеру, а стили используются как независимая перекрёстная проверка.
-
-Зависимостей нет: xlsx читается как zip + XML средствами стандартной библиотеки.
+Читает xlsx как zip + XML, без внешних зависимостей. Восстанавливает номера,
+испорченные автоформатированием Excel, и достраивает уровни вложенности.
 """
 
 from __future__ import annotations
@@ -37,7 +23,6 @@ NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 Q = "{%s}" % NS
 NSMAP = {"m": NS}
 
-# Колонки C..K — матрица применимости вида работ к типу объекта.
 OBJECT_TYPES = {
     "C": "Жильё",
     "D": "Образование",
@@ -50,23 +35,20 @@ OBJECT_TYPES = {
     "K": "Дороги",
 }
 
-# Стиль ячейки колонки A (индекс в cellXfs) → уровень WBS. Из xl/styles.xml:
-# 14 — жирный 14pt на заливке D9D9D9, 17 — жирный на F2F2F2.
-#
-# Однозначно кодируются только уровни 1–2: глубже форматирование переиспользовано
-# и уровню не соответствует (стиль 25 поровну делится между уровнями 3 и 4).
-# Поэтому проверка по стилям намеренно ограничена разделами и подразделами.
+# Стиль ячейки колонки A → уровень WBS. Глубже второго уровня форматирование
+# переиспользовано и уровню не соответствует, поэтому сверка ограничена
+# разделами и подразделами.
 STYLE_LEVEL = {"14": 1, "17": 2}
 
-EXCEL_EPOCH = dt.date(1899, 12, 30)  # серийная дата 1 == 1900-01-01
+EXCEL_EPOCH = dt.date(1899, 12, 30)
 
 
 @dataclass
 class Work:
-    row: int                     # номер строки в исходном xlsx — для трассировки
-    code: str                    # канонический номер, напр. "10.11.1"
-    raw_code: str                # то, что реально лежало в ячейке
-    repaired: bool               # был ли номер восстановлен из серийной даты
+    row: int
+    code: str
+    raw_code: str
+    repaired: bool
     level: int
     name: str
     parent: str | None
@@ -90,17 +72,15 @@ def _cell_text(cell: ET.Element, shared: list[str]) -> str:
 
 
 def _normalize(text: str) -> str:
-    """Схлопывает переносы строк и двойные пробелы внутри наименований работ."""
     return re.sub(r"\s+", " ", text).strip()
 
 
 def repair_code(raw: str, current_section: str | None) -> tuple[str, bool]:
-    """Восстанавливает номер, съеденный автоформатированием Excel.
+    """Восстанавливает номер, распознанный Excel как дата.
 
-    Серийное число трактуется как дата: день — номер раздела, месяц — номер
-    подраздела. Восстановление принимается только если день совпал с разделом,
-    в котором строка физически находится, иначе номер остаётся сырым и строка
-    попадёт в отчёт о расхождениях.
+    Номера вида «10.1.» сохранены серийными числами: 45667 → 10.01.2025 → «10.1».
+    День трактуется как раздел, месяц как подраздел. Восстановление принимается
+    только если день совпал с разделом, в котором строка физически лежит.
     """
     raw = raw.strip()
     if not re.fullmatch(r"\d{5}", raw):
@@ -119,10 +99,8 @@ def parse(xlsx: Path) -> tuple[list[Work], dict]:
 
     works: list[Work] = []
     issues: list[str] = []
-    style_levels: list[tuple[int, int]] = []   # (уровень по номеру, уровень по стилю)
+    style_levels: list[tuple[int, int]] = []
     section: str | None = None
-    # Последняя пронумерованная работа каждого уровня — чтобы подвесить к ней
-    # детализирующие строки без номера.
     last_by_level: dict[int, Work] = {}
 
     for row in sheet.findall(".//m:row", NSMAP):
@@ -138,7 +116,6 @@ def parse(xlsx: Path) -> tuple[list[Work], dict]:
         code_cell = cells.get("A")
         raw_code = _cell_text(code_cell, shared).strip() if code_cell is not None else ""
 
-        # Раздел верхнего уровня («10.», «12.») переключает контекст для repair_code.
         if re.fullmatch(r"\d{1,2}\.?", raw_code):
             section = raw_code.rstrip(".")
 
@@ -179,19 +156,15 @@ def parse(xlsx: Path) -> tuple[list[Work], dict]:
             for deeper in [lvl for lvl in last_by_level if lvl > level]:
                 del last_by_level[deeper]
 
-    # Проверка 1: совпадает ли уровень, посчитанный по восстановленному номеру,
-    # с уровнем, заложенным в форматирование ячейки (только разделы/подразделы).
     agree = sum(1 for by_code, by_style in style_levels if by_code == by_style)
     for by_code, by_style in style_levels:
         if by_code != by_style:
             issues.append(f"уровень по номеру {by_code} ≠ уровню по стилю {by_style}")
 
-    # Проверка 2: каждая ссылка parent указывает на существующий номер работы.
-    # Это ловит и ошибки восстановления номеров, и разрывы в иерархии.
     known = {w.code for w in works}
-    for w in works:
-        if w.parent and w.parent not in known:
-            issues.append(f"строка {w.row}: родитель {w.parent!r} не найден ({w.name[:40]}…)")
+    orphans = [w for w in works if w.parent and w.parent not in known]
+    for w in orphans:
+        issues.append(f"строка {w.row}: родитель {w.parent!r} не найден ({w.name[:40]}…)")
 
     stats = {
         "rows": len(works),
@@ -201,7 +174,7 @@ def parse(xlsx: Path) -> tuple[list[Work], dict]:
         "by_object_type": {t: sum(1 for w in works if t in w.object_types)
                            for t in OBJECT_TYPES.values()},
         "style_crosscheck_lvl1_2": f"{agree}/{len(style_levels)} совпало",
-        "orphan_parents": sum(1 for w in works if w.parent and w.parent not in {x.code for x in works}),
+        "orphan_parents": len(orphans),
         "issues": issues,
     }
     return works, stats
