@@ -1,14 +1,31 @@
-# Python 3.10+
+# Python 3.12, окружение проекта — .venv в корне.
+# Запуск без активации: .venv\Scripts\python.exe script.py
 #
 # tools/parse_works_reference.py зависимостей не имеет: xlsx читается как zip + XML
 # средствами стандартной библиотеки. Запускается на голом интерпретаторе.
-#
-# Всё нижеперечисленное нужно только для tools/read_date_stamp.py.
 
-numpy==2.5.3
+# --- tools/read_date_stamp.py ---
+numpy==2.5.2
 opencv-python-headless==5.0.0.93
 pillow==12.3.0
 rapidocr-onnxruntime==1.2.3
 
 # rapidocr-onnxruntime тянет за собой onnxruntime (проверено на 1.30.0) и везёт
 # веса моделей внутри пакета — около 15 МБ. После установки обращений в сеть нет.
+
+# --- детекция (эксперименты E1/E2) ---
+ultralytics==8.4.153
+
+# ВНИМАНИЕ: torch ставится НЕ с PyPI. Обычный `pip install torch` даёт сборку
+# +cpu, и GPU молча не используется. Сначала ultralytics, потом torch — иначе
+# ultralytics подтянет CPU-сборку как зависимость и перетрёт CUDA-версию:
+#
+#   pip install ultralytics
+#   pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu130
+#
+# Проверено на RTX 4060 Laptop (sm_89), драйвер 610.74:
+#   torch==2.14.0+cu130, torchvision==0.29.0+cu130, cuda build 13.0
+# Для драйверов постарше в индексе PyTorch есть вариант cu126.
+#
+# Windows: Smart App Control блокирует неподписанные DLL из колёс pip
+# (WinError 4551 на c10.dll). Либо выключить его, либо работать в WSL2.
