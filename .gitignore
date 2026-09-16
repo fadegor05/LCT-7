@@ -24,6 +24,8 @@ kaggle.json
 
 # Веса и архивы
 *.pt
+*.ts
+*.onnx.data
 *.onnx
 *.zip
 
