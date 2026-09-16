@@ -1,0 +1,25 @@
+# Данные не версионируем: выданные материалы, распакованные архивы, промежуточные артефакты
+data/
+
+# Логи вспомогательных инструментов
+research/.codex*.log
+research/.agy*
+research/*.err
+
+# Питон
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Веса и датасеты
+*.pt
+*.onnx
+*.zip
+
+# ОС и IDE
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
