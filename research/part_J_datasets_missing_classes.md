@@ -177,7 +177,18 @@ _статус: done (2026-09-15); источников: 38 (датасетов 3
 - Объём: 2 655–2 656 изображений (train 2 244–2 245 / valid 267 / test 144); COCO (keremberke) или YOLO+data.yaml (LibreYOLO), 640×640 stretch.
 - Съёмка: имена `construction--1-_mp4-103_jpg` — кадры из видео. Похожесть средняя. Целевых классов нет.
 
-### J16. APOCE — Aerial Photographs for Object Detection of Construction Equipment (в составе RF100-VL) `[PARTIAL]`
+### J16. APOCE — Aerial Photographs for Object Detection of Construction Equipment (в составе RF100-VL) `[СКАЧАНО И ПРОВЕРЕНО 2026-09-16]`
+
+**Проверено на скачанном архиве** (`data/external/apoce.tar`, 1 418 557 440 байт, совпало с листингом HF):
+- **928 изображений** (train 649 / valid 185 / test 94), **2 246 рамок**. Разметка — **COCO json** (`_annotations.coco.json` в каждом сплите), не YOLO: для Ultralytics нужна конвертация.
+- **Классы и число рамок:** excavator 962, dump-truck 564, tower-crane **290**, concrete-mixer 205, bulldozer 95, piling-machine **78**, lifting-equipment 52.
+- **Лицензия:** в `README.dataset.txt` самого экспорта написано «License: MIT» (в статье RF100-VL указано CC BY 4.0 — расхождение; обе лицензии разрешают использование, в документации сослаться на обе).
+- **Разрешения кадров смешанные:** 960×540 (486 кадров), 5472×3648 (202), 4864×3648 (131), 6000×4000 (84), 3840×2160 (25).
+- **Масштаб объектов:** >96 px — 1 742 рамки, 32–96 px — 475, <32 px — 29. То есть мелких объектов мало, но кадры разного размера: считать нужно после ресайза под обучение.
+- **Вывод:** башенные краны берём отсюда (290 рамок — рабочий объём). Буровых всего 78 и они слиты в «piling-machine» вместе с копрами → своя разметка всё равно обязательна.
+
+---
+
 - URL: https://universe.roboflow.com/roboflow100vl-full/apoce-aerial-photographs-for-object-detection-of-construction-equipment-6raie-ryqq ; HF-зеркало: https://huggingface.co/datasets/LibreYOLO/rf100-vl → файл `apoce-aerial-photographs-for-object-detection-of-construction-equipment.tar` **1 418 557 440 байт (≈1.42 ГБ)** `[OK]`.
 - Классы (по сниппету поиска, RF100-VL): excavator, bulldozer, concrete-mixer, dump-truck, lifting-equipment, **piling-machine**, **tower-crane** `[PARTIAL]` — проверяется.
 - Объём: 928 / 931 изображение (разные сниппеты) `[PARTIAL]`. Съёмка: аэрофото (дрон).
