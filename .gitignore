@@ -16,6 +16,11 @@ __pycache__/
 venv/
 .ipynb_checkpoints/
 
+# Учётные данные: cookies.json — эквивалент пароля к сессии JupyterHub
+cookies.json
+*.token
+.env
+
 # Веса и архивы
 *.pt
 *.onnx
