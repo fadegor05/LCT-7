@@ -1,0 +1,14 @@
+{
+  "excavator":                  "excavator_crawler",
+  "backhoe loader":             "backhoe_loader",
+  "tower crane":                "tower_crane",
+  "mobile crane":               "truck_crane",
+  "crawler crane":              "crawler_crane",
+  "rotary drilling rig":        "drilling_rig",
+  "pile driver":                "pile_driver",
+  "dump truck":                 "dump_truck",
+  "concrete mixer truck":       "concrete_mixer",
+  "wheel loader":               "wheel_loader",
+  "bulldozer":                  "bulldozer",
+  "road roller":                "roller"
+}
