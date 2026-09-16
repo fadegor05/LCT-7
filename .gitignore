@@ -18,6 +18,7 @@ venv/
 
 # Учётные данные: cookies.json — эквивалент пароля к сессии JupyterHub
 cookies.json
+kaggle.json
 *.token
 .env
 
