@@ -28,7 +28,16 @@ import cv2
 import numpy as np
 from PIL import Image
 
-ROI_TOP, ROI_LEFT = 0.84, 0.38
+# Штамп встречается в двух местах: чаще в правом нижнем углу, у кадров 2-17 —
+# в ЛЕВОМ, белым. Прежний единственный вырез справа отрезал левую область, и
+# 16 кадров считались бесштамповыми; ошибка попала и в эталон, который
+# проверялся по вырезам того же правого угла.
+#
+# Углы обрабатываются по отдельности, а не одной широкой полосой: на полосе во
+# всю ширину штамп занимает малую долю выреза, пороги бинаризации перестают его
+# выделять и recall падает до нуля (проверено).
+ROI_TOP = 0.84
+ROIS = (("right", 0.38, 1.00), ("left", 0.00, 0.45))
 UPSCALE = 2
 YEAR_MIN, YEAR_MAX = 2015, 2035
 
@@ -53,9 +62,9 @@ class StampResult:
     note: str = ""
 
 
-def _roi(img: np.ndarray) -> np.ndarray:
+def _roi(img: np.ndarray, left: float, right: float) -> np.ndarray:
     h, w, _ = img.shape
-    roi = img[int(h * ROI_TOP):, int(w * ROI_LEFT):]
+    roi = img[int(h * ROI_TOP):, int(w * left):int(w * right)]
     return cv2.resize(roi, (roi.shape[1] * UPSCALE, roi.shape[0] * UPSCALE),
                       interpolation=cv2.INTER_LANCZOS4)
 
@@ -138,15 +147,16 @@ def _parse(text: str) -> dt.date | None:
 
 def read_stamp(path: Path, ocr) -> StampResult:
     img = np.asarray(Image.open(path).convert("RGB"))
-    roi = _roi(img)
 
     hits: list[tuple[dt.date, float, str, str]] = []
-    for name, variant in _variants(roi):
-        det, _ = ocr(variant)
-        for text, conf in _join_fragments(det):
-            date = _parse(text)
-            if date:
-                hits.append((date, conf, name, text))
+    for corner, left, right in ROIS:
+        roi = _roi(img, left, right)
+        for name, variant in _variants(roi):
+            det, _ = ocr(variant)
+            for text, conf in _join_fragments(det):
+                date = _parse(text)
+                if date:
+                    hits.append((date, conf, f"{corner}:{name}", text))
 
     if not hits:
         return StampResult(path.name, None, None, None, 0, None,

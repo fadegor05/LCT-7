@@ -1,0 +1,151 @@
+{
+  "meta": {
+    "model": "yoloe-26s-seg.pt",
+    "params": {
+      "imgsz": 640,
+      "conf": 0.05,
+      "iou": 0.7,
+      "device": "cuda",
+      "verbose": false
+    },
+    "created": "2026-09-17T08:34:47",
+    "images": 3
+  },
+  "images": [
+    {
+      "image": "Screenshot_1.png",
+      "width": 1212,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 22.039599978597835,
+        "inference": 17.40280000376515,
+        "postprocess": 17.1390000032261
+      },
+      "detections": [
+        {
+          "class_raw": "dump truck",
+          "class_ours": "dump_truck",
+          "conf": 0.093,
+          "bbox": [
+            0.6285,
+            0.9,
+            0.7037,
+            0.9686
+          ]
+        },
+        {
+          "class_raw": "dump truck",
+          "class_ours": "dump_truck",
+          "conf": 0.081,
+          "bbox": [
+            0.0,
+            0.8491,
+            0.2596,
+            0.9973
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_2.png",
+      "width": 1213,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.413100010016933,
+        "inference": 20.777400000952184,
+        "postprocess": 3.906400001142174
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.337,
+          "bbox": [
+            0.3394,
+            0.4197,
+            0.3974,
+            0.6903
+          ]
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.285,
+          "bbox": [
+            0.7676,
+            0.4739,
+            0.8003,
+            0.5911
+          ]
+        },
+        {
+          "class_raw": "mobile crane",
+          "class_ours": "truck_crane",
+          "conf": 0.061,
+          "bbox": [
+            0.2549,
+            0.3946,
+            0.3992,
+            0.6824
+          ]
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.055,
+          "bbox": [
+            0.7771,
+            0.475,
+            0.8008,
+            0.5884
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_3.png",
+      "width": 1217,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.45360002736561,
+        "inference": 17.760900023858994,
+        "postprocess": 3.3739999926183373
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.761,
+          "bbox": [
+            0.5121,
+            0.6657,
+            0.5625,
+            0.8612
+          ]
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.202,
+          "bbox": [
+            0.4895,
+            0.6658,
+            0.563,
+            0.8654
+          ]
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.064,
+          "bbox": [
+            0.5158,
+            0.6694,
+            0.5416,
+            0.8384
+          ]
+        }
+      ]
+    }
+  ]
+}

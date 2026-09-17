@@ -3,145 +3,145 @@
     "image": "Screenshot_1.png",
     "date": "2026-07-15",
     "confidence": 0.868,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "15.07.2026",
     "note": ""
   },
   {
     "image": "Screenshot_2.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-04-14",
+    "confidence": 0.859,
+    "variant": "left:raw",
+    "agreeing": 3,
+    "raw": "14.04.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_3.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-04-14",
+    "confidence": 0.866,
+    "variant": "left:raw",
+    "agreeing": 2,
+    "raw": "14.04.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_4.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-04-14",
+    "confidence": 0.821,
+    "variant": "left:raw",
+    "agreeing": 4,
+    "raw": "14.04.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_5.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-06-19",
+    "confidence": 0.822,
+    "variant": "left:white",
+    "agreeing": 1,
+    "raw": "19.06.2023",
+    "note": "подтверждено одной гипотезой — проверить вручную"
   },
   {
     "image": "Screenshot_6.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-06-19",
+    "confidence": 0.867,
+    "variant": "left:raw",
+    "agreeing": 3,
+    "raw": "19.06.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_7.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-07-16",
+    "confidence": 0.86,
+    "variant": "left:raw",
+    "agreeing": 3,
+    "raw": "16.07:2023",
+    "note": ""
   },
   {
     "image": "Screenshot_8.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-07-16",
+    "confidence": 0.859,
+    "variant": "left:white",
+    "agreeing": 1,
+    "raw": "16.07.2023",
+    "note": "подтверждено одной гипотезой — проверить вручную"
   },
   {
     "image": "Screenshot_9.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-07-16",
+    "confidence": 0.823,
+    "variant": "left:raw",
+    "agreeing": 3,
+    "raw": "16.07,2023",
+    "note": ""
   },
   {
     "image": "Screenshot_10.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-08-14",
+    "confidence": 0.882,
+    "variant": "left:white",
+    "agreeing": 3,
+    "raw": "14.08.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_11.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-08-14",
+    "confidence": 0.896,
+    "variant": "left:adaptive",
+    "agreeing": 3,
+    "raw": "14.08.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_12.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-09-14",
+    "confidence": 0.841,
+    "variant": "left:white",
+    "agreeing": 2,
+    "raw": "14.09.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_13.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-09-14",
+    "confidence": 0.854,
+    "variant": "left:white",
+    "agreeing": 1,
+    "raw": "14.09.2023",
+    "note": "подтверждено одной гипотезой — проверить вручную"
   },
   {
     "image": "Screenshot_14.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-09-14",
+    "confidence": 0.841,
+    "variant": "left:white",
+    "agreeing": 3,
+    "raw": "14.09.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_15.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-09-14",
+    "confidence": 0.864,
+    "variant": "left:white",
+    "agreeing": 1,
+    "raw": "14.09.2023",
+    "note": "подтверждено одной гипотезой — проверить вручную"
   },
   {
     "image": "Screenshot_16.png",
-    "date": null,
-    "confidence": null,
-    "variant": null,
-    "agreeing": 0,
-    "raw": null,
-    "note": "штамп не найден или не читается — нужна ручная привязка"
+    "date": "2023-10-13",
+    "confidence": 0.895,
+    "variant": "left:warm",
+    "agreeing": 3,
+    "raw": "13.10.2023",
+    "note": ""
   },
   {
     "image": "Screenshot_17.png",
@@ -156,7 +156,7 @@
     "image": "Screenshot_18.png",
     "date": "2026-01-02",
     "confidence": 0.867,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "02.01.2026",
     "note": ""
@@ -165,7 +165,7 @@
     "image": "Screenshot_19.png",
     "date": "2026-02-02",
     "confidence": 0.868,
-    "variant": "white",
+    "variant": "right:white",
     "agreeing": 3,
     "raw": "02.02.2026",
     "note": ""
@@ -174,7 +174,7 @@
     "image": "Screenshot_20.png",
     "date": "2026-03-02",
     "confidence": 0.893,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "02.03.2026",
     "note": ""
@@ -192,7 +192,7 @@
     "image": "Screenshot_22.png",
     "date": "2024-01-24",
     "confidence": 0.894,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "24.01.2024",
     "note": ""
@@ -201,7 +201,7 @@
     "image": "Screenshot_23.png",
     "date": "2024-01-24",
     "confidence": 0.855,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "24.01.2024",
     "note": ""
@@ -210,7 +210,7 @@
     "image": "Screenshot_24.png",
     "date": "2024-01-24",
     "confidence": 0.858,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "24.01.2024",
     "note": ""
@@ -219,7 +219,7 @@
     "image": "Screenshot_25.png",
     "date": "2024-01-24",
     "confidence": 0.871,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "24.01.2024",
     "note": ""
@@ -228,7 +228,7 @@
     "image": "Screenshot_26.png",
     "date": "2024-01-24",
     "confidence": 0.838,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 2,
     "raw": "24.01.2024",
     "note": ""
@@ -237,7 +237,7 @@
     "image": "Screenshot_27.png",
     "date": "2024-02-21",
     "confidence": 0.848,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "21.02.2024",
     "note": ""
@@ -246,7 +246,7 @@
     "image": "Screenshot_28.png",
     "date": "2024-02-21",
     "confidence": 0.861,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "21.02.2024",
     "note": ""
@@ -255,7 +255,7 @@
     "image": "Screenshot_29.png",
     "date": "2024-03-25",
     "confidence": 0.861,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "25.03.2024",
     "note": ""
@@ -264,7 +264,7 @@
     "image": "Screenshot_30.png",
     "date": "2024-03-25",
     "confidence": 0.898,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "25.03.2024",
     "note": ""
@@ -273,7 +273,7 @@
     "image": "Screenshot_31.png",
     "date": "2024-03-25",
     "confidence": 0.824,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 2,
     "raw": "25.03.2024",
     "note": ""
@@ -282,7 +282,7 @@
     "image": "Screenshot_32.png",
     "date": "2024-03-25",
     "confidence": 0.906,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "25.03.2024",
     "note": ""
@@ -291,7 +291,7 @@
     "image": "Screenshot_33.png",
     "date": "2024-04-24",
     "confidence": 0.862,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -300,7 +300,7 @@
     "image": "Screenshot_34.png",
     "date": "2024-04-24",
     "confidence": 0.852,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -309,7 +309,7 @@
     "image": "Screenshot_35.png",
     "date": "2024-04-24",
     "confidence": 0.903,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -318,7 +318,7 @@
     "image": "Screenshot_36.png",
     "date": "2024-04-24",
     "confidence": 0.85,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -327,7 +327,7 @@
     "image": "Screenshot_37.png",
     "date": "2024-04-24",
     "confidence": 0.837,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 2,
     "raw": "24.04.2024",
     "note": ""
@@ -336,7 +336,7 @@
     "image": "Screenshot_38.png",
     "date": "2024-04-24",
     "confidence": 0.839,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -345,7 +345,7 @@
     "image": "Screenshot_39.png",
     "date": "2024-04-24",
     "confidence": 0.84,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 3,
     "raw": "24.04.2024",
     "note": ""
@@ -354,7 +354,7 @@
     "image": "Screenshot_40.png",
     "date": "2024-04-24",
     "confidence": 0.874,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "24.04.2024",
     "note": ""
@@ -363,7 +363,7 @@
     "image": "Screenshot_41.png",
     "date": "2024-04-24",
     "confidence": 0.868,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 2,
     "raw": "24.04.2024",
     "note": ""
@@ -372,7 +372,7 @@
     "image": "Screenshot_42.png",
     "date": "2024-05-27",
     "confidence": 0.841,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "27.05.2024",
     "note": ""
@@ -381,7 +381,7 @@
     "image": "Screenshot_43.png",
     "date": "2024-05-27",
     "confidence": 0.821,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "27.05.2024",
     "note": ""
@@ -390,7 +390,7 @@
     "image": "Screenshot_44.png",
     "date": "2024-05-27",
     "confidence": 0.858,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "27.05.2024",
     "note": ""
@@ -399,7 +399,7 @@
     "image": "Screenshot_45.png",
     "date": "2024-05-27",
     "confidence": 0.881,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 2,
     "raw": "27.05.2024",
     "note": ""
@@ -408,7 +408,7 @@
     "image": "Screenshot_46.png",
     "date": "2024-05-27",
     "confidence": 0.818,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "27.05.2024",
     "note": ""
@@ -534,7 +534,7 @@
     "image": "Screenshot_60.png",
     "date": "2026-04-02",
     "confidence": 0.904,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 2,
     "raw": "02.04.2026",
     "note": ""
@@ -543,7 +543,7 @@
     "image": "Screenshot_61.png",
     "date": "2026-05-20",
     "confidence": 0.899,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "20.05.2026",
     "note": ""
@@ -552,7 +552,7 @@
     "image": "Screenshot_62.png",
     "date": "2024-09-17",
     "confidence": 0.804,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 2,
     "raw": "17.09.2024",
     "note": ""
@@ -570,7 +570,7 @@
     "image": "Screenshot_64.png",
     "date": "2024-11-26",
     "confidence": 0.878,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 4,
     "raw": "26.11.2024",
     "note": ""
@@ -579,7 +579,7 @@
     "image": "Screenshot_65.png",
     "date": "2024-12-16",
     "confidence": 0.887,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "16.12.2024",
     "note": "разногласие гипотез (выбрано ×3; также: 2021-12-16×1)"
@@ -588,7 +588,7 @@
     "image": "Screenshot_66.png",
     "date": "2024-12-16",
     "confidence": 0.901,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "16.12.2024",
     "note": ""
@@ -597,7 +597,7 @@
     "image": "Screenshot_67.png",
     "date": "2025-02-20",
     "confidence": 0.863,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 4,
     "raw": "20.02.2025",
     "note": ""
@@ -705,7 +705,7 @@
     "image": "Screenshot_79.png",
     "date": "2023-10-18",
     "confidence": 0.902,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 4,
     "raw": "18.10.2023",
     "note": ""
@@ -714,7 +714,7 @@
     "image": "Screenshot_80.png",
     "date": "2023-10-18",
     "confidence": 0.866,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 1,
     "raw": "18.10.2023",
     "note": "подтверждено одной гипотезой — проверить вручную"
@@ -723,7 +723,7 @@
     "image": "Screenshot_81.png",
     "date": "2023-10-18",
     "confidence": 0.876,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "18.10.2023",
     "note": ""
@@ -732,7 +732,7 @@
     "image": "Screenshot_82.png",
     "date": "2023-10-18",
     "confidence": 0.903,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 4,
     "raw": "18.10.2023",
     "note": ""
@@ -741,7 +741,7 @@
     "image": "Screenshot_83.png",
     "date": "2023-11-27",
     "confidence": 0.751,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 1,
     "raw": "27.11.2023",
     "note": "подтверждено одной гипотезой — проверить вручную"
@@ -750,7 +750,7 @@
     "image": "Screenshot_84.png",
     "date": "2023-11-27",
     "confidence": 0.832,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "27.11.2023",
     "note": ""
@@ -795,7 +795,7 @@
     "image": "Screenshot_89.png",
     "date": "2022-01-21",
     "confidence": 0.844,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "21:01.2022",
     "note": ""
@@ -804,7 +804,7 @@
     "image": "Screenshot_90.png",
     "date": "2024-01-21",
     "confidence": 0.866,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "21.01.2024",
     "note": ""
@@ -813,7 +813,7 @@
     "image": "Screenshot_91.png",
     "date": "2024-02-14",
     "confidence": 0.763,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 1,
     "raw": "14.02.2024",
     "note": "подтверждено одной гипотезой — проверить вручную"
@@ -822,7 +822,7 @@
     "image": "Screenshot_92.png",
     "date": "2024-02-14",
     "confidence": 0.894,
-    "variant": "warm_tophat",
+    "variant": "right:warm_tophat",
     "agreeing": 3,
     "raw": "14.02.2024",
     "note": ""
@@ -831,7 +831,7 @@
     "image": "Screenshot_93.png",
     "date": "2024-02-14",
     "confidence": 0.86,
-    "variant": "raw",
+    "variant": "right:raw",
     "agreeing": 3,
     "raw": "14.02.2024",
     "note": ""
@@ -840,7 +840,7 @@
     "image": "Screenshot_94.png",
     "date": "2024-02-14",
     "confidence": 0.834,
-    "variant": "warm",
+    "variant": "right:warm",
     "agreeing": 2,
     "raw": "14.02.2024",
     "note": ""

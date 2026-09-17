@@ -1,21 +1,21 @@
 ﻿image;expected_date;has_stamp;source;note
 Screenshot_1.png;2026-07-15;yes;ocr_verified;
-Screenshot_2.png;;no;visual_check;штамп отсутствует
-Screenshot_3.png;;no;visual_check;штамп отсутствует
-Screenshot_4.png;;no;visual_check;штамп отсутствует
-Screenshot_5.png;;no;visual_check;штамп отсутствует
-Screenshot_6.png;;no;visual_check;штамп отсутствует
-Screenshot_7.png;;no;visual_check;штамп отсутствует
-Screenshot_8.png;;no;visual_check;штамп отсутствует
-Screenshot_9.png;;no;visual_check;штамп отсутствует
-Screenshot_10.png;;no;visual_check;штамп отсутствует
-Screenshot_11.png;;no;visual_check;штамп отсутствует
-Screenshot_12.png;;no;visual_check;штамп отсутствует
-Screenshot_13.png;;no;visual_check;штамп отсутствует
-Screenshot_14.png;;no;visual_check;штамп отсутствует
-Screenshot_15.png;;no;visual_check;штамп отсутствует
-Screenshot_16.png;;no;visual_check;штамп отсутствует
-Screenshot_17.png;;no;visual_check;штамп отсутствует
+Screenshot_2.png;2023-04-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_3.png;2023-04-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_4.png;2023-04-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_5.png;2023-06-19;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_6.png;2023-06-19;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_7.png;2023-07-16;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_8.png;2023-07-16;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_9.png;2023-07-16;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_10.png;2023-08-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_11.png;2023-08-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_12.png;2023-09-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_13.png;2023-09-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_14.png;2023-09-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_15.png;2023-09-14;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_16.png;2023-10-13;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
+Screenshot_17.png;2024-08-09;yes;manual_read;"штамп в левом нижнем углу; прежний эталон пропустил из-за ROI справа"
 Screenshot_18.png;2026-01-02;yes;ocr_verified;
 Screenshot_19.png;2026-02-02;yes;ocr_verified;
 Screenshot_20.png;2026-03-02;yes;ocr_verified;
