@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          390.2373737373737,
+          0.0
+        ],
+        [
+          618.520202020202,
+          0.0
+        ],
+        [
+          618.520202020202,
+          746.2979797979797
+        ],
+        [
+          390.2373737373737,
+          746.2979797979797
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          274.0757575757576,
+          56.8
+        ],
+        [
+          482.4,
+          56.8
+        ],
+        [
+          482.4,
+          508.6969696969696
+        ],
+        [
+          274.0757575757576,
+          508.6969696969696
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_like",
+      "score": null,
+      "points": [
+        [
+          716.7,
+          242.1
+        ],
+        [
+          817.7172284644193,
+          242.1
+        ],
+        [
+          817.7172284644193,
+          679.5880149812733
+        ],
+        [
+          716.7,
+          679.5880149812733
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "concrete_mixer",
+      "score": null,
+      "points": [
+        [
+          522.265625,
+          294.140625
+        ],
+        [
+          583.4635416666666,
+          294.140625
+        ],
+        [
+          583.4635416666666,
+          326.171875
+        ],
+        [
+          522.265625,
+          326.171875
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "concrete_mixer",
+      "score": null,
+      "points": [
+        [
+          584.765625,
+          312.36979166666663
+        ],
+        [
+          643.6197916666666,
+          312.36979166666663
+        ],
+        [
+          643.6197916666666,
+          351.953125
+        ],
+        [
+          584.765625,
+          351.953125
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          455.859375,
+          257.1614583333333
+        ],
+        [
+          521.7447916666666,
+          257.1614583333333
+        ],
+        [
+          521.7447916666666,
+          295.18229166666663
+        ],
+        [
+          455.859375,
+          295.18229166666663
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          398.30729166666663,
+          242.3177083333333
+        ],
+        [
+          455.5989583333333,
+          242.3177083333333
+        ],
+        [
+          455.5989583333333,
+          275.9114583333333
+        ],
+        [
+          398.30729166666663,
+          275.9114583333333
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_34.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1083,
+  "description": ""
+}

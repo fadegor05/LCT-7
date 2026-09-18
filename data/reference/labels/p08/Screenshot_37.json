@@ -1,0 +1,128 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          440.2,
+          237.3
+        ],
+        [
+          520.6,
+          237.3
+        ],
+        [
+          520.6,
+          464.0
+        ],
+        [
+          440.2,
+          464.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          828.9,
+          69.3
+        ],
+        [
+          991.1666666666665,
+          69.3
+        ],
+        [
+          991.1666666666665,
+          546.1666666666665
+        ],
+        [
+          828.9,
+          546.1666666666665
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          602.7,
+          144.6
+        ],
+        [
+          719.5,
+          144.6
+        ],
+        [
+          719.5,
+          501.5
+        ],
+        [
+          602.7,
+          501.5
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          328.74242424242425,
+          411.62121212121195
+        ],
+        [
+          440.8636363636364,
+          411.62121212121195
+        ],
+        [
+          440.8636363636364,
+          488.5909090909091
+        ],
+        [
+          328.74242424242425,
+          488.5909090909091
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_37.png",
+  "imageData": null,
+  "imageHeight": 809,
+  "imageWidth": 1219,
+  "description": ""
+}

@@ -1,0 +1,302 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          269.5,
+          6.1
+        ],
+        [
+          445.30303030303014,
+          6.1
+        ],
+        [
+          445.30303030303014,
+          515.9696969696968
+        ],
+        [
+          269.5,
+          515.9696969696968
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          669.5454545454545,
+          50.4
+        ],
+        [
+          818.7,
+          50.4
+        ],
+        [
+          818.7,
+          594.7575757575756
+        ],
+        [
+          669.5454545454545,
+          594.7575757575756
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          911.3,
+          52.4
+        ],
+        [
+          1079.9,
+          52.4
+        ],
+        [
+          1079.9,
+          565.7
+        ],
+        [
+          911.3,
+          565.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_wheeled",
+      "score": null,
+      "points": [
+        [
+          238.63636363636363,
+          518.3939393939391
+        ],
+        [
+          360.4545454545454,
+          518.3939393939391
+        ],
+        [
+          360.4545454545454,
+          584.4545454545454
+        ],
+        [
+          238.63636363636363,
+          584.4545454545454
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          208.33333333333326,
+          317.7878787878788
+        ],
+        [
+          258.6363636363636,
+          317.7878787878788
+        ],
+        [
+          258.6363636363636,
+          471.72727272727275
+        ],
+        [
+          208.33333333333326,
+          471.72727272727275
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          0.0,
+          437.7878787878787
+        ],
+        [
+          72.57575757575755,
+          437.7878787878787
+        ],
+        [
+          72.57575757575755,
+          515.3636363636364
+        ],
+        [
+          0.0,
+          515.3636363636364
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          611.3636363636363,
+          275.969696969697
+        ],
+        [
+          725.3030303030301,
+          275.969696969697
+        ],
+        [
+          725.3030303030301,
+          486.2727272727273
+        ],
+        [
+          611.3636363636363,
+          486.2727272727273
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          853.1818181818181,
+          377.1818181818182
+        ],
+        [
+          914.3939393939393,
+          377.1818181818182
+        ],
+        [
+          914.3939393939393,
+          457.7878787878787
+        ],
+        [
+          853.1818181818181,
+          457.7878787878787
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          810.1515151515149,
+          260.21212121212125
+        ],
+        [
+          851.9696969696968,
+          260.21212121212125
+        ],
+        [
+          851.9696969696968,
+          451.72727272727275
+        ],
+        [
+          810.1515151515149,
+          451.72727272727275
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          574.1279069767442,
+          393.437984496124
+        ],
+        [
+          622.3837209302326,
+          393.437984496124
+        ],
+        [
+          622.3837209302326,
+          450.8023255813954
+        ],
+        [
+          574.1279069767442,
+          450.8023255813954
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle\n",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_39.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1080,
+  "description": ""
+}
