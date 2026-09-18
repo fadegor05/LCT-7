@@ -1,0 +1,288 @@
+{
+  "meta": {
+    "model": "yoloe-26s-seg.pt",
+    "mode": "visual_prompts",
+    "prompts_config": "configs\\visual_prompts.json",
+    "refer_image": "Screenshot_45.png",
+    "params": {
+      "imgsz": 1280,
+      "conf": 0.05,
+      "iou": 0.5,
+      "device": "cuda",
+      "verbose": false
+    },
+    "created": "2026-09-18T18:11:31",
+    "images": 5
+  },
+  "images": [
+    {
+      "image": "Screenshot_22.png",
+      "width": 1209,
+      "height": 800,
+      "speed_ms": {
+        "preprocess": 4.016499995486811,
+        "inference": 20.090600002731662,
+        "postprocess": 4.880400003457908
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.721,
+          "bbox": [
+            0.4083,
+            0.0358,
+            0.5296,
+            0.735
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.44,
+          "bbox": [
+            0.3543,
+            0.1814,
+            0.5206,
+            0.8211
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.302,
+          "bbox": [
+            0.5342,
+            0.0633,
+            0.609,
+            0.8241
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.208,
+          "bbox": [
+            0.4315,
+            0.0386,
+            0.6052,
+            0.7863
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.131,
+          "bbox": [
+            0.5339,
+            0.0412,
+            0.5729,
+            0.7378
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.074,
+          "bbox": [
+            0.5333,
+            0.3053,
+            0.6452,
+            0.8435
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_23.png",
+      "width": 1215,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 6.237099994905293,
+        "inference": 20.19799999834504,
+        "postprocess": 2.807500000926666
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.395,
+          "bbox": [
+            0.3917,
+            0.1747,
+            0.6616,
+            0.5642
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.224,
+          "bbox": [
+            0.5703,
+            0.1755,
+            0.6674,
+            0.5234
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.142,
+          "bbox": [
+            0.2658,
+            0.1908,
+            0.5786,
+            0.6605
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_24.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.376099997898564,
+        "inference": 20.150800002738833,
+        "postprocess": 2.256599997053854
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.722,
+          "bbox": [
+            0.3323,
+            0.0,
+            0.4811,
+            0.5513
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.437,
+          "bbox": [
+            0.6943,
+            0.0,
+            0.7704,
+            0.5476
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.414,
+          "bbox": [
+            0.2244,
+            0.0109,
+            0.5149,
+            0.6829
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.26,
+          "bbox": [
+            0.6862,
+            0.0438,
+            0.8077,
+            0.6728
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.202,
+          "bbox": [
+            0.7123,
+            0.0008,
+            0.7466,
+            0.5243
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_25.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 7.092699997883756,
+        "inference": 20.237800003087614,
+        "postprocess": 10.512500004551839
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.099,
+          "bbox": [
+            0.3087,
+            0.2833,
+            0.5324,
+            0.6026
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_26.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 3.792399998928886,
+        "inference": 21.20199999626493,
+        "postprocess": 2.977700001792982
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.578,
+          "bbox": [
+            0.6311,
+            0.0413,
+            0.7974,
+            0.6501
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.559,
+          "bbox": [
+            0.6768,
+            0.0348,
+            0.7477,
+            0.5264
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.392,
+          "bbox": [
+            0.2406,
+            0.3114,
+            0.3186,
+            0.5297
+          ]
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 0.079,
+          "bbox": [
+            0.1751,
+            0.4284,
+            0.1938,
+            0.5367
+          ]
+        }
+      ]
+    }
+  ]
+}
