@@ -4,7 +4,7 @@ deploy/config/traefik/certs/acme.json
 
 # Claude Code: делимся общим .claude/settings.json, личные оверрайды — нет
 .claude/settings.local.json
-
+.vite
 # Python
 __pycache__/
 *.pyc
