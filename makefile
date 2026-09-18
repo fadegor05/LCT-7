@@ -30,4 +30,12 @@ down:
 logs:
 	$(COMPOSE) logs -f
 
-.PHONY: dev up deploy down logs
+# Автоформат + автофиксы линтера (ruff)
+pretty:
+	cd backend && uv run ruff format . && uv run ruff check --fix .
+
+# Проверка без изменений (для CI / pre-commit)
+check:
+	cd backend && uv run ruff check . && uv run ruff format --check .
+
+.PHONY: dev up deploy down logs pretty check
