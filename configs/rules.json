@@ -8,9 +8,36 @@
       "logical": "обязательна по смыслу работы, но в ГЭСН отсутствует: перевозка нормируется отдельно (ФССЦпг), доставка бетона входит в цену материала. НЕ МОЖЕТ быть единственным доказательством этапа",
       "auxiliary": "встречается в норме с малыми маш.-ч или типична по практике"
     },
-    "note": "Список «unexpected» — всегда гипотеза: в нормах указаний о несовместимости техники с этапом нет."
+    "note": "Список «unexpected» — всегда гипотеза: в нормах указаний о несовместимости техники с этапом нет.",
+    "class_specificity": {
+      "_comment": "specific — машина привязана к узкому кругу работ и служит доказательством этапа сама по себе; generic — встречается на многих этапах, доказательством в одиночку не является. Прогон 2.1 показал: без этого разделения этап «фундаментная плита» подтверждался одним башенным краном.",
+      "specific": [
+        "drilling_rig",
+        "pile_driver",
+        "dwall_rig",
+        "paver",
+        "grader",
+        "concrete_pump",
+        "roller"
+      ],
+      "generic": [
+        "excavator_crawler",
+        "excavator_wheeled",
+        "backhoe_loader",
+        "tower_crane",
+        "truck_crane",
+        "crawler_crane",
+        "loader_crane",
+        "dump_truck",
+        "flatbed_truck",
+        "concrete_mixer",
+        "wheel_loader",
+        "bulldozer",
+        "telehandler"
+      ]
+    },
+    "evidence_rule": "Этап считается наблюдаемым, если присутствует вся normative-техника варианта И выполнено одно из двух: видна хотя бы одна specific-машина, либо (когда специфичных в варианте нет) присутствует весь набор целиком, включая logical."
   },
-
   "rules": [
     {
       "stage_code": "10.3",
@@ -19,24 +46,47 @@
         {
           "name": "обрушение",
           "required": [
-            {"class": "excavator_crawler", "min": 1, "obligation": "normative", "source": "ГЭСН 46-06-009-01"},
-            {"class": "dump_truck", "min": 1, "obligation": "logical"}
+            {
+              "class": "excavator_crawler",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 46-06-009-01"
+            },
+            {
+              "class": "dump_truck",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
           "auxiliary": [
-            {"class": "bulldozer", "obligation": "auxiliary"},
-            {"class": "truck_crane", "obligation": "auxiliary"},
-            {"class": "flatbed_truck", "obligation": "auxiliary"}
+            {
+              "class": "bulldozer",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "flatbed_truck",
+              "obligation": "auxiliary"
+            }
           ]
         }
       ],
       "unexpected": [
-        {"class": "paver", "note": "гипотеза: покрытие на этапе сноса не устраивают"},
-        {"class": "drilling_rig", "note": "гипотеза: признак свайных работ, а не сноса"}
+        {
+          "class": "paver",
+          "note": "гипотеза: покрытие на этапе сноса не устраивают"
+        },
+        {
+          "class": "drilling_rig",
+          "note": "гипотеза: признак свайных работ, а не сноса"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.1",
       "stage_name": "Устройство котлована (разработка грунта с вывозом)",
@@ -44,24 +94,51 @@
         {
           "name": "экскаватор с погрузкой в самосвалы",
           "required": [
-            {"class": "excavator_crawler", "min": 1, "obligation": "normative", "source": "ГЭСН 01-01-013-05"},
-            {"class": "dump_truck", "min": 1, "obligation": "logical", "note": "в названии нормы «с погрузкой на автомобили-самосвалы», но в машинах расценки отсутствует"}
+            {
+              "class": "excavator_crawler",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-013-05"
+            },
+            {
+              "class": "dump_truck",
+              "min": 1,
+              "obligation": "logical",
+              "note": "в названии нормы «с погрузкой на автомобили-самосвалы», но в машинах расценки отсутствует"
+            }
           ],
           "auxiliary": [
-            {"class": "bulldozer", "obligation": "normative", "source": "ГЭСН 01-01-013-05", "note": "планировка забоя и забойной дороги"},
-            {"class": "wheel_loader", "obligation": "auxiliary"},
-            {"class": "backhoe_loader", "obligation": "auxiliary", "note": "добор грунта"}
+            {
+              "class": "bulldozer",
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-013-05",
+              "note": "планировка забоя и забойной дороги"
+            },
+            {
+              "class": "wheel_loader",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "backhoe_loader",
+              "obligation": "auxiliary",
+              "note": "добор грунта"
+            }
           ]
         }
       ],
       "unexpected": [
-        {"class": "paver", "note": "гипотеза"},
-        {"class": "tower_crane", "note": "гипотеза: башенный кран обычно появляется позже, на монолите"}
+        {
+          "class": "paver",
+          "note": "гипотеза"
+        },
+        {
+          "class": "tower_crane",
+          "note": "гипотеза: башенный кран обычно появляется позже, на монолите"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.2",
       "stage_name": "Устройство свай",
@@ -69,36 +146,85 @@
         {
           "name": "буронабивные, ковшовое бурение",
           "required": [
-            {"class": "drilling_rig", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-028-01"},
-            {"class": "crawler_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-028-01", "note": "установка арматурных каркасов и бетонолитных труб"}
+            {
+              "class": "drilling_rig",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-028-01"
+            },
+            {
+              "class": "crawler_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-028-01",
+              "note": "установка арматурных каркасов и бетонолитных труб"
+            }
           ],
           "auxiliary": [
-            {"class": "excavator_crawler", "obligation": "normative", "source": "ГЭСН 05-01-028-01", "note": "уборка выбуренного грунта"},
-            {"class": "concrete_mixer", "obligation": "logical"},
-            {"class": "flatbed_truck", "obligation": "auxiliary"}
+            {
+              "class": "excavator_crawler",
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-028-01",
+              "note": "уборка выбуренного грунта"
+            },
+            {
+              "class": "concrete_mixer",
+              "obligation": "logical"
+            },
+            {
+              "class": "flatbed_truck",
+              "obligation": "auxiliary"
+            }
           ]
         },
         {
           "name": "буронабивные CFA (полый шнек)",
           "required": [
-            {"class": "drilling_rig", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-079-01"},
-            {"class": "concrete_pump", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-079-01"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-079-01"}
+            {
+              "class": "drilling_rig",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-079-01"
+            },
+            {
+              "class": "concrete_pump",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-079-01"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-079-01"
+            }
           ],
           "auxiliary": [
-            {"class": "wheel_loader", "obligation": "normative", "source": "ГЭСН 05-01-079-01"},
-            {"class": "truck_crane", "obligation": "auxiliary"}
+            {
+              "class": "wheel_loader",
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-079-01"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            }
           ]
         }
       ],
       "unexpected": [
-        {"class": "paver", "note": "гипотеза"},
-        {"class": "roller", "note": "гипотеза: уплотнение относится к земляным работам или дорожной одежде"}
+        {
+          "class": "paver",
+          "note": "гипотеза"
+        },
+        {
+          "class": "roller",
+          "note": "гипотеза: уплотнение относится к земляным работам или дорожной одежде"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.5",
       "stage_name": "Ограждающие конструкции: «стена в грунте»",
@@ -106,33 +232,77 @@
         {
           "name": "грейферная разработка",
           "required": [
-            {"class": "dwall_rig", "min": 1, "obligation": "normative", "source": "ГЭСН 05-03-010-01"},
-            {"class": "crawler_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 05-03-010-01", "note": "кран 50–70 т: каркасы, ограничители захваток"}
+            {
+              "class": "dwall_rig",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-010-01"
+            },
+            {
+              "class": "crawler_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-010-01",
+              "note": "кран 50–70 т: каркасы, ограничители захваток"
+            }
           ],
           "auxiliary": [
-            {"class": "concrete_mixer", "obligation": "normative", "source": "ГЭСН 05-03-010-01"},
-            {"class": "wheel_loader", "obligation": "normative", "source": "ГЭСН 05-03-010-01"},
-            {"class": "dump_truck", "obligation": "logical"}
+            {
+              "class": "concrete_mixer",
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-010-01"
+            },
+            {
+              "class": "wheel_loader",
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-010-01"
+            },
+            {
+              "class": "dump_truck",
+              "obligation": "logical"
+            }
           ],
-          "scene_cues": ["bentonite", "rebar_cage"]
+          "scene_cues": [
+            "bentonite",
+            "rebar_cage"
+          ]
         },
         {
           "name": "гидрофреза",
           "required": [
-            {"class": "dwall_rig", "min": 1, "obligation": "normative", "source": "ГЭСН 05-03-009-01"}
+            {
+              "class": "dwall_rig",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-009-01"
+            }
           ],
           "auxiliary": [
-            {"class": "excavator_crawler", "obligation": "normative", "source": "ГЭСН 05-03-009-01", "note": "форшахта"},
-            {"class": "truck_crane", "obligation": "auxiliary"}
+            {
+              "class": "excavator_crawler",
+              "obligation": "normative",
+              "source": "ГЭСН 05-03-009-01",
+              "note": "форшахта"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            }
           ],
-          "scene_cues": ["bentonite"]
+          "scene_cues": [
+            "bentonite"
+          ]
         }
       ],
-      "unexpected": [{"class": "paver", "note": "гипотеза"}],
+      "unexpected": [
+        {
+          "class": "paver",
+          "note": "гипотеза"
+        }
+      ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.6",
       "stage_name": "Ограждение котлована: шпунт",
@@ -140,31 +310,65 @@
         {
           "name": "вибропогружение",
           "required": [
-            {"class": "pile_driver", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-089-01, 05-01-012-01"}
+            {
+              "class": "pile_driver",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-089-01, 05-01-012-01"
+            }
           ],
           "auxiliary": [
-            {"class": "crawler_crane", "obligation": "normative", "source": "ГЭСН 05-01-011-01", "note": "подача шпунта"},
-            {"class": "truck_crane", "obligation": "auxiliary"},
-            {"class": "flatbed_truck", "obligation": "auxiliary", "note": "трал с длинномерным шпунтом"}
+            {
+              "class": "crawler_crane",
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-011-01",
+              "note": "подача шпунта"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "flatbed_truck",
+              "obligation": "auxiliary",
+              "note": "трал с длинномерным шпунтом"
+            }
           ],
-          "scene_cues": ["sheet_pile"]
+          "scene_cues": [
+            "sheet_pile"
+          ]
         },
         {
           "name": "копёр с дизель-молотом",
           "required": [
-            {"class": "pile_driver", "min": 1, "obligation": "normative", "source": "ГЭСН 05-01-011-01"}
+            {
+              "class": "pile_driver",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-011-01"
+            }
           ],
           "auxiliary": [
-            {"class": "truck_crane", "obligation": "normative", "source": "ГЭСН 05-01-011-01"}
+            {
+              "class": "truck_crane",
+              "obligation": "normative",
+              "source": "ГЭСН 05-01-011-01"
+            }
           ],
-          "scene_cues": ["sheet_pile"]
+          "scene_cues": [
+            "sheet_pile"
+          ]
         }
       ],
-      "unexpected": [{"class": "paver", "note": "гипотеза"}],
+      "unexpected": [
+        {
+          "class": "paver",
+          "note": "гипотеза"
+        }
+      ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.7",
       "stage_name": "Земляные работы: обратная засыпка, планировка, уплотнение",
@@ -172,21 +376,45 @@
         {
           "name": "засыпка и уплотнение",
           "required": [
-            {"class": "bulldozer", "min": 1, "obligation": "normative", "source": "ГЭСН 01-01-033-01, 01-01-036-01"}
+            {
+              "class": "bulldozer",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-033-01, 01-01-036-01"
+            }
           ],
           "auxiliary": [
-            {"class": "roller", "obligation": "normative", "source": "ГЭСН 01-02-001-01"},
-            {"class": "grader", "obligation": "normative", "source": "ГЭСН 01-01-036-01"},
-            {"class": "excavator_crawler", "obligation": "auxiliary"},
-            {"class": "dump_truck", "obligation": "logical", "note": "завоз грунта"}
+            {
+              "class": "roller",
+              "obligation": "normative",
+              "source": "ГЭСН 01-02-001-01"
+            },
+            {
+              "class": "grader",
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-036-01"
+            },
+            {
+              "class": "excavator_crawler",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "dump_truck",
+              "obligation": "logical",
+              "note": "завоз грунта"
+            }
           ]
         }
       ],
-      "unexpected": [{"class": "drilling_rig", "note": "гипотеза: признак свайных работ"}],
+      "unexpected": [
+        {
+          "class": "drilling_rig",
+          "note": "гипотеза: признак свайных работ"
+        }
+      ],
       "checkable_by_equipment": true,
       "confidence": "medium"
     },
-
     {
       "stage_code": "12.3.4",
       "stage_name": "Устройство фундаментной плиты",
@@ -194,35 +422,74 @@
         {
           "name": "бетонирование автобетононасосом",
           "required": [
-            {"class": "concrete_pump", "min": 1, "obligation": "normative", "source": "ГЭСН 06-01-003-08"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "logical"}
+            {
+              "class": "concrete_pump",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 06-01-003-08"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
           "auxiliary": [
-            {"class": "truck_crane", "obligation": "auxiliary", "note": "опалубка, арматура"},
-            {"class": "flatbed_truck", "obligation": "auxiliary"}
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary",
+              "note": "опалубка, арматура"
+            },
+            {
+              "class": "flatbed_truck",
+              "obligation": "auxiliary"
+            }
           ],
-          "scene_cues": ["rebar_cage", "formwork"]
+          "scene_cues": [
+            "rebar_cage",
+            "formwork"
+          ]
         },
         {
           "name": "бетонирование краном с бадьёй",
           "required": [
-            {"class": "tower_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 06-01-001-16, ТТК 4.01.01.63"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "logical"}
+            {
+              "class": "tower_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 06-01-001-16, ТТК 4.01.01.63"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
           "auxiliary": [
-            {"class": "crawler_crane", "obligation": "auxiliary"},
-            {"class": "truck_crane", "obligation": "auxiliary"}
+            {
+              "class": "crawler_crane",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            }
           ],
-          "scene_cues": ["rebar_cage", "formwork"]
+          "scene_cues": [
+            "rebar_cage",
+            "formwork"
+          ]
         }
       ],
       "unexpected": [
-        {"class": "drilling_rig", "note": "гипотеза: сваи должны быть завершены до плиты"}
+        {
+          "class": "drilling_rig",
+          "note": "гипотеза: сваи должны быть завершены до плиты"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.3.9",
       "stage_name": "Монолитные работы ниже отметки 0",
@@ -230,27 +497,65 @@
         {
           "name": "автобетононасос",
           "required": [
-            {"class": "concrete_pump", "min": 1, "obligation": "normative", "source": "ГЭСН 06-06-002-01, 06-05-002-01"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "logical"}
+            {
+              "class": "concrete_pump",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 06-06-002-01, 06-05-002-01"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
-          "auxiliary": [{"class": "truck_crane", "obligation": "auxiliary"}],
-          "scene_cues": ["formwork", "rebar_cage"]
+          "auxiliary": [
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            }
+          ],
+          "scene_cues": [
+            "formwork",
+            "rebar_cage"
+          ]
         },
         {
           "name": "башенный кран",
           "required": [
-            {"class": "tower_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 06-06-002-01"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "logical"}
+            {
+              "class": "tower_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 06-06-002-01"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
-          "auxiliary": [{"class": "concrete_pump", "obligation": "auxiliary"}],
-          "scene_cues": ["formwork", "rebar_cage"]
+          "auxiliary": [
+            {
+              "class": "concrete_pump",
+              "obligation": "auxiliary"
+            }
+          ],
+          "scene_cues": [
+            "formwork",
+            "rebar_cage"
+          ]
         }
       ],
-      "unexpected": [{"class": "paver", "note": "гипотеза"}],
+      "unexpected": [
+        {
+          "class": "paver",
+          "note": "гипотеза"
+        }
+      ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.4.28",
       "stage_name": "Монолитный каркас выше отметки 0",
@@ -258,25 +563,50 @@
         {
           "name": "башенный кран",
           "required": [
-            {"class": "tower_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 06-05-002-01, 06-08-001-01"},
-            {"class": "concrete_mixer", "min": 1, "obligation": "logical"}
+            {
+              "class": "tower_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 06-05-002-01, 06-08-001-01"
+            },
+            {
+              "class": "concrete_mixer",
+              "min": 1,
+              "obligation": "logical"
+            }
           ],
           "auxiliary": [
-            {"class": "concrete_pump", "obligation": "auxiliary"},
-            {"class": "truck_crane", "obligation": "auxiliary"},
-            {"class": "telehandler", "obligation": "auxiliary"}
+            {
+              "class": "concrete_pump",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "truck_crane",
+              "obligation": "auxiliary"
+            },
+            {
+              "class": "telehandler",
+              "obligation": "auxiliary"
+            }
           ],
-          "scene_cues": ["formwork"]
+          "scene_cues": [
+            "formwork"
+          ]
         }
       ],
       "unexpected": [
-        {"class": "drilling_rig", "note": "гипотеза: свайные работы к этому этапу завершены"},
-        {"class": "pile_driver", "note": "гипотеза"}
+        {
+          "class": "drilling_rig",
+          "note": "гипотеза: свайные работы к этому этапу завершены"
+        },
+        {
+          "class": "pile_driver",
+          "note": "гипотеза"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.4.14",
       "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
@@ -284,23 +614,45 @@
         {
           "name": "укладка асфальтобетона",
           "required": [
-            {"class": "paver", "min": 1, "obligation": "normative", "source": "ГЭСН 27-06-029-01"},
-            {"class": "roller", "min": 1, "obligation": "normative", "source": "ГЭСН 27-06-029-01"}
+            {
+              "class": "paver",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 27-06-029-01"
+            },
+            {
+              "class": "roller",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 27-06-029-01"
+            }
           ],
           "auxiliary": [
-            {"class": "dump_truck", "obligation": "logical", "note": "подвоз смеси"},
-            {"class": "wheel_loader", "obligation": "auxiliary"}
+            {
+              "class": "dump_truck",
+              "obligation": "logical",
+              "note": "подвоз смеси"
+            },
+            {
+              "class": "wheel_loader",
+              "obligation": "auxiliary"
+            }
           ]
         }
       ],
       "unexpected": [
-        {"class": "drilling_rig", "note": "гипотеза"},
-        {"class": "tower_crane", "note": "гипотеза"}
+        {
+          "class": "drilling_rig",
+          "note": "гипотеза"
+        },
+        {
+          "class": "tower_crane",
+          "note": "гипотеза"
+        }
       ],
       "checkable_by_equipment": true,
       "confidence": "high"
     },
-
     {
       "stage_code": "12.5.1",
       "stage_name": "Наружные инженерные сети",
@@ -308,21 +660,45 @@
         {
           "name": "траншея и укладка труб",
           "required": [
-            {"class": "excavator_crawler", "min": 1, "obligation": "normative", "source": "ГЭСН 01-01-022-05"},
-            {"class": "truck_crane", "min": 1, "obligation": "normative", "source": "ГЭСН 22-01-021-01, 22-04-001-01"}
+            {
+              "class": "excavator_crawler",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-022-05"
+            },
+            {
+              "class": "truck_crane",
+              "min": 1,
+              "obligation": "normative",
+              "source": "ГЭСН 22-01-021-01, 22-04-001-01"
+            }
           ],
           "auxiliary": [
-            {"class": "backhoe_loader", "obligation": "normative", "source": "ГЭСН 01-01-022-05"},
-            {"class": "dump_truck", "obligation": "logical"},
-            {"class": "flatbed_truck", "obligation": "auxiliary"}
+            {
+              "class": "backhoe_loader",
+              "obligation": "normative",
+              "source": "ГЭСН 01-01-022-05"
+            },
+            {
+              "class": "dump_truck",
+              "obligation": "logical"
+            },
+            {
+              "class": "flatbed_truck",
+              "obligation": "auxiliary"
+            }
           ]
         }
       ],
-      "unexpected": [{"class": "tower_crane", "note": "гипотеза"}],
+      "unexpected": [
+        {
+          "class": "tower_crane",
+          "note": "гипотеза"
+        }
+      ],
       "checkable_by_equipment": true,
       "confidence": "medium"
     },
-
     {
       "stage_code": "12.4.31",
       "stage_name": "Кровля",
@@ -332,7 +708,6 @@
       "confidence": "high",
       "note": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике»."
     },
-
     {
       "stage_code": "12.4.11",
       "stage_name": "Фасад",
@@ -342,7 +717,6 @@
       "confidence": "high",
       "note": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы."
     },
-
     {
       "stage_code": "12.3.10",
       "stage_name": "Гидроизоляция",
