@@ -12,6 +12,8 @@ paths:
 
 **Request flow.** router → service (business logic, raises `AppError(message, status_code)`) → repository (SQLAlchemy queries). The service owns the `AsyncSession` and calls `commit()`; repositories only stage changes.
 
+**Repositories.** Every domain repository MUST inherit from `BaseRepository[Model]` (`app/core/repository.py`) and set the `model` class attribute. Base provides the common queries (`list`, `get`, `get_by`, `list_by`, `add`, `delete`, `delete_by`). Add only domain-specific queries in the subclass, or override a base method when the model needs different behaviour (e.g. custom ordering).
+
 **Error handling.** Services raise `AppError` from `app/plugins/exceptions.py`; a single handler (registered in `main.py`) maps it to a JSON `{"detail": ...}` response.
 
 **Adapters.** In case using some external service, like storage (ex. Amazon S3), kv database (ex. Redis), use pattern Adapter with Protocol class and determined or simple implementation inherited from that
