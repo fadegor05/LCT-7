@@ -1,0 +1,23 @@
+.env
+acme.json
+deploy/config/traefik/certs/acme.json
+
+# Python
+__pycache__/
+*.pyc
+.venv
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+uv.lock
+
+# Node
+node_modules/
+dist/
+.pnpm-store/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

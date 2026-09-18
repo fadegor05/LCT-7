@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16.6
+    environment:
+      POSTGRES_DB: '${POSTGRES__DB}'
+      POSTGRES_USER: '${POSTGRES__USER}'
+      POSTGRES_PASSWORD: '${POSTGRES__PASSWORD}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES__DB} -U $${POSTGRES__USER}']
+      interval: 5s
+      timeout: 10s
+      retries: 20
+    env_file: .env
+    networks:
+      - web
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  traefik:
+    container_name: traefik
+    image: traefik:v3.6.1
+    restart: unless-stopped
+    env_file: .env
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./deploy/config/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./deploy/config/traefik/certs:/certs
+    networks:
+      - web
+
+volumes:
+  postgres_data:
