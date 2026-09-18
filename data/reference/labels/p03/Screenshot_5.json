@@ -1,0 +1,186 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          592.9,
+          97.3
+        ],
+        [
+          911.6,
+          97.3
+        ],
+        [
+          911.6,
+          384.4
+        ],
+        [
+          592.9,
+          384.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          545.1,
+          72.8
+        ],
+        [
+          683.5,
+          72.8
+        ],
+        [
+          683.5,
+          401.1
+        ],
+        [
+          545.1,
+          401.1
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          441.2746913580247,
+          229.01234567901233
+        ],
+        [
+          502.07716049382714,
+          229.01234567901233
+        ],
+        [
+          502.07716049382714,
+          412.96296296296293
+        ],
+        [
+          441.2746913580247,
+          412.96296296296293
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          409.175925925926,
+          251.54320987654316
+        ],
+        [
+          451.15123456790127,
+          251.54320987654316
+        ],
+        [
+          451.15123456790127,
+          412.3456790123456
+        ],
+        [
+          409.175925925926,
+          412.3456790123456
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          524.6080246913581,
+          359.87654320987644
+        ],
+        [
+          577.0771604938271,
+          359.87654320987644
+        ],
+        [
+          577.0771604938271,
+          407.716049382716
+        ],
+        [
+          524.6080246913581,
+          407.716049382716
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          892.7835051546392,
+          0.0
+        ],
+        [
+          1151.0,
+          0.0
+        ],
+        [
+          1151.0,
+          455.8419243986254
+        ],
+        [
+          892.7835051546392,
+          455.8419243986254
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_5.png",
+  "imageData": null,
+  "imageHeight": 813,
+  "imageWidth": 1179,
+  "description": ""
+}

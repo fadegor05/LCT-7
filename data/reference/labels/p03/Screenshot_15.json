@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          1107.4,
+          0.0
+        ],
+        [
+          1159.5,
+          0.0
+        ],
+        [
+          1159.5,
+          349.0
+        ],
+        [
+          1107.4,
+          349.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          207.03030303030306,
+          320.71212121212125
+        ],
+        [
+          396.1212121212121,
+          320.71212121212125
+        ],
+        [
+          396.1212121212121,
+          421.3181818181818
+        ],
+        [
+          207.03030303030306,
+          421.3181818181818
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "flatbed_truck",
+      "score": null,
+      "points": [
+        [
+          643.3939393939394,
+          288.5909090909091
+        ],
+        [
+          1057.939393939394,
+          288.5909090909091
+        ],
+        [
+          1057.939393939394,
+          485.56060606060595
+        ],
+        [
+          643.3939393939394,
+          485.56060606060595
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_15.png",
+  "imageData": null,
+  "imageHeight": 809,
+  "imageWidth": 1218,
+  "description": ""
+}

@@ -1,0 +1,2 @@
+drilling_rig
+truck_crane

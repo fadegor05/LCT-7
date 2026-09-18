@@ -1,0 +1,41 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          519.1,
+          0.0
+        ],
+        [
+          731.5,
+          0.0
+        ],
+        [
+          731.5,
+          463.1
+        ],
+        [
+          519.1,
+          463.1
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_6.png",
+  "imageData": null,
+  "imageHeight": 809,
+  "imageWidth": 1219,
+  "description": ""
+}

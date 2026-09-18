@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          190.3,
+          0.0
+        ],
+        [
+          684.0,
+          0.0
+        ],
+        [
+          684.0,
+          414.0
+        ],
+        [
+          190.3,
+          414.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          603.3,
+          218.0
+        ],
+        [
+          635.5,
+          218.0
+        ],
+        [
+          635.5,
+          440.7
+        ],
+        [
+          603.3,
+          440.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          547.5,
+          221.2
+        ],
+        [
+          601.5,
+          221.2
+        ],
+        [
+          601.5,
+          423.0
+        ],
+        [
+          547.5,
+          423.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "wheel_loader",
+      "score": null,
+      "points": [
+        [
+          585.1060606060605,
+          431.51515151515133
+        ],
+        [
+          834.8030303030301,
+          431.51515151515133
+        ],
+        [
+          834.8030303030301,
+          730.9090909090909
+        ],
+        [
+          585.1060606060605,
+          730.9090909090909
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          116.62121212121214,
+          335.7575757575757
+        ],
+        [
+          527.530303030303,
+          335.7575757575757
+        ],
+        [
+          527.530303030303,
+          537.5757575757575
+        ],
+        [
+          116.62121212121214,
+          537.5757575757575
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          360.53092783505156,
+          158.59278350515456
+        ],
+        [
+          451.9398625429553,
+          158.59278350515456
+        ],
+        [
+          451.9398625429553,
+          212.201030927835
+        ],
+        [
+          360.53092783505156,
+          212.201030927835
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown;offsite=true",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          1012.0773195876288,
+          302.9226804123711
+        ],
+        [
+          1215.5137457044673,
+          302.9226804123711
+        ],
+        [
+          1215.5137457044673,
+          509.7955326460479
+        ],
+        [
+          1012.0773195876288,
+          509.7955326460479
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_13.png",
+  "imageData": null,
+  "imageHeight": 811,
+  "imageWidth": 1219,
+  "description": ""
+}

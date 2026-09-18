@@ -29,7 +29,12 @@ CLASSES = {
     "excavator_like", "crane_like", "drilling_like", "truck_like",
     "earthmoving", "loader_like",
 }
-ACTIVITY = {"activity=working", "activity=idle", "activity=unknown"}
+ATTRIBUTES = {
+    # ключ: допустимые значения. Описание рамки — это список пар key=value
+    # через «;»: activity=idle;offsite=true
+    "activity": {"working", "idle", "unknown"},
+    "offsite": {"true", "false"},
+}
 MIN_SIDE_PX = 8
 
 
@@ -63,9 +68,19 @@ def main() -> int:
 
             desc = (shape.get("description") or "").strip()
             act_counter[desc or "(пусто)"] += 1
-            if desc and desc not in ACTIVITY:
-                errors.append(f"{path.name} рамка {i}: непонятный атрибут «{desc}»")
-            elif not desc:
+            if desc:
+                for part in desc.split(";"):
+                    part = part.strip()
+                    if not part:
+                        continue
+                    key, _, value = part.partition("=")
+                    key, value = key.strip(), value.strip()
+                    if key not in ATTRIBUTES:
+                        errors.append(f"{path.name} рамка {i}: неизвестный атрибут «{key}» в «{desc}»")
+                    elif value not in ATTRIBUTES[key]:
+                        errors.append(f"{path.name} рамка {i}: у «{key}» значение «{value}» вне списка "
+                                      f"{sorted(ATTRIBUTES[key])}")
+            if not desc:
                 (errors if args.strict_activity else warnings).append(
                     f"{path.name} рамка {i}: не заполнен атрибут активности")
 
