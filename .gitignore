@@ -1,36 +1,26 @@
-# Исходные и промежуточные данные не версионируем.
-# data/processed и data/reference остаются в git — это небольшие текстовые артефакты.
-data/raw/
-data/interim/
-data/external/
-
-# Логи вспомогательных инструментов
-research/.codex*.log
-research/.agy*
-research/*.err
-
-# Питон
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.ipynb_checkpoints/
-
-# Учётные данные: cookies.json — эквивалент пароля к сессии JupyterHub
-cookies.json
-kaggle.json
-*.token
 .env
+acme.json
+deploy/config/traefik/certs/acme.json
 
-# Веса и архивы
-*.pt
-*.ts
-*.onnx.data
-*.onnx
-*.zip
+# Claude Code: делимся общим .claude/settings.json, личные оверрайды — нет
+.claude/settings.local.json
+.vite
+# Python
+__pycache__/
+*.pyc
+.venv
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+uv.lock
 
-# ОС и IDE
-Thumbs.db
-.DS_Store
+# Node
+node_modules/
+dist/
+.pnpm-store/
+
+# IDE / OS
 .idea/
 .vscode/
+*.iml
+.DS_Store

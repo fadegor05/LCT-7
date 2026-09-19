@@ -1,0 +1,36 @@
+# Исходные и промежуточные данные не версионируем.
+# data/processed и data/reference остаются в git — это небольшие текстовые артефакты.
+data/raw/
+data/interim/
+data/external/
+
+# Логи вспомогательных инструментов
+research/.codex*.log
+research/.agy*
+research/*.err
+
+# Питон
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Учётные данные: cookies.json — эквивалент пароля к сессии JupyterHub
+cookies.json
+kaggle.json
+*.token
+.env
+
+# Веса и архивы
+*.pt
+*.ts
+*.onnx.data
+*.onnx
+*.zip
+
+# ОС и IDE
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/

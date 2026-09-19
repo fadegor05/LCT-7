@@ -1,0 +1,35 @@
+services:
+  backend:
+    image: ${REGISTRY}/backend:${BACKEND_TAG:-latest}
+    build: ./backend
+    env_file: .env
+    networks:
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/api`)
+      - traefik.http.routers.backend.priority=20
+      - traefik.http.services.backend.loadbalancer.server.port=8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    container_name: frontend
+    init: true
+    image: ${REGISTRY}/frontend:${FRONTEND_TAG:-latest}
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - traefik.enable=true
+      # priority=1 — фронт ловит всё, что не перехватил backend (/api, priority=20)
+      - traefik.http.routers.frontend.rule=Host(`${DOMAIN:-localhost}`)
+      - traefik.http.routers.frontend.priority=1
+
+networks:
+  web:
+    driver: bridge

@@ -1,0 +1,35 @@
+[project]
+name = "lct7-backend"
+version = "0.1.0"
+description = "LCT-7 backend (FastAPI + Dishka + Granian)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "granian[reload]>=1.6",
+    "dishka>=1.4",
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "pydantic-settings>=2.5",
+    "pydantic[email]>=2.9",
+    "bcrypt>=4.2",
+    "alembic>=1.14",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.7",
+    "mypy>=1.13",
+]
+
+# Это приложение, а не библиотека — uv ставит только зависимости в окружение,
+# сам проект собирать/устанавливать не нужно (аналог того, что gradle run в Kotlin
+# не публикует артефакт). Исходники доступны через PYTHONPATH.
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

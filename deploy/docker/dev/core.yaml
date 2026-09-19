@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      target: build
+    # сначала накатываем миграции, затем Granian с --reload (следит за /app)
+    command: sh -c "alembic upgrade head && granian --interface asgi app.main:app --host 0.0.0.0 --port 8000 --reload"
+    environment:
+      API_PREFIX: /api
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+
+  frontend:
+    build:
+      target: build
+    environment:
+      - CI=true
+    command: sh -c "pnpm install && pnpm run dev -- --host --port 5173"
+    volumes:
+      - ./frontend:/app
+      # node_modules из образа не затираются bind-mount'ом исходников
+      - /app/node_modules
+    working_dir: /app
+    networks:
+      - web
+    labels:
+      # в dev фронт отдаёт Vite dev-server на 5173 (в prod — nginx:80)
+      - traefik.http.services.frontend.loadbalancer.server.port=5173
+
+  postgres:
+    ports:
+      - '${POSTGRES__PORT:-5432}:5432'
