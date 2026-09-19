@@ -1,0 +1,33 @@
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: web
+
+entryPoints:
+  web:
+    address: ':80'
+    forwardedHeaders:
+      insecure: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 600s
+  websecure:
+    address: ':443'
+    forwardedHeaders:
+      insecure: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 600s
+
+certificatesResolvers:
+  letencrypt:
+    acme:
+      email: change-me@example.com
+      storage: /certs/acme.json
+      caServer: https://acme-v02.api.letsencrypt.org/directory
+      httpChallenge:
+        entryPoint: web
