@@ -86,3 +86,9 @@ uv sync
 granian --interface asgi app.main:app --reload   # нужен доступный PostgreSQL
 ```
 ```
+
+## Лицензия
+
+[AGPL-3.0](LICENSE). Выбрана из-за ML-части: модели Ultralytics (YOLOE, YOLO26)
+распространяются под AGPL-3.0, включая обученные веса. Закрытое внедрение с этими
+моделями потребует коммерческой лицензии Ultralytics. Обоснование — `ml/DECISIONS.md`, D-001.
