@@ -1,0 +1,28 @@
+# Прод за туннелем (TUNA) — альтернатива prod/core.yaml, а не добавка к нему.
+# Накладывается поверх common/*.yaml вместо него: `make deploy-tunnel`.
+#
+# Отличия от prod/core.yaml:
+#   * TLS терминирует туннель, внутрь приходит обычный HTTP на :80 —
+#     ни websecure, ни certresolver здесь не нужны (Let's Encrypt через
+#     httpChallenge за туннелем всё равно не пройдёт);
+#   * правила роутинга без Host(...): туннель может подменить Host-заголовок,
+#     а на этом хосте всё равно живёт одно приложение. Разводим только по пути:
+#     /api -> backend (priority 20), остальное -> frontend (priority 1).
+services:
+  backend:
+    mem_limit: 512m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.rule=PathPrefix(`/api`)
+      - traefik.http.routers.backend.priority=20
+      - traefik.http.routers.backend.entrypoints=web
+      - traefik.http.services.backend.loadbalancer.server.port=8000
+
+  frontend:
+    mem_limit: 64m
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.frontend.rule=PathPrefix(`/`)
+      - traefik.http.routers.frontend.priority=1
+      - traefik.http.routers.frontend.entrypoints=web
+      - traefik.http.services.frontend.loadbalancer.server.port=80

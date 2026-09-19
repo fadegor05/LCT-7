@@ -1,0 +1,214 @@
+# Проверки на каждый PR и на push в main. Ничего никуда не публикует —
+# публикация образов и деплой живут в cd.yml.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Новый push в ту же ветку отменяет предыдущий прогон.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Версии пинуем тут, чтобы CI и Dockerfile не разъезжались.
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.18.0'
+
+jobs:
+  backend-lint:
+    name: backend · ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/pyproject.toml
+
+      # Ровно то же, что `make check` локально и в pre-commit.
+      - name: make check
+        run: make check
+
+  backend-types:
+    name: backend · mypy (информативно)
+    runs-on: ubuntu-latest
+    # Код пока не аннотирован целиком: job показывает ошибки, но не красит CI.
+    # Убрать continue-on-error, когда mypy станет зелёным на постоянной основе.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/pyproject.toml
+
+      - name: mypy
+        working-directory: backend
+        run: uv run mypy app
+
+  backend-smoke:
+    name: backend · миграции + /api/health
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.6
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: app_user
+          POSTGRES_PASSWORD: supersecretpassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_user -d postgres"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 20
+    env:
+      # pydantic-settings: вложенные секции через двойное подчёркивание
+      POSTGRES__HOST: localhost
+      POSTGRES__PORT: '5432'
+      POSTGRES__USER: app_user
+      POSTGRES__PASSWORD: supersecretpassword
+      POSTGRES__DB: postgres
+      API_PREFIX: /api
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: backend/pyproject.toml
+
+      - name: Накатить миграции
+        working-directory: backend
+        run: uv run alembic upgrade head
+
+      - name: Поднять Granian и дождаться healthcheck
+        working-directory: backend
+        run: |
+          uv run granian --interface asgi app.main:app --host 127.0.0.1 --port 8000 &
+          echo $! > /tmp/granian.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health > /tmp/health.json; then
+              echo "ответ: $(cat /tmp/health.json)"
+              grep -q '"status":"ok"' /tmp/health.json && exit 0
+              echo "healthcheck ответил, но не 'ok'" && exit 1
+            fi
+            sleep 2
+          done
+          echo "бэкенд не поднялся за 60 с" && exit 1
+
+      - name: Остановить сервер
+        if: always()
+        run: kill "$(cat /tmp/granian.pid)" 2>/dev/null || true
+
+  frontend-build:
+    name: frontend · tsc + vite build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Установить зависимости
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # build = tsc (типы) && vite build (сборка) — см. frontend/package.json
+      - name: Сборка
+        working-directory: frontend
+        run: pnpm run build
+
+  ml-syntax:
+    name: ml · синтаксис скриптов
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # ml/ — исследовательские CLI-скрипты с тяжёлыми зависимостями (torch,
+      # ultralytics), ставить их в CI незачем. Проверяем хотя бы, что всё парсится.
+      - name: compileall
+        run: python -m compileall -q ml/tools ml/first_experiment.py
+
+  compose-config:
+    name: deploy · валидация compose-слоёв
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Подготовить .env
+        run: cp .env.dist .env
+
+      - name: dev-слой
+        run: |
+          docker compose --project-directory . \
+            --env-file ./.env --env-file ./deploy/versions.env \
+            -f deploy/docker/common/core.yaml \
+            -f deploy/docker/common/infra.yaml \
+            -f deploy/docker/dev/core.yaml \
+            config -q
+
+      - name: prod-слой
+        run: |
+          docker compose --project-directory . \
+            --env-file ./.env --env-file ./deploy/versions.env \
+            -f deploy/docker/common/core.yaml \
+            -f deploy/docker/common/infra.yaml \
+            -f deploy/docker/prod/core.yaml \
+            config -q
+
+      - name: prod-слой за туннелем
+        run: |
+          docker compose --project-directory . \
+            --env-file ./.env --env-file ./deploy/versions.env \
+            -f deploy/docker/common/core.yaml \
+            -f deploy/docker/common/infra.yaml \
+            -f deploy/docker/prod/tunnel.yaml \
+            config -q
+
+  docker-build:
+    name: docker · ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Только сборка, без push: публикация образов — задача cd.yml.
+      - name: Собрать образ
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}

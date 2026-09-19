@@ -23,6 +23,7 @@ cp .env.dist .env   # first-time setup
 make dev            # local: build + bind-mount + hot-reload (backend --reload, Vite dev-server)
 make up             # prod images, no build
 make deploy         # pull prod images by tag (deploy/versions.env) + up
+make deploy-tunnel  # same, but for a host behind a tunnel (TLS terminated upstream)
 make down           # stop, remove orphans
 make logs           # follow logs
 make pretty         # backend: ruff format + ruff check --fix
