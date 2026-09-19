@@ -10,6 +10,10 @@ COMPOSE = docker compose \
 PROD = $(COMPOSE) \
 	-f $(DOCKER_FILES)/prod/core.yaml
 
+# Прод за туннелем TUNA: TLS на стороне туннеля, внутрь идёт HTTP (deploy/README.md)
+TUNNEL = $(COMPOSE) \
+	-f $(DOCKER_FILES)/prod/tunnel.yaml
+
 # Локальная разработка: локальный билд + hot-reload (bind-mount исходников)
 dev:
 	$(COMPOSE) \
@@ -23,6 +27,11 @@ up:
 deploy:
 	$(PROD) pull
 	$(PROD) up -d --no-build
+
+# То же, но для хоста за туннелем (xxprod.ru через TUNA)
+deploy-tunnel:
+	$(TUNNEL) pull
+	$(TUNNEL) up -d --no-build
 
 down:
 	$(COMPOSE) down --remove-orphans
@@ -38,4 +47,4 @@ pretty:
 check:
 	cd backend && uv run ruff check . && uv run ruff format --check .
 
-.PHONY: dev up deploy down logs pretty check
+.PHONY: dev up deploy deploy-tunnel down logs pretty check
