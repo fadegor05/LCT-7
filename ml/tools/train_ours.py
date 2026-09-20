@@ -35,6 +35,9 @@ def main():
     ap.add_argument("--imgsz", type=int, default=960)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--lr0", type=float, default=0.002, help="ниже обычного 0.01: дообучение, не обучение")
+    ap.add_argument("--workers", type=int, default=2,
+                    help="процессов загрузчика; на Windows каждый заново грузит torch, "
+                         "при 4+ падает WinError 1455 (мал файл подкачки)")
     ap.add_argument("--name", default="ours_mix")
     ap.add_argument("--project", type=Path, default=ML / "runs")
     args = ap.parse_args()
@@ -64,7 +67,7 @@ def main():
     model = YOLO(args.weights)
     model.train(data=str(data_yaml), epochs=args.epochs, imgsz=args.imgsz, batch=args.batch,
                 lr0=args.lr0, project=str(args.project), name=args.name, seed=0,
-                patience=10, workers=4, exist_ok=True, plots=False, cache=False)
+                patience=15, workers=args.workers, exist_ok=True, plots=False, cache=False)
     print(f"веса: {args.project / args.name / 'weights/best.pt'}")
     return 0
 

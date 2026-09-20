@@ -1,0 +1,70 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          689.8,
+          453.4
+        ],
+        [
+          969.2,
+          453.4
+        ],
+        [
+          969.2,
+          749.4
+        ],
+        [
+          689.8,
+          749.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          363.3,
+          0.7
+        ],
+        [
+          420.6,
+          0.7
+        ],
+        [
+          420.6,
+          444.4
+        ],
+        [
+          363.3,
+          444.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_94.png",
+  "imageData": null,
+  "imageHeight": 814,
+  "imageWidth": 1215,
+  "description": ""
+}

@@ -1,0 +1,273 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          463.4,
+          589.0
+        ],
+        [
+          641.3,
+          589.0
+        ],
+        [
+          641.3,
+          676.7
+        ],
+        [
+          463.4,
+          676.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          882.3,
+          479.6
+        ],
+        [
+          937.8,
+          479.6
+        ],
+        [
+          937.8,
+          525.4
+        ],
+        [
+          882.3,
+          525.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          340.4,
+          531.3
+        ],
+        [
+          466.2,
+          531.3
+        ],
+        [
+          466.2,
+          651.7
+        ],
+        [
+          340.4,
+          651.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          361.2,
+          342.1
+        ],
+        [
+          496.6,
+          342.1
+        ],
+        [
+          496.6,
+          560.3
+        ],
+        [
+          361.2,
+          560.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          774.5,
+          350.6
+        ],
+        [
+          894.5,
+          350.6
+        ],
+        [
+          894.5,
+          593.5
+        ],
+        [
+          774.5,
+          593.5
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          154.6,
+          243.7
+        ],
+        [
+          316.7,
+          243.7
+        ],
+        [
+          316.7,
+          645.3
+        ],
+        [
+          154.6,
+          645.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          210.829268292683,
+          269.6666666666667
+        ],
+        [
+          316.92682926829275,
+          269.6666666666667
+        ],
+        [
+          316.92682926829275,
+          545.6829268292682
+        ],
+        [
+          210.829268292683,
+          545.6829268292682
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "flatbed_truck",
+      "score": null,
+      "points": [
+        [
+          514.8943089430894,
+          525.7642276422763
+        ],
+        [
+          700.2601626016259,
+          525.7642276422763
+        ],
+        [
+          700.2601626016259,
+          578.609756097561
+        ],
+        [
+          514.8943089430894,
+          578.609756097561
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          750.3072417465388,
+          442.45686900958464
+        ],
+        [
+          786.7289669861553,
+          442.45686900958464
+        ],
+        [
+          786.7289669861553,
+          470.9978700745473
+        ],
+        [
+          750.3072417465388,
+          470.9978700745473
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_27.png",
+  "imageData": null,
+  "imageHeight": 806,
+  "imageWidth": 1143,
+  "description": ""
+}

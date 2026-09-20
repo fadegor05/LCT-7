@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          3.6,
+          100.4
+        ],
+        [
+          399.7,
+          100.4
+        ],
+        [
+          399.7,
+          568.8
+        ],
+        [
+          3.6,
+          568.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          802.7777777777777,
+          25.944444444444404
+        ],
+        [
+          1095.5555555555554,
+          25.944444444444404
+        ],
+        [
+          1095.5555555555554,
+          692.611111111111
+        ],
+        [
+          802.7777777777777,
+          692.611111111111
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "pile_driver",
+      "score": null,
+      "points": [
+        [
+          460.0,
+          114.5555555555555
+        ],
+        [
+          785.0,
+          114.5555555555555
+        ],
+        [
+          785.0,
+          753.4444444444443
+        ],
+        [
+          460.0,
+          753.4444444444443
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_84.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1215,
+  "description": ""
+}

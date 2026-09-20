@@ -1,0 +1,41 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          505.6,
+          259.3
+        ],
+        [
+          1186.3288288288288,
+          259.3
+        ],
+        [
+          1186.3288288288288,
+          559.7597597597596
+        ],
+        [
+          505.6,
+          559.7597597597596
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_78.png",
+  "imageData": null,
+  "imageHeight": 803,
+  "imageWidth": 1215,
+  "description": ""
+}

@@ -1,0 +1,41 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          537.4,
+          251.6
+        ],
+        [
+          755.7,
+          251.6
+        ],
+        [
+          755.7,
+          541.3
+        ],
+        [
+          537.4,
+          541.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_68.png",
+  "imageData": null,
+  "imageHeight": 807,
+  "imageWidth": 1077,
+  "description": ""
+}

@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          743.0987654320987,
+          218.05555555555554
+        ],
+        [
+          926.1234567901233,
+          218.05555555555554
+        ],
+        [
+          926.1234567901233,
+          322.68518518518516
+        ],
+        [
+          743.0987654320987,
+          322.68518518518516
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          615.9382716049382,
+          268.6728395061728
+        ],
+        [
+          839.395061728395,
+          268.6728395061728
+        ],
+        [
+          839.395061728395,
+          409.8
+        ],
+        [
+          615.9382716049382,
+          409.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          227.40893470790374,
+          278.35051546391753
+        ],
+        [
+          655.5876288659794,
+          278.35051546391753
+        ],
+        [
+          655.5876288659794,
+          575.9450171821305
+        ],
+        [
+          227.40893470790374,
+          575.9450171821305
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          279.2203389830509,
+          232.5593220338983
+        ],
+        [
+          535.1525423728814,
+          232.5593220338983
+        ],
+        [
+          535.1525423728814,
+          374.367231638418
+        ],
+        [
+          279.2203389830509,
+          374.367231638418
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          440.2372881355933,
+          198.9435028248587
+        ],
+        [
+          576.9604519774011,
+          198.9435028248587
+        ],
+        [
+          576.9604519774011,
+          276.06214689265533
+        ],
+        [
+          440.2372881355933,
+          276.06214689265533
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          622.0767888307154,
+          622.7303664921467
+        ],
+        [
+          670.2443280977311,
+          622.7303664921467
+        ],
+        [
+          670.2443280977311,
+          661.2993019197207
+        ],
+        [
+          622.0767888307154,
+          661.2993019197207
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "flatbed_truck",
+      "score": null,
+      "points": [
+        [
+          20.83333333333333,
+          570.2380952380952
+        ],
+        [
+          58.630952380952365,
+          570.2380952380952
+        ],
+        [
+          58.630952380952365,
+          601.190476190476
+        ],
+        [
+          20.83333333333333,
+          601.190476190476
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_17.png",
+  "imageData": null,
+  "imageHeight": 813,
+  "imageWidth": 1222,
+  "description": ""
+}
