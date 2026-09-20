@@ -4,12 +4,16 @@
     "params": {
       "source": [
         "data\\reference\\labels\\p03",
-        "data\\reference\\labels\\p08"
+        "data\\reference\\labels\\p05",
+        "data\\reference\\labels\\p07",
+        "data\\reference\\labels\\p08",
+        "data\\reference\\labels\\p09",
+        "data\\reference\\labels\\p11"
       ],
       "keep_offsite": false
     },
-    "created": "2026-09-18T20:03:24",
-    "images": 21
+    "created": "2026-09-20T15:55:06",
+    "images": 45
   },
   "images": [
     {
@@ -931,6 +935,414 @@
             0.2932,
             0.166,
             0.4567
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_18.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1079,
+            0.402,
+            0.1955,
+            0.4582
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3199,
+            0.3726,
+            0.4443,
+            0.4751
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7124,
+            0.0752,
+            0.8597,
+            0.4558
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8085,
+            0.1574,
+            0.9264,
+            0.5455
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1295,
+            0.3389,
+            0.2098,
+            0.4246
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5086,
+            0.4045,
+            0.6036,
+            0.4709
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6356,
+            0.4565,
+            0.6887,
+            0.5311
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_19.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0685,
+            0.4985,
+            0.1921,
+            0.5998
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5779,
+            0.6374,
+            0.8373,
+            0.816
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6921,
+            -0.0003,
+            0.8964,
+            0.6394
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3916,
+            0.0261,
+            0.5871,
+            0.8176
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_20.png",
+      "width": 1218,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5925,
+            0.5964,
+            0.6577,
+            0.6974
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5803,
+            0.4478,
+            0.669,
+            0.6966
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5478,
+            0.5254,
+            0.5956,
+            0.5767
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1846,
+            0.4264,
+            0.2787,
+            0.5724
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3517,
+            0.6334,
+            0.3731,
+            0.6789
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7981,
+            0.4068,
+            0.8776,
+            0.6865
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0453,
+            0.2969,
+            0.1559,
+            0.7684
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6814,
+            0.4739,
+            0.7326,
+            0.5025
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_22.png",
+      "width": 1209,
+      "height": 800,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3566,
+            0.0521,
+            0.6203,
+            0.8217
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_23.png",
+      "width": 1215,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2565,
+            0.1663,
+            0.673,
+            0.6633
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_24.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1675,
+            0.0,
+            0.5653,
+            0.7264
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_25.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.2591,
+            0.2685,
+            0.5452,
+            0.6105
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_26.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6311,
+            0.0412,
+            0.7974,
+            0.6502
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2167,
+            0.3101,
+            0.319,
+            0.5317
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4736,
+            0.4704,
+            0.5636,
+            0.5393
           ],
           "activity": "unknown"
         }
@@ -1941,6 +2353,1698 @@
             0.9038
           ],
           "activity": "idle"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_42.png",
+      "width": 1079,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6592,
+            0.5222,
+            0.7441,
+            0.6141
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.222,
+            0.3325,
+            0.2869,
+            0.5794
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2778,
+            0.3059,
+            0.381,
+            0.6735
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.0006,
+            0.3513,
+            0.1855,
+            0.8464
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4194,
+            0.5738,
+            0.4954,
+            0.6248
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4269,
+            0.4667,
+            0.452,
+            0.5108
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8358,
+            0.5381,
+            0.8964,
+            0.6319
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2292,
+            0.5964,
+            0.2599,
+            0.6244
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_43.png",
+      "width": 1085,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.3389,
+            0.354,
+            0.3812,
+            0.5577
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.235,
+            0.3856,
+            0.273,
+            0.5429
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3476,
+            0.5465,
+            0.4238,
+            0.6448
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.4233,
+            0.7278,
+            0.5558,
+            0.8358
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6508,
+            0.3406,
+            0.7109,
+            0.5554
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4217,
+            0.5448,
+            0.4691,
+            0.5813
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_44.png",
+      "width": 1087,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.8603,
+            0.4787,
+            0.9855,
+            0.9484
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.6807,
+            0.3722,
+            0.7344,
+            0.7487
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1164,
+            0.3566,
+            0.2725,
+            0.6859
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7366,
+            0.7897,
+            0.8448,
+            1.0002
+          ],
+          "activity": "idle"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7444,
+            0.5387,
+            0.8195,
+            0.6133
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.25,
+            0.5116,
+            0.2912,
+            0.5609
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6318,
+            0.6155,
+            0.6593,
+            0.6713
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_45.png",
+      "width": 1082,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7124,
+            0.3017,
+            0.8852,
+            0.9143
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.4257,
+            0.3363,
+            0.5586,
+            0.7453
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.12,
+            0.2411,
+            0.2354,
+            0.7378
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.6452,
+            0.0431,
+            0.7067
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.3663,
+            0.6944,
+            0.6615,
+            0.8908
+          ],
+          "activity": "idle"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0019,
+            0.5542,
+            0.042,
+            0.6457
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0981,
+            0.5284,
+            0.1705,
+            0.6176
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_46.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3373,
+            0.0,
+            0.6477,
+            0.6757
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.853,
+            0.7463,
+            0.9824,
+            0.843
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9578,
+            0.4125,
+            1.0,
+            0.4836
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1927,
+            0.3922,
+            0.2392,
+            0.4327
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_49.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8496,
+            0.0,
+            0.9247,
+            0.4036
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2399,
+            0.1235,
+            0.3452,
+            0.3507
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.4695,
+            0.3674,
+            0.611,
+            0.893
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6901,
+            0.6334,
+            0.7479,
+            0.8269
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6365,
+            0.6028,
+            0.7513,
+            0.71
+          ],
+          "activity": "working"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4236,
+            0.0345,
+            0.6766,
+            0.5673
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.417,
+            0.6735,
+            0.4768,
+            0.7698
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0926,
+            0.3205,
+            0.1364,
+            0.3481
+          ],
+          "activity": "working"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.1369,
+            0.3344,
+            0.156,
+            0.3548
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.152,
+            0.302,
+            0.1875,
+            0.3605
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7279,
+            0.2099,
+            0.8004,
+            0.4199
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6088,
+            0.8968,
+            0.7571,
+            0.9988
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_50.png",
+      "width": 1081,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4849,
+            0.5704,
+            0.5689,
+            0.7381
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.1116,
+            0.0987,
+            0.547
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2962,
+            0.0,
+            0.3575,
+            0.157
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1425,
+            0.0039,
+            0.2193,
+            0.142
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5522,
+            0.388,
+            0.5778,
+            0.4202
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3741,
+            0.0178,
+            0.4097,
+            0.1325
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5276,
+            0.4237,
+            0.5574,
+            0.4783
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2918,
+            0.2468,
+            0.332,
+            0.2944
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.107,
+            -0.0011,
+            0.1577,
+            0.0761
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.6152,
+            0.0466,
+            0.7677
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4633,
+            0.299,
+            0.5328,
+            0.4406
+          ],
+          "activity": "idle"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6772,
+            0.1888,
+            0.7317,
+            0.2229
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0012,
+            0.0344,
+            0.1954,
+            0.4637
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_51.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7783,
+            0.1222,
+            0.9088,
+            0.5657
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4085,
+            0.4653,
+            0.4685,
+            0.5146
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6966,
+            0.4353,
+            0.728,
+            0.477
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5006,
+            0.4226,
+            0.5355,
+            0.4752
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7542,
+            0.3035,
+            0.793,
+            0.4848
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.524,
+            0.4468,
+            0.5936,
+            0.5663
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.4776,
+            0.5359,
+            0.5053,
+            0.5825
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.488,
+            0.5107,
+            0.5232,
+            0.5441
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_52.png",
+      "width": 1086,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6638,
+            0.5134,
+            0.7022,
+            0.5643
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6675,
+            0.2516,
+            0.7053,
+            0.3111
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3552,
+            0.2327,
+            0.5275,
+            0.5237
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9442,
+            0.5771,
+            0.9998,
+            0.633
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6598,
+            0.3586,
+            0.7004,
+            0.4204
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.5603,
+            0.4301,
+            0.6291,
+            0.4952
+          ],
+          "activity": "idle"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.696,
+            0.3396,
+            0.722,
+            0.4148
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_53.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5928,
+            0.7437,
+            0.6362,
+            0.8511
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4598,
+            0.4318,
+            0.4828,
+            0.4717
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6231,
+            0.5678,
+            0.6749,
+            0.6364
+          ],
+          "activity": "working"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8594,
+            0.2825,
+            0.8962,
+            0.3248
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6785,
+            0.3804,
+            0.8037,
+            0.5035
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9812,
+            0.2935,
+            0.9998,
+            0.3246
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5693,
+            0.222,
+            0.6785,
+            0.4569
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1537,
+            0.3195,
+            0.2181,
+            0.4042
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0807,
+            0.1952,
+            0.1435,
+            0.3698
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1018,
+            0.6307,
+            0.1508,
+            0.7044
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1201,
+            0.4313,
+            0.173,
+            0.461
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1773,
+            0.4236,
+            0.2201,
+            0.4506
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4802,
+            0.4375,
+            0.5451,
+            0.4745
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2548,
+            0.3818,
+            0.2711,
+            0.3985
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.2419,
+            0.3561,
+            0.2661,
+            0.3798
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3708,
+            0.3629,
+            0.4019,
+            0.4067
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7594,
+            0.2981,
+            0.785,
+            0.3293
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_54.png",
+      "width": 1085,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.4589,
+            0.8041,
+            0.5081,
+            0.8742
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5469,
+            0.0664,
+            0.6998,
+            0.5043
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0782,
+            0.085,
+            0.4874,
+            0.5833
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2483,
+            0.8665,
+            0.419,
+            0.9991
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4435,
+            0.485,
+            0.4863,
+            0.5195
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2872,
+            0.2494,
+            0.3645,
+            0.513
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_55.png",
+      "width": 1083,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7243,
+            0.0726,
+            0.8197,
+            0.3587
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.501,
+            0.6824,
+            0.6454,
+            0.9036
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.434,
+            0.7104,
+            0.642,
+            0.9973
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8746,
+            0.1979,
+            0.9852,
+            0.2787
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1054,
+            0.0288,
+            0.1488,
+            0.3221
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_56.png",
+      "width": 1081,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2203,
+            0.6609,
+            0.2873,
+            0.9213
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.0331,
+            0.4318,
+            0.0935,
+            0.5049
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0363,
+            0.7609,
+            0.1317,
+            0.9253
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.144,
+            0.0,
+            0.1808,
+            0.1965
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3032,
+            0.1801,
+            0.3471,
+            0.2143
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.9477,
+            0.3523,
+            1.0,
+            0.4347
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0002,
+            0.34,
+            0.1018,
+            0.4414
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.439,
+            0.0,
+            0.4603,
+            0.2472
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_57.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.2491,
+            0.6817,
+            0.435,
+            0.9103
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0501,
+            0.5286,
+            0.146,
+            0.6405
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3994,
+            0.552,
+            0.6472,
+            0.7381
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0915,
+            0.3005,
+            0.1321,
+            0.3307
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.7809,
+            0.3195,
+            0.8122,
+            0.3445
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3477,
+            0.4353,
+            0.4299,
+            0.5349
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3429,
+            0.3207,
+            0.4248,
+            0.3473
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_58.png",
+      "width": 1082,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5608,
+            0.0903,
+            0.6673,
+            0.5269
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0289,
+            0.2282,
+            0.4134,
+            0.5236
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8747,
+            0.3342,
+            0.9456,
+            0.5017
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2704,
+            0.1533,
+            0.7975,
+            0.7949
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4746,
+            0.1147,
+            0.4858,
+            0.2288
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.868,
+            0.6835,
+            0.9113,
+            0.7403
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.647,
+            0.6431,
+            0.7344,
+            0.7166
+          ],
+          "activity": "unknown"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_59.png",
+      "width": 1079,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1341,
+            0.2342,
+            0.2357,
+            0.5771
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3225,
+            0.0,
+            0.3786,
+            0.7956
+          ],
+          "activity": "unknown"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5201,
+            0.8215,
+            0.7972,
+            1.0
+          ],
+          "activity": "unknown"
         }
       ]
     }

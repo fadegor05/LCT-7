@@ -3,7 +3,7 @@
     "state": "data\\processed\\site_state_oracle.json",
     "rules": "configs\\rules.json",
     "schedule": "data\\reference\\schedule_demo.csv",
-    "created": "2026-09-18T20:03:36"
+    "created": "2026-09-20T15:55:06"
   },
   "sites": [
     {
@@ -159,8 +159,8 @@
     },
     {
       "site_id": "p05",
-      "as_of": null,
-      "observations": 0,
+      "as_of": "2026-03-02",
+      "observations": 3,
       "stages": [
         {
           "stage_code": "12.3.1",
@@ -169,8 +169,19 @@
             "start": "2025-11-01",
             "end": "2026-01-31"
           },
-          "status": "not_observed",
-          "basis": "по этой площадке нет ни одного наблюдения"
+          "status": "behind",
+          "delay_days": 30,
+          "evidence_dates": [
+            "2026-03-02"
+          ],
+          "matched_variant": "экскаватор с погрузкой в самосвалы",
+          "evidence_strength": "generic_full",
+          "observed_equipment": [
+            "excavator_crawler x3",
+            "dump_truck x1"
+          ],
+          "basis": "работы наблюдаются после плановой даты окончания",
+          "confidence": "medium"
         },
         {
           "stage_code": "12.3.2",
@@ -179,8 +190,20 @@
             "start": "2026-01-15",
             "end": "2026-02-28"
           },
-          "status": "not_observed",
-          "basis": "по этой площадке нет ни одного наблюдения"
+          "status": "behind",
+          "delay_days": 2,
+          "evidence_dates": [
+            "2026-02-02",
+            "2026-03-02"
+          ],
+          "matched_variant": "буронабивные, ковшовое бурение",
+          "evidence_strength": "specific",
+          "observed_equipment": [
+            "drilling_rig x1",
+            "crawler_crane x2"
+          ],
+          "basis": "работы наблюдаются после плановой даты окончания",
+          "confidence": "medium"
         },
         {
           "stage_code": "12.3.9",
@@ -189,11 +212,37 @@
             "start": "2026-02-15",
             "end": "2026-05-31"
           },
-          "status": "not_observed",
-          "basis": "по этой площадке нет ни одного наблюдения"
+          "status": "not_started",
+          "delay_days": 15,
+          "evidence_dates": [
+            "2026-03-02"
+          ],
+          "basis": "плановое начало прошло, техника этапа не наблюдается",
+          "confidence": "medium"
         }
       ],
-      "alerts": []
+      "alerts": [
+        {
+          "type": "stage_not_started",
+          "stage_code": "12.3.9",
+          "window": {
+            "from": "2026-02-15",
+            "to": "2026-03-02"
+          },
+          "expected": "concrete_pump, tower_crane",
+          "observed": "excavator_crawler x3, crawler_crane x2, drilling_rig x1, tower_crane x1, dump_truck x1",
+          "confidence": "medium",
+          "evidence": [
+            "Screenshot_20.png"
+          ],
+          "rules_fired": [
+            "12.3.9/автобетононасос"
+          ],
+          "explanation": "Плановое начало этапа «Монолитные работы ниже отметки 0» — 2026-02-15. На снимках от 2026-03-02 техника этапа не наблюдается; видно: excavator_crawler x3, crawler_crane x2, drilling_rig x1, tower_crane x1, dump_truck x1.",
+          "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+          "site_id": "p05"
+        }
+      ]
     },
     {
       "site_id": "p08",
