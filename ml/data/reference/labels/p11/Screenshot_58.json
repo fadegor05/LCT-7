@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          606.8,
+          73.0
+        ],
+        [
+          722.0,
+          73.0
+        ],
+        [
+          722.0,
+          425.7
+        ],
+        [
+          606.8,
+          425.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          31.226337448559708,
+          184.3497942386831
+        ],
+        [
+          447.275720164609,
+          184.3497942386831
+        ],
+        [
+          447.275720164609,
+          423.1
+        ],
+        [
+          31.226337448559708,
+          423.1
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          946.4,
+          270.0
+        ],
+        [
+          1023.1458842705786,
+          270.0
+        ],
+        [
+          1023.1458842705786,
+          405.3447432762836
+        ],
+        [
+          946.4,
+          405.3447432762836
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "pile_driver",
+      "score": null,
+      "points": [
+        [
+          292.5432098765432,
+          123.85596707818927
+        ],
+        [
+          862.9135802469136,
+          123.85596707818927
+        ],
+        [
+          862.9135802469136,
+          642.3
+        ],
+        [
+          292.5432098765432,
+          642.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          513.5,
+          92.7
+        ],
+        [
+          525.6,
+          92.7
+        ],
+        [
+          525.6,
+          184.9
+        ],
+        [
+          513.5,
+          184.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "telehandler",
+      "score": null,
+      "points": [
+        [
+          939.2,
+          552.3
+        ],
+        [
+          986.0,
+          552.3
+        ],
+        [
+          986.0,
+          598.2
+        ],
+        [
+          939.2,
+          598.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          700.059829059829,
+          519.6581196581196
+        ],
+        [
+          794.5897435897436,
+          519.6581196581196
+        ],
+        [
+          794.5897435897436,
+          578.974358974359
+        ],
+        [
+          700.059829059829,
+          578.974358974359
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_58.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1082,
+  "description": ""
+}

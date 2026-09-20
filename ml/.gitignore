@@ -34,3 +34,6 @@ Thumbs.db
 .DS_Store
 .idea/
 .vscode/
+
+# прогоны обучения: веса и логи не версионируем
+runs/

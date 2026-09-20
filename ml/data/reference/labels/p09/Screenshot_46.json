@@ -1,0 +1,128 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          366.0,
+          0.0
+        ],
+        [
+          702.8,
+          0.0
+        ],
+        [
+          702.8,
+          547.3
+        ],
+        [
+          366.0,
+          547.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          925.5,
+          604.5
+        ],
+        [
+          1065.9,
+          604.5
+        ],
+        [
+          1065.9,
+          682.8
+        ],
+        [
+          925.5,
+          682.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          1039.2,
+          334.1
+        ],
+        [
+          1085.0,
+          334.1
+        ],
+        [
+          1085.0,
+          391.7
+        ],
+        [
+          1039.2,
+          391.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          209.06411348336766,
+          317.68853425336476
+        ],
+        [
+          259.56411348336775,
+          317.68853425336476
+        ],
+        [
+          259.56411348336775,
+          350.4885342533648
+        ],
+        [
+          209.06411348336766,
+          350.4885342533648
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_46.png",
+  "imageData": null,
+  "imageHeight": 810,
+  "imageWidth": 1085,
+  "description": ""
+}

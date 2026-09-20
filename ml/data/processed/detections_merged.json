@@ -1,0 +1,5526 @@
+{
+  "meta": {
+    "model": "merge:yoloe+finetuned",
+    "params": {
+      "sources": {
+        "yoloe": {
+          "file": "data/processed/detections_1280.json",
+          "conf": 0.6
+        },
+        "finetuned": {
+          "file": "data/processed/detections_k_apoce.json",
+          "conf": 0.55
+        }
+      },
+      "conflict_iou": 0.5
+    },
+    "created": "2026-09-20T13:16:22",
+    "images": 100
+  },
+  "images": [
+    {
+      "image": "Screenshot_1.png",
+      "width": 1212,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 12.360599997919053,
+        "inference": 23.393400013446808,
+        "postprocess": 6.14269997458905
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_10.png",
+      "width": 1084,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.450600012205541,
+        "inference": 31.580800015944988,
+        "postprocess": 7.464900001650676
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.856,
+          "bbox": [
+            0.2282,
+            0.0405,
+            0.3731,
+            0.5868
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.796,
+          "bbox": [
+            0.0002,
+            0.0002,
+            0.1649,
+            0.3985
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.78,
+          "bbox": [
+            0.3523,
+            0.0051,
+            0.464,
+            0.4469
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.772,
+          "bbox": [
+            0.4077,
+            0.0141,
+            0.5867,
+            0.4849
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.754,
+          "bbox": [
+            0.5907,
+            0.1721,
+            0.7108,
+            0.396
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.742,
+          "bbox": [
+            0.9256,
+            0.0858,
+            1.0,
+            0.3623
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.64,
+          "bbox": [
+            0.3202,
+            0.127,
+            0.3409,
+            0.3655
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_100.png",
+      "width": 1220,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 4.7153999912552536,
+        "inference": 19.886900001438335,
+        "postprocess": 3.640800016000867
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.92,
+          "bbox": [
+            0.6817,
+            0.7252,
+            0.7463,
+            0.8614
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.868,
+          "bbox": [
+            0.8426,
+            0.5499,
+            0.9191,
+            0.6207
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower crane",
+          "class_ours": "tower_crane",
+          "conf": 0.726,
+          "bbox": [
+            0.4484,
+            0.0,
+            0.6596,
+            0.6299
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.613,
+          "bbox": [
+            0.7484,
+            0.4912,
+            0.8525,
+            0.6073
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_11.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 3.7238000077195466,
+        "inference": 22.633499989751726,
+        "postprocess": 12.816600006772205
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.841,
+          "bbox": [
+            0.5656,
+            0.2663,
+            0.6032,
+            0.5712
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.803,
+          "bbox": [
+            0.6092,
+            0.0477,
+            0.7455,
+            0.6855
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 0.626,
+          "bbox": [
+            0.2929,
+            0.5556,
+            0.4536,
+            0.6479
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_12.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.212600004393607,
+        "inference": 21.226499986369163,
+        "postprocess": 4.474899993510917
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.938,
+          "bbox": [
+            0.3655,
+            0.4098,
+            0.4657,
+            0.6438
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.923,
+          "bbox": [
+            0.4771,
+            0.513,
+            0.6668,
+            0.7966
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.891,
+          "bbox": [
+            0.0536,
+            0.5005,
+            0.1728,
+            0.5785
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.747,
+          "bbox": [
+            0.2155,
+            0.0889,
+            0.5252,
+            0.5472
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_13.png",
+      "width": 1219,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 4.515799984801561,
+        "inference": 24.722500005736947,
+        "postprocess": 6.416299991542473
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.923,
+          "bbox": [
+            0.1045,
+            0.4302,
+            0.433,
+            0.6472
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.908,
+          "bbox": [
+            0.8434,
+            0.3979,
+            1.0,
+            0.607
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.8,
+          "bbox": [
+            0.1559,
+            0.0007,
+            0.1818,
+            0.5095
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.751,
+          "bbox": [
+            0.4949,
+            0.2688,
+            0.5213,
+            0.5434
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.739,
+          "bbox": [
+            0.4491,
+            0.2727,
+            0.4934,
+            0.5216
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_14.png",
+      "width": 1216,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.005299997515976,
+        "inference": 19.120799988741055,
+        "postprocess": 4.1523000109009445
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.919,
+          "bbox": [
+            0.2548,
+            0.5091,
+            0.5031,
+            0.7801
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower crane",
+          "class_ours": "tower_crane",
+          "conf": 0.7,
+          "bbox": [
+            0.7319,
+            0.0008,
+            0.7739,
+            0.5264
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.655,
+          "bbox": [
+            0.5274,
+            0.2551,
+            0.7449,
+            0.4147
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_15.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 3.4657999931368977,
+        "inference": 19.051599985687062,
+        "postprocess": 3.684600000269711
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.934,
+          "bbox": [
+            0.5326,
+            0.3715,
+            0.8604,
+            0.6226
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.883,
+          "bbox": [
+            0.1551,
+            0.4181,
+            0.3176,
+            0.505
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.673,
+          "bbox": [
+            0.9095,
+            0.0005,
+            0.9525,
+            0.4361
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_16.png",
+      "width": 1219,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.345699999248609,
+        "inference": 18.275300011737272,
+        "postprocess": 4.064899985678494
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.928,
+          "bbox": [
+            0.4345,
+            0.4636,
+            0.7757,
+            0.7117
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.895,
+          "bbox": [
+            0.4135,
+            0.0,
+            0.6191,
+            0.1944
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.911,
+          "bbox": [
+            0.0001,
+            0.0299,
+            0.113,
+            0.1484
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_17.png",
+      "width": 1222,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 5.3990000160411,
+        "inference": 27.060499996878207,
+        "postprocess": 3.993499994976446
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_18.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.342500003986061,
+        "inference": 21.515000000363216,
+        "postprocess": 4.462799988687038
+      },
+      "detections": [
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.862,
+          "bbox": [
+            0.1079,
+            0.3304,
+            0.2288,
+            0.4582
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.841,
+          "bbox": [
+            0.3199,
+            0.3727,
+            0.4443,
+            0.4751
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.749,
+          "bbox": [
+            0.7124,
+            0.0753,
+            0.8318,
+            0.4238
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.704,
+          "bbox": [
+            0.8085,
+            0.1574,
+            0.9264,
+            0.5456
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_19.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 5.0657000101637095,
+        "inference": 23.270900011993945,
+        "postprocess": 5.319899995811284
+      },
+      "detections": [
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.934,
+          "bbox": [
+            0.0685,
+            0.4985,
+            0.1921,
+            0.5997
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.785,
+          "bbox": [
+            0.5779,
+            0.162,
+            0.8333,
+            0.816
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.766,
+          "bbox": [
+            0.6639,
+            0.0,
+            0.8449,
+            0.6449
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.717,
+          "bbox": [
+            0.6616,
+            0.2281,
+            0.8234,
+            0.7877
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.611,
+          "bbox": [
+            0.6624,
+            0.2389,
+            0.7709,
+            0.7408
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_2.png",
+      "width": 1213,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 4.967299988493323,
+        "inference": 24.971900013042614,
+        "postprocess": 3.612900007283315
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.857,
+          "bbox": [
+            0.7601,
+            0.4728,
+            0.8036,
+            0.6022
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.661,
+          "bbox": [
+            0.494,
+            0.513,
+            0.5288,
+            0.5551
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.622,
+          "bbox": [
+            0.3422,
+            0.4197,
+            0.4142,
+            0.6954
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_20.png",
+      "width": 1218,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 3.1257999944500625,
+        "inference": 18.117500003427267,
+        "postprocess": 5.2900000009685755
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.945,
+          "bbox": [
+            0.0388,
+            0.2792,
+            0.1502,
+            0.7025
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.819,
+          "bbox": [
+            0.5767,
+            0.5971,
+            0.6595,
+            0.7047
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.813,
+          "bbox": [
+            0.5444,
+            0.523,
+            0.597,
+            0.586
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_21.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 4.537300002994016,
+        "inference": 22.164299996802583,
+        "postprocess": 3.7409999931696802
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.633,
+          "bbox": [
+            0.5225,
+            0.0023,
+            0.6611,
+            0.8346
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.63,
+          "bbox": [
+            0.1047,
+            0.0002,
+            0.1376,
+            0.5895
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_22.png",
+      "width": 1209,
+      "height": 800,
+      "speed_ms": {
+        "preprocess": 3.197899990482256,
+        "inference": 18.07860002736561,
+        "postprocess": 4.578799998853356
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.966,
+          "bbox": [
+            0.4062,
+            0.0437,
+            0.5407,
+            0.7193
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.889,
+          "bbox": [
+            0.3566,
+            0.1592,
+            0.5217,
+            0.8218
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_23.png",
+      "width": 1215,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 4.747300001326948,
+        "inference": 21.699900011299178,
+        "postprocess": 3.4586999972816557
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.904,
+          "bbox": [
+            0.2713,
+            0.1732,
+            0.6669,
+            0.6645
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_24.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.6138000034261495,
+        "inference": 21.996499999659136,
+        "postprocess": 4.758400027640164
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.877,
+          "bbox": [
+            0.3319,
+            0.0,
+            0.4813,
+            0.5211
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.79,
+          "bbox": [
+            0.2478,
+            0.0074,
+            0.4847,
+            0.6445
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.753,
+          "bbox": [
+            0.6936,
+            0.0299,
+            0.7717,
+            0.5922
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.735,
+          "bbox": [
+            0.5411,
+            0.5693,
+            0.5577,
+            0.6401
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_25.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 4.604699992341921,
+        "inference": 21.957899996777996,
+        "postprocess": 3.176700003677979
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.927,
+          "bbox": [
+            0.3108,
+            0.2824,
+            0.5353,
+            0.6113
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_26.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 4.603999987011775,
+        "inference": 21.38669998385012,
+        "postprocess": 3.1661000102758408
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.929,
+          "bbox": [
+            0.2406,
+            0.3114,
+            0.3186,
+            0.5297
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.9,
+          "bbox": [
+            0.6311,
+            0.0412,
+            0.7974,
+            0.6502
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.894,
+          "bbox": [
+            0.6758,
+            0.0351,
+            0.7488,
+            0.5447
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.766,
+          "bbox": [
+            0.2661,
+            0.31,
+            0.319,
+            0.5035
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_27.png",
+      "width": 1143,
+      "height": 806,
+      "speed_ms": {
+        "preprocess": 5.072100000688806,
+        "inference": 38.181800016900524,
+        "postprocess": 4.806000011740252
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.891,
+          "bbox": [
+            0.2985,
+            0.6586,
+            0.4084,
+            0.8118
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.712,
+          "bbox": [
+            0.1455,
+            0.299,
+            0.2667,
+            0.7837
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.702,
+          "bbox": [
+            0.3182,
+            0.427,
+            0.4326,
+            0.6908
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_28.png",
+      "width": 1110,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 5.768800008809194,
+        "inference": 46.895200008293614,
+        "postprocess": 11.141499999212101
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.853,
+          "bbox": [
+            0.2548,
+            0.3272,
+            0.3485,
+            0.861
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.845,
+          "bbox": [
+            0.6841,
+            0.2447,
+            0.8274,
+            0.7549
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.797,
+          "bbox": [
+            0.5138,
+            0.3299,
+            0.6068,
+            0.6507
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.75,
+          "bbox": [
+            0.4214,
+            0.1578,
+            0.4574,
+            0.4131
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_29.png",
+      "width": 1163,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 5.505999986780807,
+        "inference": 19.13919998332858,
+        "postprocess": 7.133400009479374
+      },
+      "detections": [
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.838,
+          "bbox": [
+            0.3043,
+            0.0885,
+            0.4209,
+            0.8326
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.768,
+          "bbox": [
+            0.1928,
+            0.4628,
+            0.3196,
+            0.5871
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.822,
+          "bbox": [
+            0.8929,
+            0.2356,
+            0.9998,
+            0.5281
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_3.png",
+      "width": 1217,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 3.9495000091847032,
+        "inference": 20.051599974976853,
+        "postprocess": 2.295899990713224
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.758,
+          "bbox": [
+            0.4946,
+            0.6647,
+            0.563,
+            0.867
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.654,
+          "bbox": [
+            0.6944,
+            0.5325,
+            0.7206,
+            0.5787
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_30.png",
+      "width": 1203,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 7.626800012076274,
+        "inference": 30.104999983450398,
+        "postprocess": 7.022700010566041
+      },
+      "detections": [
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.824,
+          "bbox": [
+            0.1177,
+            0.1201,
+            0.2484,
+            0.572
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.822,
+          "bbox": [
+            0.8432,
+            0.2201,
+            0.9806,
+            0.5785
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.676,
+          "bbox": [
+            0.6534,
+            0.4718,
+            0.7112,
+            0.5208
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.727,
+          "bbox": [
+            0.2059,
+            0.2134,
+            0.2749,
+            0.4615
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.72,
+          "bbox": [
+            0.6971,
+            0.2248,
+            0.7538,
+            0.4717
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.712,
+          "bbox": [
+            0.7318,
+            0.3714,
+            0.8014,
+            0.5898
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.688,
+          "bbox": [
+            0.615,
+            0.3671,
+            0.6676,
+            0.9182
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_31.png",
+      "width": 1163,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 7.297700009075925,
+        "inference": 25.542399991536513,
+        "postprocess": 9.095300018088892
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.887,
+          "bbox": [
+            0.4688,
+            0.6845,
+            0.5578,
+            0.7617
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.881,
+          "bbox": [
+            0.5849,
+            0.8738,
+            0.6802,
+            0.9975
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.88,
+          "bbox": [
+            0.5281,
+            0.2216,
+            0.5798,
+            0.5358
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.836,
+          "bbox": [
+            0.8728,
+            0.3776,
+            0.9307,
+            0.5684
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.833,
+          "bbox": [
+            0.0372,
+            0.3504,
+            0.1361,
+            0.6317
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_32.png",
+      "width": 1309,
+      "height": 804,
+      "speed_ms": {
+        "preprocess": 9.558499994454905,
+        "inference": 27.55199998500757,
+        "postprocess": 3.5923999967053533
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.788,
+          "bbox": [
+            0.191,
+            0.0045,
+            0.3515,
+            0.6679
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.564,
+          "bbox": [
+            0.9068,
+            0.4941,
+            0.9998,
+            0.5952
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_33.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 7.429399993270636,
+        "inference": 25.5071000137832,
+        "postprocess": 6.9691999815404415
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.93,
+          "bbox": [
+            0.1084,
+            0.5244,
+            0.1828,
+            0.5644
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.795,
+          "bbox": [
+            0.8548,
+            0.2954,
+            0.8997,
+            0.5795
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.795,
+          "bbox": [
+            0.5395,
+            0.0369,
+            0.6119,
+            0.6512
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.759,
+          "bbox": [
+            0.7945,
+            0.2928,
+            0.899,
+            0.5977
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.703,
+          "bbox": [
+            0.0,
+            0.1625,
+            0.1557,
+            0.6569
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.692,
+          "bbox": [
+            0.5636,
+            0.0051,
+            0.6195,
+            0.7139
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.633,
+          "bbox": [
+            0.5132,
+            0.4861,
+            0.5572,
+            0.538
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.669,
+          "bbox": [
+            0.4403,
+            0.365,
+            0.4908,
+            0.5335
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_34.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.6670999804046005,
+        "inference": 25.249999976949766,
+        "postprocess": 5.943800002569333
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.662,
+          "bbox": [
+            0.4977,
+            0.0146,
+            0.6887,
+            0.6462
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.644,
+          "bbox": [
+            0.6682,
+            0.3159,
+            0.7303,
+            0.8228
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_35.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.292599973268807,
+        "inference": 23.474099987652153,
+        "postprocess": 6.808800011640415
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.875,
+          "bbox": [
+            0.2202,
+            0.2718,
+            0.3335,
+            0.3828
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.942,
+          "bbox": [
+            0.716,
+            0.0,
+            0.7623,
+            0.3696
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.911,
+          "bbox": [
+            0.3574,
+            0.0215,
+            0.3902,
+            0.3406
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.852,
+          "bbox": [
+            0.4547,
+            0.0673,
+            0.4993,
+            0.3594
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.716,
+          "bbox": [
+            0.6967,
+            0.0013,
+            0.764,
+            0.3704
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_36.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.722299993271008,
+        "inference": 20.589299994753674,
+        "postprocess": 6.248299992876127
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.87,
+          "bbox": [
+            0.7414,
+            0.4951,
+            0.8703,
+            0.7714
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.792,
+          "bbox": [
+            0.2119,
+            0.524,
+            0.2602,
+            0.7355
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.721,
+          "bbox": [
+            0.9258,
+            0.6054,
+            1.0,
+            0.7473
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.676,
+          "bbox": [
+            0.5968,
+            0.5007,
+            0.6118,
+            0.7316
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.675,
+          "bbox": [
+            0.4166,
+            0.0018,
+            0.5387,
+            0.6894
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_37.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 12.060799985192716,
+        "inference": 36.134199996013194,
+        "postprocess": 6.8721999996341765
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.948,
+          "bbox": [
+            0.3604,
+            0.2933,
+            0.427,
+            0.5737
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.792,
+          "bbox": [
+            0.6809,
+            0.0878,
+            0.7644,
+            0.5886
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.768,
+          "bbox": [
+            0.4948,
+            0.1645,
+            0.5889,
+            0.6197
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.762,
+          "bbox": [
+            0.6778,
+            0.1356,
+            0.8078,
+            0.667
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.696,
+          "bbox": [
+            0.2753,
+            0.5147,
+            0.3616,
+            0.5923
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_38.png",
+      "width": 1221,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 7.1598000067751855,
+        "inference": 18.49940000101924,
+        "postprocess": 4.42849998944439
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_unknown",
+          "class_ours": "drilling_unknown",
+          "conf": 0.606,
+          "bbox": [
+            0.6087,
+            0.0,
+            0.9011,
+            0.6582
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_39.png",
+      "width": 1080,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.260800022166222,
+        "inference": 21.99760000803508,
+        "postprocess": 20.103399991057813
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_unknown",
+          "class_ours": "drilling_unknown",
+          "conf": 0.874,
+          "bbox": [
+            0.851,
+            0.0475,
+            1.0,
+            0.7035
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.862,
+          "bbox": [
+            0.5807,
+            0.362,
+            0.6643,
+            0.5813
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.74,
+          "bbox": [
+            0.2105,
+            0.4075,
+            0.2341,
+            0.5567
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.708,
+          "bbox": [
+            0.7064,
+            0.0624,
+            0.7581,
+            0.6281
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.682,
+          "bbox": [
+            0.2499,
+            0.0046,
+            0.2956,
+            0.591
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.655,
+          "bbox": [
+            0.6187,
+            0.0878,
+            0.7643,
+            0.7036
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.622,
+          "bbox": [
+            0.2899,
+            0.4106,
+            0.3758,
+            0.6559
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_4.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.984700004570186,
+        "inference": 23.035700025502592,
+        "postprocess": 3.491999988909811
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.899,
+          "bbox": [
+            0.1287,
+            0.6549,
+            0.2009,
+            0.8481
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.858,
+          "bbox": [
+            0.5658,
+            0.7246,
+            0.6116,
+            0.7651
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.773,
+          "bbox": [
+            0.0469,
+            0.387,
+            0.0893,
+            0.4605
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.641,
+          "bbox": [
+            0.4818,
+            0.3375,
+            0.5558,
+            0.5375
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.609,
+          "bbox": [
+            0.5651,
+            0.6991,
+            0.6121,
+            0.7652
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_40.png",
+      "width": 1081,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 8.419000019785017,
+        "inference": 28.087300015613437,
+        "postprocess": 7.779700012179092
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.791,
+          "bbox": [
+            0.3049,
+            0.6862,
+            0.3813,
+            0.8182
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.802,
+          "bbox": [
+            0.3454,
+            0.3191,
+            0.4281,
+            0.5897
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.735,
+          "bbox": [
+            0.8064,
+            0.0902,
+            0.8543,
+            0.6219
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_41.png",
+      "width": 1083,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 7.093199994415045,
+        "inference": 24.451200006296858,
+        "postprocess": 9.839200007263571
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.923,
+          "bbox": [
+            0.4335,
+            0.6914,
+            0.5645,
+            0.8153
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.829,
+          "bbox": [
+            0.7361,
+            0.4133,
+            0.8076,
+            0.4718
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.818,
+          "bbox": [
+            0.9083,
+            0.4205,
+            0.9838,
+            0.4657
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.867,
+          "bbox": [
+            0.5121,
+            0.2767,
+            0.5941,
+            0.5159
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.72,
+          "bbox": [
+            0.163,
+            0.1484,
+            0.2637,
+            0.7281
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.618,
+          "bbox": [
+            0.864,
+            0.418,
+            0.9161,
+            0.5006
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.657,
+          "bbox": [
+            0.3118,
+            0.1738,
+            0.4083,
+            0.7821
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.618,
+          "bbox": [
+            0.1393,
+            0.0445,
+            0.252,
+            0.5889
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_42.png",
+      "width": 1079,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 6.605500006116927,
+        "inference": 23.739299998851493,
+        "postprocess": 5.851099995197728
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.937,
+          "bbox": [
+            0.6574,
+            0.5202,
+            0.7448,
+            0.6185
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.815,
+          "bbox": [
+            0.0006,
+            0.3513,
+            0.1855,
+            0.8463
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.795,
+          "bbox": [
+            0.4327,
+            0.5712,
+            0.4962,
+            0.6215
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.779,
+          "bbox": [
+            0.2713,
+            0.3024,
+            0.3811,
+            0.6878
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.777,
+          "bbox": [
+            0.4269,
+            0.4668,
+            0.452,
+            0.5108
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.775,
+          "bbox": [
+            0.8358,
+            0.5381,
+            0.8964,
+            0.6319
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.805,
+          "bbox": [
+            0.222,
+            0.3325,
+            0.2869,
+            0.5794
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_43.png",
+      "width": 1085,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.372600008035079,
+        "inference": 24.466200004098937,
+        "postprocess": 5.478300008689985
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.913,
+          "bbox": [
+            0.3476,
+            0.5465,
+            0.4238,
+            0.6448
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.8,
+          "bbox": [
+            0.4233,
+            0.7279,
+            0.5558,
+            0.8358
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.86,
+          "bbox": [
+            0.3389,
+            0.354,
+            0.3812,
+            0.5577
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.758,
+          "bbox": [
+            0.6508,
+            0.3406,
+            0.7109,
+            0.5554
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.718,
+          "bbox": [
+            0.235,
+            0.3857,
+            0.2593,
+            0.5205
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_44.png",
+      "width": 1087,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 6.492699991213158,
+        "inference": 26.401299983263016,
+        "postprocess": 4.861699999310076
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.905,
+          "bbox": [
+            0.7444,
+            0.5387,
+            0.8195,
+            0.6133
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.887,
+          "bbox": [
+            0.1129,
+            0.3561,
+            0.2764,
+            0.69
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.844,
+          "bbox": [
+            0.25,
+            0.5116,
+            0.2912,
+            0.5609
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.872,
+          "bbox": [
+            0.9213,
+            0.4788,
+            0.9855,
+            0.8526
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.861,
+          "bbox": [
+            0.6807,
+            0.3722,
+            0.7344,
+            0.7487
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.709,
+          "bbox": [
+            0.8514,
+            0.654,
+            0.9804,
+            0.9999
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.65,
+          "bbox": [
+            0.7022,
+            0.3756,
+            0.735,
+            0.6965
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_45.png",
+      "width": 1082,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 10.463899991009384,
+        "inference": 33.9869000017643,
+        "postprocess": 8.5413999913726
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.916,
+          "bbox": [
+            0.7124,
+            0.4198,
+            0.8851,
+            0.9143
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.872,
+          "bbox": [
+            0.4929,
+            0.3363,
+            0.5586,
+            0.7384
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.798,
+          "bbox": [
+            0.1826,
+            0.2487,
+            0.2289,
+            0.6016
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.735,
+          "bbox": [
+            0.1866,
+            0.2471,
+            0.229,
+            0.7576
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.668,
+          "bbox": [
+            0.1202,
+            0.5306,
+            0.1649,
+            0.6041
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.652,
+          "bbox": [
+            0.4885,
+            0.3264,
+            0.5729,
+            0.7918
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_46.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 8.121699996991083,
+        "inference": 27.76840000296943,
+        "postprocess": 7.4874999991152436
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.814,
+          "bbox": [
+            0.351,
+            0.0,
+            0.6441,
+            0.6859
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_47.png",
+      "width": 1222,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 9.156100015388802,
+        "inference": 25.445599982049316,
+        "postprocess": 4.989099979866296
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.908,
+          "bbox": [
+            0.1797,
+            0.2767,
+            0.607,
+            0.5696
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.885,
+          "bbox": [
+            0.0583,
+            0.2422,
+            0.1763,
+            0.5235
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_48.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.423099985113367,
+        "inference": 25.341899978229776,
+        "postprocess": 4.000799992354587
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.803,
+          "bbox": [
+            0.4564,
+            0.3525,
+            0.717,
+            0.6555
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.698,
+          "bbox": [
+            0.021,
+            0.5026,
+            0.3415,
+            0.7131
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_49.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.338300001109019,
+        "inference": 21.894200006499887,
+        "postprocess": 9.535199991660193
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.897,
+          "bbox": [
+            0.2357,
+            0.1215,
+            0.3458,
+            0.3538
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.746,
+          "bbox": [
+            0.6772,
+            0.6394,
+            0.7507,
+            0.8342
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.714,
+          "bbox": [
+            0.6365,
+            0.6029,
+            0.7513,
+            0.71
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.632,
+          "bbox": [
+            0.417,
+            0.3497,
+            0.6094,
+            0.8864
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.623,
+          "bbox": [
+            0.8496,
+            0.0,
+            0.9247,
+            0.4036
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.559,
+          "bbox": [
+            0.6095,
+            0.9018,
+            0.7581,
+            0.9995
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_5.png",
+      "width": 1179,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 5.088700010674074,
+        "inference": 44.758399977581576,
+        "postprocess": 5.388399993535131
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.913,
+          "bbox": [
+            0.4619,
+            0.0898,
+            0.5956,
+            0.4953
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.781,
+          "bbox": [
+            0.3587,
+            0.2904,
+            0.4221,
+            0.4964
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.697,
+          "bbox": [
+            0.4451,
+            0.4513,
+            0.4893,
+            0.4987
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower crane",
+          "class_ours": "tower_crane",
+          "conf": 0.71,
+          "bbox": [
+            0.5021,
+            0.1204,
+            0.7715,
+            0.4568
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_50.png",
+      "width": 1081,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 6.420500023523346,
+        "inference": 22.41229999344796,
+        "postprocess": 6.694400013657287
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.921,
+          "bbox": [
+            0.4958,
+            0.5751,
+            0.5734,
+            0.7435
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.886,
+          "bbox": [
+            0.0006,
+            0.0001,
+            0.198,
+            0.5049
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.784,
+          "bbox": [
+            0.2963,
+            0.0044,
+            0.3574,
+            0.1588
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.568,
+          "bbox": [
+            0.3777,
+            0.0888,
+            0.4097,
+            0.1326
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_51.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.05530000757426,
+        "inference": 24.094699998386204,
+        "postprocess": 5.41519999387674
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 0.923,
+          "bbox": [
+            0.759,
+            0.0872,
+            0.9112,
+            0.5705
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.888,
+          "bbox": [
+            0.4085,
+            0.4653,
+            0.4685,
+            0.5146
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.773,
+          "bbox": [
+            0.6966,
+            0.4353,
+            0.728,
+            0.477
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.735,
+          "bbox": [
+            0.5006,
+            0.4226,
+            0.5355,
+            0.4752
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_52.png",
+      "width": 1086,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 5.979999987175688,
+        "inference": 22.626599995419383,
+        "postprocess": 4.962200007867068
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.715,
+          "bbox": [
+            0.6675,
+            0.2516,
+            0.7053,
+            0.311
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_53.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 6.23599998652935,
+        "inference": 22.226600005524233,
+        "postprocess": 5.143199989106506
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.876,
+          "bbox": [
+            0.5871,
+            0.742,
+            0.6423,
+            0.859
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.676,
+          "bbox": [
+            0.6231,
+            0.5678,
+            0.6749,
+            0.6364
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.624,
+          "bbox": [
+            0.8594,
+            0.2825,
+            0.8962,
+            0.3248
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_54.png",
+      "width": 1085,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 4.114000010304153,
+        "inference": 20.181400002911687,
+        "postprocess": 5.204599990975112
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.925,
+          "bbox": [
+            0.2483,
+            0.8665,
+            0.419,
+            0.9991
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.886,
+          "bbox": [
+            0.2792,
+            0.2477,
+            0.3578,
+            0.5162
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 0.853,
+          "bbox": [
+            0.4589,
+            0.8041,
+            0.5081,
+            0.8742
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.813,
+          "bbox": [
+            0.5469,
+            0.0664,
+            0.6998,
+            0.5043
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.799,
+          "bbox": [
+            0.0782,
+            0.0878,
+            0.1312,
+            0.5833
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.681,
+          "bbox": [
+            0.4435,
+            0.485,
+            0.4863,
+            0.5194
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_55.png",
+      "width": 1083,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 5.825200001709163,
+        "inference": 22.473799996078014,
+        "postprocess": 4.414600000018254
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.779,
+          "bbox": [
+            0.501,
+            0.6824,
+            0.6454,
+            0.9036
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.826,
+          "bbox": [
+            0.7526,
+            0.0726,
+            0.7962,
+            0.3302
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.731,
+          "bbox": [
+            0.434,
+            0.7104,
+            0.642,
+            0.9973
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.672,
+          "bbox": [
+            0.1111,
+            0.0003,
+            0.1466,
+            0.3231
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_56.png",
+      "width": 1081,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.571999976178631,
+        "inference": 19.843499991111457,
+        "postprocess": 4.412400012370199
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.939,
+          "bbox": [
+            0.0363,
+            0.7609,
+            0.1317,
+            0.9253
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.915,
+          "bbox": [
+            0.2158,
+            0.6598,
+            0.308,
+            0.9235
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "backhoe loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.752,
+          "bbox": [
+            0.0331,
+            0.4318,
+            0.0935,
+            0.505
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.557,
+          "bbox": [
+            0.2965,
+            0.1687,
+            0.3475,
+            0.2134
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_57.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 6.077300000470132,
+        "inference": 22.417600004700944,
+        "postprocess": 4.0701000252738595
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.912,
+          "bbox": [
+            0.0501,
+            0.5287,
+            0.146,
+            0.6405
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.862,
+          "bbox": [
+            0.3994,
+            0.552,
+            0.6472,
+            0.7381
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.708,
+          "bbox": [
+            0.2464,
+            0.6755,
+            0.4357,
+            0.9106
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_58.png",
+      "width": 1082,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.359599996358156,
+        "inference": 23.508899990702048,
+        "postprocess": 4.792100022314116
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.852,
+          "bbox": [
+            0.5608,
+            0.0904,
+            0.6673,
+            0.5268
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.692,
+          "bbox": [
+            0.3988,
+            0.1549,
+            0.4338,
+            0.6311
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_59.png",
+      "width": 1079,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 5.797199992230162,
+        "inference": 23.35430000675842,
+        "postprocess": 5.6056999892462045
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.935,
+          "bbox": [
+            0.1341,
+            0.2341,
+            0.2357,
+            0.5771
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.572,
+          "bbox": [
+            0.5201,
+            0.8215,
+            0.7972,
+            1.0
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower crane",
+          "class_ours": "tower_crane",
+          "conf": 0.6,
+          "bbox": [
+            0.3225,
+            0.0,
+            0.3929,
+            0.5721
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_6.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.980300000170246,
+        "inference": 27.11629998520948,
+        "postprocess": 4.20329999178648
+      },
+      "detections": [
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.859,
+          "bbox": [
+            0.4257,
+            0.0,
+            0.6001,
+            0.5724
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.815,
+          "bbox": [
+            0.8731,
+            0.1249,
+            0.8916,
+            0.4299
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_60.png",
+      "width": 1217,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 3.9095999964047223,
+        "inference": 18.419700005324557,
+        "postprocess": 1.887999998871237
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.692,
+          "bbox": [
+            0.5176,
+            0.393,
+            0.6757,
+            0.5747
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_61.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 3.5140999825671315,
+        "inference": 17.424099991330877,
+        "postprocess": 2.969099994516
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.849,
+          "bbox": [
+            0.54,
+            0.387,
+            0.7297,
+            0.5769
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_62.png",
+      "width": 1216,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 5.475500016473234,
+        "inference": 22.943299991311505,
+        "postprocess": 5.276299983961508
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.759,
+          "bbox": [
+            0.0957,
+            0.0544,
+            0.3793,
+            0.7555
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "dump truck",
+          "class_ours": "dump_truck",
+          "conf": 0.679,
+          "bbox": [
+            0.593,
+            0.4475,
+            0.891,
+            0.7723
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.643,
+          "bbox": [
+            0.1342,
+            0.0063,
+            0.2754,
+            0.6309
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_63.png",
+      "width": 1223,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 5.460999993374571,
+        "inference": 22.796600009314716,
+        "postprocess": 4.961600003298372
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.934,
+          "bbox": [
+            0.6144,
+            0.3503,
+            0.7533,
+            0.5208
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.91,
+          "bbox": [
+            0.8551,
+            0.3231,
+            0.9664,
+            0.5281
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_64.png",
+      "width": 1222,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 3.7721999979112297,
+        "inference": 17.722499993396923,
+        "postprocess": 4.915800003800541
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.882,
+          "bbox": [
+            0.2908,
+            0.5686,
+            0.5734,
+            0.8482
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.859,
+          "bbox": [
+            0.5433,
+            0.4245,
+            0.63,
+            0.5116
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.747,
+          "bbox": [
+            0.6258,
+            0.5167,
+            0.8671,
+            0.7061
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_65.png",
+      "width": 1221,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 5.6059999915305525,
+        "inference": 17.7718999912031,
+        "postprocess": 3.336399997351691
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.991,
+          "bbox": [
+            0.4281,
+            0.4806,
+            0.4793,
+            0.6227
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.724,
+          "bbox": [
+            0.4508,
+            0.4828,
+            0.4654,
+            0.5837
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 0.645,
+          "bbox": [
+            0.5572,
+            0.4497,
+            0.6023,
+            0.504
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.616,
+          "bbox": [
+            0.437,
+            0.2982,
+            0.5055,
+            0.3933
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_66.png",
+      "width": 1222,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 5.900199990719557,
+        "inference": 22.927499987417832,
+        "postprocess": 3.657299996120855
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.949,
+          "bbox": [
+            0.3179,
+            0.5563,
+            0.5083,
+            0.806
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.932,
+          "bbox": [
+            0.5634,
+            0.3793,
+            0.6288,
+            0.5613
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_67.png",
+      "width": 1212,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 3.9628999948035926,
+        "inference": 17.561099986778572,
+        "postprocess": 5.422999995062128
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.862,
+          "bbox": [
+            0.3747,
+            0.0001,
+            0.628,
+            0.5498
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.725,
+          "bbox": [
+            0.4187,
+            0.0079,
+            0.8113,
+            0.5703
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.607,
+          "bbox": [
+            0.3756,
+            0.0003,
+            0.4898,
+            0.5476
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_68.png",
+      "width": 1077,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 6.72199999098666,
+        "inference": 24.798500002361834,
+        "postprocess": 3.5598000104073435
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.878,
+          "bbox": [
+            0.5005,
+            0.3132,
+            0.711,
+            0.6745
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_69.png",
+      "width": 1218,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 3.888500010361895,
+        "inference": 18.341199989663437,
+        "postprocess": 4.619900020770729
+      },
+      "detections": [
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.951,
+          "bbox": [
+            0.0966,
+            0.4121,
+            0.2741,
+            0.5359
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.9,
+          "bbox": [
+            0.5525,
+            0.2094,
+            0.5935,
+            0.5829
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_7.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.225299984682351,
+        "inference": 20.082300005014986,
+        "postprocess": 14.479100005701184
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.903,
+          "bbox": [
+            0.5622,
+            0.0412,
+            0.6518,
+            0.5462
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.895,
+          "bbox": [
+            0.8321,
+            0.1704,
+            1.0,
+            0.7556
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.75,
+          "bbox": [
+            0.7124,
+            0.4143,
+            0.9015,
+            0.5632
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.774,
+          "bbox": [
+            0.1462,
+            0.2414,
+            0.1742,
+            0.5946
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.708,
+          "bbox": [
+            0.0957,
+            0.3771,
+            0.3769,
+            0.7552
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "tower crane",
+          "class_ours": "tower_crane",
+          "conf": 0.646,
+          "bbox": [
+            0.1547,
+            0.0226,
+            0.4681,
+            0.5352
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.634,
+          "bbox": [
+            0.1169,
+            0.2413,
+            0.1908,
+            0.6102
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "dump truck",
+          "class_ours": "dump_truck",
+          "conf": 0.63,
+          "bbox": [
+            0.3891,
+            0.5563,
+            0.473,
+            0.6748
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_70.png",
+      "width": 1222,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 8.137099997838959,
+        "inference": 30.536500009475276,
+        "postprocess": 6.422200007364154
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.933,
+          "bbox": [
+            0.2176,
+            0.32,
+            0.5749,
+            0.7634
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.635,
+          "bbox": [
+            0.1219,
+            0.3723,
+            0.1938,
+            0.485
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_71.png",
+      "width": 1214,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 8.358399994904175,
+        "inference": 23.183000012068078,
+        "postprocess": 4.033800010802224
+      },
+      "detections": [
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.811,
+          "bbox": [
+            0.4066,
+            0.2408,
+            0.4922,
+            0.4562
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_72.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.9340999976266176,
+        "inference": 24.652699998114258,
+        "postprocess": 4.254199971910566
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.961,
+          "bbox": [
+            0.1768,
+            0.4186,
+            0.3842,
+            0.7242
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_73.png",
+      "width": 1216,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 8.561700000427663,
+        "inference": 27.2345999837853,
+        "postprocess": 2.691200003027916
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.939,
+          "bbox": [
+            0.4617,
+            0.405,
+            0.6727,
+            0.5745
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_74.png",
+      "width": 1213,
+      "height": 806,
+      "speed_ms": {
+        "preprocess": 6.457399984356016,
+        "inference": 27.585000003455207,
+        "postprocess": 4.06989999464713
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.925,
+          "bbox": [
+            0.3865,
+            0.47,
+            0.5991,
+            0.729
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_75.png",
+      "width": 1217,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 7.642999989911914,
+        "inference": 23.92919998965226,
+        "postprocess": 3.6995999980717897
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.701,
+          "bbox": [
+            0.5362,
+            0.6755,
+            0.6637,
+            0.7843
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_76.png",
+      "width": 1216,
+      "height": 804,
+      "speed_ms": {
+        "preprocess": 5.252100003417581,
+        "inference": 17.815400002291426,
+        "postprocess": 5.1574999815784395
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.934,
+          "bbox": [
+            0.6423,
+            0.3831,
+            0.7998,
+            0.5976
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.909,
+          "bbox": [
+            0.1232,
+            0.3885,
+            0.2772,
+            0.4833
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.706,
+          "bbox": [
+            0.8355,
+            0.6369,
+            0.8735,
+            0.7134
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_77.png",
+      "width": 1222,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 6.473699992056936,
+        "inference": 23.87289999751374,
+        "postprocess": 3.874799993354827
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.876,
+          "bbox": [
+            0.7061,
+            0.2759,
+            0.8076,
+            0.4828
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_78.png",
+      "width": 1215,
+      "height": 803,
+      "speed_ms": {
+        "preprocess": 5.157899984624237,
+        "inference": 22.940199996810406,
+        "postprocess": 4.121300007682294
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.597,
+          "bbox": [
+            0.4154,
+            0.3289,
+            1.0,
+            0.6995
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_79.png",
+      "width": 1218,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 7.436000014422461,
+        "inference": 24.746899987803772,
+        "postprocess": 3.7743999855592847
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.929,
+          "bbox": [
+            0.2482,
+            0.602,
+            0.5037,
+            0.8683
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.774,
+          "bbox": [
+            0.7255,
+            0.6381,
+            0.9234,
+            0.8039
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.771,
+          "bbox": [
+            0.6769,
+            0.5355,
+            0.7564,
+            0.6379
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_8.png",
+      "width": 1221,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.376800003228709,
+        "inference": 19.89820000017062,
+        "postprocess": 4.5399999944493175
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.818,
+          "bbox": [
+            0.0,
+            0.46,
+            0.1303,
+            0.7458
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.861,
+          "bbox": [
+            0.4148,
+            0.0008,
+            0.5169,
+            0.6736
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.806,
+          "bbox": [
+            0.6603,
+            0.0,
+            0.7577,
+            0.6669
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.735,
+          "bbox": [
+            0.3744,
+            0.0679,
+            0.5186,
+            0.7079
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_80.png",
+      "width": 1220,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 9.022400015965104,
+        "inference": 25.847200013231486,
+        "postprocess": 7.863900013035163
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.897,
+          "bbox": [
+            0.8397,
+            0.4882,
+            0.8715,
+            0.5566
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.874,
+          "bbox": [
+            0.1465,
+            0.1709,
+            0.3984,
+            0.5473
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.824,
+          "bbox": [
+            0.6497,
+            0.3331,
+            0.6746,
+            0.5203
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 0.689,
+          "bbox": [
+            0.1717,
+            0.6179,
+            0.3035,
+            0.7401
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_81.png",
+      "width": 1219,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 7.45100001222454,
+        "inference": 24.731899990001693,
+        "postprocess": 7.146299991291016
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_unknown",
+          "class_ours": "drilling_unknown",
+          "conf": 0.773,
+          "bbox": [
+            0.5853,
+            0.0,
+            0.9009,
+            0.8542
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.816,
+          "bbox": [
+            0.2935,
+            0.1065,
+            0.3248,
+            0.6962
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.759,
+          "bbox": [
+            0.2927,
+            0.1598,
+            0.3571,
+            0.778
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.691,
+          "bbox": [
+            0.2959,
+            0.1093,
+            0.3144,
+            0.5527
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.673,
+          "bbox": [
+            0.293,
+            0.0991,
+            0.3349,
+            0.7735
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.668,
+          "bbox": [
+            0.0,
+            0.3275,
+            0.203,
+            0.6603
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_82.png",
+      "width": 1211,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 8.893899997929111,
+        "inference": 28.06040001451038,
+        "postprocess": 7.57539999904111
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.882,
+          "bbox": [
+            0.4501,
+            0.6623,
+            0.5316,
+            0.7491
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.953,
+          "bbox": [
+            0.594,
+            0.2461,
+            0.6475,
+            0.6897
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.933,
+          "bbox": [
+            0.5378,
+            0.3207,
+            0.5769,
+            0.624
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.868,
+          "bbox": [
+            0.5499,
+            0.3207,
+            0.5765,
+            0.5822
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.706,
+          "bbox": [
+            0.327,
+            0.3395,
+            0.337,
+            0.5941
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.621,
+          "bbox": [
+            0.8412,
+            0.5449,
+            0.9271,
+            0.619
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.673,
+          "bbox": [
+            0.6096,
+            0.2452,
+            0.6249,
+            0.6772
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.666,
+          "bbox": [
+            0.6776,
+            0.6558,
+            0.8653,
+            0.7645
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.596,
+          "bbox": [
+            0.0,
+            0.7261,
+            0.1075,
+            1.0
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_83.png",
+      "width": 1217,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 7.245199987664819,
+        "inference": 25.43639999930747,
+        "postprocess": 6.6895000054501
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.724,
+          "bbox": [
+            0.1924,
+            0.8054,
+            0.2238,
+            0.8677
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_84.png",
+      "width": 1215,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 8.598300017183647,
+        "inference": 30.452600010903552,
+        "postprocess": 7.721499976469204
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.971,
+          "bbox": [
+            0.4266,
+            0.1477,
+            0.5044,
+            0.699
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.93,
+          "bbox": [
+            0.7178,
+            0.2358,
+            0.8947,
+            0.8385
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.92,
+          "bbox": [
+            0.0578,
+            0.1794,
+            0.29,
+            0.6933
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.854,
+          "bbox": [
+            0.6697,
+            0.0399,
+            0.7153,
+            0.6858
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.775,
+          "bbox": [
+            0.6717,
+            0.0398,
+            0.7844,
+            0.7255
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.775,
+          "bbox": [
+            0.4948,
+            0.4175,
+            0.5154,
+            0.6718
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_85.png",
+      "width": 1218,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 7.744800008367747,
+        "inference": 24.930299987317994,
+        "postprocess": 10.784399986732751
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.907,
+          "bbox": [
+            0.7189,
+            0.1098,
+            0.7785,
+            0.1691
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.931,
+          "bbox": [
+            0.8353,
+            0.1509,
+            0.8928,
+            0.6488
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.853,
+          "bbox": [
+            0.0,
+            0.6755,
+            0.1157,
+            0.7762
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.836,
+          "bbox": [
+            0.3251,
+            0.528,
+            0.3893,
+            0.6357
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.902,
+          "bbox": [
+            0.5267,
+            0.316,
+            0.6875,
+            0.7847
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.866,
+          "bbox": [
+            0.5406,
+            0.3488,
+            0.742,
+            0.8269
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 0.795,
+          "bbox": [
+            0.7125,
+            0.3308,
+            0.7718,
+            0.4233
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.676,
+          "bbox": [
+            0.4757,
+            0.2125,
+            0.5111,
+            0.6948
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.616,
+          "bbox": [
+            0.6993,
+            0.1961,
+            0.7679,
+            0.2848
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_86.png",
+      "width": 1213,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 5.834199982928112,
+        "inference": 24.42249999148771,
+        "postprocess": 7.4583999812603
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.93,
+          "bbox": [
+            0.5829,
+            0.6045,
+            0.714,
+            0.7448
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.925,
+          "bbox": [
+            0.4408,
+            0.6728,
+            0.5702,
+            0.759
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.819,
+          "bbox": [
+            0.2183,
+            0.6614,
+            0.3194,
+            0.7621
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.839,
+          "bbox": [
+            0.2612,
+            0.3392,
+            0.3919,
+            0.6324
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.819,
+          "bbox": [
+            0.4763,
+            0.2554,
+            0.5159,
+            0.6737
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.765,
+          "bbox": [
+            0.7709,
+            0.7418,
+            0.8138,
+            0.8156
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.756,
+          "bbox": [
+            0.0009,
+            0.2051,
+            0.1183,
+            0.6535
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.749,
+          "bbox": [
+            0.3739,
+            0.3338,
+            0.4049,
+            0.6226
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.706,
+          "bbox": [
+            0.0627,
+            0.2018,
+            0.1169,
+            0.6075
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.7,
+          "bbox": [
+            0.3381,
+            0.2261,
+            0.444,
+            0.7362
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_87.png",
+      "width": 1212,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 8.351299999048933,
+        "inference": 28.06169999530539,
+        "postprocess": 8.145200001308694
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.821,
+          "bbox": [
+            0.6884,
+            0.6369,
+            0.9891,
+            0.8824
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.808,
+          "bbox": [
+            0.2684,
+            0.7203,
+            0.4164,
+            0.8737
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.802,
+          "bbox": [
+            0.5022,
+            0.2343,
+            0.5509,
+            0.667
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.765,
+          "bbox": [
+            0.3948,
+            0.2388,
+            0.5365,
+            0.6614
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.753,
+          "bbox": [
+            0.0764,
+            0.0767,
+            0.1583,
+            0.5952
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.71,
+          "bbox": [
+            0.0006,
+            0.14,
+            0.1537,
+            0.6976
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.648,
+          "bbox": [
+            0.6506,
+            0.002,
+            0.6863,
+            0.6218
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.623,
+          "bbox": [
+            0.6547,
+            0.0287,
+            0.7231,
+            0.7541
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_88.png",
+      "width": 1220,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 6.053400022210553,
+        "inference": 24.80350001133047,
+        "postprocess": 9.86760001978837
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.932,
+          "bbox": [
+            0.2323,
+            0.5388,
+            0.3821,
+            0.7315
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.924,
+          "bbox": [
+            0.0753,
+            0.5195,
+            0.1601,
+            0.6673
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator",
+          "class_ours": "excavator_crawler",
+          "conf": 0.965,
+          "bbox": [
+            0.5252,
+            0.5157,
+            0.6448,
+            0.7269
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.899,
+          "bbox": [
+            0.3049,
+            0.0806,
+            0.3377,
+            0.6609
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.81,
+          "bbox": [
+            0.6931,
+            0.0,
+            0.7221,
+            0.4239
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.777,
+          "bbox": [
+            0.3746,
+            0.4153,
+            0.5418,
+            0.6685
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.69,
+          "bbox": [
+            0.6931,
+            0.0007,
+            0.7221,
+            0.6817
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.645,
+          "bbox": [
+            0.3056,
+            0.0631,
+            0.3748,
+            0.6176
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_89.png",
+      "width": 1221,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 10.092299984535202,
+        "inference": 29.054499987978488,
+        "postprocess": 7.140000001527369
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.79,
+          "bbox": [
+            0.8828,
+            0.3596,
+            0.9277,
+            0.5196
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.773,
+          "bbox": [
+            0.3455,
+            0.2926,
+            0.3966,
+            0.5161
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.701,
+          "bbox": [
+            0.8401,
+            0.4796,
+            0.885,
+            0.5748
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.688,
+          "bbox": [
+            0.2086,
+            0.5691,
+            0.2736,
+            0.6371
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.742,
+          "bbox": [
+            0.2171,
+            0.669,
+            0.2418,
+            0.8026
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.694,
+          "bbox": [
+            0.3454,
+            0.1083,
+            0.3966,
+            0.5191
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.616,
+          "bbox": [
+            0.3466,
+            0.2974,
+            0.3817,
+            0.5123
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_9.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 4.4194999791216105,
+        "inference": 20.33050000318326,
+        "postprocess": 7.911599997896701
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.94,
+          "bbox": [
+            0.0619,
+            0.2418,
+            0.1228,
+            0.5594
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.834,
+          "bbox": [
+            0.0832,
+            0.2418,
+            0.1217,
+            0.5597
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.721,
+          "bbox": [
+            0.1413,
+            0.2966,
+            0.1625,
+            0.4518
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.713,
+          "bbox": [
+            0.4534,
+            0.1651,
+            0.505,
+            0.5395
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_90.png",
+      "width": 1216,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 8.747199986828491,
+        "inference": 31.090799981029704,
+        "postprocess": 10.803099983604625
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.934,
+          "bbox": [
+            0.4915,
+            0.5037,
+            0.6299,
+            0.7801
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.844,
+          "bbox": [
+            0.251,
+            0.4893,
+            0.4242,
+            0.8905
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.808,
+          "bbox": [
+            0.7121,
+            0.5203,
+            0.7378,
+            0.5774
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "crawler crane",
+          "class_ours": "crawler_crane",
+          "conf": 0.88,
+          "bbox": [
+            0.7145,
+            0.2869,
+            0.9012,
+            0.5569
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 0.876,
+          "bbox": [
+            0.4086,
+            0.6459,
+            0.5015,
+            0.7555
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.615,
+          "bbox": [
+            0.0889,
+            0.1441,
+            0.2888,
+            0.8194
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_91.png",
+      "width": 1223,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 12.995500001125038,
+        "inference": 31.343899987405166,
+        "postprocess": 6.059500010451302
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.907,
+          "bbox": [
+            0.4433,
+            0.167,
+            0.6435,
+            0.4492
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.834,
+          "bbox": [
+            0.5775,
+            0.0911,
+            0.788,
+            0.3316
+          ],
+          "source": "finetuned"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_92.png",
+      "width": 1221,
+      "height": 815,
+      "speed_ms": {
+        "preprocess": 10.873699997318909,
+        "inference": 29.281900002388284,
+        "postprocess": 5.228400026680902
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.9,
+          "bbox": [
+            0.0878,
+            0.6329,
+            0.1709,
+            0.7947
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.607,
+          "bbox": [
+            0.0763,
+            0.0,
+            0.113,
+            0.6572
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_93.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 10.185199993429706,
+        "inference": 33.62460000789724,
+        "postprocess": 6.994800001848489
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.912,
+          "bbox": [
+            0.8233,
+            0.1121,
+            0.8914,
+            0.242
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.903,
+          "bbox": [
+            0.324,
+            0.313,
+            0.3833,
+            0.4642
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.901,
+          "bbox": [
+            0.4343,
+            0.2056,
+            0.5073,
+            0.3204
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.855,
+          "bbox": [
+            0.7453,
+            0.0767,
+            0.8287,
+            0.1727
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.854,
+          "bbox": [
+            0.2898,
+            0.8763,
+            0.3968,
+            1.0
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.777,
+          "bbox": [
+            0.115,
+            0.0014,
+            0.1696,
+            0.4869
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.677,
+          "bbox": [
+            0.6234,
+            0.7992,
+            0.6459,
+            0.8774
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_94.png",
+      "width": 1215,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 8.418899989919737,
+        "inference": 29.634599981363863,
+        "postprocess": 4.806200013263151
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.922,
+          "bbox": [
+            0.5691,
+            0.5542,
+            0.8008,
+            0.9323
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.95,
+          "bbox": [
+            0.3015,
+            0.0003,
+            0.34,
+            0.5456
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_95.png",
+      "width": 1217,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 7.351199979893863,
+        "inference": 28.448800003388897,
+        "postprocess": 6.309499993221834
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.801,
+          "bbox": [
+            0.0845,
+            0.0001,
+            0.1206,
+            0.3487
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.645,
+          "bbox": [
+            0.0205,
+            0.1748,
+            0.0654,
+            0.3972
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_96.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 6.933099997695535,
+        "inference": 24.377399997320026,
+        "postprocess": 4.014099977212027
+      },
+      "detections": [
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.844,
+          "bbox": [
+            0.0,
+            0.5956,
+            0.0511,
+            0.9745
+          ],
+          "source": "yoloe"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.797,
+          "bbox": [
+            0.7767,
+            0.0011,
+            0.9993,
+            0.535
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_97.png",
+      "width": 1221,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 6.260399997700006,
+        "inference": 21.236200002022088,
+        "postprocess": 4.373499978100881
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.934,
+          "bbox": [
+            0.6025,
+            0.2652,
+            0.7437,
+            0.4065
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.917,
+          "bbox": [
+            0.2809,
+            0.6641,
+            0.4146,
+            0.9549
+          ],
+          "source": "finetuned"
+        },
+        {
+          "class_raw": "pile driver",
+          "class_ours": "pile_driver",
+          "conf": 0.657,
+          "bbox": [
+            0.3883,
+            0.5026,
+            0.5121,
+            0.8703
+          ],
+          "source": "yoloe"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_98.png",
+      "width": 1221,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 4.486599995288998,
+        "inference": 19.871700002113357,
+        "postprocess": 2.5123000086750835
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_99.png",
+      "width": 1216,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 5.82259998191148,
+        "inference": 24.508400005288422,
+        "postprocess": 3.5262999881524593
+      },
+      "detections": []
+    }
+  ]
+}

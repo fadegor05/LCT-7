@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          131.4,
+          324.83333333333326
+        ],
+        [
+          238.16666666666666,
+          324.83333333333326
+        ],
+        [
+          238.16666666666666,
+          370.2
+        ],
+        [
+          131.4,
+          370.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          389.6,
+          301.1
+        ],
+        [
+          541.2,
+          301.1
+        ],
+        [
+          541.2,
+          383.9
+        ],
+        [
+          389.6,
+          383.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          867.7,
+          60.8
+        ],
+        [
+          1047.126436781609,
+          60.8
+        ],
+        [
+          1047.126436781609,
+          368.2758620689655
+        ],
+        [
+          867.7,
+          368.2758620689655
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          984.8,
+          127.2
+        ],
+        [
+          1128.4,
+          127.2
+        ],
+        [
+          1128.4,
+          440.8
+        ],
+        [
+          984.8,
+          440.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          157.73333333333332,
+          273.8333333333333
+        ],
+        [
+          255.5,
+          273.8333333333333
+        ],
+        [
+          255.5,
+          343.06666666666666
+        ],
+        [
+          157.73333333333332,
+          343.06666666666666
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          619.5,
+          326.83333333333326
+        ],
+        [
+          735.1666666666666,
+          326.83333333333326
+        ],
+        [
+          735.1666666666666,
+          380.5
+        ],
+        [
+          619.5,
+          380.5
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          774.1666666666666,
+          368.83333333333326
+        ],
+        [
+          838.8333333333333,
+          368.83333333333326
+        ],
+        [
+          838.8333333333333,
+          429.16666666666663
+        ],
+        [
+          774.1666666666666,
+          429.16666666666663
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_18.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1218,
+  "description": ""
+}

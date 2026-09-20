@@ -141,7 +141,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=unknown;offsite=true\n",
+      "description": "activity=unknown;offsite=true",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},
@@ -170,7 +170,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=unknown;offsite=true\n",
+      "description": "activity=unknown;offsite=true",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},
@@ -199,7 +199,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=idle\n",
+      "description": "activity=idle",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},

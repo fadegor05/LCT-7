@@ -1,0 +1,244 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          842.9,
+          98.7
+        ],
+        [
+          984.2,
+          98.7
+        ],
+        [
+          984.2,
+          457.1
+        ],
+        [
+          842.9,
+          457.1
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          442.4,
+          376.0
+        ],
+        [
+          507.4,
+          376.0
+        ],
+        [
+          507.4,
+          415.8
+        ],
+        [
+          442.4,
+          415.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          754.4,
+          351.7
+        ],
+        [
+          788.4,
+          351.7
+        ],
+        [
+          788.4,
+          385.4
+        ],
+        [
+          754.4,
+          385.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          542.1,
+          341.5
+        ],
+        [
+          579.9,
+          341.5
+        ],
+        [
+          579.9,
+          384.0
+        ],
+        [
+          542.1,
+          384.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "pile_driver",
+      "score": null,
+      "points": [
+        [
+          816.8,
+          245.2
+        ],
+        [
+          858.8,
+          245.2
+        ],
+        [
+          858.8,
+          391.7
+        ],
+        [
+          816.8,
+          391.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          567.5,
+          361.0
+        ],
+        [
+          642.9,
+          361.0
+        ],
+        [
+          642.9,
+          457.6
+        ],
+        [
+          567.5,
+          457.6
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          517.2,
+          432.98538622129433
+        ],
+        [
+          547.2759220598468,
+          432.98538622129433
+        ],
+        [
+          547.2759220598468,
+          470.7
+        ],
+        [
+          517.2,
+          470.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          528.4951287404314,
+          412.6652748782185
+        ],
+        [
+          566.6217814892136,
+          412.6652748782185
+        ],
+        [
+          566.6217814892136,
+          439.6239387613083
+        ],
+        [
+          528.4951287404314,
+          439.6239387613083
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_51.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1083,
+  "description": ""
+}
