@@ -14,6 +14,13 @@ LCT-7 is a hackathon monorepo for an automated construction-site violation detec
 Orchestration is Docker Compose with layered files (`common` / `dev` / `prod`) behind Traefik.
 `makefile` at the root is the entry point. Much of the code documentation is in Russian.
 
+## Skills
+
+`.claude/skills/` contains the [obra/superpowers](https://github.com/obra/superpowers) skill set
+(imported, MIT-licensed) — brainstorming, writing/executing plans, TDD, systematic debugging,
+subagent-driven development, code review, git worktrees, etc. Claude Code should check
+`.claude/skills/using-superpowers/SKILL.md` for how and when to invoke them.
+
 ## Commands
 
 Root (Docker Compose via `makefile`):
