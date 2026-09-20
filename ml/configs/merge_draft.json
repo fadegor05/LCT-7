@@ -1,0 +1,13 @@
+{
+  "sources": {
+    "yoloe": {
+      "file": "data/processed/detections_1280.json",
+      "conf": 0.15
+    },
+    "finetuned": {
+      "file": "data/processed/detections_k_apoce.json",
+      "conf": 0.25
+    }
+  },
+  "conflict_iou": 0.5
+}

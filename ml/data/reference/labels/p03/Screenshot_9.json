@@ -54,7 +54,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=unknown\n",
+      "description": "activity=unknown",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},

@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "telehandler",
+      "score": null,
+      "points": [
+        [
+          270.02632193981873,
+          552.1677768039732
+        ],
+        [
+          471.52632193981884,
+          552.1677768039732
+        ],
+        [
+          471.52632193981884,
+          737.3677768039731
+        ],
+        [
+          270.02632193981873,
+          737.3677768039731
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          54.3,
+          428.2
+        ],
+        [
+          158.3,
+          428.2
+        ],
+        [
+          158.3,
+          518.8
+        ],
+        [
+          54.3,
+          518.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          432.9,
+          447.1
+        ],
+        [
+          701.6,
+          447.1
+        ],
+        [
+          701.6,
+          597.9
+        ],
+        [
+          432.9,
+          597.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          99.2,
+          243.4
+        ],
+        [
+          143.2,
+          243.4
+        ],
+        [
+          143.2,
+          267.9
+        ],
+        [
+          99.2,
+          267.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          846.4428152492669,
+          258.7572825024438
+        ],
+        [
+          880.4428152492669,
+          258.7572825024438
+        ],
+        [
+          880.4428152492669,
+          279.0572825024438
+        ],
+        [
+          846.4428152492669,
+          279.0572825024438
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          376.92307692307696,
+          352.6107226107226
+        ],
+        [
+          465.96736596736594,
+          352.6107226107226
+        ],
+        [
+          465.96736596736594,
+          433.26340326340323
+        ],
+        [
+          376.92307692307696,
+          433.26340326340323
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_unknown",
+      "score": null,
+      "points": [
+        [
+          371.73445143256464,
+          259.7868623340321
+        ],
+        [
+          460.4835779175402,
+          259.7868623340321
+        ],
+        [
+          460.4835779175402,
+          281.3102725366876
+        ],
+        [
+          371.73445143256464,
+          281.3102725366876
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_57.png",
+  "imageData": null,
+  "imageHeight": 810,
+  "imageWidth": 1084,
+  "description": ""
+}

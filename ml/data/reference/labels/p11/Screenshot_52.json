@@ -1,0 +1,215 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          720.9,
+          417.9
+        ],
+        [
+          762.6,
+          417.9
+        ],
+        [
+          762.6,
+          459.3
+        ],
+        [
+          720.9,
+          459.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_unknown",
+      "score": null,
+      "points": [
+        [
+          724.9,
+          204.8
+        ],
+        [
+          766.0,
+          204.8
+        ],
+        [
+          766.0,
+          253.2
+        ],
+        [
+          724.9,
+          253.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          385.7,
+          189.4
+        ],
+        [
+          572.9,
+          189.4
+        ],
+        [
+          572.9,
+          426.3
+        ],
+        [
+          385.7,
+          426.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          1025.4,
+          469.8
+        ],
+        [
+          1085.8,
+          469.8
+        ],
+        [
+          1085.8,
+          515.3
+        ],
+        [
+          1025.4,
+          515.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          716.5902887139107,
+          291.8700787401575
+        ],
+        [
+          760.5902887139107,
+          291.8700787401575
+        ],
+        [
+          760.5902887139107,
+          342.1700787401575
+        ],
+        [
+          716.5902887139107,
+          342.1700787401575
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "telehandler",
+      "score": null,
+      "points": [
+        [
+          608.5181623931624,
+          350.1068376068376
+        ],
+        [
+          683.1976495726495,
+          350.1068376068376
+        ],
+        [
+          683.1976495726495,
+          403.09829059829053
+        ],
+        [
+          608.5181623931624,
+          403.09829059829053
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=idle",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "concrete_mixer",
+      "score": null,
+      "points": [
+        [
+          755.9055118110235,
+          276.4750656167979
+        ],
+        [
+          784.0419947506562,
+          276.4750656167979
+        ],
+        [
+          784.0419947506562,
+          337.6824146981627
+        ],
+        [
+          755.9055118110235,
+          337.6824146981627
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_52.png",
+  "imageData": null,
+  "imageHeight": 814,
+  "imageWidth": 1086,
+  "description": ""
+}

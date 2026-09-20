@@ -14,15 +14,18 @@
 Размечаем **партиями по площадкам**, а не подряд по номерам кадров: кадры одного
 объекта похожи, и глаз не перестраивается между разными стройками.
 
-**Шаг 1 — черновик от детектора.** Готовые рамки, чтобы не рисовать с нуля:
+**Шаг 1 — черновик от детектора.** Готовые рамки, чтобы не рисовать с нуля.
+Партии p05, p07, p09, p11 уже собраны гибридом (YOLOE + дообученная модель
+Захара) и лежат в `data/interim/label/<площадка>`. Для новой партии:
 
 ```powershell
-.venv\Scripts\python.exe tools\detect_visual_prompt.py <список_кадров> -o data\processed\detections_<группа>.json
-.venv\Scripts\python.exe tools\to_labeling.py data\processed\detections_<группа>.json -o data\interim\label\<группа>
+..\.venv\Scripts\python.exe tools\merge_detections.py --config configs\merge_draft.json --out data\processed\detections_merged_draft.json
+..\.venv\Scripts\python.exe tools\to_labeling.py data\processed\detections_merged_draft.json -o data\interim\label\<группа> --only <имена кадров>
 ```
 
-Список кадров — текстовый файл с путями, по одному в строке. Скажите, какая
-группа нужна, — соберу.
+Черновик собирается с **низкими** порогами (`configs/merge_draft.json`): лишнюю
+рамку удалить быстрее, чем нарисовать пропущенную. Для боевого прогона пороги
+другие, выше — см. `configs/merge.json`.
 
 **Шаг 2 — правка в X-AnyLabeling.** `File → Open Dir` → папка `data\interim\label\<группа>`.
 Рамки подтянутся сами. `Ctrl+S` сохраняет кадр; удобно включить `Auto Save`.
@@ -30,7 +33,7 @@
 **Шаг 3 — проверка.**
 
 ```powershell
-.venv\Scripts\python.exe tools\check_labels.py data\interim\label\<группа>
+..\.venv\Scripts\python.exe tools\check_labels.py data\interim\label\<группа>
 ```
 
 Должно вывести «ошибок нет». После этого JSON переносятся в
@@ -56,9 +59,9 @@ activity=idle;offsite=true
 ```
 
 - `activity` — `working`, `idle` или `unknown`. Критерии по типам техники — в
-  `LABELING_SPEC.md`, наглядно — в `activity.png`.
+  `LABELING_SPEC.md` §7a (таблица по видам машин), наглядно — в `activity.png`.
 - `offsite=true` — техника **соседней** стройки: за забором, через дорогу, башенные
-  краны на горизонте. Ставится только когда это очевидно.
+  краны на горизонте. Ставится только когда это очевидно (`LABELING_SPEC.md` §7b).
 
 ---
 
