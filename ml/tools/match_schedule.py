@@ -184,6 +184,31 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
             status, delay = "on_track", 0
             basis = "наблюдения попадают в плановое окно"
 
+        # Отставание — главный вывод системы по ТЗ («отставание либо соответствие
+        # графику», Q&A 18:33), поэтому оно должно попадать в список отклонений,
+        # а не оставаться строкой в таблице статусов.
+        if status == "behind":
+            alerts.append({
+                "type": "stage_behind",
+                "stage_code": code,
+                "window": {"from": first.isoformat(), "to": last.isoformat()},
+                "expected": f"завершение к {stage['end'].isoformat()}",
+                "observed": f"работы этапа наблюдаются {last.isoformat()}",
+                "confidence": "medium" if best["specific_present"] else "low",
+                "observability": "medium",
+                "evidence": sorted({img for st, _ in observed for img in st["images"]})[:4],
+                "rules_fired": [f"{code}/{best['variant']}"],
+                "explanation": (f"Этап «{name}» отстаёт на {delay} дн.: плановое окончание "
+                                f"{stage['end'].isoformat()}, а работы наблюдаются "
+                                f"{last.isoformat()}" +
+                                (f" (подтверждение: {', '.join(best['specific_present'])})."
+                                 if best["specific_present"]
+                                 else " по полному набору универсальной техники.")),
+                "cannot_claim": ("Отставание измерено по снимкам: работы этапа видны после "
+                                 "плановой даты. Объём невыполненных работ и новый срок "
+                                 "завершения по фотографиям не определяются."),
+            })
+
         # Логическая техника отсутствует — повод для алерта, но не для вывода
         # об этапе: в нормах её нет, и по снимку её отсутствие не доказуемо.
         if best["missing_logical"]:
