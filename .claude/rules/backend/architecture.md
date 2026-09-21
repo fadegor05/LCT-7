@@ -3,12 +3,13 @@ paths:
   - "backend/**/*.py"
 ---
 
-**Dependency injection (Dishka).** Infrastructure providers (`Settings`, `AsyncEngine`, `async_sessionmaker` at `Scope.APP`; `AsyncSession` at `Scope.REQUEST`) live in `app/plugins/di.py`. Each domain has its own `Provider` in `modules/<domain>/provider.py` (repository + service, `Scope.REQUEST`). Routes receive dependencies via `FromDishka[...]` + `@inject`. Constructors are wired automatically by type.
+**Dependency injection (Dishka).** Infrastructure providers (`Settings`, `AsyncEngine`, `async_sessionmaker` at `Scope.APP`; `AsyncSession` at `Scope.REQUEST`) live in `app/plugins/di.py`. `Scope.APP` also covers external-system clients, stateless parsers and reference caches; `Scope.REQUEST` covers the session, repositories and services. Each domain has its own `Provider` in `domains/<domain>/provider.py` (repository + service, `Scope.REQUEST`). Routes receive dependencies via `FromDishka[...]` + `@inject`. Constructors are wired automatically by type.
 
 - `app/core/` — infrastructure: `settings.py` (pydantic-settings, nested env via `__` e.g. `POSTGRES__HOST`), `database.py` (`Base`), `security.py` (bcrypt).
 - `app/plugins/` — cross-cutting: `di.py` (Dishka container), `exceptions.py`, `routing.py`.
-- `app/modules/<domain>/` — one folder per domain, each with `models.py / schemas.py / repository.py / service.py / provider.py / router.py`.
+- `app/domains/<domain>/` — one folder per domain, flat, with `models.py / schemas.py / repository.py / service.py / provider.py / router.py` (omit files a domain doesn't need).
 - `app/adapters/` — external integrations (ML client planned).
+- `core/`, `plugins/` and `adapters/` are not domains.
 
 **Request flow.** router → service (business logic, raises `AppError(message, status_code)`) → repository (SQLAlchemy queries). The service owns the `AsyncSession` and calls `commit()`; repositories only stage changes.
 
@@ -20,9 +21,9 @@ paths:
 
 **Schemas.** We build schemas content in routers, from services we return models 
 
-### Adding a new domain module
+### Adding a new domain
 
-1. Create `app/modules/<domain>/` with the six files above (copy `user/` as the template).
+1. Create `app/domains/<domain>/` with the six files above (copy `user/` as the template).
 2. Register its router in `app/plugins/routing.py`.
 3. Register its provider in `create_container()` in `app/plugins/di.py`.
 4. Import its `models` in `app/models.py` — **Alembic autogenerate only sees models imported there.**

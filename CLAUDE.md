@@ -36,3 +36,14 @@ make logs           # follow logs
 make pretty         # backend: ruff format + ruff check --fix
 make check          # backend: ruff check + ruff format --check (CI/pre-commit)
 ```
+
+## Backend structure
+
+- `app/core/` — infrastructure: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py`.
+- `app/plugins/` — cross-cutting: `di.py`, `routing.py`, `exceptions.py`.
+- `app/adapters/` — external systems (ML, ГЭСН reference data).
+- `app/domains/<domain>/` — one domain = one flat directory with `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` (omit files a domain doesn't need). `core/`, `plugins/`, `adapters/` are not domains.
+- `app/models.py` — single import point for ORM models, so Alembic autogenerate sees them.
+- DI: `Scope.APP` — settings, engine, sessionmaker, external clients, stateless parsers, reference caches. `Scope.REQUEST` — session, repositories, services.
+
+Full convention: docs/architecture.md §6.

@@ -5,9 +5,9 @@ from collections.abc import Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
-from app.modules.user.models import User
-from app.modules.user.repository import UserRepository
-from app.modules.user.schemas import UserCreate
+from app.domains.user.models import User
+from app.domains.user.repository import UserRepository
+from app.domains.user.schemas import UserCreate
 from app.plugins.exceptions import AppError
 
 
