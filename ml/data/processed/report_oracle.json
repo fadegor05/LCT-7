@@ -3,7 +3,7 @@
     "state": "data\\processed\\site_state_oracle.json",
     "rules": "configs\\rules.json",
     "schedule": "data\\reference\\schedule_demo.csv",
-    "created": "2026-09-21T15:08:15"
+    "created": "2026-09-21T15:19:44"
   },
   "sites": [
     {
@@ -30,6 +30,17 @@
           },
           "status": "not_checkable",
           "basis": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы."
+        }
+      ],
+      "equipment_engagement": [
+        {
+          "class": "excavator_crawler",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
         }
       ],
       "alerts": []
@@ -80,6 +91,98 @@
           ],
           "basis": "наблюдения попадают в плановое окно",
           "confidence": "medium"
+        }
+      ],
+      "equipment_engagement": [
+        {
+          "class": "backhoe_loader",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "crawler_crane",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_rig",
+          "observations": 7,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 7,
+          "basis": "определённый ответ дан по 0 наблюдениям из 7 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "dump_truck",
+          "observations": 9,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 8,
+          "basis": "определённый ответ дан по 1 наблюдениям из 9 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_crawler",
+          "observations": 6,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 5,
+          "basis": "определённый ответ дан по 1 наблюдениям из 6 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_unknown",
+          "observations": 3,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 3,
+          "basis": "определённый ответ дан по 0 наблюдениям из 3 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "flatbed_truck",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "pile_driver",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_crane",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_unknown",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
         }
       ],
       "alerts": []
@@ -169,6 +272,116 @@
           "confidence": "medium"
         }
       ],
+      "equipment_engagement": [
+        {
+          "class": "backhoe_loader",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "bulldozer",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "concrete_mixer",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "crawler_crane",
+          "observations": 11,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 10,
+          "basis": "определённый ответ дан по 1 наблюдениям из 11 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_like",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_rig",
+          "observations": 16,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 15,
+          "basis": "определённый ответ дан по 1 наблюдениям из 16 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_crawler",
+          "observations": 18,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 18,
+          "basis": "определённый ответ дан по 0 наблюдениям из 18 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_wheeled",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "flatbed_truck",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "tower_crane",
+          "observations": 10,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 10,
+          "basis": "определённый ответ дан по 0 наблюдениям из 10 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_unknown",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "wheel_loader",
+          "observations": 3,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 3,
+          "basis": "определённый ответ дан по 0 наблюдениям из 3 — меньше порога 10, доля не оценивается"
+        }
+      ],
       "alerts": [
         {
           "type": "stage_not_started",
@@ -256,6 +469,35 @@
           "confidence": "medium"
         }
       ],
+      "equipment_engagement": [
+        {
+          "class": "backhoe_loader",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "flatbed_truck",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "tower_crane",
+          "observations": 5,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 5,
+          "basis": "определённый ответ дан по 0 наблюдениям из 5 — меньше порога 10, доля не оценивается"
+        }
+      ],
       "alerts": [
         {
           "type": "stage_not_started",
@@ -341,6 +583,62 @@
           ],
           "basis": "плановое начало прошло, техника этапа не наблюдается",
           "confidence": "medium"
+        }
+      ],
+      "equipment_engagement": [
+        {
+          "class": "crawler_crane",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_rig",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "dump_truck",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_crawler",
+          "observations": 10,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 10,
+          "basis": "определённый ответ дан по 0 наблюдениям из 10 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "tower_crane",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_crane",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
         }
       ],
       "alerts": [
@@ -445,6 +743,107 @@
           "basis": "снимков в плановом окне нет, последнее наблюдение раньше начала"
         }
       ],
+      "equipment_engagement": [
+        {
+          "class": "backhoe_loader",
+          "observations": 10,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 10,
+          "basis": "определённый ответ дан по 0 наблюдениям из 10 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "concrete_mixer",
+          "observations": 6,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 6,
+          "basis": "определённый ответ дан по 0 наблюдениям из 6 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "crawler_crane",
+          "observations": 8,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 7,
+          "basis": "определённый ответ дан по 1 наблюдениям из 8 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_like",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_rig",
+          "observations": 48,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 47,
+          "basis": "определённый ответ дан по 1 наблюдениям из 48 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "dump_truck",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_crawler",
+          "observations": 38,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 38,
+          "basis": "определённый ответ дан по 0 наблюдениям из 38 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_wheeled",
+          "observations": 3,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 3,
+          "basis": "определённый ответ дан по 0 наблюдениям из 3 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "flatbed_truck",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "pile_driver",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_crane",
+          "observations": 13,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 13,
+          "basis": "определённый ответ дан по 0 наблюдениям из 13 — меньше порога 10, доля не оценивается"
+        }
+      ],
       "alerts": []
     },
     {
@@ -472,6 +871,98 @@
           ],
           "basis": "наблюдения попадают в плановое окно",
           "confidence": "medium"
+        }
+      ],
+      "equipment_engagement": [
+        {
+          "class": "backhoe_loader",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "crawler_crane",
+          "observations": 5,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 1 наблюдениям из 5 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_like",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "drilling_rig",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "dump_truck",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_crawler",
+          "observations": 9,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 9,
+          "basis": "определённый ответ дан по 0 наблюдениям из 9 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "excavator_unknown",
+          "observations": 2,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 2,
+          "basis": "определённый ответ дан по 0 наблюдениям из 2 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "pile_driver",
+          "observations": 9,
+          "decided": 1,
+          "engaged": 1,
+          "not_engaged": 0,
+          "unknown": 8,
+          "basis": "определённый ответ дан по 1 наблюдениям из 9 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_crane",
+          "observations": 3,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 3,
+          "basis": "определённый ответ дан по 0 наблюдениям из 3 — меньше порога 10, доля не оценивается"
+        },
+        {
+          "class": "truck_unknown",
+          "observations": 1,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 1,
+          "basis": "определённый ответ дан по 0 наблюдениям из 1 — меньше порога 10, доля не оценивается"
         }
       ],
       "alerts": []
@@ -505,6 +996,17 @@
           },
           "status": "not_observed",
           "basis": "снимков в плановом окне нет, последнее наблюдение раньше начала"
+        }
+      ],
+      "equipment_engagement": [
+        {
+          "class": "excavator_crawler",
+          "observations": 4,
+          "decided": 0,
+          "engaged": 0,
+          "not_engaged": 0,
+          "unknown": 4,
+          "basis": "определённый ответ дан по 0 наблюдениям из 4 — меньше порога 10, доля не оценивается"
         }
       ],
       "alerts": [
@@ -556,6 +1058,7 @@
           "basis": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен."
         }
       ],
+      "equipment_engagement": [],
       "alerts": [
         {
           "type": "unusable_data",

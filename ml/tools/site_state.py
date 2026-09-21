@@ -123,6 +123,15 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
             for cls, n in counts.items():
                 equipment[cls] = max(equipment[cls], n)
 
+        # Вовлечённость: одно наблюдение = один work sample (part_N_activity, §6.3).
+        # Вердикта «машина простаивает» по кадру не даём — копим доли по классам.
+        engagement: dict[str, Counter] = defaultdict(Counter)
+        for f in frames:
+            for d in f["detections"]:
+                st = d.get("engagement")
+                if st:
+                    engagement[d["class_ours"]][st] += 1
+
         states.append({
             "site_id": site_id,
             "date": date,
@@ -130,6 +139,7 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
             "images": [f["image"] for f in frames],
             "equipment": dict(sorted(equipment.items(), key=lambda kv: -kv[1])),
             "per_frame_totals": [sum(c.values()) for c in per_frame],
+            "engagement": {k: dict(v) for k, v in sorted(engagement.items())},
             "observability": {
                 "n_images": len(frames),
                 "empty_frames": sum(1 for c in per_frame if not c),

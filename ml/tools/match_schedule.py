@@ -244,6 +244,64 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
             "basis": "наблюдений в плановом окне нет"}, []
 
 
+MIN_SAMPLES = 10          # меньше — доля простоя статистически бессмысленна
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Интервал Уилсона: в отличие от нормального приближения не схлопывается
+    в точку при доле 0 или 1 и корректен на малых выборках."""
+    if not n:
+        return 0.0, 1.0
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    hw = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return max(0.0, c - hw), min(1.0, c + hw)
+
+
+def work_sampling(states: list[dict]) -> list[dict]:
+    """Доля наблюдений без признаков вовлечённости, по классам техники.
+
+    Метод work sampling (в строительном производственном анализе с 1930-х): одно
+    наблюдение — один мгновенный замер, ответ бинарный, оценка — доля с
+    доверительным интервалом. Вердикта «машина простаивает» по одному кадру не
+    даём: он не наблюдаем (research/part_N_activity.md).
+
+    Интервал — нормальное приближение, z = 1.96. При малом N он широкий, и это
+    честно: на десятке наблюдений доля простоя не измеряется.
+    """
+    agg: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for st in states:
+        for cls, counts in (st.get("engagement") or {}).items():
+            for k, v in counts.items():
+                agg[cls][k] += v
+    out = []
+    for cls, c in sorted(agg.items()):
+        engaged, not_engaged = c.get("engaged", 0), c.get("not_engaged", 0)
+        decided = engaged + not_engaged
+        total = decided + c.get("unknown", 0)
+        if not total:
+            continue
+        row = {"class": cls, "observations": total, "decided": decided,
+               "engaged": engaged, "not_engaged": not_engaged,
+               "unknown": c.get("unknown", 0)}
+        # Порог: на единичных наблюдениях доля не оценивается. Без него отчёт
+        # напечатал бы «0% ±0 п.п.» по одному кадру — ложная точность.
+        if decided >= MIN_SAMPLES:
+            p = not_engaged / decided
+            lo, hi = wilson(not_engaged, decided)
+            row["not_engaged_share"] = round(p, 3)
+            row["ci95"] = [round(lo, 3), round(hi, 3)]
+            row["basis"] = (f"{decided} наблюдений с определённым ответом из {total}; "
+                            f"доля без признаков вовлечённости {p:.0%} "
+                            f"(интервал {lo:.0%}–{hi:.0%})")
+        else:
+            row["basis"] = (f"определённый ответ дан по {decided} наблюдениям из {total} — "
+                            f"меньше порога {MIN_SAMPLES}, доля не оценивается")
+        out.append(row)
+    return out
+
+
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 states: list[dict], specific: set[str],
                 unusable: dict[str, int] | None = None) -> dict:
@@ -251,6 +309,8 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
 
     # Дыра в данных — не то же самое, что отсутствие работ. Заказчик просил
     # предупреждать, что часть площадки или периода вне контроля (Q&A 13:01).
+    sampling = work_sampling(states)
+
     if unusable:
         total = sum(unusable.values())
         reasons = ", ".join(f"{k}: {v}" for k, v in sorted(unusable.items()))
@@ -318,6 +378,7 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
         "as_of": states[-1]["date"] if states else None,
         "observations": len(states),
         "stages": stages,
+        "equipment_engagement": sampling,
         "alerts": alerts,
     }
 
