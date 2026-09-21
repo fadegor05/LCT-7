@@ -51,9 +51,20 @@ def load_schedule(path: Path) -> dict[str, list[dict]]:
 
 
 def load_rules(path: Path) -> tuple[dict[str, dict], set[str]]:
+    """Правила по коду этапа; укрупнённое правило доступно по каждому исходному коду.
+
+    D-011 сводит неразличимые по технике работы в один наблюдаемый этап (например,
+    фундаментную плиту и монолит ниже нуля). В графике заказчика коды остаются
+    исходными, поэтому объединённое правило регистрируется под всеми ними.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
     specific = set(data["meta"].get("class_specificity", {}).get("specific", []))
-    return {r["stage_code"]: r for r in data["rules"]}, specific
+    rules = {}
+    for r in data["rules"]:
+        rules[r["stage_code"]] = r
+        for code in r.get("merged_from", []):
+            rules[code] = r
+    return rules, specific
 
 
 def load_states(path: Path) -> dict[str, list[dict]]:

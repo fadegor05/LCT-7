@@ -38,6 +38,9 @@ def main():
     ap.add_argument("--workers", type=int, default=2,
                     help="процессов загрузчика; на Windows каждый заново грузит torch, "
                          "при 4+ падает WinError 1455 (мал файл подкачки)")
+    ap.add_argument("--patience", type=int, default=15)
+    ap.add_argument("--strong-aug", action="store_true",
+                    help="агрессивная аугментация: при 73 кадрах разнообразие важнее точности копии")
     ap.add_argument("--name", default="ours_mix")
     ap.add_argument("--project", type=Path, default=ML / "runs")
     args = ap.parse_args()
@@ -65,9 +68,12 @@ def main():
 
     from ultralytics import YOLO
     model = YOLO(args.weights)
+    aug = dict(mosaic=1.0, copy_paste=0.3, scale=0.7, degrees=5.0, translate=0.2,
+               fliplr=0.5, hsv_v=0.5, close_mosaic=10) if args.strong_aug else {}
     model.train(data=str(data_yaml), epochs=args.epochs, imgsz=args.imgsz, batch=args.batch,
                 lr0=args.lr0, project=str(args.project), name=args.name, seed=0,
-                patience=15, workers=args.workers, exist_ok=True, plots=False, cache=False)
+                patience=args.patience, workers=args.workers, exist_ok=True,
+                plots=False, cache=False, **aug)
     print(f"веса: {args.project / args.name / 'weights/best.pt'}")
     return 0
 
