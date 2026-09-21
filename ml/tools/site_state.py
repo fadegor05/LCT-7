@@ -96,14 +96,20 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
                  thresholds: dict[str, float], default_conf: float) -> tuple[list[dict], dict]:
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
     skipped = Counter()
+    # кадры, выпавшие из цепочки, — это не «ничего не происходит», а дыра в данных.
+    # Заказчик просил предупреждать явно (Q&A 13:01), поэтому копим по площадкам
+    # и выносим в отчёт, а не только в консоль.
+    unusable: dict[str, Counter] = defaultdict(Counter)
 
     for record in records:
         site_id, date = sites.get(record["image"], ("", ""))
         if not site_id:
             skipped["без площадки"] += 1
+            unusable["_без площадки"]["нет привязки к площадке"] += 1
             continue
         if not date:
             skipped["площадка есть, даты нет"] += 1
+            unusable[site_id]["дата не распознана"] += 1
             continue
         groups[(site_id, date)].append(record)
 
@@ -129,7 +135,7 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
                 "empty_frames": sum(1 for c in per_frame if not c),
             },
         })
-    return states, dict(skipped)
+    return states, dict(skipped), {k: dict(v) for k, v in unusable.items()}
 
 
 def main() -> int:
@@ -150,7 +156,7 @@ def main() -> int:
     sites = load_sites(args.sites)
     thresholds = load_thresholds(args.thresholds)
 
-    states, skipped = build_states(records, sites, thresholds, args.conf)
+    states, skipped, unusable = build_states(records, sites, thresholds, args.conf)
     if not states:
         print("не собрано ни одного состояния: проверьте, что имена кадров в "
               "детекциях и в sites.csv совпадают", file=sys.stderr)
@@ -166,6 +172,7 @@ def main() -> int:
             "dedup": {"iou": DEDUP_IOU, "contained": DEDUP_CONTAIN},
             "source_images": len(records),
             "states": len(states),
+            "unusable_frames": unusable,
         },
         "states": states,
     }

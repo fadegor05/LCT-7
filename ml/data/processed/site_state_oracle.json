@@ -9,10 +9,67 @@
       "iou": 0.3,
       "contained": 0.7
     },
-    "source_images": 45,
-    "states": 11
+    "source_images": 59,
+    "states": 17,
+    "unusable_frames": {
+      "p06": {
+        "дата не распознана": 1
+      },
+      "p11": {
+        "дата не распознана": 11
+      }
+    }
   },
   "states": [
+    {
+      "site_id": "p01",
+      "date": "2026-07-15",
+      "n_images": 1,
+      "images": [
+        "Screenshot_1.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 1
+      },
+      "per_frame_totals": [
+        1
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p02",
+      "date": "2023-04-14",
+      "n_images": 3,
+      "images": [
+        "Screenshot_2.png",
+        "Screenshot_3.png",
+        "Screenshot_4.png"
+      ],
+      "equipment": {
+        "dump_truck": 5,
+        "drilling_rig": 3,
+        "crawler_crane": 2,
+        "excavator_crawler": 2,
+        "excavator_unknown": 2,
+        "backhoe_loader": 1,
+        "flatbed_truck": 1,
+        "pile_driver": 1,
+        "truck_crane": 1,
+        "truck_unknown": 1
+      },
+      "per_frame_totals": [
+        13,
+        11,
+        11
+      ],
+      "observability": {
+        "n_images": 3,
+        "empty_frames": 0
+      }
+    },
     {
       "site_id": "p03",
       "date": "2023-06-19",
@@ -140,6 +197,26 @@
       }
     },
     {
+      "site_id": "p04",
+      "date": "2024-08-09",
+      "n_images": 1,
+      "images": [
+        "Screenshot_17.png"
+      ],
+      "equipment": {
+        "tower_crane": 5,
+        "backhoe_loader": 1,
+        "flatbed_truck": 1
+      },
+      "per_frame_totals": [
+        7
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
       "site_id": "p05",
       "date": "2026-01-02",
       "n_images": 1,
@@ -232,11 +309,67 @@
     },
     {
       "site_id": "p08",
+      "date": "2024-02-21",
+      "n_images": 2,
+      "images": [
+        "Screenshot_27.png",
+        "Screenshot_28.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 3,
+        "drilling_rig": 3,
+        "truck_crane": 2,
+        "flatbed_truck": 1,
+        "backhoe_loader": 1,
+        "pile_driver": 1
+      },
+      "per_frame_totals": [
+        8,
+        10
+      ],
+      "observability": {
+        "n_images": 2,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p08",
+      "date": "2024-03-25",
+      "n_images": 4,
+      "images": [
+        "Screenshot_29.png",
+        "Screenshot_30.png",
+        "Screenshot_31.png",
+        "Screenshot_32.png"
+      ],
+      "equipment": {
+        "drilling_rig": 5,
+        "excavator_crawler": 4,
+        "crawler_crane": 2,
+        "backhoe_loader": 2,
+        "pile_driver": 1,
+        "truck_crane": 1,
+        "concrete_mixer": 1
+      },
+      "per_frame_totals": [
+        12,
+        11,
+        14,
+        5
+      ],
+      "observability": {
+        "n_images": 4,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p08",
       "date": "2024-04-24",
-      "n_images": 8,
+      "n_images": 9,
       "images": [
         "Screenshot_33.png",
         "Screenshot_34.png",
+        "Screenshot_35.png",
         "Screenshot_36.png",
         "Screenshot_37.png",
         "Screenshot_38.png",
@@ -259,6 +392,7 @@
       "per_frame_totals": [
         13,
         7,
+        6,
         8,
         4,
         6,
@@ -267,7 +401,7 @@
         11
       ],
       "observability": {
-        "n_images": 8,
+        "n_images": 9,
         "empty_frames": 0
       }
     },
@@ -305,6 +439,24 @@
       ],
       "observability": {
         "n_images": 6,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p10",
+      "date": "2024-06-25",
+      "n_images": 1,
+      "images": [
+        "Screenshot_47.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 4
+      },
+      "per_frame_totals": [
+        4
+      ],
+      "observability": {
+        "n_images": 1,
         "empty_frames": 0
       }
     }

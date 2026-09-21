@@ -67,6 +67,12 @@ def load_rules(path: Path) -> tuple[dict[str, dict], set[str]]:
     return rules, specific
 
 
+def load_unusable(path: Path) -> dict[str, dict]:
+    """Кадры, не дошедшие до цепочки: нет даты или нет привязки к площадке."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("meta", {}).get("unusable_frames", {})
+
+
 def load_states(path: Path) -> dict[str, list[dict]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     by_site: dict[str, list[dict]] = defaultdict(list)
@@ -239,8 +245,25 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
 
 
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
-                states: list[dict], specific: set[str]) -> dict:
+                states: list[dict], specific: set[str],
+                unusable: dict[str, int] | None = None) -> dict:
     stages, alerts = [], []
+
+    # Дыра в данных — не то же самое, что отсутствие работ. Заказчик просил
+    # предупреждать, что часть площадки или периода вне контроля (Q&A 13:01).
+    if unusable:
+        total = sum(unusable.values())
+        reasons = ", ".join(f"{k}: {v}" for k, v in sorted(unusable.items()))
+        alerts.append({
+            "type": "unusable_data",
+            "site_id": site_id,
+            "confidence": "high",
+            "observability": "low",
+            "explanation": f"{total} кадр(ов) площадки не участвуют в анализе ({reasons}). "
+                           f"Выводы по этой площадке построены только на кадрах с датой.",
+            "cannot_claim": "Отсутствие наблюдений на этих кадрах не означает отсутствия работ: "
+                            "кадры исключены из-за неполных данных, а не из-за пустой площадки.",
+        })
     for stage in sorted(plan, key=lambda s: s["start"]):
         status, stage_alerts = stage_status(stage, rules.get(stage["stage_code"]), states, specific)
         stages.append(status)
@@ -311,7 +334,9 @@ def main() -> int:
     rules, specific = load_rules(args.rules)
     states_by_site = load_states(args.state)
 
-    reports = [site_report(site, plan, rules, states_by_site.get(site, []), specific)
+    unusable = load_unusable(args.state)
+    reports = [site_report(site, plan, rules, states_by_site.get(site, []), specific,
+                           unusable.get(site))
                for site, plan in sorted(plans.items())]
     if not reports:
         print("в графике нет ни одной площадки", file=sys.stderr)
