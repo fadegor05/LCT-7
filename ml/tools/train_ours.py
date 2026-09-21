@@ -29,6 +29,8 @@ def main():
     ap.add_argument("--ours", type=Path, default=ML / "data/interim/ours_yolo")
     ap.add_argument("--kaggle", type=Path, default=ML / "data/external/lct7-kaggle-thin")
     ap.add_argument("--apoce", type=Path, default=ML / "data/external/lct7-apoce")
+    ap.add_argument("--extra", type=Path, nargs="*", default=[],
+                    help="дополнительные наборы в формате YOLO (например MOCS)")
     ap.add_argument("--weights", type=str, default=str(ML / "weights/yolo26s_k_apoce_best.pt"))
     ap.add_argument("--repeat", type=int, default=10, help="во сколько раз повторить наши кадры")
     ap.add_argument("--epochs", type=int, default=30)
@@ -48,7 +50,8 @@ def main():
     ours = images(args.ours / "train/images")
     kaggle = images(args.kaggle / "train/images")
     apoce = images(args.apoce / "train/images")
-    listing = kaggle + apoce + ours * args.repeat
+    extra = [p for d in args.extra for p in images(d / "train/images")]
+    listing = kaggle + apoce + extra + ours * args.repeat
 
     cfg_dir = args.project / "cfg"
     cfg_dir.mkdir(parents=True, exist_ok=True)
@@ -62,8 +65,8 @@ def main():
         f"val: {(args.ours / 'val/images').resolve().as_posix()}\n"
         f"names:{names}", encoding="utf-8")
 
-    print(f"Kaggle {len(kaggle)} + APOCE {len(apoce)} + наши {len(ours)}x{args.repeat} "
-          f"= {len(listing)} кадров в эпохе")
+    print(f"Kaggle {len(kaggle)} + APOCE {len(apoce)} + доп. {len(extra)} + "
+          f"наши {len(ours)}x{args.repeat} = {len(listing)} кадров в эпохе")
     print(f"старт с {Path(args.weights).name}, lr0 {args.lr0}, {args.epochs} эпох, imgsz {args.imgsz}")
 
     from ultralytics import YOLO
