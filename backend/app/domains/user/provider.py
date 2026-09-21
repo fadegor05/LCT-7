@@ -1,4 +1,4 @@
-"""DI-провайдер модуля user (аналог UserModule.kt / Koin-модуля).
+"""DI-провайдер домена user (аналог UserModule.kt / Koin-модуля).
 
 Dishka сам подставит зависимости в конструкторы: UserRepository(session),
 UserService(repository, session). Оба — в scope REQUEST, живут ровно один запрос.
@@ -6,8 +6,8 @@ UserService(repository, session). Оба — в scope REQUEST, живут ров
 
 from dishka import Provider, Scope, provide
 
-from app.modules.user.repository import UserRepository
-from app.modules.user.service import UserService
+from app.domains.user.repository import UserRepository
+from app.domains.user.service import UserService
 
 
 class UserProvider(Provider):

@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 
 from app.core.repository import BaseRepository
-from app.modules.user.models import User
+from app.domains.user.models import User
 
 
 class UserRepository(BaseRepository[User]):

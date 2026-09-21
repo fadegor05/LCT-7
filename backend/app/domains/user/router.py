@@ -3,8 +3,8 @@
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 
-from app.modules.user.schemas import UserCreate, UserRead
-from app.modules.user.service import UserService
+from app.domains.user.schemas import UserCreate, UserRead
+from app.domains.user.service import UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 

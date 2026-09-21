@@ -12,12 +12,15 @@ LCT-7/
 ├── backend/                 # FastAPI + Dishka + Granian
 │   ├── Dockerfile
 │   ├── pyproject.toml        # зависимости (uv), package = false
+│   ├── alembic.ini           # конфиг Alembic
+│   ├── migrations/           # миграции Alembic
 │   └── app/
 │       ├── main.py           # сборка приложения (аналог Application.kt)
-│       ├── core/             # settings, database (Base), security
+│       ├── core/             # settings, database (Base), repository, security
 │       ├── plugins/          # di (Dishka), exceptions, routing
-│       ├── clients/          # внешние клиенты (позже ML)
-│       └── modules/<домен>/  # per-domain: models / schemas / repository /
+│       ├── adapters/         # внешние системы (позже ML)
+│       ├── models.py         # единая точка импорта ORM-моделей для Alembic
+│       └── domains/<домен>/  # per-domain: models / schemas / repository /
 │                             #   service / provider (DI) / router
 ├── frontend/                # React + Vite (single-page), nginx в prod
 │   ├── Dockerfile
@@ -36,8 +39,9 @@ LCT-7/
 ```
 
 Бэкенд повторяет раскладку Kotlin-версии: `core` (инфраструктура), `plugins`
-(сквозные вещи — DI/ошибки/роутинг), `modules/<домен>` (по модулю на доменную
-область), `clients` (внешние интеграции).
+(сквозные вещи — DI/ошибки/роутинг), `domains/<домен>` (по каталогу на доменную
+область), `adapters` (внешние интеграции). `core`, `plugins` и `adapters`
+доменами не являются — подробнее в [docs/architecture.md](docs/architecture.md) §6.
 
 ## Быстрый старт
 
@@ -96,10 +100,10 @@ common/infra.yaml  # postgres + traefik
 - **Granian** — ASGI-сервер: `granian --interface asgi app.main:app`.
 - **Dishka** — DI-контейнер (`app/plugins/di.py`). Инфраструктура (`Settings`,
   `AsyncEngine`, `AsyncSession`) в scope APP/REQUEST; доменные провайдеры — в
-  своих модулях (`modules/<домен>/provider.py`). В роутах зависимости
+  своих доменах (`domains/<домен>/provider.py`). В роутах зависимости
   подставляются через `FromDishka[...]` + `@inject`.
-- Таблицы создаются на старте (`Base.metadata.create_all`) — для реального
-  проекта заменить на Alembic.
+- Схема применяется миграциями: `alembic upgrade head` выполняется перед
+  стартом сервера (см. `backend/app/main.py`, `deploy/docker/dev/core.yaml`).
 
 Локальный запуск без Docker:
 

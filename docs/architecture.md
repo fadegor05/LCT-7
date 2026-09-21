@@ -63,7 +63,48 @@
 
 ## 6. Детализация компонентов
 
-*Заглушка.*
+### 6.1. Раскладка бэкенда
+
+| Путь | Назначение |
+|---|---|
+| `app/core/` | инфраструктура: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py` |
+| `app/plugins/` | сквозные вещи: `di.py` (Dishka-контейнер), `routing.py`, `exceptions.py` |
+| `app/adapters/` | внешние системы: ML, справочные данные ГЭСН |
+| `app/domains/<домен>/` | один домен — один плоский каталог: `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` |
+| `app/models.py` | единая точка импорта ORM-моделей всех доменов — по ней Alembic autogenerate видит схему |
+| `app/main.py` | сборка приложения: подключение роутеров, DI-контейнера, обработчиков ошибок |
+
+`core/`, `adapters/` и `plugins/` доменами не являются: в них нет `router.py`/`service.py`, промежуточного уровня `modules/` нет — домены лежат прямо в `app/domains/`.
+
+### 6.2. Состав домена
+
+Все шесть файлов не обязательны: файл опускается, если домену он не нужен (например, `utility` — без моделей и репозитория, только `schemas.py` и `router.py`).
+
+| Файл | Ответственность |
+|---|---|
+| `models.py` | ORM-модели (SQLAlchemy) |
+| `schemas.py` | Pydantic-контракты запросов/ответов |
+| `repository.py` | запросы к БД поверх `BaseRepository` |
+| `service.py` | бизнес-логика домена, владеет `AsyncSession` и вызывает `commit()` |
+| `router.py` | HTTP-эндпоинты, сборка схем из результата сервиса |
+| `provider.py` | DI-провайдер домена (репозиторий + сервис) |
+
+### 6.3. Скоупы DI
+
+| Scope | Что живёт |
+|---|---|
+| `Scope.APP` | настройки, engine, sessionmaker, клиенты внешних систем, парсеры без состояния, кэши справочников |
+| `Scope.REQUEST` | `AsyncSession`, репозитории, сервисы |
+
+Каждый домен регистрирует свой `provider.py` в `create_container()` (`app/plugins/di.py`).
+
+### 6.4. Как добавить домен
+
+1. Создать `app/domains/<домен>/` по образцу `user/` — только нужные из шести файлов.
+2. Зарегистрировать роутер в `app/plugins/routing.py`.
+3. Зарегистрировать провайдер в `create_container()` (`app/plugins/di.py`).
+4. Дописать импорт моделей домена в `app/models.py` — иначе Alembic их не увидит.
+5. Сгенерировать миграцию: `uv run alembic revision --autogenerate -m "..."`.
 
 ## 7. Словари значений
 
