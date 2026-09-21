@@ -64,6 +64,37 @@ def observed_stages(equipment: dict[str, int], rules: dict, specific: set) -> li
     return out
 
 
+SCENE = ROOT / "data" / "reference" / "scene_level.csv"
+
+
+def load_scene_level() -> dict[tuple[str, str], str]:
+    """Уровень работ относительно отметки 0 по наблюдению (площадка, дата).
+
+    Признак сцены из research/part_M_scene_stage.md: граница качества распознавания
+    стадии проходит ровно по отметке 0, поэтому различать три равноценных класса не
+    нужно — достаточно бинарного «ниже нуля / выше нуля». Размечается по кадру за
+    минуту и знания ГЭСН не требует.
+    """
+    import csv
+    if not SCENE.exists():
+        return {}
+    with open(SCENE, encoding="utf-8") as f:
+        return {(r["site_id"], r["date"]): r["work_level"]
+                for r in csv.DictReader(f, delimiter=";")}
+
+
+def apply_scene(hits: list[tuple], rules: dict, level: str | None) -> list[tuple]:
+    """Этап, идущий на другом уровне, чем наблюдаемый, отбрасывается."""
+    if not level or level == "mixed":
+        return hits
+    out = []
+    for h in hits:
+        need = rules[h[0]].get("work_level", "any")
+        if need == "any" or need == level:
+            out.append(h)
+    return out
+
+
 def apply_order(hits: list[tuple], rules: dict, floor: int) -> list[tuple]:
     """Порядковое ограничение D-015: этап не возвращается назад.
 
@@ -80,10 +111,12 @@ def part1(rules: dict, specific: set) -> None:
     states = json.loads(ORACLE.read_text(encoding="utf-8"))["states"]
     counts = []
     floors: dict[str, int] = {}
+    scene = load_scene_level()
     for s in sorted(states, key=lambda x: (x["site_id"], x["date"])):
         hits = observed_stages(s["equipment"], rules, specific)
         site = s["site_id"]
         hits = apply_order(hits, rules, floors.get(site, 0))
+        hits = apply_scene(hits, rules, scene.get((site, s["date"])))
         # планку поднимает только специфичное свидетельство: универсальная техника
         # встречается на многих этапах, и ошибочная планка отрезала бы верные
         strong = [rules[c].get("order", 0) for c, _, st in hits if st == "specific"]
