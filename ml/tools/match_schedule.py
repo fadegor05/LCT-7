@@ -67,6 +67,10 @@ def load_rules(path: Path) -> tuple[dict[str, dict], set[str]]:
     return rules, specific
 
 
+NO_PROGRESS_SIM = 0.8     # похожесть составов техники, выше которой считаем «то же самое»
+NO_PROGRESS_DAYS = 14     # минимальный разрыв между наблюдениями, иначе сравнивать нечего
+
+
 def load_unusable(path: Path) -> dict[str, dict]:
     """Кадры, не дошедшие до цепочки: нет даты или нет привязки к площадке."""
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -356,22 +360,67 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 })
 
     # Отсутствие изменений между соседними наблюдениями.
+    #
+    # Раньше условием было полное совпадение состава техники — на реальных сериях
+    # такого не бывает, и алерт не срабатывал ни разу. Считаем похожесть составов
+    # (Жаккар по классам): при 0.8 и выше состав «практически тот же».
     for prev, cur in zip(states, states[1:]):
-        if prev["equipment"] == cur["equipment"] and prev["equipment"]:
+        a, b = set(prev["equipment"]), set(cur["equipment"])
+        if not a or not b:
+            continue
+        sim = len(a & b) / len(a | b)
+        days = (cur["_date"] - prev["_date"]).days
+        if sim >= NO_PROGRESS_SIM and days >= NO_PROGRESS_DAYS:
             alerts.append({
                 "type": "no_progress",
                 "site_id": site_id,
                 "stage_code": "",
                 "window": {"from": prev["date"], "to": cur["date"]},
-                "expected": "изменение состава техники",
+                "expected": "смена состава техники за период",
                 "observed": ", ".join(f"{k} x{v}" for k, v in cur["equipment"].items()),
                 "confidence": "low",
+                "observability": "medium",
                 "evidence": cur["images"][:4],
                 "rules_fired": [],
-                "explanation": (f"Состав техники не изменился с {prev['date']} по {cur['date']}."),
-                "cannot_claim": ("Одинаковый состав техники не означает отсутствия работ: "
-                                 "между съёмками могли смениться объёмы, а не машины."),
+                "explanation": (f"За {days} дней (с {prev['date']} по {cur['date']}) состав техники "
+                                f"совпадает на {sim:.0%}: те же классы, что и в прошлое наблюдение."),
+                "cannot_claim": ("Одинаковый состав техники не означает отсутствия работ: между "
+                                 "съёмками могли смениться объёмы, а не машины."),
             })
+
+    # Застой этапа: работы одного этапа наблюдаются после планового окончания
+    # на протяжении нескольких наблюдений подряд. Это и есть «прогноз задержки»
+    # в наблюдаемой форме (Q&A 12:52): не модель, а измеренный сдвиг.
+    for stage in plan:
+        rule = rules.get(stage["stage_code"])
+        if not rule or not rule.get("checkable_by_equipment", True):
+            continue
+        seen = [st for st in states
+                if match_stage(st["equipment"], rule, specific)["observed"]]
+        if len(seen) < 3:
+            continue
+        last, first = seen[-1], seen[0]
+        overdue = (last["_date"] - stage["end"]).days
+        if overdue <= 0:
+            continue
+        span = (last["_date"] - first["_date"]).days
+        alerts.append({
+            "type": "stage_stalled",
+            "site_id": site_id,
+            "stage_code": stage["stage_code"],
+            "window": {"from": first["date"], "to": last["date"]},
+            "expected": f"завершение к {stage['end'].isoformat()}",
+            "observed": f"работы этапа наблюдаются на {len(seen)} датах за {span} дн.",
+            "confidence": "medium",
+            "observability": "medium",
+            "evidence": last["images"][:4],
+            "rules_fired": [f"{stage['stage_code']}/stalled"],
+            "explanation": (f"Этап «{stage['stage_name']}» наблюдается на {len(seen)} наблюдениях "
+                            f"подряд и продолжается через {overdue} дн. после планового окончания "
+                            f"{stage['end'].isoformat()}. Признаков перехода к следующему этапу нет."),
+            "cannot_claim": ("Срок завершения по этим данным не предсказывается: объём выполненных "
+                             "работ по снимкам не измеряется, видно только продолжение этапа."),
+        })
 
     return {
         "site_id": site_id,

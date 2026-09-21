@@ -3,7 +3,7 @@
     "state": "data\\processed\\site_state_oracle.json",
     "rules": "configs\\rules.json",
     "schedule": "data\\reference\\schedule_demo.csv",
-    "created": "2026-09-21T15:19:44"
+    "created": "2026-09-21T15:32:11"
   },
   "sites": [
     {
@@ -445,6 +445,30 @@
           ],
           "explanation": "На дату 2023-09-14 по плану идёт этап «Устройство котлована», но наблюдается tower_crane.",
           "cannot_claim": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива."
+        },
+        {
+          "type": "stage_stalled",
+          "site_id": "p03",
+          "stage_code": "12.3.2",
+          "window": {
+            "from": "2023-06-19",
+            "to": "2023-09-14"
+          },
+          "expected": "завершение к 2023-07-31",
+          "observed": "работы этапа наблюдаются на 4 датах за 87 дн.",
+          "confidence": "medium",
+          "observability": "medium",
+          "evidence": [
+            "Screenshot_12.png",
+            "Screenshot_13.png",
+            "Screenshot_14.png",
+            "Screenshot_15.png"
+          ],
+          "rules_fired": [
+            "12.3.2/stalled"
+          ],
+          "explanation": "Этап «Устройство свай» наблюдается на 4 наблюдениях подряд и продолжается через 45 дн. после планового окончания 2023-07-31. Признаков перехода к следующему этапу нет.",
+          "cannot_claim": "Срок завершения по этим данным не предсказывается: объём выполненных работ по снимкам не измеряется, видно только продолжение этапа."
         }
       ]
     },
