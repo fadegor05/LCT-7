@@ -41,7 +41,18 @@ ORACLE = ROOT / "data" / "processed" / "site_state_oracle.json"
 
 
 def checkable(rules: dict) -> dict:
-    return {c: r for c, r in rules.items() if r.get("checkable_by_equipment", True)}
+    # укрупнённое правило (D-011/D-015) зарегистрировано под каждым исходным кодом,
+    # чтобы находиться по графику заказчика; в переборе оно должно быть один раз
+    seen, out = set(), {}
+    for c, r in rules.items():
+        if not r.get("checkable_by_equipment", True):
+            continue
+        key = id(r)
+        if key in seen:
+            continue
+        seen.add(key)
+        out[r["stage_code"]] = r
+    return out
 
 
 def observed_stages(equipment: dict[str, int], rules: dict, specific: set) -> list[tuple]:
@@ -53,12 +64,31 @@ def observed_stages(equipment: dict[str, int], rules: dict, specific: set) -> li
     return out
 
 
+def apply_order(hits: list[tuple], rules: dict, floor: int) -> list[tuple]:
+    """Порядковое ограничение D-015: этап не возвращается назад.
+
+    Если на прошлых датах площадки подтверждён этап с порядком N, то на текущем
+    наблюдении этапы с порядком < N отбрасываются. Так пара «снос / котлован»
+    (экскаватор + самосвал, зрением не разделимы) закрывается бесплатно: снос не
+    идёт после начала котлована на той же захватке.
+    """
+    return [h for h in hits if rules[h[0]].get("order", 0) >= floor]
+
+
 def part1(rules: dict, specific: set) -> None:
     print("\n=== 1. Неоднозначность реальных наблюдений (ручная разметка) ===")
     states = json.loads(ORACLE.read_text(encoding="utf-8"))["states"]
     counts = []
-    for s in states:
+    floors: dict[str, int] = {}
+    for s in sorted(states, key=lambda x: (x["site_id"], x["date"])):
         hits = observed_stages(s["equipment"], rules, specific)
+        site = s["site_id"]
+        hits = apply_order(hits, rules, floors.get(site, 0))
+        # планку поднимает только специфичное свидетельство: универсальная техника
+        # встречается на многих этапах, и ошибочная планка отрезала бы верные
+        strong = [rules[c].get("order", 0) for c, _, st in hits if st == "specific"]
+        if strong:
+            floors[site] = max(floors.get(site, 0), max(strong))
         counts.append(len(hits))
         print(f"\n{s['site_id']} {s['date']}  кадров={s['n_images']}  "
               f"техника: {', '.join(f'{k}x{v}' for k, v in s['equipment'].items())}")

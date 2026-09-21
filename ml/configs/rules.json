@@ -42,6 +42,10 @@
         "12.3.4",
         "12.3.9"
       ]
+    },
+    "stage_order": {
+      "field": "order",
+      "note": "технологический порядок: этап не возвращается назад. Используется как порядковое ограничение (D-015): пара «снос / котлован» зрением не разделяется, но снос не идёт после начала котлована на той же захватке"
     }
   },
   "rules": [
@@ -91,7 +95,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 0
     },
     {
       "stage_code": "12.3.1",
@@ -143,7 +148,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 1
     },
     {
       "stage_code": "12.3.2",
@@ -229,7 +235,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 2
     },
     {
       "stage_code": "12.3.5",
@@ -307,7 +314,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 3
     },
     {
       "stage_code": "12.3.6",
@@ -373,7 +381,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 4
     },
     {
       "stage_code": "12.3.7",
@@ -419,7 +428,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "medium"
+      "confidence": "medium",
+      "order": 5
     },
     {
       "stage_code": "12.3.4+12.3.9",
@@ -556,7 +566,8 @@
       ],
       "checkable_by_equipment": true,
       "confidence": "high",
-      "version": 2
+      "version": 2,
+      "order": 6
     },
     {
       "stage_code": "12.4.28",
@@ -607,7 +618,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 9
     },
     {
       "stage_code": "12.4.14",
@@ -653,7 +665,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 11
     },
     {
       "stage_code": "12.5.1",
@@ -699,7 +712,8 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "medium"
+      "confidence": "medium",
+      "order": 10
     },
     {
       "stage_code": "12.4.31",
@@ -708,7 +722,8 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике»."
+      "note": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике».",
+      "order": 12
     },
     {
       "stage_code": "12.4.11",
@@ -717,7 +732,8 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы."
+      "note": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы.",
+      "order": 13
     },
     {
       "stage_code": "12.3.10",
@@ -726,7 +742,8 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен."
+      "note": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен.",
+      "order": 14
     }
   ]
 }
