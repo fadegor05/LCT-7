@@ -23,13 +23,16 @@ LCT-7/
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   └── src/
-└── deploy/
-    ├── versions.env         # REGISTRY + теги образов
-    ├── docker/
-    │   ├── common/{core,infra}.yaml   # сервисы + Traefik-лейблы + postgres/traefik
-    │   ├── dev/core.yaml              # локальный билд, bind-mount, hot-reload
-    │   └── prod/core.yaml             # TLS, mem_limit, готовые образы
-    └── config/traefik/traefik.yml
+├── deploy/
+│   ├── README.md            # схема деплоя, туннель, включение CD
+│   ├── versions.env         # REGISTRY + теги образов
+│   ├── docker/
+│   │   ├── common/{core,infra}.yaml   # сервисы + Traefik-лейблы + postgres/traefik
+│   │   ├── dev/core.yaml              # локальный билд, bind-mount, hot-reload
+│   │   ├── prod/core.yaml             # TLS на хосте, mem_limit, готовые образы
+│   │   └── prod/tunnel.yaml           # прод за туннелем: TLS терминирует туннель
+│   └── config/traefik/traefik.yml
+└── .github/workflows/       # ci.yml (проверки) + cd.yml (шаблон деплоя)
 ```
 
 Бэкенд повторяет раскладку Kotlin-версии: `core` (инфраструктура), `plugins`
@@ -66,7 +69,27 @@ common/infra.yaml  # postgres + traefik
   всё остальное → frontend (priority 1).
 
 `make deploy` использует `prod/core.yaml` (TLS + готовые образы по тегам из
-`deploy/versions.env`) и не билдит, только `pull` + `up`.
+`deploy/versions.env`) и не билдит, только `pull` + `up`. `make deploy-tunnel` —
+то же самое для хоста за туннелем, где TLS терминируется снаружи.
+
+## CI/CD
+
+**CI** (`.github/workflows/ci.yml`) — на каждый PR и push в `main`:
+
+| Job | Что делает |
+|---|---|
+| `backend · ruff` | `make check` — линт + проверка формата |
+| `backend · mypy` | типы; пока информативно, CI не красит |
+| `backend · миграции + /api/health` | postgres в сервис-контейнере, `alembic upgrade head`, поднимает Granian и дёргает healthcheck |
+| `frontend · tsc + vite build` | `pnpm install --frozen-lockfile` + `pnpm build` |
+| `ml · синтаксис скриптов` | `compileall` по `ml/tools` — без установки torch |
+| `deploy · валидация compose-слоёв` | `docker compose config` по dev / prod / tunnel |
+| `docker · backend/frontend` | сборка образов (без публикации) |
+
+**CD** (`.github/workflows/cd.yml`) — пока шаблон: автотриггеров нет, деплой
+отключён переменной `DEPLOY_ENABLED`. Работающая часть — сборка и публикация
+образов в GHCR по ручному запуску. Как включить деплой на `xxprod.ru` —
+в [deploy/README.md](deploy/README.md).
 
 ## Бэкенд: Dishka + Granian
 
@@ -86,3 +109,9 @@ uv sync
 granian --interface asgi app.main:app --reload   # нужен доступный PostgreSQL
 ```
 ```
+
+## Лицензия
+
+[AGPL-3.0](LICENSE). Выбрана из-за ML-части: модели Ultralytics (YOLOE, YOLO26)
+распространяются под AGPL-3.0, включая обученные веса. Закрытое внедрение с этими
+моделями потребует коммерческой лицензии Ultralytics. Обоснование — `ml/DECISIONS.md`, D-001.
