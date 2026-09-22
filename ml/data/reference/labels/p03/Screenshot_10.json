@@ -228,7 +228,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=unknown;offsite=true\n",
+      "description": "activity=unknown;offsite=true",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},

@@ -286,7 +286,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=idle\n",
+      "description": "activity=idle",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},

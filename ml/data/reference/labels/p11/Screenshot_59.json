@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          144.7,
+          188.5
+        ],
+        [
+          254.3,
+          188.5
+        ],
+        [
+          254.3,
+          464.6
+        ],
+        [
+          144.7,
+          464.6
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          348.0,
+          0.0
+        ],
+        [
+          408.5476190476191,
+          0.0
+        ],
+        [
+          408.5476190476191,
+          640.4365079365078
+        ],
+        [
+          348.0,
+          640.4365079365078
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "flatbed_truck",
+      "score": null,
+      "points": [
+        [
+          561.2,
+          661.3
+        ],
+        [
+          860.2,
+          661.3
+        ],
+        [
+          860.2,
+          805.0
+        ],
+        [
+          561.2,
+          805.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_59.png",
+  "imageData": null,
+  "imageHeight": 805,
+  "imageWidth": 1079,
+  "description": ""
+}
