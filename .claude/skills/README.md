@@ -11,3 +11,9 @@ code review, git worktrees, etc.) for Claude Code sessions working in this repo.
 
 To pick up updates, re-sync the `skills/` directory from the upstream repo and
 review the diff before committing.
+
+## Project-specific skills
+
+`vibe/` is homegrown for this repo (not part of the superpowers import): it
+drives a single Linear task end-to-end — plan, confirmation, spec,
+subagent-driven development, PR — via `/vibe <linear-task>`.
