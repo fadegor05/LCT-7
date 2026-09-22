@@ -116,7 +116,7 @@
 
 | Путь | Назначение |
 |---|---|
-| `app/core/` | инфраструктура: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py` |
+| `app/core/` | инфраструктура: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`) |
 | `app/plugins/` | сквозные вещи: `di.py` (Dishka-контейнер), `routing.py`, `exceptions.py` |
 | `app/adapters/` | внешние системы: ML, справочные данные ГЭСН |
 | `app/domains/<домен>/` | один домен — один плоский каталог: `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` |
