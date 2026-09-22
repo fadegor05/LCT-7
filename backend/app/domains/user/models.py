@@ -1,4 +1,10 @@
-"""ORM-модели пользователя (аналог UserModels.kt)."""
+"""ORM-модель пользователя стенда (docs/DataModel.md §5.5, таблица app_user).
+
+Авторизации в MVP нет (product.md §14, §16): в таблице живёт ровно одна строка,
+она нужна, чтобы подписывать создание строек и решения по гипотезам
+(«Решил: инженер [ФИО]»). Таблица названа app_user, потому что user —
+зарезервированное слово в PostgreSQL.
+"""
 
 import uuid
 from datetime import datetime
@@ -10,11 +16,10 @@ from app.core.database import Base
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "app_user"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    name: Mapped[str] = mapped_column(String(255))
-    role: Mapped[str] = mapped_column(String(32), default="student")
-    hashed_password: Mapped[str] = mapped_column(String(255))
+    # default намеренно нет: идентификатор стендового пользователя задаётся явно
+    # константой STAND_USER_ID, чтобы seed был воспроизводим между перезапусками.
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    full_name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
