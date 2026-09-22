@@ -47,4 +47,8 @@ pretty:
 check:
 	cd backend && uv run ruff check . && uv run ruff format --check .
 
-.PHONY: dev up deploy deploy-tunnel down logs pretty check
+# Тесты бэкенда
+test:
+	cd backend && uv run pytest
+
+.PHONY: dev up deploy deploy-tunnel down logs pretty check test

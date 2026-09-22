@@ -6,6 +6,7 @@
 
 from contextlib import asynccontextmanager
 
+from dishka import AsyncContainer
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI):
     await app.state.dishka_container.close()
 
 
-def create_app() -> FastAPI:
+def create_app(container: AsyncContainer | None = None) -> FastAPI:
     app = FastAPI(
         title="LCT-7 API",
         docs_url=f"{settings.api_prefix}/docs",
@@ -33,8 +34,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    container = create_container()
-    setup_dishka(container, app)
+    setup_dishka(container or create_container(), app)
 
     register_exception_handlers(app)
     app.include_router(api_router, prefix=settings.api_prefix)

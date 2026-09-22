@@ -19,6 +19,10 @@ dependencies = [
 dev = [
     "ruff>=0.7",
     "mypy>=1.13",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "httpx>=0.28.1",
+    "aiosqlite>=0.22.1",
 ]
 
 # Это приложение, а не библиотека — uv ставит только зависимости в окружение,
@@ -33,3 +37,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["."]
