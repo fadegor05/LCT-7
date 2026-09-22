@@ -1,23 +1,15 @@
-"""HTTP-роуты пользователя (аналог UserRoutes.kt)."""
+"""HTTP-роуты стендового пользователя."""
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 
-from app.domains.user.schemas import UserCreate, UserRead
-from app.domains.user.service import UserService
+from app.domains.user.provider import CurrentUser
+from app.domains.user.schemas import UserRead
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("")
+@router.get("/me")
 @inject
-async def list_users(service: FromDishka[UserService]) -> list[UserRead]:
-    users = await service.list_users()
-    return [UserRead.model_validate(user) for user in users]
-
-
-@router.post("", status_code=201)
-@inject
-async def create_user(data: UserCreate, service: FromDishka[UserService]) -> UserRead:
-    user = await service.create_user(data)
+async def read_me(user: FromDishka[CurrentUser]) -> UserRead:
     return UserRead.model_validate(user)

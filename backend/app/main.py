@@ -11,6 +11,7 @@ from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
 from app.core.settings import get_settings
+from app.domains.user.service import UserService
 from app.plugins.di import create_container
 from app.plugins.exceptions import register_exception_handlers
 from app.plugins.routing import api_router
@@ -22,6 +23,10 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Схема БД накатывается миграциями Alembic (`alembic upgrade head`) до старта
     # сервера — см. команду запуска в deploy/docker/dev/core.yaml и Dockerfile.
+    # Здесь только идемпотентный seed стендового пользователя.
+    async with app.state.dishka_container() as request_container:
+        service = await request_container.get(UserService)
+        await service.ensure_stand_user()
     yield
     await app.state.dishka_container.close()
 
