@@ -12,6 +12,7 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.assessment.service import AssessmentService
 from app.domains.methodology.recalculator import StatusRecalculator
 
 
@@ -36,6 +37,7 @@ class AssessmentProvider(Provider):
     deviation_evidence_repository = provide(DeviationEvidenceRepository, scope=Scope.REQUEST)
     status_basis_repository = provide(StatusBasisRepository, scope=Scope.REQUEST)
     coordinator = provide(RecomputeCoordinator, scope=Scope.REQUEST)
+    service = provide(AssessmentService, scope=Scope.REQUEST)
 
     @provide(scope=Scope.REQUEST, provides=StatusRecalculator)
     def status_recalculator(self, coordinator: RecomputeCoordinator) -> StatusRecalculator:

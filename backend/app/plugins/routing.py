@@ -6,6 +6,7 @@
 
 from fastapi import APIRouter
 
+from app.domains.assessment.router import router as assessment_router
 from app.domains.methodology.router import equipment_router
 from app.domains.methodology.router import router as methodology_router
 from app.domains.observation.router import router as observation_router
@@ -24,3 +25,4 @@ api_router.include_router(equipment_router)
 api_router.include_router(methodology_router)
 api_router.include_router(photo_router)
 api_router.include_router(observation_router)
+api_router.include_router(assessment_router)
