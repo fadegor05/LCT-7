@@ -7,9 +7,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base
-from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.catalog import EquipmentCatalog, EquipmentTypeInfo
 from app.domains.methodology.models import EquipmentType
-from app.domains.methodology.schemas import EquipmentTypeRead
 from app.domains.methodology.seed import EQUIPMENT_SEED
 
 
@@ -54,7 +53,7 @@ class TestEquipmentCatalog:
 
         items = await catalog.all()
         assert len(items) == 20
-        assert all(isinstance(item, EquipmentTypeRead) for item in items)
+        assert all(isinstance(item, EquipmentTypeInfo) for item in items)
 
         # Проверяем сортировку по коду
         codes = [item.code for item in items]

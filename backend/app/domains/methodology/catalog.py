@@ -2,12 +2,22 @@
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domains.methodology.models import EquipmentType
-from app.domains.methodology.schemas import EquipmentTypeRead
+
+
+@dataclass(frozen=True)
+class EquipmentTypeInfo:
+    """Информация о типе оборудования (без Pydantic)."""
+
+    id: uuid.UUID
+    code: str
+    title: str
+    synonyms: tuple[str, ...] | list[str]
 
 
 class EquipmentCatalog:
@@ -20,10 +30,10 @@ class EquipmentCatalog:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]):
         """Инициализировать каталог с sessionmaker."""
         self._sessionmaker = sessionmaker
-        self._cache: list[EquipmentTypeRead] | None = None
+        self._cache: list[EquipmentTypeInfo] | None = None
         self._lock = asyncio.Lock()
 
-    async def all(self) -> list[EquipmentTypeRead]:
+    async def all(self) -> list[EquipmentTypeInfo]:
         """Получить все типы оборудования, отсортированные по коду.
 
         Результат кешируется при первом вызове.
@@ -34,10 +44,18 @@ class EquipmentCatalog:
                     stmt = select(EquipmentType).order_by(EquipmentType.code)
                     result = await session.execute(stmt)
                     equipment_types = result.scalars().all()
-                    self._cache = [EquipmentTypeRead.model_validate(eq) for eq in equipment_types]
+                    self._cache = [
+                        EquipmentTypeInfo(
+                            id=eq.id,
+                            code=eq.code,
+                            title=eq.title,
+                            synonyms=tuple(eq.synonyms),
+                        )
+                        for eq in equipment_types
+                    ]
             return self._cache
 
-    async def by_id(self, id: uuid.UUID) -> EquipmentTypeRead | None:
+    async def by_id(self, id: uuid.UUID) -> EquipmentTypeInfo | None:
         """Найти тип оборудования по ID.
 
         Использует закешированный список.
@@ -48,7 +66,7 @@ class EquipmentCatalog:
                 return item
         return None
 
-    async def by_code(self, code: str) -> EquipmentTypeRead | None:
+    async def by_code(self, code: str) -> EquipmentTypeInfo | None:
         """Найти тип оборудования по коду.
 
         Использует закешированный список.

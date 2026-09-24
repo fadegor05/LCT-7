@@ -93,3 +93,10 @@ class MethodologyRepository(BaseRepository[MethodologyRule]):
         )
         position = result.scalar_one_or_none()
         return position if position is not None else -1
+
+    async def get_rule_for_update(self, rule_id: uuid.UUID) -> MethodologyRule | None:
+        """Получить правило с блокировкой FOR UPDATE для предотвращения race condition."""
+        result = await self._session.execute(
+            select(MethodologyRule).where(MethodologyRule.id == rule_id).with_for_update()
+        )
+        return result.scalar_one_or_none()

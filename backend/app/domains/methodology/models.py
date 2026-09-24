@@ -98,6 +98,10 @@ class EquipmentSet(Base):
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("rule_id", "position", name="uq_equipment_sets_rule_position"),
+    )
+
 
 class EquipmentRequirement(Base):
     """Требование по конкретному типу оборудования (таблица equipment_requirements).

@@ -464,3 +464,47 @@ async def test_base_rule_without_stage_key_fails(engine: AsyncEngine, container)
 
         with pytest.raises(IntegrityError):
             await session.flush()
+
+
+@pytest.mark.asyncio
+async def test_equipment_set_unique_rule_position_constraint(
+    engine: AsyncEngine, container
+) -> None:
+    """Два набора с одинаковыми rule_id и position вызывают IntegrityError."""
+    maker = await container.get(async_sessionmaker[AsyncSession])
+
+    async with maker() as session:
+        # Инфраструктура
+        owner_id = uuid.uuid4()
+        owner = User(id=owner_id, full_name="John Doe")
+        session.add(owner)
+
+        site_id = uuid.uuid4()
+        site = Site(id=site_id, name="Site", owner_id=owner_id)
+        session.add(site)
+
+        schedule_id = uuid.uuid4()
+        schedule = Schedule(id=schedule_id, site_id=site_id)
+        session.add(schedule)
+
+        stage_id = uuid.uuid4()
+        stage = ScheduleStage(id=stage_id, schedule_id=schedule_id, name="Stage", position=1)
+        session.add(stage)
+
+        # Правило
+        rule_id = uuid.uuid4()
+        rule = MethodologyRule(id=rule_id, site_id=site_id, stage_id=stage_id)
+        session.add(rule)
+        await session.flush()
+
+        # Первый набор
+        set1 = EquipmentSet(id=uuid.uuid4(), rule_id=rule_id, position=1)
+        session.add(set1)
+        await session.commit()
+
+        # Второй набор с тем же rule_id и position
+        set2 = EquipmentSet(id=uuid.uuid4(), rule_id=rule_id, position=1)
+        session.add(set2)
+
+        with pytest.raises(IntegrityError):
+            await session.commit()

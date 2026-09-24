@@ -482,6 +482,78 @@ async def test_post_set_without_source_returns_422(
     assert response.status_code == 422
 
 
+async def test_post_set_with_gesn_code_too_long_returns_422(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """POST с gesn_code > 64 символов возвращает 422."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+
+    site_id, _ = await create_site_with_schedule(client, container)
+
+    get_resp = await client.get(f"/sites/{site_id}/methodology")
+    rules = get_resp.json()
+    rule_id = rules[0]["id"]
+
+    eq_resp = await client.get("/equipment-types")
+    equipment_types = eq_resp.json()
+    excavator_id = next(eq["id"] for eq in equipment_types if eq["code"] == "excavator_crawler")
+
+    set_data = {
+        "requirements": [
+            {
+                "equipment_type_id": str(excavator_id),
+                "min_count": 1,
+                "obligation": "normative",
+                "gesn_code": "x" * 65,
+            },
+        ]
+    }
+
+    response = await client.post(
+        f"/sites/{site_id}/methodology/rules/{rule_id}/sets",
+        json=set_data,
+    )
+
+    assert response.status_code == 422
+
+
+async def test_post_set_with_source_note_too_long_returns_422(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """POST с source_note > 500 символов возвращает 422."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+
+    site_id, _ = await create_site_with_schedule(client, container)
+
+    get_resp = await client.get(f"/sites/{site_id}/methodology")
+    rules = get_resp.json()
+    rule_id = rules[0]["id"]
+
+    eq_resp = await client.get("/equipment-types")
+    equipment_types = eq_resp.json()
+    excavator_id = next(eq["id"] for eq in equipment_types if eq["code"] == "excavator_crawler")
+
+    set_data = {
+        "requirements": [
+            {
+                "equipment_type_id": str(excavator_id),
+                "min_count": 1,
+                "obligation": "normative",
+                "source_note": "x" * 501,
+            },
+        ]
+    }
+
+    response = await client.post(
+        f"/sites/{site_id}/methodology/rules/{rule_id}/sets",
+        json=set_data,
+    )
+
+    assert response.status_code == 422
+
+
 async def test_put_set_replaces_requirements_returns_200(
     client: AsyncClient, container: AsyncContainer
 ) -> None:
@@ -551,6 +623,96 @@ async def test_delete_set_returns_204(client: AsyncClient, container: AsyncConta
     rules = get_resp.json()
     updated_rule = next(r for r in rules if r["id"] == rule_with_sets["id"])
     assert len(updated_rule["sets"]) == initial_set_count - 1
+
+
+async def test_delete_last_set_of_verifiable_rule_returns_422(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """DELETE последнего набора проверяемого этапа возвращает 422."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+
+    site_id, _ = await create_site_with_schedule(client, container)
+
+    # Получаем первое правило с ровно одним набором
+    get_resp = await client.get(f"/sites/{site_id}/methodology")
+    rules = get_resp.json()
+    rule_with_one_set = next(
+        (r for r in rules if len(r["sets"]) == 1 and r["is_verifiable"]),
+        None,
+    )
+
+    if rule_with_one_set is None:
+        # Если нет правила с одним набором, создаём новое
+        rule_with_multiple = next(r for r in rules if len(r["sets"]) > 1)
+        rule_id = rule_with_multiple["id"]
+        set_id = rule_with_multiple["sets"][1]["id"]
+
+        # Удаляем один набор, оставляя один
+        await client.delete(f"/sites/{site_id}/methodology/sets/{set_id}")
+
+        # Получаем обновленные правила
+        get_resp = await client.get(f"/sites/{site_id}/methodology")
+        rules = get_resp.json()
+        rule_with_one_set = next(r for r in rules if r["id"] == rule_id)
+
+    set_id = rule_with_one_set["sets"][0]["id"]
+
+    # Пытаемся удалить последний набор проверяемого этапа
+    response = await client.delete(f"/sites/{site_id}/methodology/sets/{set_id}")
+
+    assert response.status_code == 422
+    assert "Нельзя удалить последний комплект проверяемого этапа" in response.json()["detail"]
+
+
+async def test_delete_last_set_of_unverifiable_rule_returns_204(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """DELETE последнего набора непроверяемого этапа возвращает 204."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+
+    site_id, _ = await create_site_with_schedule(client, container)
+
+    # Получаем первое правило с ровно одним набором
+    get_resp = await client.get(f"/sites/{site_id}/methodology")
+    rules = get_resp.json()
+    rule_with_one_set = next(
+        (r for r in rules if len(r["sets"]) == 1 and not r["is_verifiable"]),
+        None,
+    )
+
+    if rule_with_one_set is None:
+        # Если нет непроверяемого правила, сначала создаём такое
+        rule_with_multiple = next(r for r in rules if len(r["sets"]) > 1)
+        rule_id = rule_with_multiple["id"]
+
+        # Обновляем правило, чтобы сделать его непроверяемым
+        update_response = await client.patch(
+            f"/sites/{site_id}/methodology/rules/{rule_id}",
+            json={"is_verifiable": False, "unverifiable_reason": "для тестирования"},
+        )
+        assert update_response.status_code == 200
+
+        # Получаем обновлённое правило
+        get_resp = await client.get(f"/sites/{site_id}/methodology")
+        rules = get_resp.json()
+        rule_with_one_set = next(r for r in rules if r["id"] == rule_id)
+
+        # Если у непроверяемого правила есть наборы, удаляем все кроме одного
+        while len(rule_with_one_set["sets"]) > 1:
+            set_id = rule_with_one_set["sets"][-1]["id"]
+            await client.delete(f"/sites/{site_id}/methodology/sets/{set_id}")
+            get_resp = await client.get(f"/sites/{site_id}/methodology")
+            rules = get_resp.json()
+            rule_with_one_set = next(r for r in rules if r["id"] == rule_id)
+
+    set_id = rule_with_one_set["sets"][0]["id"]
+
+    # Удаляем последний набор непроверяемого этапа - должно работать
+    response = await client.delete(f"/sites/{site_id}/methodology/sets/{set_id}")
+
+    assert response.status_code == 204
 
 
 async def test_delete_nonexistent_set_returns_404(

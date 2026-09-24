@@ -96,6 +96,50 @@ class TestRequirementIn:
         assert req.source_note == "по смыслу работы"
         assert req.gesn_code is None
 
+    def test_requirement_in_gesn_code_too_long(self):
+        """RequirementIn с gesn_code > 64 символов должен вернуть ошибку валидации."""
+        with pytest.raises(ValidationError) as exc_info:
+            RequirementIn(
+                equipment_type_id=uuid.uuid4(),
+                min_count=1,
+                obligation=Obligation.NORMATIVE,
+                gesn_code="x" * 65,
+            )
+        errors = exc_info.value.errors()
+        assert any("String should have at most 64 characters" in str(e) for e in errors)
+
+    def test_requirement_in_gesn_code_max_length(self):
+        """RequirementIn с gesn_code ровно 64 символа валиден."""
+        req = RequirementIn(
+            equipment_type_id=uuid.uuid4(),
+            min_count=1,
+            obligation=Obligation.NORMATIVE,
+            gesn_code="x" * 64,
+        )
+        assert len(req.gesn_code) == 64
+
+    def test_requirement_in_source_note_too_long(self):
+        """RequirementIn с source_note > 500 символов должен вернуть ошибку валидации."""
+        with pytest.raises(ValidationError) as exc_info:
+            RequirementIn(
+                equipment_type_id=uuid.uuid4(),
+                min_count=1,
+                obligation=Obligation.NORMATIVE,
+                source_note="x" * 501,
+            )
+        errors = exc_info.value.errors()
+        assert any("String should have at most 500 characters" in str(e) for e in errors)
+
+    def test_requirement_in_source_note_max_length(self):
+        """RequirementIn с source_note ровно 500 символов валиден."""
+        req = RequirementIn(
+            equipment_type_id=uuid.uuid4(),
+            min_count=1,
+            obligation=Obligation.NORMATIVE,
+            source_note="x" * 500,
+        )
+        assert len(req.source_note) == 500
+
     def test_requirement_in_obligation_values(self):
         """RequirementIn принимает все значения Obligation."""
         for obligation in [Obligation.NORMATIVE, Obligation.LOGICAL, Obligation.AUXILIARY]:
