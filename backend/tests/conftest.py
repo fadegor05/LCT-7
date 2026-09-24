@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.core.settings import Settings, get_settings
+from app.domains.site.provider import SiteProvider
 from app.domains.user.provider import UserProvider
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
@@ -69,6 +70,7 @@ async def container() -> AsyncIterator[AsyncContainer]:
         TestAppProvider(),
         TestDatabaseProvider(),
         UserProvider(),
+        SiteProvider(),
         UtilityProvider(),
     )
     yield container
