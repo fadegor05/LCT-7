@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.settings import Settings, get_settings
+from app.domains.site.provider import SiteProvider
 from app.domains.user.provider import UserProvider
 from app.domains.utility.provider import UtilityProvider
 
@@ -51,5 +52,6 @@ def create_container() -> AsyncContainer:
         AppProvider(),
         DatabaseProvider(),
         UserProvider(),
+        SiteProvider(),
         UtilityProvider(),
     )

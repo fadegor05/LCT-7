@@ -5,6 +5,7 @@
 """
 
 from app.core.database import Base
+from app.domains.site import models as site_models  # noqa: F401
 from app.domains.user import models as user_models  # noqa: F401
 
 __all__ = ["Base"]
