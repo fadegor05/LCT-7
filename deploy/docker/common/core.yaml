@@ -3,6 +3,9 @@ services:
     image: ${REGISTRY}/backend:${BACKEND_TAG:-latest}
     build: ./backend
     env_file: .env
+    environment:
+      # Тег образа нужен самому приложению (GET /api/version), а не только compose при pull.
+      BACKEND_TAG: ${BACKEND_TAG:-latest}
     networks:
       - web
     labels:

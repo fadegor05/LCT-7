@@ -20,6 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.settings import Settings, get_settings
 from app.domains.user.provider import UserProvider
+from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
 
@@ -64,7 +65,12 @@ class TestDatabaseProvider(Provider):
 
 @pytest.fixture
 async def container() -> AsyncIterator[AsyncContainer]:
-    container = make_async_container(TestAppProvider(), TestDatabaseProvider(), UserProvider())
+    container = make_async_container(
+        TestAppProvider(),
+        TestDatabaseProvider(),
+        UserProvider(),
+        UtilityProvider(),
+    )
     yield container
     await container.close()
 
