@@ -6,6 +6,7 @@ from datetime import date
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.schedule.models import DatesSource, Schedule, ScheduleImportIssue, ScheduleStage
 from app.domains.schedule.parser import ScheduleFormatError, ScheduleParser
 from app.domains.schedule.repository import ScheduleRepository
@@ -23,11 +24,13 @@ class ScheduleService:
         session: AsyncSession,
         guard: SiteAccessGuard,
         parser: ScheduleParser,
+        recalculator: StatusRecalculator,
     ) -> None:
         self._repository = repository
         self._session = session
         self._guard = guard
         self._parser = parser
+        self._recalculator = recalculator
 
     async def _build_report(self, schedule: Schedule) -> ScheduleReport:
         """Построить ScheduleReport из Schedule с загрузкой связанных данных.
@@ -233,6 +236,8 @@ class ScheduleService:
             stage.dates_source = DatesSource.MANUAL.value
             # Коммитим только если есть изменения
             await self._session.commit()
+            # Триггер пересчёта статусов этапов и отклонений
+            await self._recalculator.recalculate(site_id)
 
         return stage
 

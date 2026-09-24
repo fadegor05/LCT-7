@@ -7,6 +7,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.observation.models import Observation, ObservedEquipment
 from app.domains.observation.policies import (
     ActivityPolicy,
@@ -38,6 +39,7 @@ class ObservationService:
         aggregation: AggregationPolicy,
         observability: ObservabilityPolicy,
         activity: ActivityPolicy,
+        recalculator: StatusRecalculator,
     ) -> None:
         """Инициализировать ObservationService.
 
@@ -52,6 +54,7 @@ class ObservationService:
             aggregation: AggregationPolicy для агрегации детекций.
             observability: ObservabilityPolicy для оценки наблюдаемости.
             activity: ActivityPolicy для оценки активности техники.
+            recalculator: StatusRecalculator для пересчёта статусов этапов.
         """
         self._repository = repository
         self._equipment_repo = equipment_repo
@@ -63,6 +66,7 @@ class ObservationService:
         self._aggregation = aggregation
         self._observability = observability
         self._activity = activity
+        self._recalculator = recalculator
 
     async def recompute(self, site_id: uuid.UUID, observed_on: date) -> Observation | None:
         """Пересчитать наблюдение за дату.
@@ -97,6 +101,8 @@ class ObservationService:
             if existing:
                 await self._repository.delete(existing)
                 await self._session.commit()
+                # Триггер пересчёта статусов этапов и отклонений (только если было удаление)
+                await self._recalculator.recalculate(site_id)
             return None
 
         # Шаг 3: Собрать детекции для кадров со статусом "done"
@@ -180,6 +186,8 @@ class ObservationService:
 
         # Шаг 11: Коммитить и вернуть
         await self._session.commit()
+        # Триггер пересчёта статусов этапов и отклонений
+        await self._recalculator.recalculate(site_id)
         return observation
 
     async def list_observations(self, site_id: uuid.UUID) -> list[ObservationRead]:
