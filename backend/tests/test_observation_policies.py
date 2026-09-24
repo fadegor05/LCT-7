@@ -177,6 +177,72 @@ class TestAggregationPolicy:
         assert type_a in result
         assert result[type_a].count_min == 1
 
+    def test_aggregation_score_confidence_from_max_count_frame_not_global_best(self):
+        """Score confidence должна быть от кадра с max count, не от глобально лучшего.
+
+        Frame A: 1 детекция типа X с score=0.95 (глобально лучший score)
+        Frame B: 3 детекции типа X с score=0.30 каждая (max count = 3)
+
+        Результат:
+        - count_min=3 (из frame B)
+        - score_confidence должна быть LOW (0.30 < min_score_medium=0.4),
+          а не HIGH (0.95 >= min_score_high=0.7)
+        """
+        equipment_id = uuid.uuid4()
+
+        # Frame A: 1 детекция с high score
+        frame_a = [FrameEquipment(equipment_id, score=0.95)]
+        # Frame B: 3 детекции с low score
+        frame_b = [
+            FrameEquipment(equipment_id, score=0.30),
+            FrameEquipment(equipment_id, score=0.30),
+            FrameEquipment(equipment_id, score=0.30),
+        ]
+
+        frames = [frame_a, frame_b]
+        date_sources = [None, None]
+
+        policy = AggregationPolicy(min_score_high=0.7, min_score_medium=0.4)
+        result = policy.aggregate(frames, date_sources)
+
+        # count_min должен быть 3 (max count из frame B)
+        assert result[equipment_id].count_min == 3
+        # score_confidence должна быть LOW, потому что score из frame B (max count frame)
+        # составляет 0.30, что < min_score_medium=0.4
+        assert result[equipment_id].confidence == Confidence.LOW
+
+    def test_aggregation_score_confidence_with_tied_max_count(self):
+        """При равных max count на разных кадрах, используется лучший score из tied.
+
+        Frame A: 2 детекции типа X с score=0.5 каждая (max = 2)
+        Frame B: 2 детекции типа X с score=0.65 каждая (tie на max = 2)
+
+        Результат:
+        - count_min=2
+        - score_confidence от лучшего из tied: 0.65 (> 0.5 из A),
+          что >= min_score_medium=0.4 но < min_score_high=0.7 -> MEDIUM
+        """
+        equipment_id = uuid.uuid4()
+
+        frame_a = [
+            FrameEquipment(equipment_id, score=0.5),
+            FrameEquipment(equipment_id, score=0.5),
+        ]
+        frame_b = [
+            FrameEquipment(equipment_id, score=0.65),
+            FrameEquipment(equipment_id, score=0.65),
+        ]
+
+        frames = [frame_a, frame_b]
+        date_sources = [None, None]
+
+        policy = AggregationPolicy(min_score_high=0.7, min_score_medium=0.4)
+        result = policy.aggregate(frames, date_sources)
+
+        assert result[equipment_id].count_min == 2
+        # score_confidence от лучшего из tied: 0.65 >= 0.4 и < 0.7 -> MEDIUM
+        assert result[equipment_id].confidence == Confidence.MEDIUM
+
 
 class TestObservabilityPolicy:
     """Тесты ObservabilityPolicy.assess()."""

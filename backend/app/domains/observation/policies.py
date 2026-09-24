@@ -50,36 +50,43 @@ class AggregationPolicy:
             - count_min(type) = max(Counter(детекций этого типа на одном кадре)) по всем кадрам.
               Никогда не сумма.
             - confidence(type) = min(score_confidence, source_confidence):
-              - score_confidence — по лучшему score этого типа среди всех кадров:
-                >= min_score_high -> HIGH, >= min_score_medium -> MEDIUM, иначе LOW.
+              - score_confidence — по лучшему score этого типа среди кадров, давших максимум
+                count_min (кадры, на которых зафиксирован максимальный счёт этого типа).
+                Если несколько кадров имеют count == max для типа (tie), используем лучший
+                score из этих tied кадров. >= min_score_high -> HIGH, >= min_score_medium
+                -> MEDIUM, иначе LOW.
               - source_confidence — HIGH, если во всех date_sources нет "stamp"/"neighbours",
                 иначе MEDIUM (штамп/соседи — источник хуже, см. architecture.md §7.3/§7.4).
             - Тип техники без детекций ни на одном кадре в результат не попадает.
         """
-        # Словари для хранения: max count на кадре и best score для каждого типа
+        # Для каждого типа техники отслеживаем: (max_count, best_score_from_max_frame)
         max_count_per_type: dict[uuid.UUID, int] = {}
-        best_score_per_type: dict[uuid.UUID, float] = {}
+        # best_score_from_max_count_frame: только score из кадра(ов), давших max count
+        score_per_type: dict[uuid.UUID, float] = {}
 
         # Обходим все кадры
         for frame in frames:
             # Считаем детекции по типам в этом кадре
             counter = Counter(eq.equipment_type_id for eq in frame)
 
-            # Обновляем max count и best score
+            # Обновляем max count и score for each equipment type in this frame
             for equipment in frame:
                 etype_id = equipment.equipment_type_id
                 score = equipment.score
-
-                # Обновляем максимум по кадрам для этого типа
-                current_max = max_count_per_type.get(etype_id, 0)
                 frame_count = counter[etype_id]
-                if frame_count > current_max:
-                    max_count_per_type[etype_id] = frame_count
 
-                # Обновляем лучший (максимальный) score для этого типа
-                current_best = best_score_per_type.get(etype_id, -1.0)
-                if score > current_best:
-                    best_score_per_type[etype_id] = score
+                current_max = max_count_per_type.get(etype_id, 0)
+
+                if frame_count > current_max:
+                    # Это новый максимум для этого типа; заменяем данные
+                    max_count_per_type[etype_id] = frame_count
+                    score_per_type[etype_id] = score
+                elif frame_count == current_max:
+                    # Tie: берём лучший score из двух tied кадров (этого и предыдущего)
+                    current_best = score_per_type.get(etype_id, -1.0)
+                    if score > current_best:
+                        score_per_type[etype_id] = score
+                # Если frame_count < current_max, игнорируем score этого кадра
 
         # Определяем source_confidence
         # HIGH если нет "stamp"/"neighbours", иначе MEDIUM
@@ -91,7 +98,7 @@ class AggregationPolicy:
         result: dict[uuid.UUID, AggregatedEquipment] = {}
 
         for equipment_type_id, count_min in max_count_per_type.items():
-            best_score = best_score_per_type[equipment_type_id]
+            best_score = score_per_type[equipment_type_id]
 
             # Определяем score_confidence
             if best_score >= self._min_score_high:
