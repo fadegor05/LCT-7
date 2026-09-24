@@ -439,43 +439,35 @@ class TestObservationServiceRecompute:
             site = Site(id=site_id, name="Test Site", owner_id=owner_id)
             session.add(site)
 
-            await seed_test_data(session, site_id, owner_id)
+            equipment_ids = await seed_test_data(session, site_id, owner_id)
 
-            # Создаём 0 фото (pending, не учитывается в frames)
-            # На самом деле нам нужно 0 done фото, но есть pending
-            # Но настройка по умолчанию: min_photos_medium=1, min_photos_high=3
-            # Значит 0 фото -> LOW
-            await session.commit()
-
-        # Запускаем recompute с 0 фото -> должен вернуть None
-        async with container() as request_container:
-            service = await self._create_service(request_container)
-            result = await service.recompute(site_id, obs_date)
-
-        assert result is None
-
-        # Теперь добавим фото pending (не done) и проверим что это low observability
-        async with container() as request_container:
-            session = await request_container.get(AsyncSession)
+            # Создаём 1 done фото
             photo = Photo(
                 id=uuid.uuid4(),
                 site_id=site_id,
-                storage_key="pending.jpg",
-                original_name="pending.jpg",
+                storage_key="test.jpg",
+                original_name="test.jpg",
                 width=100,
                 height=100,
                 captured_on=obs_date,
                 date_source=DateSource.MANUAL.value,
-                processing_status=ProcessingStatus.PENDING.value,
+                processing_status=ProcessingStatus.DONE.value,
             )
             session.add(photo)
+            await session.flush()
+
+            det = Detection(
+                id=uuid.uuid4(),
+                photo_id=photo.id,
+                equipment_type_id=equipment_ids["crane"],
+                bbox=[0.1, 0.1, 0.5, 0.5],
+                score=0.9,
+                model_version="v1",
+            )
+            session.add(det)
             await session.commit()
 
-        # Запускаем recompute - есть 1 фото, но оно pending
-        # То есть, у нас будет 1 фото в total, но 0 done фото
-        # Проверяем наблюдаемость: photo_count=1, frames=[[]],
-        # В AggregationPolicy.aggregate это даст пустой результат для aggregated
-        # Но observability будет MEDIUM (1 >= min_photos_medium=1)
+        # First: recompute with default policy (min_photos_medium=1) -> MEDIUM
         async with container() as request_container:
             service = await self._create_service(request_container)
             result = await service.recompute(site_id, obs_date)
@@ -483,6 +475,47 @@ class TestObservationServiceRecompute:
         assert result is not None
         assert result.photo_count == 1
         assert result.observability == "medium"
+        assert result.observability_notes is not None
+
+        # Second: recompute with CUSTOM policy (min_photos_medium=2) -> LOW
+        # This exercises the actual LOW branch with custom thresholds
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            photo_repo = PhotoRepository(session)
+            detection_repo = DetectionRepository(session)
+            obs_repo = ObservationRepository(session)
+            eq_repo = ObservedEquipmentRepository(session)
+            guard = await request_container.get(SiteAccessGuard)
+            catalog = await request_container.get(EquipmentCatalog)
+            settings = await request_container.get(Settings)
+
+            agg_policy = AggregationPolicy(
+                min_score_high=settings.observation.min_score_high,
+                min_score_medium=settings.observation.min_score_medium,
+            )
+            # CUSTOM: min_photos_medium=2, min_photos_high=4
+            obs_policy = ObservabilityPolicy(min_photos_medium=2, min_photos_high=4)
+            act_policy = ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+
+            service = ObservationService(
+                repository=obs_repo,
+                equipment_repo=eq_repo,
+                photos=photo_repo,
+                detections=detection_repo,
+                session=session,
+                guard=guard,
+                catalog=catalog,
+                aggregation=agg_policy,
+                observability=obs_policy,
+                activity=act_policy,
+            )
+
+            # Recompute with new policy: 1 photo < 2 threshold -> LOW
+            result = await service.recompute(site_id, obs_date)
+
+        assert result is not None
+        assert result.photo_count == 1
+        assert result.observability == "low"
         assert result.observability_notes is not None
 
     @pytest.mark.asyncio
