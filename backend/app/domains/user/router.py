@@ -1,23 +1,27 @@
-"""HTTP-роуты пользователя (аналог UserRoutes.kt)."""
+"""HTTP-роуты стендового пользователя.
+
+Регистрации и логина нет: пользователь один и создаётся при старте. Наружу торчит
+только чтение и смена ФИО, которым подписываются решения инженера.
+"""
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 
-from app.domains.user.schemas import UserCreate, UserRead
+from app.domains.user.provider import CurrentUser
+from app.domains.user.schemas import UserRead, UserUpdate
 from app.domains.user.service import UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("")
+@router.get("/me")
 @inject
-async def list_users(service: FromDishka[UserService]) -> list[UserRead]:
-    users = await service.list_users()
-    return [UserRead.model_validate(user) for user in users]
+async def read_me(user: FromDishka[CurrentUser]) -> UserRead:
+    return UserRead.model_validate(user)
 
 
-@router.post("", status_code=201)
+@router.patch("/me")
 @inject
-async def create_user(data: UserCreate, service: FromDishka[UserService]) -> UserRead:
-    user = await service.create_user(data)
+async def update_me(data: UserUpdate, service: FromDishka[UserService]) -> UserRead:
+    user = await service.rename(data.full_name)
     return UserRead.model_validate(user)

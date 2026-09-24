@@ -1,13 +1,19 @@
-"""DI-провайдер домена user (аналог UserModule.kt / Koin-модуля).
+"""DI-провайдер домена user.
 
-Dishka сам подставит зависимости в конструкторы: UserRepository(session),
-UserService(repository, session). Оба — в scope REQUEST, живут ровно один запрос.
+CurrentUser — единственное, что домен отдаёт наружу. Сейчас он разрешается в
+стендового пользователя; когда появится авторизация, меняется только этот провайдер,
+а потребители (`FromDishka[CurrentUser]`) остаются прежними.
 """
+
+from typing import NewType
 
 from dishka import Provider, Scope, provide
 
+from app.domains.user.models import User
 from app.domains.user.repository import UserRepository
 from app.domains.user.service import UserService
+
+CurrentUser = NewType("CurrentUser", User)
 
 
 class UserProvider(Provider):
@@ -15,3 +21,7 @@ class UserProvider(Provider):
 
     repository = provide(UserRepository)
     service = provide(UserService)
+
+    @provide
+    async def current_user(self, service: UserService) -> CurrentUser:
+        return CurrentUser(await service.get_current())

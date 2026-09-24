@@ -116,7 +116,7 @@
 
 | Путь | Назначение |
 |---|---|
-| `app/core/` | инфраструктура: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py` |
+| `app/core/` | инфраструктура: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`) |
 | `app/plugins/` | сквозные вещи: `di.py` (Dishka-контейнер), `routing.py`, `exceptions.py` |
 | `app/adapters/` | внешние системы: ML, справочные данные ГЭСН |
 | `app/domains/<домен>/` | один домен — один плоский каталог: `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` |
@@ -147,7 +147,18 @@
 
 Каждый домен регистрирует свой `provider.py` в `create_container()` (`app/plugins/di.py`).
 
-### 6.4. Как добавить домен
+### 6.4. Идентичность в MVP
+
+Авторизации нет (`product.md` §14, §16). Домен `user` держит одну строку `app_user`
+(`DataModel.md` §5.5) — ею подписываются создание строек и решения по гипотезам.
+Строка создаётся при старте приложения идемпотентным seed'ом с фиксированным
+идентификатором; ФИО правится через `PATCH /users/me`.
+
+Остальные домены не знают, откуда взялась личность: они получают её через
+`FromDishka[CurrentUser]` (`Scope.REQUEST`). Когда появится авторизация, изменится
+единственный провайдер — `app/domains/user/provider.py`, а потребители нет.
+
+### 6.5. Как добавить домен
 
 1. Создать `app/domains/<домен>/` по образцу `user/` — только нужные из шести файлов.
 2. Зарегистрировать роутер в `app/plugins/routing.py`.
