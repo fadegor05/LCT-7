@@ -1707,3 +1707,74 @@ class TestPhotoServiceStorageErrors:
         assert error1 != error2
         assert error2 != error3
         assert error1 != error3
+
+    @pytest.mark.asyncio
+    async def test_upload_batch_triggers_observation_recalculator_hook(
+        self, container, detector
+    ) -> None:
+        """upload_batch with dated photos triggers observation recalculation end-to-end.
+
+        Это доказывает, что hook photo → observation действительно срабатывает через
+        реальный LiveObservationRecalculator, когда ObservationProvider подключён.
+        """
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        observation_date = date(2025, 1, 15)
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            # Создаём EquipmentType для детектора
+            equipment = EquipmentType(id=uuid.uuid4(), code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+
+            owner_id = owner.id
+            equipment_id = equipment.id
+
+        # Создаём файл с EXIF датой
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(observation_date),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        # Загружаем файл
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            # Конфигурируем детектор для возврата одного detection
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                detections=[RawDetection(bbox=[0.1, 0.1, 0.9, 0.9], class_ours="crane", conf=0.95)],
+            )
+
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            report = await service.upload_batch(site_id, files)
+
+        assert report.uploaded == 1
+
+        # Теперь проверяем, что наблюдение было автоматически создано
+        # путём запроса ObservationRepository из ТОГОже контейнера
+        async with container() as request_container:
+            from app.domains.observation.repository import ObservationRepository
+
+            obs_repo = await request_container.get(ObservationRepository)
+            observation = await obs_repo.get_by_site_and_date(site_id, observation_date)
+
+        # Наблюдение должно существовать (доказывает, что hook сработал)
+        assert observation is not None
+        assert observation.site_id == site_id
+        assert observation.observed_on == observation_date
+        # photo_count должен быть 1 (у нас загруз 1 файл)
+        assert observation.photo_count == 1
+        # Наблюдаемость должна быть medium (1 фото >= min_photos_medium=1, но < min_photos_high=3)
+        assert observation.observability == "medium"

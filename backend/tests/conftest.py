@@ -26,6 +26,7 @@ from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
+from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
 from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
@@ -183,6 +184,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         ScheduleProvider(),
         MethodologyProvider(),
         TestPhotoProvider(storage_root=storage_root),
+        ObservationProvider(),
         UtilityProvider(),
     )
     yield container

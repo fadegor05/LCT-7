@@ -111,6 +111,57 @@ class TestPhotoProviderWiring:
         finally:
             await container.close()
 
+    @pytest.mark.asyncio
+    async def test_photo_only_container_uses_noop_recalculator(self) -> None:
+        """Контейнер с только PhotoProvider (без ObservationProvider) использует Noop.
+
+        Это доказывает graceful degradation: photo домен работает и без observation,
+        когда observation не подключён в контейнер.
+        """
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from dishka import make_async_container
+
+        from app.domains.methodology.provider import MethodologyProvider
+        from app.domains.photo.provider import PhotoProvider
+        from app.domains.photo.recalculator import NoopObservationRecalculator
+        from app.domains.photo.recalculator import ObservationRecalculator as ObsRecalc
+        from app.domains.schedule.provider import ScheduleProvider
+        from app.domains.site.provider import SiteProvider
+        from app.domains.user.provider import UserProvider
+        from app.domains.utility.provider import UtilityProvider
+        from app.plugins.di import AppProvider, DatabaseProvider
+
+        # Создаём временную директорию для storage
+        with TemporaryDirectory() as tmpdir:
+            storage_root = Path(tmpdir) / "storage"
+            storage_root.mkdir(parents=True, exist_ok=True)
+
+            # Строим контейнер БЕЗ ObservationProvider
+            container = make_async_container(
+                AppProvider(),
+                DatabaseProvider(),
+                UserProvider(),
+                SiteProvider(),
+                ScheduleProvider(),
+                MethodologyProvider(),
+                PhotoProvider(),  # Только PhotoProvider, без ObservationProvider
+                UtilityProvider(),
+            )
+
+            try:
+                async with container() as request_container:
+                    recalculator = await request_container.get(ObsRecalc)
+                    # Должен быть Noop, т.к. ObservationProvider() не подключён
+                    assert isinstance(recalculator, NoopObservationRecalculator)
+                    # Убедиться, что это точно Noop, а не Live
+                    from app.domains.observation.recalculator import LiveObservationRecalculator
+
+                    assert not isinstance(recalculator, LiveObservationRecalculator)
+            finally:
+                await container.close()
+
 
 class TestStorageIsolation:
     """Тесты изоляции файлового хранилища между тестами.
