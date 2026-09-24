@@ -10,6 +10,7 @@ from app.adapters.storage.factory import create_storage
 from app.core.settings import Settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
+from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.service import PhotoService
 from app.domains.site.guard import SiteAccessGuard
@@ -40,6 +41,11 @@ class PhotoProvider(Provider):
         """Создать resolver для разрешения дат."""
         return DateResolver(ocr=ocr)
 
+    @provide(scope=Scope.APP, provides=ObservationRecalculator)
+    def observation_recalculator(self) -> ObservationRecalculator:
+        """Заглушка по умолчанию — реальная реализация приходит из ObservationProvider."""
+        return NoopObservationRecalculator()
+
     # REQUEST scope: привязаны к сессии БД
 
     photo_repository = provide(PhotoRepository, scope=Scope.REQUEST)
@@ -57,6 +63,7 @@ class PhotoProvider(Provider):
         resolver: DateResolver,
         catalog: EquipmentCatalog,
         settings: Settings,
+        recalculator: ObservationRecalculator,
     ) -> PhotoService:
         """Создать PhotoService."""
         return PhotoService(
@@ -69,4 +76,5 @@ class PhotoProvider(Provider):
             resolver=resolver,
             catalog=catalog,
             settings=settings,
+            recalculator=recalculator,
         )

@@ -20,6 +20,7 @@ from app.domains.photo.date_resolver import (
     read_image_info,
 )
 from app.domains.photo.models import DateSource, Detection, Photo, ProcessingStatus
+from app.domains.photo.recalculator import ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.schemas import (
     DetectionRead,
@@ -57,6 +58,7 @@ class PhotoService:
         resolver: DateResolver,
         catalog: EquipmentCatalog,
         settings: Settings,
+        recalculator: ObservationRecalculator,
     ) -> None:
         self._repository = repository
         self._detections = detections
@@ -67,6 +69,7 @@ class PhotoService:
         self._resolver = resolver
         self._catalog = catalog
         self._settings = settings
+        self._recalculator = recalculator
 
     async def upload_batch(self, site_id: uuid.UUID, files: Sequence[UploadInput]) -> UploadReport:
         """Загрузить пакет фотографий.
@@ -133,6 +136,18 @@ class PhotoService:
 
         uploaded = sum(1 for item in final_items if item.photo is not None)
         failed = sum(1 for item in final_items if item.error is not None)
+
+        # Trigger observation recomputation for each distinct date
+        try:
+            dates_to_recompute = {
+                item.photo.captured_on
+                for item in final_items
+                if item.photo is not None and item.photo.captured_on is not None
+            }
+            for date_value in dates_to_recompute:
+                await self._recalculator.recompute(site_id, date_value)
+        except Exception:
+            logger.exception("Ошибка при пересчёте наблюдений после загрузки фото")
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
@@ -487,9 +502,20 @@ class PhotoService:
         if photo is None:
             raise AppError("Снимок не найден", status_code=404)
 
+        # Capture old date before mutation
+        old_date = photo.captured_on
+
         photo.captured_on = captured_on
         photo.date_source = DateSource.MANUAL.value
         await self._session.commit()
+
+        # Trigger observation recomputation for new and old dates
+        try:
+            await self._recalculator.recompute(site_id, captured_on)
+            if old_date is not None and old_date != captured_on:
+                await self._recalculator.recompute(site_id, old_date)
+        except Exception:
+            logger.exception("Ошибка при пересчёте наблюдений после изменения даты фото")
 
         return PhotoRead.model_validate(photo)
 
