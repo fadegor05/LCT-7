@@ -438,8 +438,18 @@ class TestPhotoServiceList:
             service._guard._current_user = type("obj", (object,), {"id": owner_id})()
             undated = await service.list_photos(site_id, undated=True)
 
-        assert len(undated) == 1
-        assert undated[0].captured_on is None
+        # Both photos are dated via neighbours-dating (photo1 has EXIF date, photo2 gets
+        # date from photo1), so undated list should be empty
+        assert len(undated) == 0
+
+        # Verify both photos are now dated
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            all_photos = await service.list_photos(site_id)
+
+        assert len(all_photos) == 2
+        assert all(photo.captured_on == date(2025, 1, 1) for photo in all_photos)
 
 
 class TestPhotoServiceGet:
@@ -1735,7 +1745,6 @@ class TestPhotoServiceStorageErrors:
             await session.commit()
 
             owner_id = owner.id
-            equipment_id = equipment.id
 
         # Создаём файл с EXIF датой
         files = [

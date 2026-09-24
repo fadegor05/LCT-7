@@ -118,6 +118,7 @@ class PhotoService:
         if batch_photo_ids:
             await self._apply_neighbours_dating(site_id, batch_photo_ids)
             await self._session.flush()
+            await self._session.commit()
 
         # Reload photos from DB to get updated dates after neighbours dating
         final_items: list[UploadItem] = []

@@ -74,65 +74,67 @@ class TestObservationProviderWiring:
             await container.close()
 
     @pytest.mark.asyncio
-    async def test_create_container_resolves_observation_service(self) -> None:
-        """create_container() может разрешить ObservationService в REQUEST scope."""
-        container = create_container()
-        try:
-            async with container() as request_container:
-                service = await request_container.get(ObservationService)
-                assert isinstance(service, ObservationService)
-        finally:
-            await container.close()
+    async def test_create_container_resolves_observation_service(self, container) -> None:
+        """Test container может разрешить ObservationService в REQUEST scope."""
+        # Need to seed stand user first since ObservationService depends on SiteAccessGuard
+        async with container() as request_container:
+            from app.domains.user.service import UserService
+
+            user_service = await request_container.get(UserService)
+            await user_service.ensure_stand_user()
+
+        # Now resolve ObservationService
+        async with container() as request_container:
+            service = await request_container.get(ObservationService)
+            assert isinstance(service, ObservationService)
 
     @pytest.mark.asyncio
-    async def test_app_scope_policies_are_reused(self) -> None:
+    async def test_app_scope_policies_are_reused(self, container) -> None:
         """APP scope политики переиспользуются между REQUEST контекстами."""
-        container = create_container()
-        try:
-            async with container() as request_container1:
-                policy1 = await request_container1.get(AggregationPolicy)
+        async with container() as request_container1:
+            policy1 = await request_container1.get(AggregationPolicy)
 
-            async with container() as request_container2:
-                policy2 = await request_container2.get(AggregationPolicy)
+        async with container() as request_container2:
+            policy2 = await request_container2.get(AggregationPolicy)
 
-            # Они должны быть одинаковыми объектами (переиспользованы)
-            assert policy1 is policy2
-        finally:
-            await container.close()
+        # Они должны быть одинаковыми объектами (переиспользованы)
+        assert policy1 is policy2
 
     @pytest.mark.asyncio
-    async def test_request_scope_repositories_are_different(self) -> None:
+    async def test_request_scope_repositories_are_different(self, container) -> None:
         """REQUEST scope репозитории создаются новые в каждом REQUEST контексте."""
-        container = create_container()
-        try:
-            async with container() as request_container1:
-                repo1 = await request_container1.get(ObservationRepository)
+        async with container() as request_container1:
+            repo1 = await request_container1.get(ObservationRepository)
 
-            async with container() as request_container2:
-                repo2 = await request_container2.get(ObservationRepository)
+        async with container() as request_container2:
+            repo2 = await request_container2.get(ObservationRepository)
 
-            # Они должны быть разными объектами (новые для каждого контекста)
-            assert repo1 is not repo2
-        finally:
-            await container.close()
+        # Они должны быть разными объектами (новые для каждого контекста)
+        assert repo1 is not repo2
 
     @pytest.mark.asyncio
-    async def test_create_container_resolves_live_recalculator(self) -> None:
-        """create_container() может разрешить LiveObservationRecalculator.
+    async def test_create_container_resolves_live_recalculator(self, container) -> None:
+        """Test container resolve LiveObservationRecalculator (не Noop).
 
         Это критический тест (Review Focus #5): проверяет, что ObservationProvider
-        зарегистрирован ПОСЛЕ PhotoProvider в create_container(), поэтому реальная
+        зарегистрирован ПОСЛЕ PhotoProvider в conftest.py, поэтому реальная
         реализация (Live) переопределяет no-op заглушку из PhotoProvider.
+        Используем test container с in-memory SQLite вместо production container.
         """
-        container = create_container()
-        try:
-            async with container() as request_container:
-                recalculator = await request_container.get(ObservationRecalculator)
-                assert isinstance(recalculator, LiveObservationRecalculator)
-                # Убедиться, что это точно LIVE, а не Noop
-                assert not isinstance(recalculator, NoopObservationRecalculator)
-        finally:
-            await container.close()
+        # Need to seed stand user first since LiveObservationRecalculator depends on
+        # ObservationService which depends on SiteAccessGuard
+        async with container() as request_container:
+            from app.domains.user.service import UserService
+
+            user_service = await request_container.get(UserService)
+            await user_service.ensure_stand_user()
+
+        # Now resolve ObservationRecalculator
+        async with container() as request_container:
+            recalculator = await request_container.get(ObservationRecalculator)
+            assert isinstance(recalculator, LiveObservationRecalculator)
+            # Убедиться, что это точно LIVE, а не Noop
+            assert not isinstance(recalculator, NoopObservationRecalculator)
 
     @pytest.mark.asyncio
     async def test_photo_only_container_resolves_noop_recalculator(self) -> None:
