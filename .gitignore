@@ -17,6 +17,7 @@ uv.lock
 # Node
 node_modules/
 dist/
+coverage/
 .pnpm-store/
 
 # IDE / OS

@@ -1,0 +1,58 @@
+/* Токены дизайн-системы LCT-7 (макет «ЛЦТ — MVP: экраны», ds/lct7/tokens.json). */
+:root {
+  --surface: #fff;
+  --surface-card: #f7f7f5;
+  --surface-inverse: #262423;
+  --on-inverse: #f7f7f5;
+  --on-inverse-muted: #b9b7b4;
+  --glass: rgb(232 232 232 / 75%);
+  --scrim: rgb(20 20 20 / 40%);
+  --line: #dddcdb;
+  --line-control: #85837f;
+  --ink: #141414;
+  --ink-muted: #5a5a5a;
+  --ink-disabled: #abaaaa;
+  --link: #476b80;
+  --accent: #ff4114;
+  --accent-strong: #cc3608;
+  --on-accent: #fff;
+  --accent-soft: #fff0eb;
+  --focus-ring: #cc3608;
+  --status-ahead: #0a5cad;
+  --status-ahead-soft: #e6f0fb;
+  --status-ontrack: #0b7a63;
+  --status-ontrack-soft: #e2f5ef;
+  --status-behind: #c4162a;
+  --status-behind-soft: #fdecee;
+  --status-notstarted: #5a5a5a;
+  --status-notstarted-soft: #ececea;
+  --status-unobserved: #4f6b7c;
+  --status-unobserved-soft: #e8eef2;
+  --caution: #8f5200;
+  --caution-soft: #fff1d1;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 32px;
+  --radius-pill: 56px;
+  --control-sm: 40px;
+  --control-md: 48px;
+  --control-lg: 56px;
+  --icon: 24px;
+  --blur-md: 16px;
+  --shadow-pop: 0 8px 24px rgb(20 20 20 / 12%);
+  --font-sans:
+    'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', helvetica, arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', menlo, consolas, monospace;
+  --content-width: 1200px;
+}

@@ -16,6 +16,8 @@ services:
       target: build
     environment:
       - CI=true
+      # true — экраны на MSW-моках (бэкенд для них ещё не готов), false — реальный /api
+      - VITE_USE_MOCKS=${VITE_USE_MOCKS:-true}
     command: sh -c "pnpm install && pnpm run dev -- --host --port 5173"
     volumes:
       - ./frontend:/app

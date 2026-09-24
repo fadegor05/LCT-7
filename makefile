@@ -47,4 +47,20 @@ pretty:
 check:
 	cd backend && uv run ruff check . && uv run ruff format --check .
 
-.PHONY: dev up deploy deploy-tunnel down logs pretty check
+# Тесты бэкенда
+test:
+	cd backend && uv run pytest
+
+# Frontend: автоформат + автофиксы (Prettier, ESLint, Stylelint)
+front-pretty:
+	cd frontend && pnpm run format && pnpm run lint:fix
+
+# Frontend: проверки без изменений (типы, линтеры, формат, тесты с порогами покрытия)
+front-check:
+	cd frontend && pnpm run check
+
+# Frontend: тесты с отчётом покрытия (frontend/coverage/index.html)
+front-test:
+	cd frontend && pnpm run test:coverage
+
+.PHONY: dev up deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test

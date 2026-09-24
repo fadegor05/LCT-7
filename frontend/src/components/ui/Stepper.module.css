@@ -1,0 +1,50 @@
+.steps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-card);
+  color: var(--ink-muted);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.current .num {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+.done .num {
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.current .label {
+  font-weight: 500;
+}
+
+.upcoming .label {
+  color: var(--ink-muted);
+}
+
+.line {
+  flex: 1;
+  min-width: 32px;
+  height: 1px;
+  background: var(--line-control);
+}

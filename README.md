@@ -12,12 +12,15 @@ LCT-7/
 ├── backend/                 # FastAPI + Dishka + Granian
 │   ├── Dockerfile
 │   ├── pyproject.toml        # зависимости (uv), package = false
+│   ├── alembic.ini           # конфиг Alembic
+│   ├── migrations/           # миграции Alembic
 │   └── app/
 │       ├── main.py           # сборка приложения (аналог Application.kt)
-│       ├── core/             # settings, database (Base), security
+│       ├── core/             # settings, database (Base), repository, security
 │       ├── plugins/          # di (Dishka), exceptions, routing
-│       ├── clients/          # внешние клиенты (позже ML)
-│       └── modules/<домен>/  # per-domain: models / schemas / repository /
+│       ├── adapters/         # внешние системы (позже ML)
+│       ├── models.py         # единая точка импорта ORM-моделей для Alembic
+│       └── domains/<домен>/  # per-domain: models / schemas / repository /
 │                             #   service / provider (DI) / router
 ├── frontend/                # React + Vite (single-page), nginx в prod
 │   ├── Dockerfile
@@ -36,8 +39,9 @@ LCT-7/
 ```
 
 Бэкенд повторяет раскладку Kotlin-версии: `core` (инфраструктура), `plugins`
-(сквозные вещи — DI/ошибки/роутинг), `modules/<домен>` (по модулю на доменную
-область), `clients` (внешние интеграции).
+(сквозные вещи — DI/ошибки/роутинг), `domains/<домен>` (по каталогу на доменную
+область), `adapters` (внешние интеграции). `core`, `plugins` и `adapters`
+доменами не являются — подробнее в [docs/architecture.md](docs/architecture.md) §6.
 
 ## Быстрый старт
 
@@ -64,7 +68,9 @@ common/infra.yaml  # postgres + traefik
 - `backend`: билдится локально (`target: build`), исходники монтируются в `/app`,
   Granian запускается с `--reload`;
 - `frontend`: вместо nginx крутится Vite dev-server на порту 5173, исходники
-  примонтированы;
+  примонтированы; по умолчанию экраны работают на MSW-моках
+  (`VITE_USE_MOCKS=true` в `.env`), для реального API — `VITE_USE_MOCKS=false`.
+  Подробно — [docs/architecture-frontend.md](docs/architecture-frontend.md);
 - Traefik разводит трафик по одному хосту: `/api` → backend (priority 20),
   всё остальное → frontend (priority 1).
 
@@ -81,7 +87,7 @@ common/infra.yaml  # postgres + traefik
 | `backend · ruff` | `make check` — линт + проверка формата |
 | `backend · mypy` | типы; пока информативно, CI не красит |
 | `backend · миграции + /api/health` | postgres в сервис-контейнере, `alembic upgrade head`, поднимает Granian и дёргает healthcheck |
-| `frontend · tsc + vite build` | `pnpm install --frozen-lockfile` + `pnpm build` |
+| `frontend · lint + test + build` | ESLint + Stylelint, Prettier, Vitest с порогами покрытия, `pnpm build` |
 | `ml · синтаксис скриптов` | `compileall` по `ml/tools` — без установки torch |
 | `deploy · валидация compose-слоёв` | `docker compose config` по dev / prod / tunnel |
 | `docker · backend/frontend` | сборка образов (без публикации) |
@@ -96,10 +102,10 @@ common/infra.yaml  # postgres + traefik
 - **Granian** — ASGI-сервер: `granian --interface asgi app.main:app`.
 - **Dishka** — DI-контейнер (`app/plugins/di.py`). Инфраструктура (`Settings`,
   `AsyncEngine`, `AsyncSession`) в scope APP/REQUEST; доменные провайдеры — в
-  своих модулях (`modules/<домен>/provider.py`). В роутах зависимости
+  своих доменах (`domains/<домен>/provider.py`). В роутах зависимости
   подставляются через `FromDishka[...]` + `@inject`.
-- Таблицы создаются на старте (`Base.metadata.create_all`) — для реального
-  проекта заменить на Alembic.
+- Схема применяется миграциями: `alembic upgrade head` выполняется перед
+  стартом сервера (см. `backend/app/main.py`, `deploy/docker/dev/core.yaml`).
 
 Локальный запуск без Docker:
 
