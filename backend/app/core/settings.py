@@ -47,6 +47,16 @@ class DetectorSettings(BaseModel):
     timeout_s: float = 30.0
 
 
+class ObservationSettings(BaseModel):
+    """Пороги для расчёта наблюдаемости, уверенности и активности."""
+
+    min_photos_medium: int = 2
+    min_photos_high: int = 3
+    min_score_high: float = 0.7
+    min_score_medium: float = 0.4
+    movement_threshold: float = 0.05
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -66,6 +76,7 @@ class Settings(BaseSettings):
     s3: bool = False
     storage: StorageSettings = StorageSettings()
     detector: DetectorSettings = DetectorSettings()
+    observation: ObservationSettings = ObservationSettings()
 
 
 @lru_cache

@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.provider import MethodologyProvider
+from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.provider import PhotoProvider
 from app.domains.schedule.provider import ScheduleProvider
 from app.domains.site.provider import SiteProvider
@@ -59,5 +60,6 @@ def create_container() -> AsyncContainer:
         ScheduleProvider(),
         MethodologyProvider(),
         PhotoProvider(),
+        ObservationProvider(),
         UtilityProvider(),
     )

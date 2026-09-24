@@ -26,7 +26,9 @@ from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
+from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
+from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.service import PhotoService
 from app.domains.schedule.provider import ScheduleProvider
@@ -122,6 +124,11 @@ class TestPhotoProvider(Provider):
         """Создать DateResolver для тестов."""
         return DateResolver(ocr=ocr)
 
+    @provide(scope=Scope.APP, provides=ObservationRecalculator)
+    def observation_recalculator(self) -> ObservationRecalculator:
+        """Заглушка по умолчанию — реальная реализация приходит из ObservationProvider."""
+        return NoopObservationRecalculator()
+
     # REQUEST scope
     photo_repository = provide(PhotoRepository, scope=Scope.REQUEST)
     detection_repository = provide(DetectionRepository, scope=Scope.REQUEST)
@@ -138,6 +145,7 @@ class TestPhotoProvider(Provider):
         resolver: DateResolver,
         catalog: EquipmentCatalog,
         settings: Settings,
+        recalculator: ObservationRecalculator,
     ) -> PhotoService:
         """Создать PhotoService для тестов."""
         return PhotoService(
@@ -150,6 +158,7 @@ class TestPhotoProvider(Provider):
             resolver=resolver,
             catalog=catalog,
             settings=settings,
+            recalculator=recalculator,
         )
 
 
@@ -175,6 +184,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         ScheduleProvider(),
         MethodologyProvider(),
         TestPhotoProvider(storage_root=storage_root),
+        ObservationProvider(),
         UtilityProvider(),
     )
     yield container
