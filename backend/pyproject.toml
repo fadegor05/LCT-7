@@ -12,6 +12,8 @@ dependencies = [
     "pydantic-settings>=2.5",
     "pydantic[email]>=2.9",
     "alembic>=1.14",
+    "openpyxl>=3.1.5",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]
