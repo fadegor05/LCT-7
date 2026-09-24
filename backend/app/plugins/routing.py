@@ -6,6 +6,8 @@
 
 from fastapi import APIRouter
 
+from app.domains.methodology.router import equipment_router
+from app.domains.methodology.router import router as methodology_router
 from app.domains.schedule.router import router as schedule_router
 from app.domains.site.router import router as site_router
 from app.domains.user.router import router as user_router
@@ -16,3 +18,5 @@ api_router.include_router(site_router)
 api_router.include_router(schedule_router)
 api_router.include_router(user_router)
 api_router.include_router(utility_router)
+api_router.include_router(equipment_router)
+api_router.include_router(methodology_router)
