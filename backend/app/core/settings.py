@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # Префикс, под которым Traefik отдаёт бэкенд (PathPrefix(`/api`)). Traefik
     # префикс не срезает, поэтому роуты монтируются именно под ним.
     api_prefix: str = "/api"
+    backend_tag: str = "dev"
 
     postgres: PostgresSettings = PostgresSettings()
 
