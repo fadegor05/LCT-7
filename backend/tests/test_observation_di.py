@@ -173,3 +173,19 @@ class TestObservationProviderWiring:
                 assert not isinstance(recalculator, LiveObservationRecalculator)
         finally:
             await container.close()
+
+    def test_create_container_registers_observation_provider_after_photo_provider(self) -> None:
+        """Review Focus #5: production di.py must register ObservationProvider() after
+        PhotoProvider() — reversed order silently resurrects the no-op recalculator with
+        no other test failure anywhere."""
+        import inspect
+
+        from app.plugins import di as di_module
+
+        source = inspect.getsource(di_module.create_container)
+        photo_index = source.index("PhotoProvider()")
+        observation_index = source.index("ObservationProvider()")
+        assert photo_index < observation_index, (
+            "PhotoProvider() must be registered before ObservationProvider() in "
+            "create_container() so the real LiveObservationRecalculator overrides the no-op"
+        )

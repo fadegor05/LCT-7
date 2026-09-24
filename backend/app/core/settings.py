@@ -50,7 +50,7 @@ class DetectorSettings(BaseModel):
 class ObservationSettings(BaseModel):
     """Пороги для расчёта наблюдаемости, уверенности и активности."""
 
-    min_photos_medium: int = 1
+    min_photos_medium: int = 2
     min_photos_high: int = 3
     min_score_high: float = 0.7
     min_score_medium: float = 0.4

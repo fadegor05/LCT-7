@@ -106,9 +106,11 @@ class ObservationService:
         frames: list[list[FrameEquipment]] = []
         current_bboxes: dict[uuid.UUID, list[list[float]]] = {}
         date_sources = [p.date_source for p in day_photos]
+        done_photo_count = 0
 
         for p in day_photos:
             if p.processing_status == "done":
+                done_photo_count += 1
                 dets = await self._detections.list_by_photo(p.id)
                 frame_equipment = [FrameEquipment(d.equipment_type_id, d.score) for d in dets]
                 frames.append(frame_equipment)
@@ -122,8 +124,9 @@ class ObservationService:
                 # Фото не готово - не добавляем в frames, но учитываем в фото_count
                 frames.append([])
 
-        # Шаг 4: Оценить наблюдаемость
-        level, notes = self._observability.assess(len(day_photos))
+        # Шаг 4: Оценить наблюдаемость (используя только done photos,
+        # но photo_count остаётся все фото)
+        level, notes = self._observability.assess(done_photo_count)
 
         # Шаг 5: Агрегировать детекции
         aggregated = self._aggregation.aggregate(frames, date_sources)

@@ -138,17 +138,18 @@ class PhotoService:
         uploaded = sum(1 for item in final_items if item.photo is not None)
         failed = sum(1 for item in final_items if item.error is not None)
 
-        # Trigger observation recomputation for each distinct date
-        try:
-            dates_to_recompute = {
-                item.photo.captured_on
-                for item in final_items
-                if item.photo is not None and item.photo.captured_on is not None
-            }
-            for date_value in dates_to_recompute:
+        # Trigger observation recomputation for each distinct date (in sorted order for determinism)
+        dates_to_recompute = {
+            item.photo.captured_on
+            for item in final_items
+            if item.photo is not None and item.photo.captured_on is not None
+        }
+        for date_value in sorted(dates_to_recompute):
+            try:
                 await self._recalculator.recompute(site_id, date_value)
-        except Exception:
-            logger.exception("Ошибка при пересчёте наблюдений после загрузки фото")
+            except Exception:
+                logger.exception("Ошибка при пересчёте наблюдений после загрузки фото")
+                await self._session.rollback()
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
@@ -510,6 +511,9 @@ class PhotoService:
         photo.date_source = DateSource.MANUAL.value
         await self._session.commit()
 
+        # Build response BEFORE calling recalculator hook to avoid session poisoning
+        photo_read = PhotoRead.model_validate(photo)
+
         # Trigger observation recomputation for new and old dates
         try:
             await self._recalculator.recompute(site_id, captured_on)
@@ -517,8 +521,9 @@ class PhotoService:
                 await self._recalculator.recompute(site_id, old_date)
         except Exception:
             logger.exception("Ошибка при пересчёте наблюдений после изменения даты фото")
+            await self._session.rollback()
 
-        return PhotoRead.model_validate(photo)
+        return photo_read
 
     async def get_image(self, site_id: uuid.UUID, photo_id: uuid.UUID) -> tuple[bytes, str]:
         """Получить байты изображения и его MIME-тип.
@@ -628,6 +633,14 @@ class PhotoService:
 
             photo.processing_status = ProcessingStatus.DONE.value
             await self._session.commit()
+
+        # Trigger observation recalculation after detections are updated
+        if photo.captured_on is not None:
+            try:
+                await self._recalculator.recompute(site_id, photo.captured_on)
+            except Exception:
+                logger.exception("Ошибка при пересчёте наблюдений после переобнаружения")
+                await self._session.rollback()
 
         # Возвращаем PhotoDetail
         return await self.get_photo(site_id, photo_id)

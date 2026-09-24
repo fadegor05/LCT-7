@@ -1785,5 +1785,118 @@ class TestPhotoServiceStorageErrors:
         assert observation.observed_on == observation_date
         # photo_count должен быть 1 (у нас загруз 1 файл)
         assert observation.photo_count == 1
-        # Наблюдаемость должна быть medium (1 фото >= min_photos_medium=1, но < min_photos_high=3)
-        assert observation.observability == "medium"
+        # Наблюдаемость должна быть low (1 фото < min_photos_medium=2)
+        assert observation.observability == "low"
+
+    @pytest.mark.asyncio
+    async def test_set_date_triggers_observation_recalculator_hook(
+        self, container, detector
+    ) -> None:
+        """set_date triggers observation recalculation end-to-end.
+
+        Это доказывает, что hook photo.set_date → observation действительно срабатывает
+        через реальный LiveObservationRecalculator, когда ObservationProvider подключён.
+        Also verifies that old date's observation is cleaned up if no other photos remain.
+        """
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        old_date = date(2025, 1, 14)
+        new_date = date(2025, 1, 15)
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            # Создаём EquipmentType для детектора
+            equipment = EquipmentType(id=uuid.uuid4(), code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+
+            owner_id = owner.id
+
+        # Загружаем фото без даты (будет pending или с дефолтной датой)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_image(),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        # Загружаем файл - он получит old_date через EXIF/DateResolver
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                detections=[RawDetection(bbox=[0.1, 0.1, 0.9, 0.9], class_ours="crane", conf=0.95)],
+            )
+
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            report = await service.upload_batch(site_id, files)
+            assert report.uploaded == 1
+
+            # Получаем ID загруженного фото
+            photo_id = report.items[0].photo.id
+
+            # Вручную устанавливаем дату на old_date (чтобы иметь контролируемую начальную дату)
+            session = await request_container.get(AsyncSession)
+            photo = await session.get(Photo, photo_id)
+            photo.captured_on = old_date
+            photo.date_source = DateSource.MANUAL.value
+            await session.commit()
+
+            # Trigger recalculator to create observation for old_date
+            from app.domains.photo.recalculator import ObservationRecalculator
+
+            recalculator = await request_container.get(ObservationRecalculator)
+            await recalculator.recompute(site_id, old_date)
+
+        # Проверяем, что наблюдение было создано для old_date
+        async with container() as request_container:
+            from app.domains.observation.repository import ObservationRepository
+
+            obs_repo = await request_container.get(ObservationRepository)
+            old_observation = await obs_repo.get_by_site_and_date(site_id, old_date)
+
+        assert old_observation is not None
+        assert old_observation.observed_on == old_date
+
+        # Теперь вызываем set_date, чтобы переместить фото на new_date
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.set_date(site_id, photo_id, new_date)
+
+        assert result.captured_on == new_date
+        assert result.date_source == DateSource.MANUAL.value
+
+        # Проверяем, что наблюдение было создано для new_date
+        async with container() as request_container:
+            from app.domains.observation.repository import ObservationRepository
+
+            obs_repo = await request_container.get(ObservationRepository)
+            new_observation = await obs_repo.get_by_site_and_date(site_id, new_date)
+
+        # Новое наблюдение должно существовать (доказывает, что hook сработал для new_date)
+        assert new_observation is not None
+        assert new_observation.site_id == site_id
+        assert new_observation.observed_on == new_date
+        assert new_observation.photo_count == 1
+        assert new_observation.observability == "low"  # 1 фото < min_photos_medium=2
+
+        # Проверяем, что наблюдение для old_date было удалено (так как нет больше фото на эту дату)
+        async with container() as request_container:
+            from app.domains.observation.repository import ObservationRepository
+
+            obs_repo = await request_container.get(ObservationRepository)
+            old_observation_after = await obs_repo.get_by_site_and_date(site_id, old_date)
+
+        # Старое наблюдение должно быть удалено (так как фото больше не на эту дату)
+        assert old_observation_after is None

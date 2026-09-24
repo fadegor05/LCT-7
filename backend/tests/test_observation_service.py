@@ -107,7 +107,7 @@ class TestObservationServiceRecompute:
         assert result.site_id == site_id
         assert result.observed_on == obs_date
         assert result.photo_count == 1
-        assert result.observability == "medium"  # 1 фото при min_photos_medium=1 -> medium
+        assert result.observability == "low"  # 1 фото при min_photos_medium=2 -> low
 
     @pytest.mark.asyncio
     async def test_recompute_is_idempotent_same_id(self, container) -> None:
@@ -467,55 +467,58 @@ class TestObservationServiceRecompute:
             session.add(det)
             await session.commit()
 
-        # First: recompute with default policy (min_photos_medium=1) -> MEDIUM
+            # Store equipment_ids for later use
+            equipment_ids_stored = equipment_ids
+
+        # First: recompute with default policy (min_photos_medium=2) -> LOW
         async with container() as request_container:
             service = await self._create_service(request_container)
             result = await service.recompute(site_id, obs_date)
 
         assert result is not None
         assert result.photo_count == 1
-        assert result.observability == "medium"
+        assert result.observability == "low"
         assert result.observability_notes is not None
 
-        # Second: recompute with CUSTOM policy (min_photos_medium=2) -> LOW
-        # This exercises the actual LOW branch with custom thresholds
+        # Second: add another done photo and recompute with default policy -> MEDIUM
+        # This exercises the transition from LOW to MEDIUM with min_photos_medium=2
         async with container() as request_container:
             session = await request_container.get(AsyncSession)
-            photo_repo = PhotoRepository(session)
-            detection_repo = DetectionRepository(session)
-            obs_repo = ObservationRepository(session)
-            eq_repo = ObservedEquipmentRepository(session)
-            guard = await request_container.get(SiteAccessGuard)
-            catalog = await request_container.get(EquipmentCatalog)
-            settings = await request_container.get(Settings)
 
-            agg_policy = AggregationPolicy(
-                min_score_high=settings.observation.min_score_high,
-                min_score_medium=settings.observation.min_score_medium,
+            # Create another done photo for the same date
+            photo2 = Photo(
+                id=uuid.uuid4(),
+                site_id=site_id,
+                storage_key="test2.jpg",
+                original_name="test2.jpg",
+                width=100,
+                height=100,
+                captured_on=obs_date,
+                date_source=DateSource.MANUAL.value,
+                processing_status=ProcessingStatus.DONE.value,
             )
-            # CUSTOM: min_photos_medium=2, min_photos_high=4
-            obs_policy = ObservabilityPolicy(min_photos_medium=2, min_photos_high=4)
-            act_policy = ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+            session.add(photo2)
+            await session.flush()
 
-            service = ObservationService(
-                repository=obs_repo,
-                equipment_repo=eq_repo,
-                photos=photo_repo,
-                detections=detection_repo,
-                session=session,
-                guard=guard,
-                catalog=catalog,
-                aggregation=agg_policy,
-                observability=obs_policy,
-                activity=act_policy,
+            # Add a detection to the second photo using the stored equipment_ids
+            det2 = Detection(
+                id=uuid.uuid4(),
+                photo_id=photo2.id,
+                equipment_type_id=equipment_ids_stored["excavator"],
+                bbox=[0.2, 0.2, 0.6, 0.6],
+                score=0.85,
+                model_version="v1",
             )
+            session.add(det2)
+            await session.commit()
 
-            # Recompute with new policy: 1 photo < 2 threshold -> LOW
+            # Recompute with default policy: 2 photos >= 2 threshold -> MEDIUM
+            service = await self._create_service(request_container)
             result = await service.recompute(site_id, obs_date)
 
         assert result is not None
-        assert result.photo_count == 1
-        assert result.observability == "low"
+        assert result.photo_count == 2
+        assert result.observability == "medium"
         assert result.observability_notes is not None
 
     @pytest.mark.asyncio
