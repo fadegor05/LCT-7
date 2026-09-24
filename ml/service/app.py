@@ -22,6 +22,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, Detector
+from service.pipeline import build_report, summary
 
 MAX_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024))
 _detector: Detector | None = None
@@ -32,6 +33,33 @@ class Detection(BaseModel):
     class_ours: str = Field(description="класс нашей таксономии")
     conf: float
     bbox: list[float] = Field(description="доли кадра, [x1, y1, x2, y2]")
+
+
+class Observation(BaseModel):
+    """Кадр с привязкой: детекции плюс площадка и дата."""
+
+    image: str
+    site_id: str | None = Field(None, description="без неё кадр в анализ не попадёт")
+    date: str | None = Field(None, description="ISO-дата съёмки; без неё кадр в анализ не попадёт")
+    width: int = 0
+    height: int = 0
+    detections: list[Detection] = []
+
+
+class ScheduleRow(BaseModel):
+    site_id: str
+    stage_code: str
+    stage_name: str = ""
+    planned_start: str
+    planned_end: str
+    note: str = ""
+
+
+class ReportRequest(BaseModel):
+    observations: list[Observation]
+    schedule: list[ScheduleRow]
+    conf: float = Field(DEFAULT_CONF, ge=0.0, le=1.0,
+                        description="порог уверенности при подсчёте техники")
 
 
 class FrameResult(BaseModel):
@@ -74,6 +102,28 @@ def meta() -> dict:
     """Версия весов и пороги — чтобы в журнале бэкенда было видно, какая модель
     дала ответ. Без этого через месяц не разобраться, откуда взялась детекция."""
     return detector().meta()
+
+
+@app.post("/report", summary="Статусы этапов и алерты по площадкам")
+def report(req: ReportRequest) -> dict:
+    """Вторая половина цепочки: детекции сводятся по паре «площадка и дата» и
+    сопоставляются с календарным планом.
+
+    Кадры без площадки или даты в анализ не попадают: без даты нельзя сказать,
+    отстаёт этап или нет. Они не теряются молча — счётчик в `meta` и алерт
+    `unusable_data` по площадке (Q&A 13:01).
+    """
+    if not req.observations:
+        raise HTTPException(400, "нет наблюдений")
+    if not req.schedule:
+        raise HTTPException(400, "нет календарного плана: не с чем сравнивать")
+    try:
+        result = build_report([o.model_dump() for o in req.observations],
+                              [s.model_dump() for s in req.schedule],
+                              conf=req.conf)
+    except Exception as exc:
+        raise HTTPException(422, f"не удалось построить отчёт: {exc}") from exc
+    return {**result, "summary": summary(result)}
 
 
 @app.post("/detect", response_model=FrameResult, summary="Детекции по одному кадру")
