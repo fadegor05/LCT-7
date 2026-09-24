@@ -1,0 +1,79 @@
+.frame {
+  margin: 0;
+  min-width: 0;
+}
+
+.img {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-card);
+  background-size: cover;
+  background-position: center;
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--surface-card) 0 12px,
+    var(--line) 12px 13px
+  );
+}
+
+.placeholder {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: 0;
+  color: var(--ink-muted);
+}
+
+.box {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+}
+
+.boxLabel {
+  position: absolute;
+  left: -2px;
+  bottom: 100%;
+  margin-bottom: 2px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.zone {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.zone polygon {
+  fill: rgb(11 122 99 / 18%);
+  stroke: var(--status-ontrack);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 14px;
+  line-height: 16px;
+  letter-spacing: 0;
+}

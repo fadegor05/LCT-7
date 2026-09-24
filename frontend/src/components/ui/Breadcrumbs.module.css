@@ -1,0 +1,20 @@
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.crumbs a {
+  text-decoration: none;
+}
+
+.sep {
+  color: var(--line-control);
+}
+
+.current {
+  color: var(--ink-muted);
+}

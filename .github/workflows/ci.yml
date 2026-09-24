@@ -117,7 +117,7 @@ jobs:
         run: kill "$(cat /tmp/granian.pid)" 2>/dev/null || true
 
   frontend-build:
-    name: frontend · tsc + vite build
+    name: frontend · lint + test + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -135,6 +135,20 @@ jobs:
       - name: Установить зависимости
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
+      # ESLint + Stylelint, затем Prettier — то же, что `make front-check` локально.
+      - name: Линтеры
+        working-directory: frontend
+        run: pnpm run lint
+
+      - name: Форматирование
+        working-directory: frontend
+        run: pnpm run format:check
+
+      # Vitest + MSW; пороги покрытия заданы в vite.config.ts и валят job при просадке.
+      - name: Тесты с покрытием
+        working-directory: frontend
+        run: pnpm run test:coverage
 
       # build = tsc (типы) && vite build (сборка) — см. frontend/package.json
       - name: Сборка

@@ -68,7 +68,9 @@ common/infra.yaml  # postgres + traefik
 - `backend`: билдится локально (`target: build`), исходники монтируются в `/app`,
   Granian запускается с `--reload`;
 - `frontend`: вместо nginx крутится Vite dev-server на порту 5173, исходники
-  примонтированы;
+  примонтированы; по умолчанию экраны работают на MSW-моках
+  (`VITE_USE_MOCKS=true` в `.env`), для реального API — `VITE_USE_MOCKS=false`.
+  Подробно — [docs/architecture-frontend.md](docs/architecture-frontend.md);
 - Traefik разводит трафик по одному хосту: `/api` → backend (priority 20),
   всё остальное → frontend (priority 1).
 
@@ -85,7 +87,7 @@ common/infra.yaml  # postgres + traefik
 | `backend · ruff` | `make check` — линт + проверка формата |
 | `backend · mypy` | типы; пока информативно, CI не красит |
 | `backend · миграции + /api/health` | postgres в сервис-контейнере, `alembic upgrade head`, поднимает Granian и дёргает healthcheck |
-| `frontend · tsc + vite build` | `pnpm install --frozen-lockfile` + `pnpm build` |
+| `frontend · lint + test + build` | ESLint + Stylelint, Prettier, Vitest с порогами покрытия, `pnpm build` |
 | `ml · синтаксис скриптов` | `compileall` по `ml/tools` — без установки torch |
 | `deploy · валидация compose-слоёв` | `docker compose config` по dev / prod / tunnel |
 | `docker · backend/frontend` | сборка образов (без публикации) |
