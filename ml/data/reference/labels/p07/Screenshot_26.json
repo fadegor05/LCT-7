@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "wheel_loader",
+      "score": null,
+      "points": [
+        [
+          769.3,
+          33.2
+        ],
+        [
+          972.0,
+          33.2
+        ],
+        [
+          972.0,
+          523.4
+        ],
+        [
+          769.3,
+          523.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          264.18835192069395,
+          249.6
+        ],
+        [
+          388.9,
+          249.6
+        ],
+        [
+          388.9,
+          428.00495662949186
+        ],
+        [
+          264.18835192069395,
+          428.00495662949186
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          577.3231292517006,
+          378.63945578231284
+        ],
+        [
+          686.9829931972788,
+          378.63945578231284
+        ],
+        [
+          686.9829931972788,
+          434.1496598639455
+        ],
+        [
+          577.3231292517006,
+          434.1496598639455
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_26.png",
+  "imageData": null,
+  "imageHeight": 805,
+  "imageWidth": 1219,
+  "description": ""
+}

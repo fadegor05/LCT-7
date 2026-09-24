@@ -141,7 +141,7 @@
         ]
       ],
       "group_id": null,
-      "description": "activity=working\n",
+      "description": "activity=working",
       "difficult": false,
       "shape_type": "rectangle",
       "flags": {},

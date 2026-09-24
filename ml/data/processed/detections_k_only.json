@@ -1,0 +1,4630 @@
+{
+  "meta": {
+    "model": "yolo26s_k_only_best.pt",
+    "params": {
+      "imgsz": 960,
+      "conf": 0.05,
+      "iou": 0.7,
+      "device": "cuda",
+      "verbose": false
+    },
+    "created": "2026-09-19T13:34:46",
+    "images": 100
+  },
+  "images": [
+    {
+      "image": "Screenshot_1.png",
+      "width": 1212,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 43.56019999249838,
+        "inference": 13.149000005796552,
+        "postprocess": 16.943900001933798
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.58,
+          "bbox": [
+            0.9228,
+            0.0,
+            0.9997,
+            0.6413
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.199,
+          "bbox": [
+            0.3392,
+            0.8685,
+            0.4105,
+            0.9759
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.105,
+          "bbox": [
+            0.3391,
+            0.8683,
+            0.4112,
+            0.9765
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.056,
+          "bbox": [
+            0.9379,
+            0.1875,
+            1.0,
+            0.6222
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_2.png",
+      "width": 1213,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 4.280499997548759,
+        "inference": 12.4690999800805,
+        "postprocess": 4.005499999038875
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.154,
+          "bbox": [
+            0.9673,
+            0.3107,
+            1.0,
+            0.5081
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.096,
+          "bbox": [
+            0.2486,
+            0.3748,
+            0.4469,
+            0.5151
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_3.png",
+      "width": 1217,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 4.118200013181195,
+        "inference": 23.47899999585934,
+        "postprocess": 2.3090000031515956
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.126,
+          "bbox": [
+            0.0,
+            0.1667,
+            0.1254,
+            0.4942
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_4.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.4508000060450286,
+        "inference": 8.297799999127164,
+        "postprocess": 1.9123000092804432
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.05,
+          "bbox": [
+            0.9514,
+            0.6606,
+            0.9999,
+            0.8031
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_5.png",
+      "width": 1179,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 2.4435999803245068,
+        "inference": 8.760299999266863,
+        "postprocess": 1.4647000061813742
+      },
+      "detections": [
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.286,
+          "bbox": [
+            0.1515,
+            0.4554,
+            0.9678,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.101,
+          "bbox": [
+            0.3568,
+            0.2865,
+            0.4243,
+            0.4958
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.095,
+          "bbox": [
+            0.4596,
+            0.0935,
+            0.6014,
+            0.5249
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.057,
+          "bbox": [
+            0.4465,
+            0.4519,
+            0.4892,
+            0.4946
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_6.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.616100013256073,
+        "inference": 9.615200018743053,
+        "postprocess": 1.3586000131908804
+      },
+      "detections": [
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.384,
+          "bbox": [
+            0.5098,
+            0.4628,
+            0.5741,
+            0.4937
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.096,
+          "bbox": [
+            0.3223,
+            0.5235,
+            0.4271,
+            0.591
+          ]
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 0.054,
+          "bbox": [
+            0.4278,
+            0.4999,
+            0.5004,
+            0.5724
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_7.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.266099996631965,
+        "inference": 7.566800020867959,
+        "postprocess": 1.4303000061772764
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.758,
+          "bbox": [
+            0.7123,
+            0.4102,
+            0.9012,
+            0.5628
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.46,
+          "bbox": [
+            0.0802,
+            0.3056,
+            0.377,
+            0.7534
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.259,
+          "bbox": [
+            0.7514,
+            0.1988,
+            1.0,
+            0.9859
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.183,
+          "bbox": [
+            0.3325,
+            0.4757,
+            0.4817,
+            0.607
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.177,
+          "bbox": [
+            0.066,
+            0.2411,
+            0.2159,
+            0.6121
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.088,
+          "bbox": [
+            0.3322,
+            0.4805,
+            0.3992,
+            0.6028
+          ]
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 0.083,
+          "bbox": [
+            0.3317,
+            0.4998,
+            0.4841,
+            0.6138
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_8.png",
+      "width": 1221,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.269100019475445,
+        "inference": 7.750899996608496,
+        "postprocess": 1.9767000048886985
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.809,
+          "bbox": [
+            0.0,
+            0.4585,
+            0.1308,
+            0.783
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_9.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 4.173799999989569,
+        "inference": 14.042800001334399,
+        "postprocess": 2.379200013820082
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.653,
+          "bbox": [
+            0.2808,
+            0.3803,
+            0.4878,
+            0.587
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.078,
+          "bbox": [
+            0.6319,
+            0.4423,
+            0.745,
+            0.5417
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.069,
+          "bbox": [
+            0.635,
+            0.444,
+            0.7438,
+            0.5401
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.056,
+          "bbox": [
+            0.6366,
+            0.4454,
+            0.7445,
+            0.54
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_10.png",
+      "width": 1084,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.5443000195082277,
+        "inference": 15.935700008412823,
+        "postprocess": 1.1631999805103987
+      },
+      "detections": [
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.32,
+          "bbox": [
+            0.8427,
+            0.3478,
+            0.9143,
+            0.3721
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.266,
+          "bbox": [
+            0.1724,
+            0.14,
+            0.3701,
+            0.6469
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.097,
+          "bbox": [
+            0.2229,
+            0.1123,
+            0.373,
+            0.6371
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.074,
+          "bbox": [
+            0.4812,
+            0.4769,
+            0.613,
+            0.5887
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_11.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.4498999991919845,
+        "inference": 8.385599998291582,
+        "postprocess": 1.2123000051360577
+      },
+      "detections": [
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 0.75,
+          "bbox": [
+            0.2901,
+            0.5548,
+            0.4538,
+            0.6495
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.345,
+          "bbox": [
+            0.6165,
+            0.5728,
+            0.7363,
+            0.6816
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.26,
+          "bbox": [
+            0.911,
+            0.6034,
+            0.9998,
+            0.9985
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.115,
+          "bbox": [
+            0.0,
+            0.5405,
+            0.0755,
+            0.6375
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.096,
+          "bbox": [
+            0.0013,
+            0.5617,
+            0.069,
+            0.6048
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.092,
+          "bbox": [
+            0.3019,
+            0.5561,
+            0.4531,
+            0.649
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.069,
+          "bbox": [
+            0.1254,
+            0.572,
+            0.9702,
+            0.9986
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.063,
+          "bbox": [
+            0.0,
+            0.5366,
+            0.0773,
+            0.6032
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.058,
+          "bbox": [
+            0.6159,
+            0.5707,
+            0.7375,
+            0.6832
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.051,
+          "bbox": [
+            0.0105,
+            0.5731,
+            0.0662,
+            0.6052
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.051,
+          "bbox": [
+            0.0,
+            0.5369,
+            0.0756,
+            0.6191
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_12.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.782400028081611,
+        "inference": 9.968099999241531,
+        "postprocess": 1.1817000049632043
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.834,
+          "bbox": [
+            0.3656,
+            0.4122,
+            0.4636,
+            0.6435
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.672,
+          "bbox": [
+            0.4787,
+            0.5123,
+            0.6615,
+            0.7284
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.578,
+          "bbox": [
+            0.0526,
+            0.5004,
+            0.1718,
+            0.5773
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.354,
+          "bbox": [
+            0.8348,
+            0.4658,
+            0.932,
+            0.5472
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.195,
+          "bbox": [
+            0.0168,
+            0.5004,
+            0.1729,
+            0.6334
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.086,
+          "bbox": [
+            0.6018,
+            0.5159,
+            0.6672,
+            0.7969
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_13.png",
+      "width": 1219,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.359600010095164,
+        "inference": 8.240899973316118,
+        "postprocess": 1.7759999900590628
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.851,
+          "bbox": [
+            0.1066,
+            0.4201,
+            0.431,
+            0.6148
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.63,
+          "bbox": [
+            0.8748,
+            0.4025,
+            1.0,
+            0.6208
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.604,
+          "bbox": [
+            0.0,
+            0.5021,
+            0.1322,
+            0.5929
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.435,
+          "bbox": [
+            0.4224,
+            0.5179,
+            0.475,
+            0.5647
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.153,
+          "bbox": [
+            0.0096,
+            0.4608,
+            0.6628,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.084,
+          "bbox": [
+            0.4215,
+            0.4932,
+            1.0,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.064,
+          "bbox": [
+            0.4938,
+            0.5174,
+            0.5343,
+            0.5474
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_14.png",
+      "width": 1216,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.286600007209927,
+        "inference": 7.609099993715063,
+        "postprocess": 1.211199996760115
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.781,
+          "bbox": [
+            0.2556,
+            0.5084,
+            0.4972,
+            0.7811
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.103,
+          "bbox": [
+            0.3782,
+            0.3587,
+            0.4918,
+            0.6163
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.079,
+          "bbox": [
+            0.9073,
+            0.5208,
+            0.999,
+            0.5858
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.065,
+          "bbox": [
+            0.3505,
+            0.3545,
+            0.5042,
+            0.7349
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.064,
+          "bbox": [
+            0.9037,
+            0.5202,
+            0.9732,
+            0.5716
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_15.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.530099998693913,
+        "inference": 7.633400004124269,
+        "postprocess": 1.2721999955829233
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.932,
+          "bbox": [
+            0.5299,
+            0.3701,
+            0.8643,
+            0.6213
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.755,
+          "bbox": [
+            0.1327,
+            0.4162,
+            0.3184,
+            0.5098
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_16.png",
+      "width": 1219,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.334099990548566,
+        "inference": 8.556100015994161,
+        "postprocess": 1.3701000134460628
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.664,
+          "bbox": [
+            0.4355,
+            0.4085,
+            0.779,
+            0.7111
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.308,
+          "bbox": [
+            0.594,
+            0.3131,
+            0.7783,
+            0.7123
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.187,
+          "bbox": [
+            0.6588,
+            0.1203,
+            0.7681,
+            0.1595
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.176,
+          "bbox": [
+            0.9669,
+            0.0,
+            1.0,
+            0.12
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.136,
+          "bbox": [
+            0.8036,
+            0.0629,
+            0.9132,
+            0.1111
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_17.png",
+      "width": 1222,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 2.360299986321479,
+        "inference": 8.65550001617521,
+        "postprocess": 1.3333999959286302
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.107,
+          "bbox": [
+            0.5873,
+            0.5383,
+            1.0,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_18.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.2074000153224915,
+        "inference": 7.722499984083697,
+        "postprocess": 1.4054999919608235
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.76,
+          "bbox": [
+            0.2954,
+            0.3713,
+            0.4454,
+            0.4786
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.405,
+          "bbox": [
+            0.7076,
+            0.0732,
+            0.8498,
+            0.4429
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.121,
+          "bbox": [
+            0.124,
+            0.345,
+            0.1996,
+            0.4607
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.078,
+          "bbox": [
+            0.6043,
+            0.4527,
+            0.6873,
+            0.5318
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.052,
+          "bbox": [
+            0.8019,
+            0.4337,
+            0.875,
+            0.5433
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_19.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 3.0709999846294522,
+        "inference": 10.443300008773804,
+        "postprocess": 1.5168000245466828
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.837,
+          "bbox": [
+            0.0656,
+            0.4956,
+            0.193,
+            0.6234
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.564,
+          "bbox": [
+            0.6604,
+            0.0094,
+            0.8535,
+            0.6534
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.449,
+          "bbox": [
+            0.5656,
+            0.6516,
+            0.8401,
+            0.8228
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.1,
+          "bbox": [
+            0.4042,
+            0.7247,
+            0.5429,
+            0.8194
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_20.png",
+      "width": 1218,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 4.175900015980005,
+        "inference": 11.39070000499487,
+        "postprocess": 2.7587999938987195
+      },
+      "detections": [
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.802,
+          "bbox": [
+            0.7634,
+            0.4252,
+            0.8652,
+            0.4779
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.592,
+          "bbox": [
+            0.6241,
+            0.4874,
+            0.8698,
+            0.5717
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.408,
+          "bbox": [
+            0.5765,
+            0.5972,
+            0.6603,
+            0.7054
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.135,
+          "bbox": [
+            0.6132,
+            0.4802,
+            0.9985,
+            0.5795
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.106,
+          "bbox": [
+            0.858,
+            0.4981,
+            1.0,
+            0.5761
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.088,
+          "bbox": [
+            0.0036,
+            0.479,
+            0.1559,
+            0.56
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_21.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 3.591199987567961,
+        "inference": 14.542899996740744,
+        "postprocess": 1.2652000004891306
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_22.png",
+      "width": 1209,
+      "height": 800,
+      "speed_ms": {
+        "preprocess": 2.8547999972943217,
+        "inference": 10.989500005962327,
+        "postprocess": 1.4942999987397343
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_23.png",
+      "width": 1215,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 3.158500010613352,
+        "inference": 13.405000005150214,
+        "postprocess": 1.6962999943643808
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.481,
+          "bbox": [
+            0.265,
+            0.1719,
+            0.6715,
+            0.6473
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.474,
+          "bbox": [
+            0.0,
+            0.1052,
+            0.1616,
+            0.5224
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.403,
+          "bbox": [
+            0.2612,
+            0.1807,
+            0.6804,
+            0.6464
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_24.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.032299999380484,
+        "inference": 13.210400007665157,
+        "postprocess": 0.8302000060211867
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_25.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 4.322599997976795,
+        "inference": 10.73409998207353,
+        "postprocess": 2.0794000010937452
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.914,
+          "bbox": [
+            0.2691,
+            0.2805,
+            0.5392,
+            0.6129
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_26.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 3.5724000190384686,
+        "inference": 9.65719998930581,
+        "postprocess": 1.8119999731425196
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.115,
+          "bbox": [
+            0.6384,
+            0.0477,
+            0.8463,
+            0.5691
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.05,
+          "bbox": [
+            0.6435,
+            0.0374,
+            0.8485,
+            0.5713
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_27.png",
+      "width": 1143,
+      "height": 806,
+      "speed_ms": {
+        "preprocess": 2.9292000108398497,
+        "inference": 17.626299988478422,
+        "postprocess": 0.906000001123175
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_28.png",
+      "width": 1110,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.303299988852814,
+        "inference": 8.093299984466285,
+        "postprocess": 1.406800001859665
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.056,
+          "bbox": [
+            0.6779,
+            0.2515,
+            1.0,
+            0.7389
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_29.png",
+      "width": 1163,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.412899979390204,
+        "inference": 8.89560001087375,
+        "postprocess": 1.2484999897424132
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.705,
+          "bbox": [
+            0.5882,
+            0.361,
+            0.6476,
+            0.4464
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.524,
+          "bbox": [
+            0.8911,
+            0.2628,
+            0.9993,
+            0.532
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.351,
+          "bbox": [
+            0.0,
+            0.4549,
+            0.104,
+            0.5424
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.077,
+          "bbox": [
+            0.895,
+            0.0998,
+            0.9999,
+            0.5355
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_30.png",
+      "width": 1203,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 5.409800010966137,
+        "inference": 11.962200020207092,
+        "postprocess": 1.1464999988675117
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_31.png",
+      "width": 1163,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 4.043499997351319,
+        "inference": 13.807899988023564,
+        "postprocess": 2.0332999993115664
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.169,
+          "bbox": [
+            0.8542,
+            0.3677,
+            0.9461,
+            0.6119
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.075,
+          "bbox": [
+            0.5839,
+            0.8743,
+            0.6914,
+            0.9965
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_32.png",
+      "width": 1309,
+      "height": 804,
+      "speed_ms": {
+        "preprocess": 3.1612000020686537,
+        "inference": 23.37660000193864,
+        "postprocess": 1.3476999884005636
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.396,
+          "bbox": [
+            0.9082,
+            0.4472,
+            0.9996,
+            0.5985
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.367,
+          "bbox": [
+            0.9069,
+            0.4905,
+            0.9997,
+            0.5968
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.278,
+          "bbox": [
+            0.6528,
+            0.5311,
+            0.7156,
+            0.6154
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.057,
+          "bbox": [
+            0.0,
+            0.5542,
+            0.0345,
+            0.7115
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.056,
+          "bbox": [
+            0.2205,
+            0.2284,
+            0.3667,
+            0.6689
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.052,
+          "bbox": [
+            0.0,
+            0.5568,
+            0.0345,
+            0.7015
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_33.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.9784000071231276,
+        "inference": 11.044799990486354,
+        "postprocess": 1.8359999812673777
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.338,
+          "bbox": [
+            0.6272,
+            0.6186,
+            0.7268,
+            0.6867
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.164,
+          "bbox": [
+            0.0,
+            0.5549,
+            0.0461,
+            0.5914
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.139,
+          "bbox": [
+            0.3463,
+            0.5217,
+            0.3819,
+            0.5527
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.088,
+          "bbox": [
+            0.5452,
+            0.5112,
+            0.5933,
+            0.6519
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.065,
+          "bbox": [
+            0.7935,
+            0.2932,
+            0.9189,
+            0.5993
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.059,
+          "bbox": [
+            0.5134,
+            0.486,
+            0.5628,
+            0.5436
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_34.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.554900012910366,
+        "inference": 8.404399995924905,
+        "postprocess": 1.2258999922778457
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.372,
+          "bbox": [
+            0.1062,
+            0.4272,
+            0.2131,
+            0.4794
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.077,
+          "bbox": [
+            0.1913,
+            0.06,
+            0.2119,
+            0.1104
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_35.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.285300026414916,
+        "inference": 8.38590000057593,
+        "postprocess": 1.305699988733977
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.892,
+          "bbox": [
+            0.2197,
+            0.272,
+            0.3319,
+            0.3809
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.327,
+          "bbox": [
+            0.0236,
+            0.413,
+            0.6475,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.226,
+          "bbox": [
+            0.8883,
+            0.2595,
+            1.0,
+            0.4194
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.061,
+          "bbox": [
+            0.8881,
+            0.0809,
+            0.9999,
+            0.4243
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.061,
+          "bbox": [
+            0.0671,
+            0.0062,
+            0.2074,
+            0.3931
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_36.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.1929000213276595,
+        "inference": 8.023600006708875,
+        "postprocess": 1.3806999777443707
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.747,
+          "bbox": [
+            0.7404,
+            0.4953,
+            0.8735,
+            0.7714
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.659,
+          "bbox": [
+            0.928,
+            0.6057,
+            1.0,
+            0.7486
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.07,
+          "bbox": [
+            0.2083,
+            0.521,
+            0.2588,
+            0.7359
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.067,
+          "bbox": [
+            0.0485,
+            0.6744,
+            0.1211,
+            0.715
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_37.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.064000000245869,
+        "inference": 9.118700021645054,
+        "postprocess": 1.3772999809589237
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.778,
+          "bbox": [
+            0.6771,
+            0.0971,
+            0.8172,
+            0.6651
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.739,
+          "bbox": [
+            0.4944,
+            0.2103,
+            0.5857,
+            0.6233
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_38.png",
+      "width": 1221,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.1881000138819218,
+        "inference": 9.288399975048378,
+        "postprocess": 1.348699996015057
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.473,
+          "bbox": [
+            0.0959,
+            0.1597,
+            0.4491,
+            0.5888
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.3,
+          "bbox": [
+            0.2096,
+            0.1576,
+            0.4474,
+            0.5826
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_39.png",
+      "width": 1080,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.6373000000603497,
+        "inference": 8.898100000806153,
+        "postprocess": 1.2111000251024961
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.295,
+          "bbox": [
+            0.001,
+            0.58,
+            0.0559,
+            0.6264
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.158,
+          "bbox": [
+            0.0028,
+            0.5799,
+            0.0569,
+            0.6276
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.126,
+          "bbox": [
+            0.5796,
+            0.5434,
+            0.6761,
+            0.5862
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.124,
+          "bbox": [
+            0.5799,
+            0.5514,
+            0.6339,
+            0.5911
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.058,
+          "bbox": [
+            0.8061,
+            0.4867,
+            0.8425,
+            0.5529
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_40.png",
+      "width": 1081,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.8517999744508415,
+        "inference": 8.500900003127754,
+        "postprocess": 1.2630000128410757
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.403,
+          "bbox": [
+            0.0,
+            0.6742,
+            0.0349,
+            0.752
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.157,
+          "bbox": [
+            0.4244,
+            0.4726,
+            0.4863,
+            0.5409
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.106,
+          "bbox": [
+            0.305,
+            0.6873,
+            0.3829,
+            0.8181
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.101,
+          "bbox": [
+            0.3377,
+            0.5299,
+            0.3839,
+            0.5682
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_41.png",
+      "width": 1083,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.498999994713813,
+        "inference": 8.382700005313382,
+        "postprocess": 1.2947999930474907
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.203,
+          "bbox": [
+            0.2972,
+            0.1794,
+            0.4104,
+            0.4341
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_42.png",
+      "width": 1079,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.7053999947384,
+        "inference": 8.459699980448931,
+        "postprocess": 1.2583999778144062
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.89,
+          "bbox": [
+            0.657,
+            0.5203,
+            0.745,
+            0.6193
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.368,
+          "bbox": [
+            0.8331,
+            0.5404,
+            0.8944,
+            0.6321
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.291,
+          "bbox": [
+            0.0025,
+            0.5283,
+            0.187,
+            0.8323
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.277,
+          "bbox": [
+            0.4186,
+            0.5722,
+            0.4965,
+            0.6251
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.242,
+          "bbox": [
+            0.4313,
+            0.5712,
+            0.4965,
+            0.6197
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.232,
+          "bbox": [
+            0.0022,
+            0.5373,
+            0.1869,
+            0.8323
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.113,
+          "bbox": [
+            0.2196,
+            0.8321,
+            0.4879,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_43.png",
+      "width": 1085,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.373399998759851,
+        "inference": 8.554200001526624,
+        "postprocess": 1.3136000197846442
+      },
+      "detections": [
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 0.576,
+          "bbox": [
+            0.9649,
+            0.5354,
+            0.9997,
+            0.5882
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.104,
+          "bbox": [
+            0.9646,
+            0.5361,
+            1.0,
+            0.5849
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_44.png",
+      "width": 1087,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.201899973442778,
+        "inference": 8.435299998382106,
+        "postprocess": 1.3080999779049307
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.064,
+          "bbox": [
+            0.7442,
+            0.5173,
+            0.9939,
+            0.9983
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_45.png",
+      "width": 1082,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.361399994697422,
+        "inference": 8.398999983910471,
+        "postprocess": 1.2189999979455024
+      },
+      "detections": [
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.799,
+          "bbox": [
+            0.0,
+            0.6451,
+            0.0422,
+            0.7068
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.255,
+          "bbox": [
+            0.1094,
+            0.5323,
+            0.1652,
+            0.6159
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.094,
+          "bbox": [
+            0.0,
+            0.6444,
+            0.0422,
+            0.7065
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_46.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.679299999726936,
+        "inference": 8.49409998045303,
+        "postprocess": 1.2240000069141388
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.178,
+          "bbox": [
+            0.3545,
+            0.0053,
+            0.5085,
+            0.4231
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_47.png",
+      "width": 1222,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.262099995277822,
+        "inference": 8.059500018134713,
+        "postprocess": 1.174099976196885
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.812,
+          "bbox": [
+            0.0707,
+            0.2432,
+            0.1711,
+            0.5197
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.504,
+          "bbox": [
+            0.6022,
+            0.3473,
+            0.7159,
+            0.5609
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.46,
+          "bbox": [
+            0.1743,
+            0.2682,
+            0.6117,
+            0.5704
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.108,
+          "bbox": [
+            0.7174,
+            0.407,
+            0.9287,
+            0.6823
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.078,
+          "bbox": [
+            0.1768,
+            0.2694,
+            0.6231,
+            0.7021
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.075,
+          "bbox": [
+            0.0547,
+            0.2645,
+            0.8207,
+            0.995
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_48.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.2286000021267682,
+        "inference": 7.592099980683997,
+        "postprocess": 1.3657000090461224
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.828,
+          "bbox": [
+            0.4565,
+            0.3497,
+            0.7163,
+            0.6558
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.471,
+          "bbox": [
+            0.0239,
+            0.4903,
+            0.3379,
+            0.7097
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_49.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.501499984646216,
+        "inference": 8.979800011729822,
+        "postprocess": 0.6592999852728099
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_50.png",
+      "width": 1081,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 2.6343000063207,
+        "inference": 8.401900005992502,
+        "postprocess": 1.4971999917179346
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.062,
+          "bbox": [
+            0.6822,
+            0.0683,
+            0.7187,
+            0.0987
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_51.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.6045000122394413,
+        "inference": 8.738099975744262,
+        "postprocess": 1.3040999765507877
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.074,
+          "bbox": [
+            0.696,
+            0.436,
+            0.7282,
+            0.4756
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.059,
+          "bbox": [
+            0.7515,
+            0.0962,
+            0.9099,
+            0.5637
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_52.png",
+      "width": 1086,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 2.5067999958992004,
+        "inference": 8.431399997789413,
+        "postprocess": 1.2407000176608562
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.073,
+          "bbox": [
+            0.9431,
+            0.3825,
+            0.9993,
+            0.645
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_53.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.744400000665337,
+        "inference": 8.989700028905645,
+        "postprocess": 1.382599992211908
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.054,
+          "bbox": [
+            0.0085,
+            0.4261,
+            0.7751,
+            0.9998
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_54.png",
+      "width": 1085,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.955500007374212,
+        "inference": 8.405500004300848,
+        "postprocess": 1.2623999791685492
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.381,
+          "bbox": [
+            0.2487,
+            0.8631,
+            0.4204,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_55.png",
+      "width": 1083,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.555200015194714,
+        "inference": 8.437100012088194,
+        "postprocess": 1.3762000016868114
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.422,
+          "bbox": [
+            0.7251,
+            0.283,
+            0.8151,
+            0.3493
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.134,
+          "bbox": [
+            0.4316,
+            0.6696,
+            0.643,
+            0.9757
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.08,
+          "bbox": [
+            0.979,
+            0.1657,
+            1.0,
+            0.1865
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_56.png",
+      "width": 1081,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.8643999830819666,
+        "inference": 8.469699998386204,
+        "postprocess": 1.3738000125158578
+      },
+      "detections": [
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.197,
+          "bbox": [
+            0.035,
+            0.7596,
+            0.1301,
+            0.9314
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.184,
+          "bbox": [
+            0.6692,
+            0.1618,
+            0.8166,
+            0.2641
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.174,
+          "bbox": [
+            0.9478,
+            0.3529,
+            0.9997,
+            0.4366
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.097,
+          "bbox": [
+            0.9474,
+            0.2817,
+            0.9992,
+            0.4413
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_57.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.9811999993398786,
+        "inference": 8.410100010223687,
+        "postprocess": 1.2959000014234334
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.545,
+          "bbox": [
+            0.0211,
+            0.5292,
+            0.1462,
+            0.6768
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.54,
+          "bbox": [
+            0.3986,
+            0.5557,
+            0.6465,
+            0.7251
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.479,
+          "bbox": [
+            0.2489,
+            0.6763,
+            0.4354,
+            0.9101
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.418,
+          "bbox": [
+            0.2491,
+            0.6765,
+            0.4354,
+            0.9102
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_58.png",
+      "width": 1082,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.4776000063866377,
+        "inference": 10.936699982266873,
+        "postprocess": 1.3106999977026135
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.171,
+          "bbox": [
+            0.3988,
+            0.1516,
+            0.4581,
+            0.3323
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_59.png",
+      "width": 1079,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 2.631899988045916,
+        "inference": 8.439800003543496,
+        "postprocess": 1.4084000140428543
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.831,
+          "bbox": [
+            0.5212,
+            0.8296,
+            0.7971,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_60.png",
+      "width": 1217,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.199300011852756,
+        "inference": 8.780300006037578,
+        "postprocess": 1.2735000054817647
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.221,
+          "bbox": [
+            0.5173,
+            0.3904,
+            0.6764,
+            0.5723
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.131,
+          "bbox": [
+            0.0117,
+            0.4965,
+            0.859,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.097,
+          "bbox": [
+            0.0005,
+            0.0,
+            0.1457,
+            0.5257
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_61.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.2013999987393618,
+        "inference": 7.972099992912263,
+        "postprocess": 1.2777000083588064
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.613,
+          "bbox": [
+            0.5384,
+            0.3849,
+            0.7274,
+            0.5811
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.38,
+          "bbox": [
+            0.5405,
+            0.3875,
+            0.7294,
+            0.5781
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_62.png",
+      "width": 1216,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.4759999942034483,
+        "inference": 8.639599982416257,
+        "postprocess": 2.3193999950308353
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.509,
+          "bbox": [
+            0.5814,
+            0.448,
+            0.8962,
+            0.7777
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.183,
+          "bbox": [
+            0.2625,
+            0.4666,
+            0.8802,
+            0.7699
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_63.png",
+      "width": 1223,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.403500024229288,
+        "inference": 7.647500024177134,
+        "postprocess": 1.5127999940887094
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.914,
+          "bbox": [
+            0.6144,
+            0.3486,
+            0.7526,
+            0.5218
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.88,
+          "bbox": [
+            0.8535,
+            0.323,
+            0.963,
+            0.5274
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_64.png",
+      "width": 1222,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 2.4682999937795103,
+        "inference": 8.09239997761324,
+        "postprocess": 1.3624000130221248
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.301,
+          "bbox": [
+            0.6261,
+            0.5124,
+            0.8448,
+            0.6712
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.235,
+          "bbox": [
+            0.0,
+            0.3811,
+            0.0486,
+            0.6962
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.183,
+          "bbox": [
+            0.2907,
+            0.5636,
+            0.5758,
+            0.8536
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_65.png",
+      "width": 1221,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.1893999946769327,
+        "inference": 7.660599978407845,
+        "postprocess": 1.51859998004511
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.643,
+          "bbox": [
+            0.4348,
+            0.2971,
+            0.5066,
+            0.4066
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.186,
+          "bbox": [
+            0.5566,
+            0.4474,
+            0.6051,
+            0.5067
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_66.png",
+      "width": 1222,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.3779000039212406,
+        "inference": 7.859599980292842,
+        "postprocess": 1.3313000090420246
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.813,
+          "bbox": [
+            0.3159,
+            0.5546,
+            0.5098,
+            0.8082
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.806,
+          "bbox": [
+            0.5638,
+            0.3812,
+            0.6258,
+            0.5616
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_67.png",
+      "width": 1212,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 3.0994999979157,
+        "inference": 7.593799993628636,
+        "postprocess": 1.2597999884746969
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.323,
+          "bbox": [
+            0.0,
+            0.7201,
+            0.2298,
+            0.8806
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.075,
+          "bbox": [
+            0.4491,
+            0.6776,
+            0.7508,
+            0.9244
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_68.png",
+      "width": 1077,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.517600019928068,
+        "inference": 9.099499991862103,
+        "postprocess": 1.1911999899894
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.936,
+          "bbox": [
+            0.0753,
+            0.5889,
+            0.1384,
+            0.6568
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.844,
+          "bbox": [
+            0.4979,
+            0.3093,
+            0.7143,
+            0.6741
+          ]
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 0.08,
+          "bbox": [
+            0.0764,
+            0.5901,
+            0.1375,
+            0.656
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_69.png",
+      "width": 1218,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.2129999997559935,
+        "inference": 8.096600009594113,
+        "postprocess": 1.195199991343543
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.828,
+          "bbox": [
+            0.0962,
+            0.4071,
+            0.2733,
+            0.5481
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.07,
+          "bbox": [
+            0.0969,
+            0.4348,
+            0.1919,
+            0.5471
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_70.png",
+      "width": 1222,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.600100007839501,
+        "inference": 8.798199996817857,
+        "postprocess": 1.407400006428361
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.797,
+          "bbox": [
+            0.2171,
+            0.3136,
+            0.583,
+            0.7566
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.547,
+          "bbox": [
+            0.0,
+            0.0,
+            0.093,
+            0.4771
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.106,
+          "bbox": [
+            0.9311,
+            0.5519,
+            1.0,
+            0.7417
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.091,
+          "bbox": [
+            0.1221,
+            0.3721,
+            0.1924,
+            0.4804
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_71.png",
+      "width": 1214,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.2037999879103154,
+        "inference": 7.650299987290055,
+        "postprocess": 1.3266000023577362
+      },
+      "detections": [
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.814,
+          "bbox": [
+            0.382,
+            0.4511,
+            0.6459,
+            0.6564
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.502,
+          "bbox": [
+            0.3081,
+            0.2382,
+            0.5046,
+            0.6352
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_72.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.380799996899441,
+        "inference": 7.935600006021559,
+        "postprocess": 1.6271999920718372
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.912,
+          "bbox": [
+            0.1766,
+            0.417,
+            0.3869,
+            0.7237
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_73.png",
+      "width": 1216,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.3649000213481486,
+        "inference": 8.91920001595281,
+        "postprocess": 1.343199983239174
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.315,
+          "bbox": [
+            0.628,
+            0.1608,
+            1.0,
+            0.731
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.301,
+          "bbox": [
+            0.4621,
+            0.3987,
+            0.6745,
+            0.5706
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_74.png",
+      "width": 1213,
+      "height": 806,
+      "speed_ms": {
+        "preprocess": 2.3351999989245087,
+        "inference": 7.662499992875382,
+        "postprocess": 1.4563000004272908
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.764,
+          "bbox": [
+            0.3865,
+            0.4718,
+            0.5996,
+            0.7192
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_75.png",
+      "width": 1217,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.352299983613193,
+        "inference": 7.641900010639802,
+        "postprocess": 1.4347000105772167
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.813,
+          "bbox": [
+            0.5582,
+            0.6768,
+            0.6652,
+            0.7839
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.409,
+          "bbox": [
+            0.4984,
+            0.4387,
+            0.6487,
+            0.534
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.182,
+          "bbox": [
+            0.0073,
+            0.6772,
+            0.6779,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.127,
+          "bbox": [
+            0.182,
+            0.6997,
+            0.8342,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.127,
+          "bbox": [
+            0.4964,
+            0.437,
+            0.6481,
+            0.5339
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_76.png",
+      "width": 1216,
+      "height": 804,
+      "speed_ms": {
+        "preprocess": 2.2170000011101365,
+        "inference": 7.744500006083399,
+        "postprocess": 1.3119999784976244
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.236,
+          "bbox": [
+            0.1222,
+            0.3877,
+            0.2745,
+            0.4848
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.205,
+          "bbox": [
+            0.6434,
+            0.3817,
+            0.798,
+            0.5217
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_77.png",
+      "width": 1222,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.355600008741021,
+        "inference": 8.167199994204566,
+        "postprocess": 2.4482000153511763
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.636,
+          "bbox": [
+            0.0,
+            0.488,
+            0.0757,
+            0.8908
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.38,
+          "bbox": [
+            0.5175,
+            0.4899,
+            0.6898,
+            0.6056
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.302,
+          "bbox": [
+            0.7058,
+            0.2714,
+            0.8099,
+            0.5869
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.247,
+          "bbox": [
+            0.7058,
+            0.2721,
+            0.8099,
+            0.5879
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_78.png",
+      "width": 1215,
+      "height": 803,
+      "speed_ms": {
+        "preprocess": 2.518099994631484,
+        "inference": 7.74279999313876,
+        "postprocess": 1.3834999990649521
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.483,
+          "bbox": [
+            0.4155,
+            0.322,
+            0.8504,
+            0.6636
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.066,
+          "bbox": [
+            0.0,
+            0.5022,
+            0.0692,
+            0.8122
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_79.png",
+      "width": 1218,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.430399996228516,
+        "inference": 7.559599995147437,
+        "postprocess": 1.2075999984517694
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.946,
+          "bbox": [
+            0.2498,
+            0.6017,
+            0.5051,
+            0.8665
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.93,
+          "bbox": [
+            0.726,
+            0.6342,
+            0.9264,
+            0.805
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.135,
+          "bbox": [
+            0.4419,
+            0.5861,
+            0.5282,
+            0.6227
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.11,
+          "bbox": [
+            0.6935,
+            0.5344,
+            0.7676,
+            0.6346
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_80.png",
+      "width": 1220,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 2.202199975727126,
+        "inference": 7.614100002683699,
+        "postprocess": 1.6767999914009124
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.874,
+          "bbox": [
+            0.1689,
+            0.6147,
+            0.3052,
+            0.7457
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.162,
+          "bbox": [
+            0.8225,
+            0.4881,
+            0.8726,
+            0.5685
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_81.png",
+      "width": 1219,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 2.314000012120232,
+        "inference": 8.598299988079816,
+        "postprocess": 0.6375999946612865
+      },
+      "detections": []
+    },
+    {
+      "image": "Screenshot_82.png",
+      "width": 1211,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 2.4002999998629093,
+        "inference": 8.146300009684637,
+        "postprocess": 1.2922000023536384
+      },
+      "detections": [
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.892,
+          "bbox": [
+            0.2116,
+            0.7674,
+            0.4281,
+            0.9999
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.85,
+          "bbox": [
+            0.4494,
+            0.6645,
+            0.5309,
+            0.7495
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.841,
+          "bbox": [
+            0.0,
+            0.7449,
+            0.1058,
+            0.9996
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.593,
+          "bbox": [
+            0.5655,
+            0.7521,
+            0.7497,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.524,
+          "bbox": [
+            0.8378,
+            0.5473,
+            0.9268,
+            0.6357
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.445,
+          "bbox": [
+            0.2961,
+            0.5962,
+            0.3994,
+            0.7082
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.44,
+          "bbox": [
+            0.806,
+            0.6951,
+            0.9998,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.197,
+          "bbox": [
+            0.5343,
+            0.5714,
+            0.582,
+            0.629
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.107,
+          "bbox": [
+            0.6741,
+            0.6551,
+            0.7966,
+            0.7585
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_83.png",
+      "width": 1217,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 2.2473999997600913,
+        "inference": 7.991899998160079,
+        "postprocess": 1.2866999895777553
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.668,
+          "bbox": [
+            0.4616,
+            0.0033,
+            0.6399,
+            0.1724
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.354,
+          "bbox": [
+            0.3439,
+            0.8701,
+            0.5439,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.077,
+          "bbox": [
+            0.765,
+            0.0777,
+            0.9274,
+            0.3082
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_84.png",
+      "width": 1215,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.291899989359081,
+        "inference": 8.401099999900907,
+        "postprocess": 1.190500013763085
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.268,
+          "bbox": [
+            0.2052,
+            0.619,
+            0.34,
+            0.7001
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.265,
+          "bbox": [
+            0.2004,
+            0.619,
+            0.339,
+            0.7007
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.169,
+          "bbox": [
+            0.6022,
+            0.6158,
+            0.674,
+            0.6574
+          ]
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.053,
+          "bbox": [
+            0.1917,
+            0.6198,
+            0.3407,
+            0.7009
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_85.png",
+      "width": 1218,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 2.4065000179689378,
+        "inference": 7.578800024930388,
+        "postprocess": 1.2940999877173454
+      },
+      "detections": [
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.86,
+          "bbox": [
+            0.7187,
+            0.1121,
+            0.7779,
+            0.1675
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.061,
+          "bbox": [
+            0.5333,
+            0.2814,
+            0.7432,
+            0.8323
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_86.png",
+      "width": 1213,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 2.2354999964591116,
+        "inference": 8.597499981988221,
+        "postprocess": 1.2953999976161867
+      },
+      "detections": [
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 0.907,
+          "bbox": [
+            0.4391,
+            0.6722,
+            0.5711,
+            0.7602
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.864,
+          "bbox": [
+            0.5828,
+            0.6051,
+            0.7174,
+            0.7441
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.834,
+          "bbox": [
+            0.219,
+            0.6626,
+            0.3215,
+            0.7598
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.403,
+          "bbox": [
+            0.0006,
+            0.5619,
+            0.1169,
+            0.6557
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.174,
+          "bbox": [
+            0.0,
+            0.5613,
+            0.116,
+            0.6556
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.101,
+          "bbox": [
+            0.3455,
+            0.6271,
+            0.4633,
+            0.7337
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.096,
+          "bbox": [
+            0.2605,
+            0.599,
+            0.3521,
+            0.6358
+          ]
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 0.087,
+          "bbox": [
+            0.2583,
+            0.3349,
+            0.4139,
+            0.6385
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_87.png",
+      "width": 1212,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.289199997903779,
+        "inference": 7.572700007585809,
+        "postprocess": 1.2102000182494521
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.918,
+          "bbox": [
+            0.2727,
+            0.7213,
+            0.4208,
+            0.8735
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.787,
+          "bbox": [
+            0.5972,
+            0.7486,
+            0.8082,
+            0.8912
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.781,
+          "bbox": [
+            0.6699,
+            0.6335,
+            0.989,
+            0.8786
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.389,
+          "bbox": [
+            0.3365,
+            0.2477,
+            0.5561,
+            0.6799
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.37,
+          "bbox": [
+            0.4498,
+            0.7419,
+            0.6323,
+            0.8405
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.13,
+          "bbox": [
+            0.3427,
+            0.6235,
+            0.4077,
+            0.6768
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.076,
+          "bbox": [
+            0.0029,
+            0.5824,
+            0.1478,
+            0.699
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.072,
+          "bbox": [
+            0.3415,
+            0.6021,
+            0.4858,
+            0.6778
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.069,
+          "bbox": [
+            0.5072,
+            0.7463,
+            0.6341,
+            0.8378
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.057,
+          "bbox": [
+            0.3421,
+            0.618,
+            0.4829,
+            0.6775
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_88.png",
+      "width": 1220,
+      "height": 812,
+      "speed_ms": {
+        "preprocess": 2.3270000237971544,
+        "inference": 7.615300011821091,
+        "postprocess": 1.303199998801574
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.889,
+          "bbox": [
+            0.2321,
+            0.5381,
+            0.3817,
+            0.7295
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.862,
+          "bbox": [
+            0.5194,
+            0.5086,
+            0.6468,
+            0.7283
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.788,
+          "bbox": [
+            0.0786,
+            0.5209,
+            0.1606,
+            0.668
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.083,
+          "bbox": [
+            0.3717,
+            0.4154,
+            0.5552,
+            0.6852
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_89.png",
+      "width": 1221,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 2.44609999936074,
+        "inference": 8.177699986845255,
+        "postprocess": 1.3252999924588948
+      },
+      "detections": [
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.479,
+          "bbox": [
+            0.0,
+            0.2203,
+            0.3416,
+            0.8502
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.289,
+          "bbox": [
+            0.0036,
+            0.2359,
+            0.4504,
+            0.9202
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.236,
+          "bbox": [
+            0.0599,
+            0.0366,
+            0.5971,
+            0.2076
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.051,
+          "bbox": [
+            0.0141,
+            0.0736,
+            0.5601,
+            0.2134
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_90.png",
+      "width": 1216,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.2145999828353524,
+        "inference": 7.611300010466948,
+        "postprocess": 1.3134000182617456
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.901,
+          "bbox": [
+            0.4903,
+            0.5008,
+            0.6289,
+            0.7791
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.9,
+          "bbox": [
+            0.2466,
+            0.4891,
+            0.4261,
+            0.8891
+          ]
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 0.763,
+          "bbox": [
+            0.4061,
+            0.6331,
+            0.5029,
+            0.7577
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.475,
+          "bbox": [
+            0.0,
+            0.329,
+            0.0656,
+            0.7429
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.19,
+          "bbox": [
+            0.4066,
+            0.6333,
+            0.5028,
+            0.7574
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.057,
+          "bbox": [
+            0.671,
+            0.5563,
+            0.7128,
+            0.5762
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_91.png",
+      "width": 1223,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.2344000171869993,
+        "inference": 7.603500009281561,
+        "postprocess": 1.367799995932728
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.758,
+          "bbox": [
+            0.4404,
+            0.1672,
+            0.647,
+            0.4409
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.168,
+          "bbox": [
+            0.622,
+            0.0862,
+            0.7865,
+            0.3289
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_92.png",
+      "width": 1221,
+      "height": 815,
+      "speed_ms": {
+        "preprocess": 2.3640999861527234,
+        "inference": 8.841600007144734,
+        "postprocess": 1.2377000239212066
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.887,
+          "bbox": [
+            0.0886,
+            0.637,
+            0.168,
+            0.7939
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.074,
+          "bbox": [
+            0.5005,
+            0.4883,
+            0.583,
+            0.515
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_93.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 2.2376000124495476,
+        "inference": 9.391400002641603,
+        "postprocess": 1.2529999949038029
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.426,
+          "bbox": [
+            0.7468,
+            0.0766,
+            0.8402,
+            0.1729
+          ]
+        },
+        {
+          "class_raw": "loader_unknown",
+          "class_ours": "loader_unknown",
+          "conf": 0.386,
+          "bbox": [
+            0.4345,
+            0.2058,
+            0.5072,
+            0.3204
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.26,
+          "bbox": [
+            0.7468,
+            0.0768,
+            0.8933,
+            0.2407
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.106,
+          "bbox": [
+            0.4344,
+            0.2067,
+            0.5065,
+            0.3223
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_94.png",
+      "width": 1215,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 2.3493999906349927,
+        "inference": 9.038999996846542,
+        "postprocess": 2.227299992227927
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.889,
+          "bbox": [
+            0.5684,
+            0.5517,
+            0.8006,
+            0.9413
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.527,
+          "bbox": [
+            0.0251,
+            0.4919,
+            0.5016,
+            0.9997
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.185,
+          "bbox": [
+            0.7429,
+            0.2988,
+            0.8447,
+            0.3607
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.163,
+          "bbox": [
+            0.0001,
+            0.4192,
+            0.0633,
+            0.5173
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.082,
+          "bbox": [
+            0.8681,
+            0.2766,
+            0.9298,
+            0.3174
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.074,
+          "bbox": [
+            0.0,
+            0.478,
+            0.4958,
+            1.0
+          ]
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 0.062,
+          "bbox": [
+            0.7453,
+            0.2987,
+            0.9222,
+            0.3616
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_95.png",
+      "width": 1217,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.2735999955330044,
+        "inference": 8.031500008655712,
+        "postprocess": 1.2202000070828944
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.516,
+          "bbox": [
+            0.7484,
+            0.2947,
+            0.983,
+            0.5153
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.376,
+          "bbox": [
+            0.4449,
+            0.1036,
+            0.6235,
+            0.5376
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.057,
+          "bbox": [
+            0.6445,
+            0.283,
+            0.9843,
+            0.5172
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_96.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 2.3719000164419413,
+        "inference": 7.593699992867187,
+        "postprocess": 1.2704999826382846
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.112,
+          "bbox": [
+            0.6365,
+            0.4647,
+            0.7189,
+            0.5835
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.107,
+          "bbox": [
+            0.0,
+            0.5534,
+            0.0919,
+            0.6842
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_97.png",
+      "width": 1221,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.307099988684058,
+        "inference": 7.570199988549575,
+        "postprocess": 1.2692000018432736
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.301,
+          "bbox": [
+            0.6354,
+            0.2661,
+            0.7464,
+            0.3595
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.13,
+          "bbox": [
+            0.8925,
+            0.2047,
+            0.9997,
+            0.3557
+          ]
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.084,
+          "bbox": [
+            0.6058,
+            0.268,
+            0.7479,
+            0.3717
+          ]
+        },
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.055,
+          "bbox": [
+            0.7291,
+            0.208,
+            0.977,
+            0.35
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.054,
+          "bbox": [
+            0.8492,
+            0.2058,
+            0.9714,
+            0.337
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_98.png",
+      "width": 1221,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.3230000224430114,
+        "inference": 7.643400022061542,
+        "postprocess": 1.4635999978054315
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.122,
+          "bbox": [
+            0.1047,
+            0.2422,
+            0.7651,
+            0.9806
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_99.png",
+      "width": 1216,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 2.2555000032298267,
+        "inference": 8.511399995768443,
+        "postprocess": 1.296799979172647
+      },
+      "detections": [
+        {
+          "class_raw": "loader_crane",
+          "class_ours": "loader_crane",
+          "conf": 0.445,
+          "bbox": [
+            0.0003,
+            0.4016,
+            0.3054,
+            0.8006
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.286,
+          "bbox": [
+            0.124,
+            0.5251,
+            0.7321,
+            0.7895
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.21,
+          "bbox": [
+            0.1164,
+            0.4351,
+            0.7654,
+            0.7921
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.076,
+          "bbox": [
+            0.1075,
+            0.5365,
+            0.5797,
+            0.7849
+          ]
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_100.png",
+      "width": 1220,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 2.2610999876633286,
+        "inference": 9.167999989585951,
+        "postprocess": 1.4015999913681298
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 0.824,
+          "bbox": [
+            0.8582,
+            0.5496,
+            0.9214,
+            0.6177
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.606,
+          "bbox": [
+            0.7331,
+            0.4935,
+            0.8523,
+            0.6069
+          ]
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 0.292,
+          "bbox": [
+            0.7145,
+            0.4933,
+            0.8287,
+            0.6043
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.114,
+          "bbox": [
+            0.9631,
+            0.5585,
+            0.9981,
+            0.5922
+          ]
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 0.111,
+          "bbox": [
+            0.7849,
+            0.5579,
+            0.8521,
+            0.6053
+          ]
+        }
+      ]
+    }
+  ]
+}
