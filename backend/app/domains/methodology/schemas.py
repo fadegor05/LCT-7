@@ -28,8 +28,8 @@ class RequirementIn(BaseModel):
     equipment_type_id: uuid.UUID
     min_count: int = Field(1, ge=1)
     obligation: Obligation
-    gesn_code: str | None = None
-    source_note: str | None = None
+    gesn_code: str | None = Field(None, max_length=64)
+    source_note: str | None = Field(None, max_length=500)
 
     @field_validator("gesn_code", "source_note", mode="before")
     @classmethod

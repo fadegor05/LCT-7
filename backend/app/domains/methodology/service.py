@@ -1,11 +1,13 @@
 """Бизнес-логика методологии проверки оборудования на объекте строительства."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.catalog import EquipmentCatalog, EquipmentTypeInfo
 from app.domains.methodology.defaults import DefaultRuleSet
 from app.domains.methodology.models import (
     EquipmentRequirement,
@@ -16,15 +18,37 @@ from app.domains.methodology.models import (
 from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.methodology.schemas import (
-    RequirementRead,
-    RuleRead,
     RuleUpdate,
-    SetRead,
     SetWrite,
 )
 from app.domains.schedule.repository import ScheduleRepository
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
+
+
+@dataclass
+class RequirementView:
+    """View для требования по оборудованию (без Pydantic)."""
+
+    requirement: EquipmentRequirement
+    equipment_type: EquipmentTypeInfo
+
+
+@dataclass
+class SetView:
+    """View для набора требований (без Pydantic)."""
+
+    equipment_set: EquipmentSet
+    requirements: list[RequirementView]
+
+
+@dataclass
+class RuleView:
+    """View для правила методологии (без Pydantic)."""
+
+    rule: MethodologyRule
+    stage_name: str | None
+    sets: list[SetView]
 
 
 class MethodologyService:
@@ -48,11 +72,11 @@ class MethodologyService:
         self._defaults = defaults
         self._recalculator = recalculator
 
-    async def list_equipment_types(self):
+    async def list_equipment_types(self) -> list[EquipmentTypeInfo]:
         """Получить все типы оборудования из каталога."""
         return await self._catalog.all()
 
-    async def list_rules(self, site_id: uuid.UUID) -> list[RuleRead]:
+    async def list_rules(self, site_id: uuid.UUID) -> list[RuleView]:
         """Получить правила с ленивой материализацией по умолчанию.
 
         Для каждого этапа, не имеющего правила, создаёт правило:
@@ -63,7 +87,7 @@ class MethodologyService:
             site_id: ID сайта
 
         Returns:
-            Список RuleRead, упорядочены по position этапа
+            Список RuleView, упорядочены по position этапа
 
         Raises:
             AppError(404) если сайт не принадлежит текущему пользователю
@@ -78,73 +102,97 @@ class MethodologyService:
         if schedule is None:
             raise AppError("График не загружен", status_code=404)
 
-        # Получаем этапы графика
-        stages = await self._schedule_repository.list_stages(schedule.id)
+        # Получаем этапы графика (id берём заранее: после rollback ORM-объекты протухают)
+        schedule_id = schedule.id
+        stages = await self._schedule_repository.list_stages(schedule_id)
 
-        # Получаем существующие правила для сайта
-        existing_rules = await self._repository.list_rules_by_site(site_id)
-        existing_stage_ids = {rule.stage_id for rule in existing_rules}
+        # Материализация с retry на IntegrityError (race condition protection)
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                # Получаем существующие правила для сайта
+                existing_rules = await self._repository.list_rules_by_site(site_id)
+                existing_stage_ids = {rule.stage_id for rule in existing_rules}
 
-        # Проверяем, есть ли новые этапы, требующие материализации
-        need_commit = False
+                # Проверяем, есть ли новые этапы, требующие материализации
+                need_commit = False
 
-        for stage in stages:
-            if stage.id not in existing_stage_ids:
-                # Найти совпадение со строкой по умолчанию
-                default_rule = self._defaults.match_stage(stage.name)
+                for stage in stages:
+                    if stage.id not in existing_stage_ids:
+                        # Найти совпадение со строкой по умолчанию
+                        default_rule = self._defaults.match_stage(stage.name)
 
-                if default_rule is not None:
-                    # Создать правило с наборами и требованиями
-                    rule = MethodologyRule(
-                        site_id=site_id,
-                        stage_id=stage.id,
-                        stage_key=default_rule.stage_key,
-                        is_verifiable=True,
-                    )
-                    await self._repository.add(rule)
+                        if default_rule is not None:
+                            # Создать правило с наборами и требованиями
+                            rule = MethodologyRule(
+                                site_id=site_id,
+                                stage_id=stage.id,
+                                stage_key=default_rule.stage_key,
+                                is_verifiable=True,
+                            )
+                            await self._repository.add(rule)
 
-                    # Добавить наборы и требования
-                    for set_idx, default_set in enumerate(default_rule.sets, start=1):
-                        equipment_set = await self._repository.add_set(rule.id, set_idx)
+                            # Добавить наборы и требования
+                            for set_idx, default_set in enumerate(default_rule.sets, start=1):
+                                equipment_set = await self._repository.add_set(rule.id, set_idx)
 
-                        # Разрешить коды оборудования в ID
-                        requirements = []
-                        for default_req in default_set:
-                            # Найти оборудование по коду
-                            equipment_type = await self._catalog.by_code(default_req.equipment_code)
-                            if equipment_type is None:
-                                raise AppError(
-                                    f"Справочник техники не содержит {default_req.equipment_code}",
-                                    status_code=500,
+                                # Разрешить коды оборудования в ID
+                                requirements = []
+                                for default_req in default_set:
+                                    # Найти оборудование по коду
+                                    equipment_type = await self._catalog.by_code(
+                                        default_req.equipment_code
+                                    )
+                                    if equipment_type is None:
+                                        msg = (
+                                            f"Справочник техники не содержит "
+                                            f"{default_req.equipment_code}"
+                                        )
+                                        raise AppError(msg, status_code=500)
+
+                                    req = EquipmentRequirement(
+                                        set_id=equipment_set.id,
+                                        equipment_type_id=equipment_type.id,
+                                        min_count=default_req.min_count,
+                                        obligation=default_req.obligation,
+                                        gesn_code=default_req.gesn_code,
+                                        source_note=default_req.source_note,
+                                    )
+                                    requirements.append(req)
+
+                                await self._repository.add_requirements(
+                                    equipment_set.id, requirements
                                 )
 
-                            req = EquipmentRequirement(
-                                set_id=equipment_set.id,
-                                equipment_type_id=equipment_type.id,
-                                min_count=default_req.min_count,
-                                obligation=default_req.obligation,
-                                gesn_code=default_req.gesn_code,
-                                source_note=default_req.source_note,
+                            need_commit = True
+                        else:
+                            # Создать правило без наборов (не проверяется)
+                            reason = "Нет правила в базовом наборе — задайте комплект"
+                            rule = MethodologyRule(
+                                site_id=site_id,
+                                stage_id=stage.id,
+                                is_verifiable=False,
+                                unverifiable_reason=reason,
                             )
-                            requirements.append(req)
+                            await self._repository.add(rule)
+                            need_commit = True
 
-                        await self._repository.add_requirements(equipment_set.id, requirements)
+                # Коммитим, если создали что-то новое
+                if need_commit:
+                    await self._session.commit()
 
-                    need_commit = True
+                # Success - exit retry loop
+                break
+            except IntegrityError as e:
+                # Rollback and retry once
+                await self._session.rollback()
+                if attempt < max_retries - 1:
+                    # После rollback ORM-объекты expired — перечитываем этапы
+                    stages = await self._schedule_repository.list_stages(schedule_id)
+                    continue
                 else:
-                    # Создать правило без наборов (не проверяется)
-                    rule = MethodologyRule(
-                        site_id=site_id,
-                        stage_id=stage.id,
-                        is_verifiable=False,
-                        unverifiable_reason="Нет правила в базовом наборе — задайте комплект",
-                    )
-                    await self._repository.add(rule)
-                    need_commit = True
-
-        # Коммитим, если создали что-то новое
-        if need_commit:
-            await self._session.commit()
+                    # Re-raise on second attempt
+                    raise e
 
         # Загружаем все правила с этапами
         rules = await self._repository.list_rules_by_site(site_id)
@@ -168,8 +216,8 @@ class MethodologyService:
                     requirements_by_set[req.set_id] = []
                 requirements_by_set[req.set_id].append(req)
 
-        # Преобразуем в схемы
-        result: list[RuleRead] = []
+        # Преобразуем в views (без построения схем)
+        result: list[RuleView] = []
         for rule in rules:
             # Найти этап
             found_stage = next((s for s in stages if s.id == rule.stage_id), None)
@@ -177,53 +225,46 @@ class MethodologyService:
 
             # Собрать наборы
             rule_sets = sets_by_rule.get(rule.id, [])
-            sets_read = []
+            set_views = []
             for s in rule_sets:
                 reqs = requirements_by_set.get(s.id, [])
-                req_reads = []
+                req_views = []
                 for req in reqs:
                     # Загрузить тип оборудования
                     equipment_type = await self._catalog.by_id(req.equipment_type_id)
                     if equipment_type:
-                        req_read = RequirementRead(
-                            id=req.id,
+                        req_view = RequirementView(
+                            requirement=req,
                             equipment_type=equipment_type,
-                            min_count=req.min_count,
-                            obligation=Obligation(req.obligation),
-                            gesn_code=req.gesn_code,
-                            source_note=req.source_note,
                         )
-                        req_reads.append(req_read)
+                        req_views.append(req_view)
 
-                set_read = SetRead(
-                    id=s.id,
-                    position=s.position,
-                    requirements=req_reads,
+                set_view = SetView(
+                    equipment_set=s,
+                    requirements=req_views,
                 )
-                sets_read.append(set_read)
+                set_views.append(set_view)
 
             # Сортируем наборы по позиции
-            sets_read.sort(key=lambda s: s.position)
+            set_views.sort(key=lambda s: s.equipment_set.position)
 
-            rule_read = RuleRead(
-                id=rule.id,
-                stage_id=rule.stage_id,
+            rule_view = RuleView(
+                rule=rule,
                 stage_name=stage_name,
-                is_verifiable=rule.is_verifiable,
-                unverifiable_reason=rule.unverifiable_reason,
-                updated_at=rule.updated_at,
-                sets=sets_read,
+                sets=set_views,
             )
-            result.append(rule_read)
+            result.append(rule_view)
 
         # Сортируем по position этапов
-        result.sort(key=lambda r: next((s.position for s in stages if s.id == r.stage_id), 999))
+        result.sort(
+            key=lambda r: next((s.position for s in stages if s.id == r.rule.stage_id), 999)
+        )
 
         return result
 
     async def update_rule(
         self, site_id: uuid.UUID, rule_id: uuid.UUID, data: RuleUpdate
-    ) -> RuleRead:
+    ) -> RuleView:
         """Обновить правило.
 
         Args:
@@ -232,7 +273,7 @@ class MethodologyService:
             data: RuleUpdate со значениями
 
         Returns:
-            RuleRead
+            RuleView
 
         Raises:
             AppError(404) если правило не принадлежит сайту или не найдено
@@ -250,11 +291,11 @@ class MethodologyService:
         # Пересчитываем
         await self._recalculator.recalculate(site_id)
 
-        # Возвращаем RuleRead
+        # Возвращаем RuleView
         rules = await self.list_rules(site_id)
-        return next(r for r in rules if r.id == rule_id)
+        return next(r for r in rules if r.rule.id == rule_id)
 
-    async def create_set(self, site_id: uuid.UUID, rule_id: uuid.UUID, data: SetWrite) -> SetRead:
+    async def create_set(self, site_id: uuid.UUID, rule_id: uuid.UUID, data: SetWrite) -> SetView:
         """Создать набор требований.
 
         Args:
@@ -263,7 +304,7 @@ class MethodologyService:
             data: SetWrite с требованиями
 
         Returns:
-            SetRead
+            SetView
 
         Raises:
             AppError(404) если правило не принадлежит сайту
@@ -274,6 +315,11 @@ class MethodologyService:
 
         # Валидировать требования
         self._validate_requirements(data)
+
+        # Получить правило с блокировкой FOR UPDATE для предотвращения race condition
+        locked_rule = await self._repository.get_rule_for_update(rule_id)
+        if locked_rule is None or locked_rule.site_id != site_id:
+            raise AppError("Правило не найдено", status_code=404)
 
         # Добавить набор
         max_pos = await self._repository.max_position(rule_id)
@@ -311,12 +357,12 @@ class MethodologyService:
         # Пересчитываем
         await self._recalculator.recalculate(site_id)
 
-        # Возвращаем SetRead
+        # Возвращаем SetView
         rules = await self.list_rules(site_id)
-        rule_read = next(r for r in rules if r.id == rule_id)
-        return next(s for s in rule_read.sets if s.id == equipment_set.id)
+        rule_view = next(r for r in rules if r.rule.id == rule_id)
+        return next(s for s in rule_view.sets if s.equipment_set.id == equipment_set.id)
 
-    async def replace_set(self, site_id: uuid.UUID, set_id: uuid.UUID, data: SetWrite) -> SetRead:
+    async def replace_set(self, site_id: uuid.UUID, set_id: uuid.UUID, data: SetWrite) -> SetView:
         """Заменить требования набора.
 
         Args:
@@ -325,7 +371,7 @@ class MethodologyService:
             data: SetWrite с новыми требованиями
 
         Returns:
-            SetRead
+            SetView
 
         Raises:
             AppError(404) если набор не принадлежит сайту
@@ -375,10 +421,10 @@ class MethodologyService:
         # Пересчитываем
         await self._recalculator.recalculate(site_id)
 
-        # Возвращаем SetRead
+        # Возвращаем SetView
         rules = await self.list_rules(site_id)
-        rule_read = next(r for r in rules if r.id == equipment_set.rule_id)
-        return next(s for s in rule_read.sets if s.id == set_id)
+        rule_view = next(r for r in rules if r.rule.id == equipment_set.rule_id)
+        return next(s for s in rule_view.sets if s.equipment_set.id == set_id)
 
     async def delete_set(self, site_id: uuid.UUID, set_id: uuid.UUID) -> None:
         """Удалить набор.
@@ -389,18 +435,31 @@ class MethodologyService:
 
         Raises:
             AppError(404) если набор не принадлежит сайту
+            AppError(422) если это последний набор проверяемого этапа
         """
         # Получить набор
         equipment_set = await self._get_site_set(site_id, set_id)
 
+        # Получить правило
+        rule = await self._session.get(MethodologyRule, equipment_set.rule_id)
+        if rule is None:
+            raise AppError("Правило не найдено", status_code=404)
+
+        # Проверить, что это не последний набор проверяемого этапа
+        if rule.is_verifiable:
+            all_sets = await self._repository.list_sets([rule.id])
+            if len(all_sets) == 1:
+                raise AppError(
+                    "Нельзя удалить последний комплект проверяемого этапа: "
+                    "добавьте другой комплект или пометьте этап непроверяемым",
+                    status_code=422,
+                )
+
         # Удалить набор (репо удалит требования)
-        rule_id = equipment_set.rule_id
         await self._repository.delete_set(equipment_set)
 
         # Обновить updated_at правила
-        rule = await self._session.get(MethodologyRule, rule_id)
-        if rule:
-            rule.updated_at = datetime.now(UTC)
+        rule.updated_at = datetime.now(UTC)
 
         # Коммитим
         await self._session.commit()

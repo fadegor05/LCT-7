@@ -29,9 +29,8 @@ def upgrade() -> None:
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("synonyms", sa.JSON(), nullable=False, server_default="[]"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("code"),
     )
-    op.create_index(op.f("ix_equipment_types_code"), "equipment_types", ["code"], unique=False)
+    op.create_index(op.f("ix_equipment_types_code"), "equipment_types", ["code"], unique=True)
 
     op.create_table(
         "methodology_rules",
@@ -81,6 +80,7 @@ def upgrade() -> None:
         sa.Column("position", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["rule_id"], ["methodology_rules.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("rule_id", "position", name="uq_equipment_sets_rule_position"),
     )
     op.create_index(op.f("ix_equipment_sets_rule_id"), "equipment_sets", ["rule_id"], unique=False)
 
@@ -109,72 +109,119 @@ def upgrade() -> None:
         unique=False,
     )
 
-    # Bulk insert seed data into equipment_types
+    # Seed справочника техники: параметризованная вставка (не f-string SQL)
+    equipment_types_table = sa.table(
+        "equipment_types",
+        sa.column("id", sa.Uuid()),
+        sa.column("code", sa.String()),
+        sa.column("title", sa.String()),
+        sa.column("synonyms", sa.JSON()),
+    )
+
     seed_data = [
         (
+            uuid.uuid4(),
             "excavator_crawler",
             "Гусеничный экскаватор",
             ["экскаватор-гусеница", "гусеничный экскаватор"],
         ),
         (
+            uuid.uuid4(),
             "excavator_wheeled",
             "Колёсный экскаватор",
             ["экскаватор на колёсах", "колёсный экскаватор"],
         ),
-        ("backhoe_loader", "Экскаватор-погрузчик", ["экскаватор-погрузчик", "backhoe"]),
-        ("tower_crane", "Башенный кран", ["кран башенный", "tower crane"]),
-        ("truck_crane", "Автокран", ["кран на автомобиле", "кран грузовой", "truck crane"]),
         (
+            uuid.uuid4(),
+            "backhoe_loader",
+            "Экскаватор-погрузчик",
+            ["экскаватор-погрузчик", "backhoe"],
+        ),
+        (uuid.uuid4(), "tower_crane", "Башенный кран", ["кран башенный", "tower crane"]),
+        (
+            uuid.uuid4(),
+            "truck_crane",
+            "Автокран",
+            ["кран на автомобиле", "кран грузовой", "truck crane"],
+        ),
+        (
+            uuid.uuid4(),
             "crawler_crane",
             "Гусеничный кран",
             ["кран гусеничный", "гусеничный кран", "crawler crane"],
         ),
-        ("loader_crane", "Кран-манипулятор", ["манипулятор", "кран-манипулятор", "loader crane"]),
         (
+            uuid.uuid4(),
+            "loader_crane",
+            "Кран-манипулятор",
+            ["манипулятор", "кран-манипулятор", "loader crane"],
+        ),
+        (
+            uuid.uuid4(),
             "drilling_rig",
             "Буровая установка",
             ["буровая машина", "буровая установка", "drilling rig"],
         ),
-        ("pile_driver", "Копёр / вибропогружатель", ["копёр", "вибропогружатель", "pile driver"]),
         (
+            uuid.uuid4(),
+            "pile_driver",
+            "Копёр / вибропогружатель",
+            ["копёр", "вибропогружатель", "pile driver"],
+        ),
+        (
+            uuid.uuid4(),
             "dwall_rig",
             "Грейфер / гидрофреза СВГ",
             ["грейфер", "гидрофреза", "гидрофреза СВГ", "dwall rig"],
         ),
-        ("dump_truck", "Самосвал", ["самосвал", "dump truck", "грузовик"]),
+        (uuid.uuid4(), "dump_truck", "Самосвал", ["самосвал", "dump truck", "грузовик"]),
         (
+            uuid.uuid4(),
             "concrete_mixer",
             "Автобетоносмеситель",
             ["бетоносмеситель", "автобетоносмеситель", "concrete mixer"],
         ),
-        ("concrete_pump", "Автобетононасос", ["бетононасос", "автобетононасос", "concrete pump"]),
         (
+            uuid.uuid4(),
+            "concrete_pump",
+            "Автобетононасос",
+            ["бетононасос", "автобетононасос", "concrete pump"],
+        ),
+        (
+            uuid.uuid4(),
             "flatbed_truck",
             "Бортовой грузовик / трал",
             ["бортовик", "трал", "бортовой грузовик", "flatbed truck"],
         ),
-        ("bulldozer", "Бульдозер", ["бульдозер", "bulldozer"]),
-        ("roller", "Каток", ["каток", "каток уплотняющий", "roller"]),
-        ("grader", "Автогрейдер", ["грейдер", "автогрейдер", "grader"]),
-        ("paver", "Асфальтоукладчик", ["асфальтоукладчик", "асфальтник", "paver"]),
+        (uuid.uuid4(), "bulldozer", "Бульдозер", ["бульдозер", "bulldozer"]),
+        (uuid.uuid4(), "roller", "Каток", ["каток", "каток уплотняющий", "roller"]),
+        (uuid.uuid4(), "grader", "Автогрейдер", ["грейдер", "автогрейдер", "grader"]),
+        (uuid.uuid4(), "paver", "Асфальтоукладчик", ["асфальтоукладчик", "асфальтник", "paver"]),
         (
+            uuid.uuid4(),
             "wheel_loader",
             "Фронтальный погрузчик",
             ["погрузчик колёсный", "фронтальный погрузчик", "wheel loader"],
         ),
         (
+            uuid.uuid4(),
             "telehandler",
             "Телескопический погрузчик",
             ["телескопический погрузчик", "телеман", "telehandler"],
         ),
     ]
 
-    for code, title, synonyms in seed_data:
-        eq_id = str(uuid.uuid4())
-        synonyms_json = json.dumps(synonyms, ensure_ascii=False)
+    # CAST строки в JSON: один путь и для онлайн-режима, и для `alembic --sql`
+    for item_id, code, title, synonyms in seed_data:
         op.execute(
-            f"INSERT INTO equipment_types (id, code, title, synonyms) "
-            f"VALUES ('{eq_id}', '{code}', \"{title.replace('"', '"')}\", '{synonyms_json}')"
+            equipment_types_table.insert().values(
+                id=item_id,
+                code=code,
+                title=title,
+                synonyms=sa.cast(
+                    sa.literal(json.dumps(synonyms, ensure_ascii=False), sa.String()), sa.JSON()
+                ),
+            )
         )
 
 

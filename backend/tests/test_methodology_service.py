@@ -196,16 +196,18 @@ class TestMethodologyServiceListRules:
         assert rules[1].stage_name == "Разработка котлована"
         assert rules[2].stage_name == "Отделка фасада"
 
-        assert rules[0].is_verifiable is True
-        assert rules[0].unverifiable_reason is None
+        assert rules[0].rule.is_verifiable is True
+        assert rules[0].rule.unverifiable_reason is None
         assert len(rules[0].sets) == 2
 
-        assert rules[1].is_verifiable is True
-        assert rules[1].unverifiable_reason is None
+        assert rules[1].rule.is_verifiable is True
+        assert rules[1].rule.unverifiable_reason is None
         assert len(rules[1].sets) == 1
 
-        assert rules[2].is_verifiable is False
-        assert rules[2].unverifiable_reason == "Нет правила в базовом наборе — задайте комплект"
+        assert rules[2].rule.is_verifiable is False
+        assert (
+            rules[2].rule.unverifiable_reason == "Нет правила в базовом наборе — задайте комплект"
+        )
         assert len(rules[2].sets) == 0
 
         assert len(recalculator.calls) == 0
@@ -219,7 +221,7 @@ class TestMethodologyServiceListRules:
         rules2 = await service.list_rules(site_and_schedule["site_id"])
 
         assert len(rules1) == len(rules2)
-        assert [r.id for r in rules1] == [r.id for r in rules2]
+        assert [r.rule.id for r in rules1] == [r.rule.id for r in rules2]
 
     @pytest.mark.asyncio
     async def test_list_rules_ordered_by_stage_position(
@@ -297,11 +299,11 @@ class TestMethodologyServiceUpdateRule:
         )
 
         updated_rule = await service.update_rule(
-            site_and_schedule["site_id"], piles_rule.id, rule_update
+            site_and_schedule["site_id"], piles_rule.rule.id, rule_update
         )
 
-        assert updated_rule.is_verifiable is False
-        assert updated_rule.unverifiable_reason == "Комплект не установлен"
+        assert updated_rule.rule.is_verifiable is False
+        assert updated_rule.rule.unverifiable_reason == "Комплект не установлен"
         assert len(recalculator.calls) == 1
         assert recalculator.calls[0] == site_and_schedule["site_id"]
 
@@ -313,7 +315,7 @@ class TestMethodologyServiceUpdateRule:
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
 
-        max_position = max(s.position for s in piles_rule.sets)
+        max_position = max(s.equipment_set.position for s in piles_rule.sets)
         equipment_types = await service.list_equipment_types()
         excavator = next(e for e in equipment_types if e.code == "excavator_crawler")
 
@@ -328,10 +330,10 @@ class TestMethodologyServiceUpdateRule:
         )
 
         new_set = await service.create_set(
-            site_and_schedule["site_id"], piles_rule.id, new_set_data
+            site_and_schedule["site_id"], piles_rule.rule.id, new_set_data
         )
 
-        assert new_set.position == max_position + 1
+        assert new_set.equipment_set.position == max_position + 1
         assert len(recalculator.calls) == 1
 
     @pytest.mark.asyncio
@@ -356,7 +358,7 @@ class TestMethodologyServiceUpdateRule:
         )
 
         with pytest.raises(AppError) as exc_info:
-            await service.create_set(site_and_schedule["site_id"], piles_rule.id, new_set_data)
+            await service.create_set(site_and_schedule["site_id"], piles_rule.rule.id, new_set_data)
 
         assert exc_info.value.status_code == 422
         assert len(recalculator.calls) == 0
@@ -368,13 +370,13 @@ class TestMethodologyServiceUpdateRule:
 
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
-        set_id = piles_rule.sets[0].id
+        set_id = piles_rule.sets[0].equipment_set.id
 
         await service.delete_set(site_and_schedule["site_id"], set_id)
 
         rules_after = await service.list_rules(site_and_schedule["site_id"])
         piles_rule_after = rules_after[0]
-        remaining_set_ids = [s.id for s in piles_rule_after.sets]
+        remaining_set_ids = [s.equipment_set.id for s in piles_rule_after.sets]
         assert set_id not in remaining_set_ids
 
 
@@ -540,7 +542,7 @@ class TestMethodologyServiceCrossSiteIsolation:
             )
 
             rules_b = await service.list_rules(site_b_id)
-            rule_b_id = rules_b[0].id
+            rule_b_id = rules_b[0].rule.id
 
             # Try to use rule from site B with site A
             with pytest.raises(AppError) as exc_info:
@@ -566,19 +568,19 @@ class TestMethodologyServiceUpdatedAt:
 
         # Set updated_at to old time
         old_time = datetime(2000, 1, 1, tzinfo=UTC)
-        rule = await session.get(MethodologyRule, piles_rule.id)
+        rule = await session.get(MethodologyRule, piles_rule.rule.id)
         rule.updated_at = old_time
         await session.flush()
 
         # Update rule
         updated_rule = await service.update_rule(
             site_and_schedule["site_id"],
-            piles_rule.id,
+            piles_rule.rule.id,
             RuleUpdate(is_verifiable=False, unverifiable_reason="Test"),
         )
 
         # Verify updated_at was bumped
-        assert updated_rule.updated_at > old_time
+        assert updated_rule.rule.updated_at > old_time
         assert len(recalculator.calls) == 1
 
     @pytest.mark.asyncio
@@ -591,7 +593,7 @@ class TestMethodologyServiceUpdatedAt:
 
         # Set updated_at to old time
         old_time = datetime(2000, 1, 1, tzinfo=UTC)
-        rule = await session.get(MethodologyRule, piles_rule.id)
+        rule = await session.get(MethodologyRule, piles_rule.rule.id)
         rule.updated_at = old_time
         await session.flush()
 
@@ -601,7 +603,7 @@ class TestMethodologyServiceUpdatedAt:
 
         await service.create_set(
             site_and_schedule["site_id"],
-            piles_rule.id,
+            piles_rule.rule.id,
             SetWrite(
                 requirements=[
                     RequirementIn(
@@ -614,7 +616,7 @@ class TestMethodologyServiceUpdatedAt:
         )
 
         # Verify updated_at was bumped
-        rule_after = await session.get(MethodologyRule, piles_rule.id)
+        rule_after = await session.get(MethodologyRule, piles_rule.rule.id)
         assert rule_after.updated_at > old_time
         assert len(recalculator.calls) == 1
 
@@ -625,11 +627,11 @@ class TestMethodologyServiceUpdatedAt:
 
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
-        set_id = piles_rule.sets[0].id
+        set_id = piles_rule.sets[0].equipment_set.id
 
         # Set updated_at to old time
         old_time = datetime(2000, 1, 1, tzinfo=UTC)
-        rule = await session.get(MethodologyRule, piles_rule.id)
+        rule = await session.get(MethodologyRule, piles_rule.rule.id)
         rule.updated_at = old_time
         await session.flush()
 
@@ -637,7 +639,7 @@ class TestMethodologyServiceUpdatedAt:
         await service.delete_set(site_and_schedule["site_id"], set_id)
 
         # Verify updated_at was bumped
-        rule_after = await session.get(MethodologyRule, piles_rule.id)
+        rule_after = await session.get(MethodologyRule, piles_rule.rule.id)
         assert rule_after.updated_at > old_time
         assert len(recalculator.calls) == 1
 
@@ -660,7 +662,7 @@ class TestMethodologyServiceUnknownEquipmentType:
         with pytest.raises(AppError) as exc_info:
             await service.create_set(
                 site_and_schedule["site_id"],
-                piles_rule.id,
+                piles_rule.rule.id,
                 SetWrite(
                     requirements=[
                         RequirementIn(
@@ -684,7 +686,7 @@ class TestMethodologyServiceUnknownEquipmentType:
 
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
-        set_id = piles_rule.sets[0].id
+        set_id = piles_rule.sets[0].equipment_set.id
 
         # Get old requirements count
         old_reqs = await session.execute(
@@ -736,7 +738,7 @@ class TestMethodologyServiceAuxiliaryOnlySet:
         with pytest.raises(AppError) as exc_info:
             await service.create_set(
                 site_and_schedule["site_id"],
-                piles_rule.id,
+                piles_rule.rule.id,
                 SetWrite(
                     requirements=[
                         RequirementIn(
@@ -767,7 +769,7 @@ class TestMethodologyServiceAuxiliaryOnlySet:
 
         new_set = await service.create_set(
             site_and_schedule["site_id"],
-            piles_rule.id,
+            piles_rule.rule.id,
             SetWrite(
                 requirements=[
                     RequirementIn(
@@ -785,7 +787,7 @@ class TestMethodologyServiceAuxiliaryOnlySet:
         )
 
         assert len(new_set.requirements) == 2
-        obligations = [r.obligation for r in new_set.requirements]
+        obligations = [r.requirement.obligation for r in new_set.requirements]
         assert Obligation.NORMATIVE in obligations
         assert Obligation.LOGICAL in obligations
         assert len(recalculator.calls) == 1
@@ -803,7 +805,7 @@ class TestMethodologyServiceReplaceSet:
 
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
-        set_id = piles_rule.sets[0].id
+        set_id = piles_rule.sets[0].equipment_set.id
 
         equipment_types = await service.list_equipment_types()
         new_equipment = next(e for e in equipment_types if e.code == "excavator_crawler")
@@ -844,7 +846,7 @@ class TestMethodologyServiceReplaceSet:
 
         rules = await service.list_rules(site_and_schedule["site_id"])
         piles_rule = rules[0]
-        set_id = piles_rule.sets[0].id
+        set_id = piles_rule.sets[0].equipment_set.id
 
         # Get old requirements
         old_reqs = await session.execute(
@@ -895,7 +897,7 @@ class TestMethodologyServiceListRulesStructure:
         piles_rule = rules[0]
 
         assert piles_rule.stage_name == "Устройство свай"
-        assert piles_rule.is_verifiable is True
+        assert piles_rule.rule.is_verifiable is True
         assert len(piles_rule.sets) == 2
 
         # Check first set has 4 requirements
@@ -903,12 +905,14 @@ class TestMethodologyServiceListRulesStructure:
         assert len(first_set.requirements) == 4
 
         # Check for gesn_code
-        reqs_with_gesn = [r for r in first_set.requirements if r.gesn_code]
+        reqs_with_gesn = [r for r in first_set.requirements if r.requirement.gesn_code]
         assert len(reqs_with_gesn) > 0
-        assert any(r.gesn_code == "05-01-079-01" for r in first_set.requirements)
+        assert any(r.requirement.gesn_code == "05-01-079-01" for r in first_set.requirements)
 
         # Check for logical concrete_mixer
-        logical_reqs = [r for r in first_set.requirements if r.obligation == Obligation.LOGICAL]
+        logical_reqs = [
+            r for r in first_set.requirements if r.requirement.obligation == Obligation.LOGICAL
+        ]
         assert len(logical_reqs) > 0
         concrete_mixer_logical = [
             r for r in logical_reqs if r.equipment_type.code == "concrete_mixer"
@@ -924,9 +928,9 @@ class TestMethodologyServiceListRulesStructure:
         facade_rule = rules[2]
 
         assert facade_rule.stage_name == "Отделка фасада"
-        assert facade_rule.is_verifiable is False
-        assert facade_rule.unverifiable_reason is not None
-        assert len(facade_rule.unverifiable_reason) > 0
+        assert facade_rule.rule.is_verifiable is False
+        assert facade_rule.rule.unverifiable_reason is not None
+        assert len(facade_rule.rule.unverifiable_reason) > 0
         assert len(facade_rule.sets) == 0
 
     @pytest.mark.asyncio
@@ -947,4 +951,41 @@ class TestMethodologyServiceListRulesStructure:
         # Second call should also not call recalculator
         rules2 = await service.list_rules(site_and_schedule["site_id"])
         assert len(rules2) == 3
+        assert len(recalculator.calls) == 0
+
+    @pytest.mark.asyncio
+    async def test_list_rules_race_condition_retry(
+        self, methodology_service, site_and_schedule
+    ) -> None:
+        """Параллельная материализация: конфликт unique -> rollback, повтор, без 500 и дублей."""
+        session, service, recalculator = methodology_service
+        site_id = site_and_schedule["site_id"]
+
+        # Другой запрос уже успел создать все правила и закоммитить
+        await service.list_rules(site_id)
+
+        # Наш запрос «не увидел» их: первое чтение возвращает пустой список
+        real_list = service._repository.list_rules_by_site
+        calls = {"n": 0}
+
+        async def stale_first_read(sid):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return []
+            return await real_list(sid)
+
+        service._repository.list_rules_by_site = stale_first_read
+
+        rules = await service.list_rules(site_id)
+
+        assert calls["n"] >= 2  # был повтор после IntegrityError
+        assert [r.stage_name for r in rules] == [
+            "Устройство свай",
+            "Разработка котлована",
+            "Отделка фасада",
+        ]
+        result = await session.execute(
+            select(MethodologyRule).where(MethodologyRule.site_id == site_id)
+        )
+        assert len(result.scalars().all()) == 3
         assert len(recalculator.calls) == 0
