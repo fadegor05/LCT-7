@@ -4,6 +4,7 @@
 """
 
 import csv
+import zipfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -11,6 +12,7 @@ from io import BytesIO, StringIO
 from pathlib import Path
 
 from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 
 class ScheduleFormatError(Exception):
@@ -78,11 +80,14 @@ class ScheduleParser:
 
     def _parse_xlsx(self, content: bytes) -> ParseResult:
         """Распарсить XLSX файл."""
-        buffer = BytesIO(content)
-        wb = load_workbook(buffer, read_only=True, data_only=True)
-        ws = wb.active
-        if ws is None:
-            raise ScheduleFormatError("Файл пуст")
+        try:
+            buffer = BytesIO(content)
+            wb = load_workbook(buffer, read_only=True, data_only=True)
+            ws = wb.active
+            if ws is None:
+                raise ScheduleFormatError("Файл пуст")
+        except (zipfile.BadZipFile, InvalidFileException, KeyError, OSError, ValueError) as e:
+            raise ScheduleFormatError("Не удалось прочитать XLSX-файл") from e
 
         # Собрать все строки и их значения
         all_rows = []
@@ -168,9 +173,10 @@ class ScheduleParser:
 
     def _detect_delimiter(self, text: str) -> str:
         """Определить разделитель CSV файла."""
-        # Взять первые две строки как образец
+        # Взять первые ~10 непустых строк как образец
         lines = text.split("\n")
-        sample = "\n".join(lines[:2])
+        non_empty_lines = [line for line in lines if line.strip()][:10]
+        sample = "\n".join(non_empty_lines)
 
         try:
             sniffer = csv.Sniffer()

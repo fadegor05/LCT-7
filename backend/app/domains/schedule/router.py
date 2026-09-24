@@ -7,8 +7,12 @@ from fastapi import APIRouter, UploadFile
 
 from app.domains.schedule.schemas import ScheduleReport, StageDatesUpdate, StageRead
 from app.domains.schedule.service import ScheduleService
+from app.plugins.exceptions import AppError
 
 router = APIRouter(prefix="/sites/{site_id}/schedule", tags=["schedule"])
+
+# Максимальный размер загружаемого файла: 5 МБ
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 
 
 @router.post("/import", status_code=201)
@@ -30,10 +34,14 @@ async def import_schedule(
 
     Raises:
         404: Сайт не найден или не принадлежит текущему пользователю
+        413: Файл слишком большой (более 5 МБ)
         422: Ошибка формата файла или неподдерживаемое расширение
     """
     filename = file.filename or ""
-    content = await file.read()
+    # Читаем файл в chunks, проверяя размер
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise AppError("Файл слишком большой (максимум 5 МБ)", status_code=413)
     report = await service.import_schedule(site_id, filename, content)
     return report
 

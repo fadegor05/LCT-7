@@ -371,6 +371,70 @@ class TestScheduleServiceImport:
             stage_list = stages.scalars().all()
             assert len(stage_list) == 1  # Только новый этап
 
+    @pytest.mark.asyncio
+    async def test_import_schedule_concurrent_import_raises_409(self, container) -> None:
+        """import_schedule() при гонке (IntegrityError) возвращает 409."""
+        await seed(container)
+
+        site_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=owner_id, full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner_id)
+            session.add(site)
+            await session.commit()
+
+        csv_content = create_csv_schedule(
+            [
+                ("Работа 1", "01.01.2025", "05.01.2025"),
+            ]
+        )
+
+        # Первый импорт успешен
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+            await service.import_schedule(site_id, "schedule.csv", csv_content)
+
+        # Второй импорт: имитируем IntegrityError при commit через монкейпатч
+        from sqlalchemy.exc import IntegrityError
+
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            # Монкейпатч: заставляем session.commit() вызвать IntegrityError один раз
+            original_commit = service._session.commit
+
+            call_count = 0
+
+            async def failing_commit():
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    # Первый вызов commit() поднимает IntegrityError
+                    raise IntegrityError("statement", "params", "orig")
+                # После rollback, нормальный commit не случится в этом тесте
+                await original_commit()
+
+            service._session.commit = failing_commit
+
+            csv_content2 = create_csv_schedule(
+                [
+                    ("Работа 2", "02.01.2025", "06.01.2025"),
+                ]
+            )
+
+            with pytest.raises(AppError) as exc_info:
+                await service.import_schedule(site_id, "schedule.csv", csv_content2)
+
+        assert exc_info.value.status_code == 409
+        assert "уже импортируется" in exc_info.value.message
+
 
 class TestScheduleServiceGet:
     """Тесты get_schedule."""
@@ -834,6 +898,101 @@ class TestScheduleServiceUpdateDates:
                 )
 
         assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_update_stage_dates_empty_body_no_commit(self, container) -> None:
+        """PATCH с пустым телом (no fields set) не должен коммитить и не менять dates_source."""
+        await seed(container)
+
+        site_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=owner_id, full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner_id)
+            session.add(site)
+            await session.commit()
+
+        csv_content = create_csv_schedule(
+            [
+                ("Работа 1", "01.01.2025", "05.01.2025"),
+            ]
+        )
+
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.import_schedule(site_id, "schedule.csv", csv_content)
+
+        stage_id = uuid.UUID(report.stages[0].id)
+        original_dates_source = report.stages[0].dates_source
+
+        # Обновляем с пустым телом (no fields set)
+        from app.domains.schedule.schemas import StageDatesUpdate
+
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+            updated = await service.update_stage_dates(
+                site_id,
+                stage_id,
+                StageDatesUpdate(),  # Empty, no fields
+            )
+
+        # Должно вернуться то же самое без изменений
+        assert updated.planned_start == date(2025, 1, 1)
+        assert updated.planned_end == date(2025, 1, 5)
+        assert updated.dates_source == original_dates_source  # Не должно измениться
+
+    @pytest.mark.asyncio
+    async def test_update_stage_dates_same_values_no_source_change(self, container) -> None:
+        """PATCH с тем же значениями не должен менять dates_source."""
+        await seed(container)
+
+        site_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=owner_id, full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner_id)
+            session.add(site)
+            await session.commit()
+
+        csv_content = create_csv_schedule(
+            [
+                ("Работа 1", "01.01.2025", "05.01.2025"),
+            ]
+        )
+
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.import_schedule(site_id, "schedule.csv", csv_content)
+
+        stage_id = uuid.UUID(report.stages[0].id)
+
+        # Обновляем с тем же значением
+        from app.domains.schedule.schemas import StageDatesUpdate
+
+        async with container() as request_container:
+            service = await request_container.get(ScheduleService)
+            guard = service._guard
+            guard._current_user = type("obj", (object,), {"id": owner_id})()
+            updated = await service.update_stage_dates(
+                site_id,
+                stage_id,
+                StageDatesUpdate(planned_start=date(2025, 1, 1), planned_end=date(2025, 1, 5)),
+            )
+
+        # Даже если передали те же значения и они не менялись, не должно менять dates_source
+        assert updated.planned_start == date(2025, 1, 1)
+        assert updated.planned_end == date(2025, 1, 5)
+        assert updated.dates_source == "file"  # Не должно измениться
 
 
 class TestScheduleServiceGetStageWindow:

@@ -412,6 +412,21 @@ class TestScheduleParserEmptyAndInvalidFiles:
 
         assert result.rows_total == 1
 
+    def test_malformed_xlsx_garbage_bytes_raises_format_error(self):
+        """Ошибка: XLSX файл с мусором (не валидный ZIP)."""
+        parser = ScheduleParser()
+        garbage_content = b"This is not a valid XLSX file \x00\xff\xfe"
+
+        with pytest.raises(ScheduleFormatError, match="Не удалось прочитать XLSX"):
+            parser.parse("schedule.xlsx", garbage_content)
+
+    def test_malformed_xlsx_empty_with_xlsx_name_raises_format_error(self):
+        """Ошибка: пустой файл с расширением .xlsx."""
+        parser = ScheduleParser()
+
+        with pytest.raises(ScheduleFormatError, match="Не удалось прочитать XLSX"):
+            parser.parse("schedule.xlsx", b"")
+
 
 class TestScheduleParserEncoding:
     """Тесты для кодировок."""
@@ -523,6 +538,17 @@ class TestScheduleParserCsvDelimiterDetection:
 
         assert len(result.rows) == 1
         assert result.rows[0].start == date(2025, 1, 1)
+
+    def test_csv_with_leading_blank_lines_before_header(self):
+        """CSV с 5+ пустыми строками перед заголовком всё ещё парсится правильно (comma)."""
+        content = ("\n\n\n\n\nНазвание,Начало,Окончание\nРабота 1,01.01.2025,02.01.2025\n").encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2025, 1, 1)
+        assert result.rows[0].end == date(2025, 1, 2)
 
 
 class TestScheduleParserIntegration:

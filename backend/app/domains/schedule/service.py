@@ -3,6 +3,7 @@
 import uuid
 from datetime import date
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.schedule.models import DatesSource, Schedule, ScheduleImportIssue, ScheduleStage
@@ -125,8 +126,15 @@ class ScheduleService:
         if issues:
             await self._repository.add_issues(issues)
 
-        # Коммитим
-        await self._session.commit()
+        # Коммитим (может поднять IntegrityError при гонке)
+        try:
+            await self._session.commit()
+        except IntegrityError as e:
+            await self._session.rollback()
+            raise AppError(
+                "График этой стройки уже импортируется, повторите запрос",
+                status_code=409,
+            ) from e
 
         # Строим отчёт
         return await self._build_report(schedule)
@@ -162,8 +170,8 @@ class ScheduleService:
 
         Применяет только поля, переданные в data.model_fields_set.
         Проверяет, что если оба поля установлены, то end >= start.
-        Если ошибка - не коммитит.
-        Устанавливает dates_source='manual'.
+        Если нет изменений - не коммитит и не меняет dates_source.
+        Если есть изменения - устанавливает dates_source='manual'.
 
         Args:
             site_id: ID сайта
@@ -194,6 +202,10 @@ class ScheduleService:
         # Получаем установленные поля
         update_dict = data.model_dump(exclude_unset=True)
 
+        # Если нет установленных полей - no-op, просто вернуть stage
+        if not update_dict:
+            return stage
+
         # Подготавливаем новые значения (результирующие значения после merge)
         new_start = update_dict.get("planned_start", stage.planned_start)
         new_end = update_dict.get("planned_end", stage.planned_end)
@@ -203,17 +215,24 @@ class ScheduleService:
         if new_start is not None and new_end is not None and new_end < new_start:
             raise AppError("Дата окончания не может быть раньше даты начала", status_code=422)
 
-        # Применяем только установленные поля
+        # Проверяем, есть ли реальные изменения
+        has_actual_changes = False
+
         if "planned_start" in update_dict:
+            if new_start != stage.planned_start:
+                has_actual_changes = True
             stage.planned_start = new_start
+
         if "planned_end" in update_dict:
+            if new_end != stage.planned_end:
+                has_actual_changes = True
             stage.planned_end = new_end
 
-        # Устанавливаем dates_source='manual'
-        stage.dates_source = DatesSource.MANUAL.value
-
-        # Коммитим
-        await self._session.commit()
+        # Устанавливаем dates_source='manual' только если есть реальные изменения
+        if has_actual_changes:
+            stage.dates_source = DatesSource.MANUAL.value
+            # Коммитим только если есть изменения
+            await self._session.commit()
 
         return stage
 

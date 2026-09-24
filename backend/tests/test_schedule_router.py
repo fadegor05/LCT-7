@@ -9,6 +9,7 @@ from dishka import AsyncContainer
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.schedule.models import Schedule, ScheduleImportIssue, ScheduleStage
 from app.domains.user.service import UserService
 
 
@@ -354,6 +355,54 @@ async def test_post_import_unknown_extension_returns_422(
     assert response.status_code == 422
 
 
+async def test_post_import_file_too_large_returns_413(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Импорт файла, превышающего MAX_UPLOAD_BYTES, возвращает 413."""
+    await seed_stand_user(container)
+
+    # Создаём сайт
+    site_resp = await client.post("/sites", json={"name": "Test Site"})
+    site_id = site_resp.json()["id"]
+
+    # Создаём файл размером 5 МБ + 1 байт
+    oversized_content = b"x" * (5 * 1024 * 1024 + 1)
+
+    response = await client.post(
+        f"/sites/{site_id}/schedule/import",
+        files={"file": ("schedule.csv", oversized_content, "text/csv")},
+    )
+
+    assert response.status_code == 413
+    assert "слишком большой" in response.json()["detail"].lower()
+
+
+async def test_post_import_file_exactly_max_size_returns_201(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Импорт файла размером ровно MAX_UPLOAD_BYTES возвращает 201."""
+    await seed_stand_user(container)
+
+    # Создаём сайт
+    site_resp = await client.post("/sites", json={"name": "Test Site"})
+    site_id = site_resp.json()["id"]
+
+    # Создаём CSV размером ровно 5 МБ (заполняем нулями до размера)
+    csv_content = make_csv_bytes("name,start,end\nФундамент,2024-01-01,2024-01-10\n")
+    # Дополняем до ровно 5 МБ комментариями/пробелами
+    padding_size = 5 * 1024 * 1024 - len(csv_content)
+    if padding_size > 0:
+        # Добавляем пустые строки
+        csv_content = csv_content + b"\n" * (padding_size // 2)
+
+    response = await client.post(
+        f"/sites/{site_id}/schedule/import",
+        files={"file": ("schedule.csv", csv_content, "text/csv")},
+    )
+
+    assert response.status_code == 201
+
+
 async def test_post_import_nonexistent_site_returns_404(
     client: AsyncClient, container: AsyncContainer
 ) -> None:
@@ -516,25 +565,49 @@ async def test_invalid_uuid_in_stage_id_returns_422(
 
 
 async def test_site_deletion_removes_schedule(
-    client: AsyncClient, container: AsyncContainer
+    client: AsyncClient, container: AsyncContainer, engine
 ) -> None:
-    """Удаление сайта удаляет связанный график.
-
-    На SQLite в памяти FK pragma может быть отключена: каскадное удаление
-    может не работать, поэтому просто проверяем что DELETE возвращает 204.
-    """
+    """Удаление сайта удаляет связанный график с каскадным удалением."""
     await seed_stand_user(container)
+
+    # Включаем FK pragma для SQLite
+    async with engine.connect() as conn:
+        await conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+        # Проверяем, что FK включены
+        result = await conn.exec_driver_sql("PRAGMA foreign_keys")
+        row = result.fetchone()
+        assert row[0] == 1, "FK pragma не включена"
 
     # Создаём сайт и импортируем график
     site_resp = await client.post("/sites", json={"name": "Test Site"})
-    site_id = site_resp.json()["id"]
+    site_id_str = site_resp.json()["id"]
+    site_id = uuid.UUID(site_id_str)
 
-    csv_content = make_csv_bytes("name,start,end\nФундамент,2024-01-01,2024-01-10\n")
+    csv_content = make_csv_bytes(
+        "name,start,end\nФундамент,2024-01-01,2024-01-10\nСтены,2024-01-11,2024-01-20\n"
+    )
     await client.post(
-        f"/sites/{site_id}/schedule/import",
+        f"/sites/{site_id_str}/schedule/import",
         files={"file": ("schedule.csv", csv_content, "text/csv")},
     )
 
     # Удаляем сайт
-    delete_resp = await client.delete(f"/sites/{site_id}")
+    delete_resp = await client.delete(f"/sites/{site_id_str}")
     assert delete_resp.status_code == 204
+
+    # Проверяем каскадное удаление: все таблицы должны быть пусты
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        from sqlalchemy import select
+
+        # Проверяем что schedules пусто
+        schedules = await session.execute(select(Schedule).where(Schedule.site_id == site_id))
+        assert len(schedules.scalars().all()) == 0
+
+        # Проверяем что stages пусто
+        schedule_stages = await session.execute(select(ScheduleStage))
+        assert len(schedule_stages.scalars().all()) == 0
+
+        # Проверяем что issues пусто
+        schedule_issues = await session.execute(select(ScheduleImportIssue))
+        assert len(schedule_issues.scalars().all()) == 0
