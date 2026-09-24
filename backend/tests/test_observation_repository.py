@@ -89,7 +89,8 @@ class TestObservationRepository:
         target_obs_id, target_obs_date = observation_ids[1]  # 2025-01-03
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             observation = await repo.get_by_site_and_date(site_id, target_obs_date)
 
         assert observation is not None
@@ -103,7 +104,8 @@ class TestObservationRepository:
         user_id, site_id, observation_ids, _ = await seed_data(container)
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             observation = await repo.get_by_site_and_date(site_id, date(2025, 2, 1))
 
         assert observation is None
@@ -117,7 +119,8 @@ class TestObservationRepository:
         other_site_id = uuid.uuid4()
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             observation = await repo.get_by_site_and_date(other_site_id, target_obs_date)
 
         assert observation is None
@@ -128,7 +131,8 @@ class TestObservationRepository:
         user_id, site_id, observation_ids, _ = await seed_data(container)
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             observations = await repo.list_by_site(site_id)
 
         assert len(observations) == 3
@@ -147,7 +151,8 @@ class TestObservationRepository:
         # observation_ids = [(obs_id_1, 2025-01-01), (obs_id_2, 2025-01-03), (obs_id_3, 2025-01-05)]
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             # Ищем наблюдение перед 2025-01-04: должно быть 2025-01-03
             previous = await repo.get_previous(site_id, date(2025, 1, 4))
 
@@ -165,7 +170,8 @@ class TestObservationRepository:
         # observation_ids = [(obs_id_1, 2025-01-01), (obs_id_2, 2025-01-03), (obs_id_3, 2025-01-05)]
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             # Ищем наблюдение перед 2025-01-06: должно быть 2025-01-05, а не 2025-01-03
             previous = await repo.get_previous(site_id, date(2025, 1, 6))
 
@@ -179,7 +185,8 @@ class TestObservationRepository:
         user_id, site_id, observation_ids, _ = await seed_data(container)
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             # Ищем наблюдение перед 2024-12-31: таких нет
             previous = await repo.get_previous(site_id, date(2024, 12, 31))
 
@@ -193,7 +200,8 @@ class TestObservationRepository:
         empty_site_id = uuid.uuid4()
 
         async with container() as request_container:
-            repo = await request_container.get(ObservationRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservationRepository(session)
             previous = await repo.get_previous(empty_site_id, date(2025, 1, 10))
 
         assert previous is None
@@ -209,7 +217,8 @@ class TestObservedEquipmentRepository:
         target_obs_id, _ = observation_ids[0]
 
         async with container() as request_container:
-            repo = await request_container.get(ObservedEquipmentRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservedEquipmentRepository(session)
             equipment = await repo.list_by_observation(target_obs_id)
 
         # Мы добавили 2 типа оборудования для каждого наблюдения
@@ -225,7 +234,8 @@ class TestObservedEquipmentRepository:
 
         # Получаем исходную технику
         async with container() as request_container:
-            repo = await request_container.get(ObservedEquipmentRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservedEquipmentRepository(session)
             old_equipment = await repo.list_by_observation(target_obs_id)
 
         assert len(old_equipment) == 2
@@ -246,13 +256,14 @@ class TestObservedEquipmentRepository:
         # Заменяем
         async with container() as request_container:
             session = await request_container.get(AsyncSession)
-            repo = await request_container.get(ObservedEquipmentRepository)
+            repo = ObservedEquipmentRepository(session)
             await repo.replace_for_observation(target_obs_id, new_equipment)
             await session.commit()
 
         # Проверяем результат
         async with container() as request_container:
-            repo = await request_container.get(ObservedEquipmentRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservedEquipmentRepository(session)
             result_equipment = await repo.list_by_observation(target_obs_id)
 
         # Должна остаться только новая техника
@@ -273,7 +284,8 @@ class TestObservedEquipmentRepository:
         target_obs_id, _ = observation_ids[0]
 
         async with container() as request_container:
-            repo = await request_container.get(ObservedEquipmentRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservedEquipmentRepository(session)
             old_equipment = await repo.list_by_observation(target_obs_id)
 
         assert len(old_equipment) == 2
@@ -281,13 +293,14 @@ class TestObservedEquipmentRepository:
         # Заменяем на пусто
         async with container() as request_container:
             session = await request_container.get(AsyncSession)
-            repo = await request_container.get(ObservedEquipmentRepository)
+            repo = ObservedEquipmentRepository(session)
             await repo.replace_for_observation(target_obs_id, [])
             await session.commit()
 
         # Проверяем результат
         async with container() as request_container:
-            repo = await request_container.get(ObservedEquipmentRepository)
+            session = await request_container.get(AsyncSession)
+            repo = ObservedEquipmentRepository(session)
             result_equipment = await repo.list_by_observation(target_obs_id)
 
         assert len(result_equipment) == 0

@@ -26,10 +26,6 @@ from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
-from app.domains.observation.repository import (
-    ObservationRepository,
-    ObservedEquipmentRepository,
-)
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
 from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
@@ -135,8 +131,6 @@ class TestPhotoProvider(Provider):
     # REQUEST scope
     photo_repository = provide(PhotoRepository, scope=Scope.REQUEST)
     detection_repository = provide(DetectionRepository, scope=Scope.REQUEST)
-    observation_repository = provide(ObservationRepository, scope=Scope.REQUEST)
-    observed_equipment_repository = provide(ObservedEquipmentRepository, scope=Scope.REQUEST)
 
     @provide(scope=Scope.REQUEST)
     async def photo_service(
