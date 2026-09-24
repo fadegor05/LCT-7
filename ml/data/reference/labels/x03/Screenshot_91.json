@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          704.1,
+          71.3
+        ],
+        [
+          958.7,
+          71.3
+        ],
+        [
+          958.7,
+          267.9
+        ],
+        [
+          704.1,
+          267.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          540.7,
+          136.0
+        ],
+        [
+          786.0,
+          136.0
+        ],
+        [
+          786.0,
+          363.7
+        ],
+        [
+          540.7,
+          363.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          690.3,
+          578.3
+        ],
+        [
+          930.7424242424241,
+          578.3
+        ],
+        [
+          930.7424242424241,
+          714.2575757575756
+        ],
+        [
+          690.3,
+          714.2575757575756
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_91.png",
+  "imageData": null,
+  "imageHeight": 807,
+  "imageWidth": 1223,
+  "description": ""
+}

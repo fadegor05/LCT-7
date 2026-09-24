@@ -29,12 +29,20 @@ def main():
     ap.add_argument("--ours", type=Path, default=ML / "data/interim/ours_yolo")
     ap.add_argument("--kaggle", type=Path, default=ML / "data/external/lct7-kaggle-thin")
     ap.add_argument("--apoce", type=Path, default=ML / "data/external/lct7-apoce")
+    ap.add_argument("--extra", type=Path, nargs="*", default=[],
+                    help="дополнительные наборы в формате YOLO (например MOCS)")
     ap.add_argument("--weights", type=str, default=str(ML / "weights/yolo26s_k_apoce_best.pt"))
     ap.add_argument("--repeat", type=int, default=10, help="во сколько раз повторить наши кадры")
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--imgsz", type=int, default=960)
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--lr0", type=float, default=0.002, help="ниже обычного 0.01: дообучение, не обучение")
+    ap.add_argument("--workers", type=int, default=2,
+                    help="процессов загрузчика; на Windows каждый заново грузит torch, "
+                         "при 4+ падает WinError 1455 (мал файл подкачки)")
+    ap.add_argument("--patience", type=int, default=15)
+    ap.add_argument("--strong-aug", action="store_true",
+                    help="агрессивная аугментация: при 73 кадрах разнообразие важнее точности копии")
     ap.add_argument("--name", default="ours_mix")
     ap.add_argument("--project", type=Path, default=ML / "runs")
     args = ap.parse_args()
@@ -42,7 +50,8 @@ def main():
     ours = images(args.ours / "train/images")
     kaggle = images(args.kaggle / "train/images")
     apoce = images(args.apoce / "train/images")
-    listing = kaggle + apoce + ours * args.repeat
+    extra = [p for d in args.extra for p in images(d / "train/images")]
+    listing = kaggle + apoce + extra + ours * args.repeat
 
     cfg_dir = args.project / "cfg"
     cfg_dir.mkdir(parents=True, exist_ok=True)
@@ -56,15 +65,18 @@ def main():
         f"val: {(args.ours / 'val/images').resolve().as_posix()}\n"
         f"names:{names}", encoding="utf-8")
 
-    print(f"Kaggle {len(kaggle)} + APOCE {len(apoce)} + наши {len(ours)}x{args.repeat} "
-          f"= {len(listing)} кадров в эпохе")
+    print(f"Kaggle {len(kaggle)} + APOCE {len(apoce)} + доп. {len(extra)} + "
+          f"наши {len(ours)}x{args.repeat} = {len(listing)} кадров в эпохе")
     print(f"старт с {Path(args.weights).name}, lr0 {args.lr0}, {args.epochs} эпох, imgsz {args.imgsz}")
 
     from ultralytics import YOLO
     model = YOLO(args.weights)
+    aug = dict(mosaic=1.0, copy_paste=0.3, scale=0.7, degrees=5.0, translate=0.2,
+               fliplr=0.5, hsv_v=0.5, close_mosaic=10) if args.strong_aug else {}
     model.train(data=str(data_yaml), epochs=args.epochs, imgsz=args.imgsz, batch=args.batch,
                 lr0=args.lr0, project=str(args.project), name=args.name, seed=0,
-                patience=10, workers=4, exist_ok=True, plots=False, cache=False)
+                patience=args.patience, workers=args.workers, exist_ok=True,
+                plots=False, cache=False, **aug)
     print(f"веса: {args.project / args.name / 'weights/best.pt'}")
     return 0
 

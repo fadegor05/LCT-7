@@ -1,0 +1,29 @@
+{
+  "version": "5.4.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "truck_crane",
+      "points": [
+        [
+          863.3,
+          222.5
+        ],
+        [
+          988.8,
+          478.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {}
+    }
+  ],
+  "imagePath": "Screenshot_77.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1222
+}

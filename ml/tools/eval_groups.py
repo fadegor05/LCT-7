@@ -23,7 +23,10 @@ GROUP = {
     "loader": ["wheel_loader", "telehandler", "loader_unknown"],
     "bulldozer": ["bulldozer"], "roller": ["roller"], "grader": ["grader"], "paver": ["paver"],
 }
+# точный класс -> группа; имя самой группы отображается в себя, чтобы модель,
+# обученную сразу на группах (make_coarse_dataset.py), можно было мерить тем же кодом
 G = {c: g for g, cs in GROUP.items() for c in cs}
+G.update({g: g for g in GROUP})
 
 
 def iou(a, b):

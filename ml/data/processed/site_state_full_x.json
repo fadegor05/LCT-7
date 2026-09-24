@@ -1,0 +1,440 @@
+{
+  "meta": {
+    "detections": "data\\processed\\detections_full_x.json",
+    "sites": "data\\reference\\sites.csv",
+    "default_conf": 0.4,
+    "thresholds": {},
+    "aggregation": "max_over_frames",
+    "dedup": {
+      "iou": 0.3,
+      "contained": 0.7
+    },
+    "source_images": 100,
+    "states": 17
+  },
+  "states": [
+    {
+      "site_id": "p01",
+      "date": "2026-07-15",
+      "n_images": 1,
+      "images": [
+        "Screenshot_1.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 1
+      },
+      "per_frame_totals": [
+        1
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p02",
+      "date": "2023-04-14",
+      "n_images": 3,
+      "images": [
+        "Screenshot_2.png",
+        "Screenshot_3.png",
+        "Screenshot_4.png"
+      ],
+      "equipment": {
+        "dump_truck": 5,
+        "drilling_rig": 3,
+        "crawler_crane": 2,
+        "excavator_crawler": 2,
+        "excavator_unknown": 2,
+        "backhoe_loader": 1,
+        "flatbed_truck": 1,
+        "truck_unknown": 1,
+        "pile_driver": 1,
+        "truck_crane": 1
+      },
+      "per_frame_totals": [
+        13,
+        11,
+        11
+      ],
+      "observability": {
+        "n_images": 3,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p03",
+      "date": "2023-06-19",
+      "n_images": 2,
+      "images": [
+        "Screenshot_5.png",
+        "Screenshot_6.png"
+      ],
+      "equipment": {
+        "drilling_rig": 3,
+        "excavator_crawler": 1,
+        "tower_crane": 1
+      },
+      "per_frame_totals": [
+        5,
+        1
+      ],
+      "observability": {
+        "n_images": 2,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p03",
+      "date": "2023-07-16",
+      "n_images": 3,
+      "images": [
+        "Screenshot_7.png",
+        "Screenshot_8.png",
+        "Screenshot_9.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 4,
+        "drilling_rig": 3,
+        "concrete_mixer": 1,
+        "tower_crane": 1
+      },
+      "per_frame_totals": [
+        6,
+        3,
+        5
+      ],
+      "observability": {
+        "n_images": 3,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p03",
+      "date": "2023-08-14",
+      "n_images": 2,
+      "images": [
+        "Screenshot_10.png",
+        "Screenshot_11.png"
+      ],
+      "equipment": {
+        "drilling_rig": 2,
+        "excavator_crawler": 1,
+        "truck_crane": 1,
+        "backhoe_loader": 1,
+        "tower_crane": 1
+      },
+      "per_frame_totals": [
+        3,
+        4
+      ],
+      "observability": {
+        "n_images": 2,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p03",
+      "date": "2023-09-14",
+      "n_images": 4,
+      "images": [
+        "Screenshot_12.png",
+        "Screenshot_13.png",
+        "Screenshot_14.png",
+        "Screenshot_15.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 3,
+        "tower_crane": 2,
+        "truck_crane": 1,
+        "flatbed_truck": 1
+      },
+      "per_frame_totals": [
+        4,
+        3,
+        4,
+        2
+      ],
+      "observability": {
+        "n_images": 4,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p03",
+      "date": "2023-10-13",
+      "n_images": 1,
+      "images": [
+        "Screenshot_16.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 2,
+        "excavator_unknown": 1
+      },
+      "per_frame_totals": [
+        3
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p04",
+      "date": "2024-08-09",
+      "n_images": 1,
+      "images": [
+        "Screenshot_17.png"
+      ],
+      "equipment": {
+        "tower_crane": 3,
+        "backhoe_loader": 1,
+        "flatbed_truck": 1
+      },
+      "per_frame_totals": [
+        5
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p05",
+      "date": "2026-01-02",
+      "n_images": 1,
+      "images": [
+        "Screenshot_18.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 5,
+        "truck_crane": 1,
+        "crawler_crane": 1
+      },
+      "per_frame_totals": [
+        7
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p05",
+      "date": "2026-02-02",
+      "n_images": 1,
+      "images": [
+        "Screenshot_19.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 2,
+        "crawler_crane": 1,
+        "drilling_rig": 1
+      },
+      "per_frame_totals": [
+        4
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p05",
+      "date": "2026-03-02",
+      "n_images": 1,
+      "images": [
+        "Screenshot_20.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 3,
+        "crawler_crane": 2,
+        "drilling_rig": 1,
+        "tower_crane": 1,
+        "dump_truck": 1
+      },
+      "per_frame_totals": [
+        8
+      ],
+      "observability": {
+        "n_images": 1,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p07",
+      "date": "2024-01-24",
+      "n_images": 5,
+      "images": [
+        "Screenshot_22.png",
+        "Screenshot_23.png",
+        "Screenshot_24.png",
+        "Screenshot_25.png",
+        "Screenshot_26.png"
+      ],
+      "equipment": {
+        "truck_crane": 1,
+        "excavator_crawler": 1,
+        "excavator_wheeled": 1,
+        "wheel_loader": 1
+      },
+      "per_frame_totals": [
+        1,
+        1,
+        1,
+        1,
+        3
+      ],
+      "observability": {
+        "n_images": 5,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p08",
+      "date": "2024-02-21",
+      "n_images": 2,
+      "images": [
+        "Screenshot_27.png",
+        "Screenshot_28.png"
+      ],
+      "equipment": {
+        "drilling_rig": 3,
+        "excavator_crawler": 2,
+        "truck_crane": 2,
+        "pile_driver": 2,
+        "backhoe_loader": 1
+      },
+      "per_frame_totals": [
+        6,
+        7
+      ],
+      "observability": {
+        "n_images": 2,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p08",
+      "date": "2024-03-25",
+      "n_images": 4,
+      "images": [
+        "Screenshot_29.png",
+        "Screenshot_30.png",
+        "Screenshot_31.png",
+        "Screenshot_32.png"
+      ],
+      "equipment": {
+        "pile_driver": 5,
+        "excavator_crawler": 2,
+        "backhoe_loader": 2,
+        "crawler_crane": 2,
+        "concrete_mixer": 1,
+        "drilling_rig": 1
+      },
+      "per_frame_totals": [
+        5,
+        11,
+        9,
+        3
+      ],
+      "observability": {
+        "n_images": 4,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p08",
+      "date": "2024-04-24",
+      "n_images": 9,
+      "images": [
+        "Screenshot_33.png",
+        "Screenshot_34.png",
+        "Screenshot_35.png",
+        "Screenshot_36.png",
+        "Screenshot_37.png",
+        "Screenshot_38.png",
+        "Screenshot_39.png",
+        "Screenshot_40.png",
+        "Screenshot_41.png"
+      ],
+      "equipment": {
+        "drilling_rig": 4,
+        "pile_driver": 3,
+        "excavator_crawler": 2,
+        "backhoe_loader": 2,
+        "concrete_mixer": 1,
+        "crawler_crane": 1,
+        "truck_crane": 1,
+        "excavator_unknown": 1
+      },
+      "per_frame_totals": [
+        10,
+        3,
+        5,
+        4,
+        3,
+        5,
+        6,
+        5,
+        9
+      ],
+      "observability": {
+        "n_images": 9,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p09",
+      "date": "2024-05-27",
+      "n_images": 5,
+      "images": [
+        "Screenshot_42.png",
+        "Screenshot_43.png",
+        "Screenshot_44.png",
+        "Screenshot_45.png",
+        "Screenshot_46.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 3,
+        "pile_driver": 3,
+        "crawler_crane": 2,
+        "excavator_unknown": 2,
+        "backhoe_loader": 1,
+        "dump_truck": 1,
+        "truck_crane": 1
+      },
+      "per_frame_totals": [
+        8,
+        7,
+        8,
+        7,
+        4
+      ],
+      "observability": {
+        "n_images": 5,
+        "empty_frames": 0
+      }
+    },
+    {
+      "site_id": "p10",
+      "date": "2024-06-25",
+      "n_images": 2,
+      "images": [
+        "Screenshot_47.png",
+        "Screenshot_48.png"
+      ],
+      "equipment": {
+        "excavator_crawler": 4
+      },
+      "per_frame_totals": [
+        4,
+        2
+      ],
+      "observability": {
+        "n_images": 2,
+        "empty_frames": 0
+      }
+    }
+  ]
+}

@@ -22,6 +22,8 @@ def main():
     parser.add_argument("--out", type=Path, default=Path("data/processed/detections_finetuned.json"), help="куда писать результат")
     parser.add_argument("--imgsz", type=int, default=960, help="на 960 модель обучалась")
     parser.add_argument("--limit", type=int, default=None, help="взять первые N кадров — для быстрых проб")
+    parser.add_argument("--augment", action="store_true",
+                        help="предсказание с аугментацией (TTA): полнота выше, точность ниже")
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
 
     args = parser.parse_args()
@@ -51,6 +53,7 @@ def main():
         "conf": args.conf,
         "iou": args.iou,
         "device": args.device,
+        "augment": args.augment,
         "verbose": False
     }
 

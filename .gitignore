@@ -25,3 +25,6 @@ coverage/
 .vscode/
 *.iml
 .DS_Store
+
+# служебные веса Ultralytics (settings weights_dir)
+weights/

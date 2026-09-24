@@ -1,0 +1,186 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          720.3,
+          203.1
+        ],
+        [
+          788.2,
+          203.1
+        ],
+        [
+          788.2,
+          562.6
+        ],
+        [
+          720.3,
+          562.6
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          1027.0,
+          442.9
+        ],
+        [
+          1122.0,
+          442.9
+        ],
+        [
+          1122.0,
+          505.8
+        ],
+        [
+          1027.0,
+          505.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          545.3,
+          539.4
+        ],
+        [
+          642.2,
+          539.4
+        ],
+        [
+          642.2,
+          607.9
+        ],
+        [
+          545.3,
+          607.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          644.1,
+          258.5
+        ],
+        [
+          700.9,
+          258.5
+        ],
+        [
+          700.9,
+          512.5
+        ],
+        [
+          644.1,
+          512.5
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          820.5,
+          532.7
+        ],
+        [
+          955.8,
+          532.7
+        ],
+        [
+          955.8,
+          614.4
+        ],
+        [
+          820.5,
+          614.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "pile_driver",
+      "score": null,
+      "points": [
+        [
+          335.94217687074826,
+          269.4353741496598
+        ],
+        [
+          495.8061224489796,
+          269.4353741496598
+        ],
+        [
+          495.8061224489796,
+          586.4421768707483
+        ],
+        [
+          335.94217687074826,
+          586.4421768707483
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_82.png",
+  "imageData": null,
+  "imageHeight": 812,
+  "imageWidth": 1211,
+  "description": ""
+}

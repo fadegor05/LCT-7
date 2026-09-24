@@ -1,0 +1,128 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          507.0,
+          324.4
+        ],
+        [
+          575.7,
+          324.4
+        ],
+        [
+          575.7,
+          414.8
+        ],
+        [
+          507.0,
+          414.8
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          359.5,
+          465.9
+        ],
+        [
+          696.2,
+          465.9
+        ],
+        [
+          696.2,
+          688.0
+        ],
+        [
+          359.5,
+          688.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          764.6,
+          418.7
+        ],
+        [
+          1033.4,
+          418.7
+        ],
+        [
+          1033.4,
+          555.2
+        ],
+        [
+          764.6,
+          555.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          658.5,
+          341.4
+        ],
+        [
+          772.4,
+          341.4
+        ],
+        [
+          772.4,
+          418.4
+        ],
+        [
+          658.5,
+          418.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_64.png",
+  "imageData": null,
+  "imageHeight": 812,
+  "imageWidth": 1222,
+  "description": ""
+}

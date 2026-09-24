@@ -1,0 +1,29 @@
+{
+  "version": "5.4.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "points": [
+        [
+          559.1,
+          325.7
+        ],
+        [
+          812.4,
+          465.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {}
+    }
+  ],
+  "imagePath": "Screenshot_73.png",
+  "imageData": null,
+  "imageHeight": 810,
+  "imageWidth": 1216
+}

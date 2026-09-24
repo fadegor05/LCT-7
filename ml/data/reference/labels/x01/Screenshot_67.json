@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          486.6,
+          0.0
+        ],
+        [
+          998.4242424242425,
+          0.0
+        ],
+        [
+          998.4242424242425,
+          668.4781144781144
+        ],
+        [
+          486.6,
+          668.4781144781144
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          0.0,
+          383.0
+        ],
+        [
+          1011.8922558922559,
+          383.0
+        ],
+        [
+          1011.8922558922559,
+          710.9023569023568
+        ],
+        [
+          0.0,
+          710.9023569023568
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          451.62289562289556,
+          1.8114478114477848
+        ],
+        [
+          605.1582491582491,
+          1.8114478114477848
+        ],
+        [
+          605.1582491582491,
+          666.4579124579124
+        ],
+        [
+          451.62289562289556,
+          666.4579124579124
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_67.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1212,
+  "description": ""
+}
