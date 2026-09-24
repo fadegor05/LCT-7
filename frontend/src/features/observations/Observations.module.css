@@ -1,0 +1,133 @@
+.days {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.day {
+  font: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 112px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.day[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--on-inverse);
+}
+
+.day[aria-pressed='true'] .muted {
+  color: var(--on-inverse-muted);
+}
+
+.dayWarn {
+  border-style: dashed;
+  border-color: var(--caution);
+  background: var(--caution-soft);
+}
+
+.equipment {
+  display: flex;
+  flex-direction: column;
+}
+
+.equipmentRow {
+  display: grid;
+  grid-template-columns: 220px 140px 170px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.equipmentRow:last-child {
+  border-bottom: 0;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.activityLink {
+  text-decoration: none;
+}
+
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.stripHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.stripHead > div:first-child {
+  flex-grow: 1;
+}
+
+.frames {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 240px;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scroll-behavior: smooth;
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewRow {
+  display: grid;
+  grid-template-columns: 120px 80px minmax(0, 1fr) 200px auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.reviewRow:last-child {
+  border-bottom: 0;
+}
+
+.clipRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.input {
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+  width: 100%;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}

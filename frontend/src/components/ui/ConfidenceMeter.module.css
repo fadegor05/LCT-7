@@ -1,0 +1,25 @@
+.meter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.bar {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.seg {
+  width: 14px;
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--line);
+}
+
+.on {
+  background: var(--ink);
+}

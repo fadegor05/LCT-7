@@ -1,0 +1,48 @@
+.callout {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 500;
+  letter-spacing: -0.32px;
+}
+
+.text {
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
+.caution {
+  background: var(--caution-soft);
+}
+
+.caution .title,
+.caution .icon {
+  color: var(--caution);
+}
+
+.behind {
+  background: var(--status-behind-soft);
+}
+
+.behind .title,
+.behind .icon {
+  color: var(--status-behind);
+}
+
+.neutral {
+  background: var(--surface-card);
+}
