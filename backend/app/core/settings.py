@@ -57,6 +57,15 @@ class ObservationSettings(BaseModel):
     movement_threshold: float = 0.05
 
 
+class AssessmentSettings(BaseModel):
+    """Пороги для расчёта статусов этапов и отклонений."""
+
+    tolerance_days: int = 3
+    stale_data_days: int = 7
+    no_progress_window_days: int = 5
+    min_confirming_observations: int = 2
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -77,6 +86,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = StorageSettings()
     detector: DetectorSettings = DetectorSettings()
     observation: ObservationSettings = ObservationSettings()
+    assessment: AssessmentSettings = AssessmentSettings()
 
 
 @lru_cache
