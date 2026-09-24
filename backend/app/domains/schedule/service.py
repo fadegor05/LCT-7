@@ -46,10 +46,10 @@ class ScheduleService:
         return ScheduleReport(
             id=schedule.id,
             site_id=schedule.site_id,
-            source_filename=schedule.source_filename,
+            source_filename=schedule.source_filename or "",
             imported_at=schedule.imported_at,
-            rows_total=schedule.rows_total,
-            rows_parsed=schedule.rows_parsed,
+            rows_total=schedule.rows_total or 0,
+            rows_parsed=schedule.rows_parsed or 0,
             stages_with_dates=stages_with_dates,
             stages_without_dates=stages_without_dates,
             stages=[StageRead.model_validate(stage) for stage in loaded_stages],

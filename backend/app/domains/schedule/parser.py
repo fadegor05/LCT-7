@@ -4,6 +4,7 @@
 """
 
 import csv
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from io import BytesIO, StringIO
@@ -80,6 +81,8 @@ class ScheduleParser:
         buffer = BytesIO(content)
         wb = load_workbook(buffer, read_only=True, data_only=True)
         ws = wb.active
+        if ws is None:
+            raise ScheduleFormatError("Файл пуст")
 
         # Собрать все строки и их значения
         all_rows = []
@@ -94,8 +97,8 @@ class ScheduleParser:
             raise ScheduleFormatError("Файл пуст")
 
         # Найти заголовок в первых 10 непустых строк
-        header_row_idx = None
         header = None
+        header_row_idx = 0
         for idx, (_row_num, row) in enumerate(all_rows[:10]):
             candidate = self._find_header(row)
             if candidate:
@@ -146,8 +149,8 @@ class ScheduleParser:
             raise ScheduleFormatError("Файл пуст")
 
         # Найти заголовок в первых 10 непустых строк
-        header_row_idx = None
         header = None
+        header_row_idx = 0
         for idx, (_row_num, row) in enumerate(all_rows[:10]):
             candidate = self._find_header(row)
             if candidate:
@@ -204,7 +207,7 @@ class ScheduleParser:
         return result
 
     def _parse_data_rows(
-        self, data_rows: list[tuple[int, list | tuple]], header: dict[str, int]
+        self, data_rows: Sequence[tuple[int, Sequence[object]]], header: dict[str, int]
     ) -> ParseResult:
         """Распарсить строки данных.
 
@@ -232,9 +235,14 @@ class ScheduleParser:
             start_str = self._get_cell(row_data, header.get("start"))
             end_str = self._get_cell(row_data, header.get("end"))
 
-            # Обрезать название
+            # Обрезать название и привести к строке
             if isinstance(name, str):
                 name = name.strip()
+            elif isinstance(name, (datetime, date)):
+                # Если это дата/время, преобразуем в строку
+                name = str(name)
+            else:
+                name = str(name) if name is not None else ""
 
             # Проверить пустое название
             if not name:
@@ -273,7 +281,7 @@ class ScheduleParser:
 
         return ParseResult(rows=rows, issues=issues, rows_total=rows_total)
 
-    def _get_cell(self, row: list | tuple, idx: int | None) -> str | datetime | date | None:
+    def _get_cell(self, row: Sequence[object], idx: int | None) -> str | datetime | date | None:
         """Получить значение ячейки по индексу."""
         if idx is None or idx >= len(row):
             return None
