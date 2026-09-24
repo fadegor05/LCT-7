@@ -16,6 +16,43 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: '${STORAGE__ACCESS_KEY}'
+      MINIO_ROOT_PASSWORD: '${STORAGE__SECRET_KEY}'
+    env_file: .env
+    networks:
+      - web
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    restart: on-failure
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: '${STORAGE__ACCESS_KEY}'
+      MINIO_ROOT_PASSWORD: '${STORAGE__SECRET_KEY}'
+    env_file: .env
+    networks:
+      - web
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set minio http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing minio/$${STORAGE__BUCKET}
+
   traefik:
     container_name: traefik
     image: traefik:v3.6.1
@@ -36,3 +73,5 @@ services:
 
 volumes:
   postgres_data:
+  storage_data:
+  minio_data:
