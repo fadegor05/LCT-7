@@ -22,6 +22,31 @@ class PostgresSettings(BaseModel):
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
 
+class StorageSettings(BaseModel):
+    """Параметры файлового хранилища (локального или S3)."""
+
+    endpoint_url: str | None = None
+    bucket: str = "photos"
+    access_key: str = "minioadmin"
+    secret_key: str = "minioadmin"
+    region: str = "us-east-1"
+    local_root: str = "/data/storage"
+    max_upload_mb: float = 20
+    max_batch_files: int = 50
+
+    @property
+    def max_upload_bytes(self) -> int:
+        """Максимальный размер одного загружаемого файла в байтах."""
+        return int(self.max_upload_mb * 1024 * 1024)
+
+
+class DetectorSettings(BaseModel):
+    """Параметры ML-детектора."""
+
+    url: str | None = None
+    timeout_s: float = 30.0
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -38,6 +63,9 @@ class Settings(BaseSettings):
     backend_tag: str = "dev"
 
     postgres: PostgresSettings = PostgresSettings()
+    s3: bool = False
+    storage: StorageSettings = StorageSettings()
+    detector: DetectorSettings = DetectorSettings()
 
 
 @lru_cache
