@@ -1,0 +1,139 @@
+"""Обёртка детектора для встраивания в бэкенд.
+
+Скрипты в tools/ рассчитаны на запуск из командной строки: читают папку, пишут
+JSON в файл. Бэкенду нужно другое — модель загружается один раз, дальше на вход
+приходит кадр, на выход детекции. Этот модуль даёт такой интерфейс.
+
+Формат выхода — тот же контракт, что у tools/detect_finetuned.py
+(docs/CONTRACTS.md §1): bbox в долях кадра, порядок [x1, y1, x2, y2].
+Это важно: дальше по цепочке идут site_state и match_schedule, которые
+рассчитывают именно на него.
+
+Использование:
+
+    from service.detector import Detector
+    det = Detector()                      # веса и порог берутся из конфига
+    result = det.predict_path("frame.jpg")
+    result = det.predict_bytes(data)      # для загрузки через HTTP
+"""
+
+from __future__ import annotations
+
+import io
+import json
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+ML = Path(__file__).resolve().parents[1]
+DEFAULT_WEIGHTS = ML / "weights" / "mocs_m_best.pt"
+DEFAULT_IMGSZ = 960          # размер обучения; на другом качество падает
+DEFAULT_CONF = 0.25          # рабочий порог, см. E12: подбор по классам не переносится
+DEFAULT_IOU = 0.7
+
+
+@dataclass
+class Detector:
+    """Загружает модель один раз и отдаёт детекции в формате контракта."""
+
+    weights: Path = DEFAULT_WEIGHTS
+    imgsz: int = DEFAULT_IMGSZ
+    conf: float = DEFAULT_CONF
+    iou: float = DEFAULT_IOU
+    device: str | None = None       # None — выбрать автоматически
+    _model: Any = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        if not Path(self.weights).exists():
+            raise FileNotFoundError(
+                f"нет файла весов {self.weights}. Веса не хранятся в git "
+                f"(великоваты): см. docs/MODEL_CARD.md, раздел «Где взять веса»")
+        if self.device is None:
+            try:
+                import torch
+                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                self.device = "cpu"
+
+    @property
+    def model(self):
+        """Ленивая загрузка: процесс бэкенда стартует быстро, модель — при первом кадре."""
+        if self._model is None:
+            from ultralytics import YOLO
+            self._model = YOLO(str(self.weights))
+        return self._model
+
+    def warmup(self) -> None:
+        """Прогрев: первый прогон вчетверо дольше из-за выделения памяти."""
+        import numpy as np
+        self.model.predict(np.zeros((self.imgsz, self.imgsz, 3), dtype="uint8"),
+                           imgsz=self.imgsz, verbose=False, device=self.device)
+
+    def _predict(self, source, name: str) -> dict:
+        started = time.perf_counter()
+        result = self.model.predict(source, imgsz=self.imgsz, conf=self.conf,
+                                    iou=self.iou, device=self.device, verbose=False)[0]
+        height, width = result.orig_shape
+        detections = [
+            {
+                "class_raw": result.names[int(cls_id)],
+                "class_ours": result.names[int(cls_id)],
+                "conf": round(float(score), 3),
+                "bbox": [round(float(v), 4) for v in box],
+            }
+            for cls_id, score, box in zip(result.boxes.cls.tolist(),
+                                          result.boxes.conf.tolist(),
+                                          result.boxes.xyxyn.tolist())
+        ]
+        return {
+            "image": name,
+            "width": int(width),
+            "height": int(height),
+            "speed_ms": {**result.speed, "total": round((time.perf_counter() - started) * 1000, 1)},
+            "detections": detections,
+        }
+
+    def predict_path(self, path: str | Path) -> dict:
+        return self._predict(str(path), Path(path).name)
+
+    def predict_bytes(self, data: bytes, name: str = "upload") -> dict:
+        from PIL import Image
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        return self._predict(img, name)
+
+    def meta(self) -> dict:
+        """Что за модель отвечает — для журнала и для отчёта пользователю."""
+        card = ML / "docs" / "MODEL_CARD.md"
+        return {
+            "weights": Path(self.weights).name,
+            "imgsz": self.imgsz,
+            "conf": self.conf,
+            "iou": self.iou,
+            "device": self.device,
+            "classes": len(self.model.names),
+            "model_card": str(card) if card.exists() else None,
+        }
+
+
+def main() -> int:
+    """Проверка обёртки без бэкенда: python -m service.detector <кадр>"""
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("image", type=Path)
+    ap.add_argument("--weights", type=Path, default=DEFAULT_WEIGHTS)
+    ap.add_argument("--conf", type=float, default=DEFAULT_CONF)
+    args = ap.parse_args()
+
+    det = Detector(weights=args.weights, conf=args.conf)
+    print("модель:", json.dumps(det.meta(), ensure_ascii=False))
+    out = det.predict_path(args.image)
+    print(f"кадр {out['image']} {out['width']}x{out['height']}, "
+          f"{len(out['detections'])} детекций, {out['speed_ms']['total']} мс")
+    for d in out["detections"][:10]:
+        print(f"   {d['class_ours']:<20}{d['conf']:.2f}  {d['bbox']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

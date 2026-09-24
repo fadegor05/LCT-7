@@ -1,0 +1,6548 @@
+{
+  "meta": {
+    "model": "ручная разметка (B0-oracle)",
+    "params": {
+      "source": [
+        "data\\reference\\labels\\p01",
+        "data\\reference\\labels\\p02",
+        "data\\reference\\labels\\p03",
+        "data\\reference\\labels\\p04",
+        "data\\reference\\labels\\p05",
+        "data\\reference\\labels\\p06",
+        "data\\reference\\labels\\p07",
+        "data\\reference\\labels\\p08",
+        "data\\reference\\labels\\p09",
+        "data\\reference\\labels\\p10",
+        "data\\reference\\labels\\p11"
+      ],
+      "keep_offsite": false
+    },
+    "created": "2026-09-21T15:06:11",
+    "images": 59,
+    "engagement": {
+      "conf": 0.01,
+      "stage": null,
+      "rule": "Chen ISARC 2020: dist < 0.5*(w1+w2)"
+    }
+  },
+  "images": [
+    {
+      "image": "Screenshot_1.png",
+      "width": 1212,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3393,
+            0.8671,
+            0.3993,
+            0.9554
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_2.png",
+      "width": 1213,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3417,
+            0.429,
+            0.4172,
+            0.7004
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1953,
+            0.7448,
+            0.2627,
+            0.7959
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4943,
+            0.5299,
+            0.5181,
+            0.5549
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом excavator_crawler"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.7245,
+            0.5444,
+            0.7397,
+            0.5734
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5374,
+            0.6296,
+            0.5703,
+            0.7714
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2935,
+            0.6473,
+            0.3175,
+            0.6695
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.2125,
+            0.6023,
+            0.2421,
+            0.6374
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.3509,
+            0.8326,
+            0.4295,
+            0.884
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5724,
+            0.6215,
+            0.6152,
+            0.7926
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.505,
+            0.5128,
+            0.5291,
+            0.5414
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом dump_truck"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.414,
+            0.4891,
+            0.4343,
+            0.5095
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7622,
+            0.4739,
+            0.8036,
+            0.5994
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5147,
+            0.697,
+            0.5402,
+            0.7351
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_3.png",
+      "width": 1217,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5075,
+            0.6629,
+            0.5622,
+            0.8656
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6968,
+            0.5329,
+            0.7208,
+            0.574
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6623,
+            0.5341,
+            0.6968,
+            0.5675
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.2822,
+            0.4222,
+            0.3249,
+            0.5686
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3573,
+            0.5066,
+            0.3915,
+            0.5388
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3247,
+            0.4302,
+            0.3521,
+            0.5503
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4399,
+            0.2289,
+            0.4919,
+            0.4603
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.4727,
+            0.4017,
+            0.488,
+            0.426
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7281,
+            0.4591,
+            0.7528,
+            0.4838
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5219,
+            0.3678,
+            0.545,
+            0.3889
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5868,
+            0.765,
+            0.634,
+            0.8119
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_4.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.1311,
+            0.6532,
+            0.2,
+            0.8409
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.483,
+            0.342,
+            0.5568,
+            0.5351
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.241,
+            0.8138,
+            0.2587,
+            0.8653
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6996,
+            0.6669,
+            0.7387,
+            0.7007
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.2772,
+            0.44,
+            0.3163,
+            0.5577
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5656,
+            0.7256,
+            0.6109,
+            0.7604
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3418,
+            0.5343,
+            0.3735,
+            0.5639
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3175,
+            0.5195,
+            0.3432,
+            0.5606
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6156,
+            0.4886,
+            0.6346,
+            0.517
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6928,
+            0.587,
+            0.7143,
+            0.6245
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5645,
+            0.6965,
+            0.5843,
+            0.7344
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_10.png",
+      "width": 1084,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2273,
+            0.3445,
+            0.3729,
+            0.5861
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4069,
+            0.0035,
+            0.5919,
+            0.4978
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4225,
+            0.0,
+            0.4606,
+            0.3761
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3083,
+            0.1128,
+            0.3542,
+            0.3421
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5919,
+            0.1696,
+            0.716,
+            0.3988
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4064,
+            0.0816,
+            0.5824,
+            0.2682
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3302,
+            0.1852,
+            0.4054,
+            0.451
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_11.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6092,
+            0.0478,
+            0.7455,
+            0.6856
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом crawler_crane"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7188,
+            0.0343,
+            0.8881,
+            0.6138
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом drilling_rig"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2641,
+            0.0,
+            0.3414,
+            0.5565
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5654,
+            0.233,
+            0.6045,
+            0.5716
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2986,
+            0.5604,
+            0.4587,
+            0.6591
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4315,
+            0.4234,
+            0.4684,
+            0.5643
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4987,
+            0.5257,
+            0.5422,
+            0.5756
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_12.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2159,
+            0.0863,
+            0.5406,
+            0.5472
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.466,
+            0.4946,
+            0.6631,
+            0.8028
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.8536,
+            0.4636,
+            0.9969,
+            0.5584
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.381,
+            0.3935,
+            0.4695,
+            0.6467
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.0156,
+            0.5414,
+            0.1773,
+            0.655
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0703,
+            0.4989,
+            0.1789,
+            0.556
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5345,
+            0.3067,
+            0.5616,
+            0.5436
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_13.png",
+      "width": 1219,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1561,
+            0.0,
+            0.5611,
+            0.5105
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4949,
+            0.2688,
+            0.5213,
+            0.5434
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4491,
+            0.2727,
+            0.4934,
+            0.5216
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.48,
+            0.5321,
+            0.6848,
+            0.9012
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0957,
+            0.414,
+            0.4328,
+            0.6629
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8303,
+            0.3735,
+            0.9971,
+            0.6286
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_14.png",
+      "width": 1216,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7322,
+            0.0002,
+            0.7739,
+            0.5182
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2636,
+            0.4953,
+            0.5123,
+            0.7923
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3708,
+            0.364,
+            0.4864,
+            0.5861
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.758,
+            0.5186,
+            0.8099,
+            0.5921
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5215,
+            0.247,
+            0.7455,
+            0.4231
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_15.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.9092,
+            0.0,
+            0.952,
+            0.4314
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.17,
+            0.3964,
+            0.3252,
+            0.5208
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5282,
+            0.3567,
+            0.8686,
+            0.6002
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_16.png",
+      "width": 1219,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4009,
+            0.4406,
+            0.7897,
+            0.7271
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0231,
+            0.0303,
+            0.1295,
+            0.1698
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.0348,
+            0.0569,
+            0.1413
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4004,
+            0.007,
+            0.6252,
+            0.2088
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_5.png",
+      "width": 1179,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5029,
+            0.1197,
+            0.7732,
+            0.4728
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4623,
+            0.0895,
+            0.5797,
+            0.4934
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3743,
+            0.2817,
+            0.4259,
+            0.5079
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3471,
+            0.3094,
+            0.3827,
+            0.5072
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.445,
+            0.4427,
+            0.4895,
+            0.5015
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7572,
+            0.0,
+            0.9763,
+            0.5607
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_6.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4258,
+            0.0,
+            0.6001,
+            0.5724
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_7.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7486,
+            0.138,
+            1.0,
+            0.9988
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5628,
+            0.0421,
+            0.6523,
+            0.5462
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.1163,
+            0.0057,
+            0.3135,
+            0.7479
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "bulldozer",
+          "class_ours": "bulldozer",
+          "conf": 1.0,
+          "bbox": [
+            0.3853,
+            0.5561,
+            0.475,
+            0.6986
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7036,
+            0.4034,
+            0.9012,
+            0.5832
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3315,
+            0.4814,
+            0.4055,
+            0.6089
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.285,
+            0.5305,
+            0.3362,
+            0.5924
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0622,
+            0.5039,
+            0.1198,
+            0.6014
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1501,
+            0.0523,
+            0.482,
+            0.4697
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_8.png",
+      "width": 1221,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3714,
+            0.0007,
+            0.5169,
+            0.7331
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6542,
+            0.0,
+            0.7581,
+            0.6645
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.4315,
+            0.127,
+            0.809
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_9.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.0613,
+            0.2412,
+            0.123,
+            0.5599
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0414,
+            0.1223,
+            0.3741,
+            0.5928
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.2873,
+            0.3664,
+            0.5096,
+            0.6437
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6245,
+            0.4229,
+            0.7774,
+            0.5787
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.2035,
+            0.1418,
+            0.2591,
+            0.5769
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4396,
+            0.1553,
+            0.5334,
+            0.5694
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1351,
+            0.2932,
+            0.166,
+            0.4567
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_17.png",
+      "width": 1222,
+      "height": 813,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6081,
+            0.2682,
+            0.7579,
+            0.3969
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.504,
+            0.3305,
+            0.6869,
+            0.5041
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1861,
+            0.3424,
+            0.5365,
+            0.7084
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2285,
+            0.2861,
+            0.4379,
+            0.4605
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3603,
+            0.2447,
+            0.4721,
+            0.3396
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5091,
+            0.766,
+            0.5485,
+            0.8134
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.017,
+            0.7014,
+            0.048,
+            0.7395
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_18.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1079,
+            0.402,
+            0.1955,
+            0.4582
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3199,
+            0.3726,
+            0.4443,
+            0.4751
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7124,
+            0.0752,
+            0.8597,
+            0.4558
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8085,
+            0.1574,
+            0.9264,
+            0.5455
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1295,
+            0.3389,
+            0.2098,
+            0.4246
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5086,
+            0.4045,
+            0.6036,
+            0.4709
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6356,
+            0.4565,
+            0.6887,
+            0.5311
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_19.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0685,
+            0.4985,
+            0.1921,
+            0.5998
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5779,
+            0.6374,
+            0.8373,
+            0.816
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6921,
+            -0.0003,
+            0.8964,
+            0.6394
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3916,
+            0.0261,
+            0.5871,
+            0.8176
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_20.png",
+      "width": 1218,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5925,
+            0.5964,
+            0.6577,
+            0.6974
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5803,
+            0.4478,
+            0.669,
+            0.6966
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5478,
+            0.5254,
+            0.5956,
+            0.5767
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1846,
+            0.4264,
+            0.2787,
+            0.5724
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3517,
+            0.6334,
+            0.3731,
+            0.6789
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7981,
+            0.4068,
+            0.8776,
+            0.6865
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0453,
+            0.2969,
+            0.1559,
+            0.7684
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6814,
+            0.4739,
+            0.7326,
+            0.5025
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_21.png",
+      "width": 1217,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8059,
+            0.6152,
+            0.8337,
+            0.6647
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9237,
+            0.6087,
+            0.9457,
+            0.6468
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4311,
+            0.172,
+            0.7237,
+            0.454
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.521,
+            0.0,
+            0.8405,
+            1.0007
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0993,
+            0.0,
+            0.143,
+            0.5768
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.7159,
+            0.679,
+            0.7546,
+            0.7255
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2278,
+            0.3685,
+            0.2628,
+            0.3989
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5823,
+            0.373,
+            0.6088,
+            0.4052
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_22.png",
+      "width": 1209,
+      "height": 800,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3566,
+            0.0521,
+            0.6203,
+            0.8217
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_23.png",
+      "width": 1215,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2565,
+            0.1663,
+            0.673,
+            0.6633
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_24.png",
+      "width": 1217,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1675,
+            0.0,
+            0.5653,
+            0.7264
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_25.png",
+      "width": 1219,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.2591,
+            0.2685,
+            0.5452,
+            0.6105
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_26.png",
+      "width": 1219,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "wheel_loader",
+          "class_ours": "wheel_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6311,
+            0.0412,
+            0.7974,
+            0.6502
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2167,
+            0.3101,
+            0.319,
+            0.5317
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4736,
+            0.4704,
+            0.5636,
+            0.5393
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_27.png",
+      "width": 1143,
+      "height": 806,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4054,
+            0.7308,
+            0.5611,
+            0.8396
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7719,
+            0.595,
+            0.8205,
+            0.6519
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2978,
+            0.6592,
+            0.4079,
+            0.8086
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.316,
+            0.4244,
+            0.4345,
+            0.6952
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6776,
+            0.435,
+            0.7826,
+            0.7364
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1353,
+            0.3024,
+            0.2771,
+            0.8006
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1845,
+            0.3346,
+            0.2773,
+            0.677
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4505,
+            0.6523,
+            0.6127,
+            0.7179
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6564,
+            0.549,
+            0.6883,
+            0.5844
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_28.png",
+      "width": 1110,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6814,
+            0.2376,
+            0.8362,
+            0.739
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2546,
+            0.2813,
+            0.389,
+            0.8488
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4153,
+            0.1536,
+            0.4644,
+            0.4162
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5132,
+            0.3254,
+            0.6228,
+            0.6525
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.732,
+            0.5154,
+            0.8206,
+            0.6058
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5713,
+            0.536,
+            0.656,
+            0.6379
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7065,
+            0.536,
+            0.7923,
+            0.649
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.3422,
+            0.4588,
+            0.3665,
+            0.4941
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3368,
+            0.5615,
+            0.5424,
+            0.7209
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4755,
+            0.4435,
+            0.5006,
+            0.4782
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5895,
+            0.3249,
+            0.671,
+            0.5312
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_29.png",
+      "width": 1163,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.902,
+            0.2316,
+            1.0,
+            0.5358
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1935,
+            0.4811,
+            0.2352,
+            0.5891
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.3113,
+            0.0032,
+            0.4285,
+            0.8506
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.613,
+            0.2393,
+            0.6792,
+            0.48
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5892,
+            0.2216,
+            0.6471,
+            0.4561
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.0629,
+            0.4884,
+            0.1011,
+            0.5311
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4669,
+            0.3803,
+            0.5065,
+            0.421
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2334,
+            0.4581,
+            0.3137,
+            0.5449
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3871,
+            0.206,
+            0.4362,
+            0.4397
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.3065,
+            0.441,
+            0.3727,
+            0.487
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3166,
+            0.4097,
+            0.38,
+            0.454
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5069,
+            0.4265,
+            0.536,
+            0.4599
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_30.png",
+      "width": 1203,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.653,
+            0.4764,
+            0.7116,
+            0.5192
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6038,
+            0.2801,
+            0.6709,
+            1.0
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3897,
+            0.4315,
+            0.4445,
+            0.4932
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.211,
+            0.2132,
+            0.2767,
+            0.4632
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом drilling_rig"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1167,
+            0.0975,
+            0.2664,
+            0.5773
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом crawler_crane"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3857,
+            0.282,
+            0.4196,
+            0.4378
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8491,
+            0.2185,
+            0.9891,
+            0.6133
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8376,
+            0.4375,
+            0.8997,
+            0.4969
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6957,
+            0.2203,
+            0.7419,
+            0.4701
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4457,
+            0.4313,
+            0.4908,
+            0.4868
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.732,
+            0.3691,
+            0.8152,
+            0.6317
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_31.png",
+      "width": 1163,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6996,
+            0.3532,
+            0.8086,
+            0.8005
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.4683,
+            0.6823,
+            0.5589,
+            0.7626
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.2098,
+            0.3795,
+            0.3732,
+            0.8855
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5253,
+            0.2209,
+            0.581,
+            0.5373
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8701,
+            0.3786,
+            0.9311,
+            0.5749
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2664,
+            0.1264,
+            0.3688,
+            0.4121
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7196,
+            0.6235,
+            0.8109,
+            0.7214
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5853,
+            0.8783,
+            0.6779,
+            0.998
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.031,
+            0.3443,
+            0.141,
+            0.6517
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2788,
+            0.4696,
+            0.3427,
+            0.7619
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6758,
+            0.5448,
+            0.7346,
+            0.612
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6828,
+            0.5363,
+            0.7345,
+            0.5808
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7354,
+            0.2885,
+            0.7548,
+            0.5155
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8194,
+            0.4594,
+            0.8584,
+            0.4937
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.8536,
+            0.5659,
+            0.8966,
+            0.6152
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_32.png",
+      "width": 1309,
+      "height": 804,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6309,
+            0.5269,
+            0.7198,
+            0.6157
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.186,
+            0.0035,
+            0.3603,
+            0.6767
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9058,
+            0.5077,
+            1.0,
+            0.5969
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5052,
+            0.4165,
+            0.5557,
+            0.6246
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3199,
+            0.2956,
+            0.4259,
+            0.6261
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_33.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5363,
+            0.0017,
+            0.6196,
+            0.6602
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.1507,
+            0.1568,
+            0.6535
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6545,
+            0.6145,
+            0.7321,
+            0.6998
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.0006,
+            0.5477,
+            0.0519,
+            0.5985
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.1098,
+            0.524,
+            0.1833,
+            0.5659
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.3493,
+            0.5216,
+            0.3835,
+            0.5533
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4341,
+            0.3588,
+            0.4828,
+            0.5376
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3117,
+            0.4931,
+            0.3643,
+            0.5421
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7831,
+            0.2789,
+            0.8845,
+            0.6055
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8355,
+            0.3064,
+            0.9051,
+            0.5664
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7557,
+            0.5134,
+            0.7951,
+            0.5668
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.507,
+            0.483,
+            0.5565,
+            0.5497
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.478,
+            0.4934,
+            0.5064,
+            0.5431
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.9692,
+            0.5185,
+            0.9989,
+            0.5662
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_34.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3603,
+            0.0,
+            0.5711,
+            0.9236
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2531,
+            0.0703,
+            0.4454,
+            0.6296
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.6618,
+            0.2996,
+            0.755,
+            0.8411
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.4822,
+            0.364,
+            0.5387,
+            0.4037
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.5399,
+            0.3866,
+            0.5943,
+            0.4356
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4209,
+            0.3183,
+            0.4818,
+            0.3653
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.3678,
+            0.2999,
+            0.4207,
+            0.3415
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_35.png",
+      "width": 1218,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2189,
+            0.2743,
+            0.3304,
+            0.3802
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.0526,
+            0.0014,
+            0.1919,
+            0.3822
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4526,
+            0.0702,
+            0.5019,
+            0.3608
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3541,
+            0.0174,
+            0.4014,
+            0.3605
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7111,
+            0.0,
+            0.7681,
+            0.3748
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6761,
+            0.338,
+            0.7251,
+            0.3756
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_36.png",
+      "width": 1218,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5541,
+            0.0,
+            0.5905,
+            0.7025
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4101,
+            0.0001,
+            0.5641,
+            0.8073
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7034,
+            0.4758,
+            0.8741,
+            0.7976
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.9145,
+            0.5914,
+            0.9976,
+            0.7554
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.5922,
+            0.4913,
+            0.6213,
+            0.7478
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.1988,
+            0.5219,
+            0.2573,
+            0.7543
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2629,
+            0.6751,
+            0.3269,
+            0.7346
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3548,
+            0.5769,
+            0.4353,
+            0.7419
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_37.png",
+      "width": 1219,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3611,
+            0.2933,
+            0.4271,
+            0.5735
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.68,
+            0.0857,
+            0.8131,
+            0.6751
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4944,
+            0.1787,
+            0.5902,
+            0.6199
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2697,
+            0.5088,
+            0.3617,
+            0.6039
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_38.png",
+      "width": 1221,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.0749,
+            0.0125,
+            0.1402,
+            0.5693
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1325,
+            0.0,
+            0.2995,
+            0.5933
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2235,
+            0.2888,
+            0.4475,
+            0.6193
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4633,
+            0.3498,
+            0.5567,
+            0.56
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5618,
+            0.4591,
+            0.6136,
+            0.5354
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6254,
+            0.0,
+            0.9834,
+            0.8311
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_39.png",
+      "width": 1080,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.2495,
+            0.0075,
+            0.4123,
+            0.6386
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.6199,
+            0.0624,
+            0.7581,
+            0.7361
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8438,
+            0.0649,
+            0.9999,
+            0.7001
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.221,
+            0.6416,
+            0.3338,
+            0.7233
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1929,
+            0.3933,
+            0.2395,
+            0.5838
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.5418,
+            0.0672,
+            0.6378
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5661,
+            0.3415,
+            0.6716,
+            0.6018
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.79,
+            0.4668,
+            0.8467,
+            0.5666
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.7501,
+            0.322,
+            0.7889,
+            0.5591
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5316,
+            0.4869,
+            0.5763,
+            0.5579
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_40.png",
+      "width": 1081,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8324,
+            0.0832,
+            0.9203,
+            0.6232
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7028,
+            0.1092,
+            0.9262,
+            0.6457
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1007,
+            0.001,
+            0.2961,
+            0.7593
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.2954,
+            0.6762,
+            0.4028,
+            0.8147
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3308,
+            0.3178,
+            0.4347,
+            0.581
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_wheeled",
+          "class_ours": "excavator_wheeled",
+          "conf": 1.0,
+          "bbox": [
+            0.3682,
+            0.5181,
+            0.4444,
+            0.6065
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4216,
+            0.4635,
+            0.4755,
+            0.534
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_41.png",
+      "width": 1083,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.163,
+            0.1485,
+            0.2637,
+            0.7281
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.1387,
+            0.0473,
+            0.2458,
+            0.5771
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.8671,
+            0.1894,
+            0.9309,
+            0.4258
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6799,
+            0.1531,
+            0.8926,
+            0.9669
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.5131,
+            0.2811,
+            0.5951,
+            0.5147
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3049,
+            0.1808,
+            0.4154,
+            0.8007
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4241,
+            0.6728,
+            0.5741,
+            0.8274
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.1012,
+            0.5321,
+            0.1382,
+            0.5875
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6169,
+            0.3659,
+            0.6648,
+            0.4487
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7373,
+            0.4,
+            0.8116,
+            0.4865
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2695,
+            0.4243,
+            0.3055,
+            0.4639
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3725,
+            0.2666,
+            0.4163,
+            0.4237
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8727,
+            0.4125,
+            0.9246,
+            0.5027
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_45.png",
+      "width": 1082,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.678,
+            0.2974,
+            0.8998,
+            0.9399
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.4885,
+            0.3264,
+            0.5728,
+            0.7917
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_like",
+          "class_ours": "drilling_like",
+          "conf": 1.0,
+          "bbox": [
+            0.1211,
+            0.281,
+            0.224,
+            0.7395
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0775,
+            0.5116,
+            0.1752,
+            0.6315
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.0013,
+            0.5403,
+            0.0515,
+            0.7306
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "drilling_rig",
+          "class_ours": "drilling_rig",
+          "conf": 1.0,
+          "bbox": [
+            0.3385,
+            0.686,
+            0.6708,
+            0.9038
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_42.png",
+      "width": 1079,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6592,
+            0.5222,
+            0.7441,
+            0.6141
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.222,
+            0.3325,
+            0.2869,
+            0.5794
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом pile_driver"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2778,
+            0.3059,
+            0.381,
+            0.6735
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом crawler_crane"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.0006,
+            0.3513,
+            0.1855,
+            0.8464
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4194,
+            0.5738,
+            0.4954,
+            0.6248
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4269,
+            0.4667,
+            0.452,
+            0.5108
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8358,
+            0.5381,
+            0.8964,
+            0.6319
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2292,
+            0.5964,
+            0.2599,
+            0.6244
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_43.png",
+      "width": 1085,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.3389,
+            0.354,
+            0.3812,
+            0.5577
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.235,
+            0.3856,
+            0.273,
+            0.5429
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3476,
+            0.5465,
+            0.4238,
+            0.6448
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.4233,
+            0.7278,
+            0.5558,
+            0.8358
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6508,
+            0.3406,
+            0.7109,
+            0.5554
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4217,
+            0.5448,
+            0.4691,
+            0.5813
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_44.png",
+      "width": 1087,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.8603,
+            0.4787,
+            0.9855,
+            0.9484
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.6807,
+            0.3722,
+            0.7344,
+            0.7487
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1164,
+            0.3566,
+            0.2725,
+            0.6859
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7366,
+            0.7897,
+            0.8448,
+            1.0002
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7444,
+            0.5387,
+            0.8195,
+            0.6133
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.25,
+            0.5116,
+            0.2912,
+            0.5609
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6318,
+            0.6155,
+            0.6593,
+            0.6713
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_45.png",
+      "width": 1082,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7124,
+            0.3017,
+            0.8852,
+            0.9143
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.4257,
+            0.3363,
+            0.5586,
+            0.7453
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.12,
+            0.2411,
+            0.2354,
+            0.7378
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.6452,
+            0.0431,
+            0.7067
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.3663,
+            0.6944,
+            0.6615,
+            0.8908
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0019,
+            0.5542,
+            0.042,
+            0.6457
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0981,
+            0.5284,
+            0.1705,
+            0.6176
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_46.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3373,
+            0.0,
+            0.6477,
+            0.6757
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.853,
+            0.7463,
+            0.9824,
+            0.843
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9578,
+            0.4125,
+            1.0,
+            0.4836
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1927,
+            0.3922,
+            0.2392,
+            0.4327
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_47.png",
+      "width": 1222,
+      "height": 811,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0603,
+            0.2434,
+            0.1729,
+            0.5259
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.1563,
+            0.2709,
+            0.6055,
+            0.575
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6016,
+            0.3404,
+            0.7014,
+            0.5615
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7215,
+            0.2402,
+            0.9611,
+            0.7204
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_49.png",
+      "width": 1080,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8496,
+            0.0,
+            0.9247,
+            0.4036
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2399,
+            0.1235,
+            0.3452,
+            0.3507
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.4695,
+            0.3674,
+            0.611,
+            0.893
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6901,
+            0.6334,
+            0.7479,
+            0.8269
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6365,
+            0.6028,
+            0.7513,
+            0.71
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4236,
+            0.0345,
+            0.6766,
+            0.5673
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.417,
+            0.6735,
+            0.4768,
+            0.7698
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0926,
+            0.3205,
+            0.1364,
+            0.3481
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.1369,
+            0.3344,
+            0.156,
+            0.3548
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.152,
+            0.302,
+            0.1875,
+            0.3605
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7279,
+            0.2099,
+            0.8004,
+            0.4199
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6088,
+            0.8968,
+            0.7571,
+            0.9988
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_50.png",
+      "width": 1081,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4849,
+            0.5704,
+            0.5689,
+            0.7381
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.1116,
+            0.0987,
+            0.547
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом crawler_crane"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2962,
+            0.0,
+            0.3575,
+            0.157
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1425,
+            0.0039,
+            0.2193,
+            0.142
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5522,
+            0.388,
+            0.5778,
+            0.4202
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3741,
+            0.0178,
+            0.4097,
+            0.1325
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.5276,
+            0.4237,
+            0.5574,
+            0.4783
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2918,
+            0.2468,
+            0.332,
+            0.2944
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.107,
+            -0.0011,
+            0.1577,
+            0.0761
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.0,
+            0.6152,
+            0.0466,
+            0.7677
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4633,
+            0.299,
+            0.5328,
+            0.4406
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6772,
+            0.1888,
+            0.7317,
+            0.2229
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0012,
+            0.0344,
+            0.1954,
+            0.4637
+          ],
+          "activity": "unknown",
+          "engagement": "engaged",
+          "engagement_why": "рядом pile_driver"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_51.png",
+      "width": 1083,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7783,
+            0.1222,
+            0.9088,
+            0.5657
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4085,
+            0.4653,
+            0.4685,
+            0.5146
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.6966,
+            0.4353,
+            0.728,
+            0.477
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5006,
+            0.4226,
+            0.5355,
+            0.4752
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.7542,
+            0.3035,
+            0.793,
+            0.4848
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.524,
+            0.4468,
+            0.5936,
+            0.5663
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.4776,
+            0.5359,
+            0.5053,
+            0.5825
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.488,
+            0.5107,
+            0.5232,
+            0.5441
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_52.png",
+      "width": 1086,
+      "height": 814,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.6638,
+            0.5134,
+            0.7022,
+            0.5643
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6675,
+            0.2516,
+            0.7053,
+            0.3111
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3552,
+            0.2327,
+            0.5275,
+            0.5237
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9442,
+            0.5771,
+            0.9998,
+            0.633
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.6598,
+            0.3586,
+            0.7004,
+            0.4204
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.5603,
+            0.4301,
+            0.6291,
+            0.4952
+          ],
+          "activity": "idle",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "concrete_mixer",
+          "class_ours": "concrete_mixer",
+          "conf": 1.0,
+          "bbox": [
+            0.696,
+            0.3396,
+            0.722,
+            0.4148
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_53.png",
+      "width": 1085,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.5928,
+            0.7437,
+            0.6362,
+            0.8511
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4598,
+            0.4318,
+            0.4828,
+            0.4717
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.6231,
+            0.5678,
+            0.6749,
+            0.6364
+          ],
+          "activity": "working",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.8594,
+            0.2825,
+            0.8962,
+            0.3248
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.6785,
+            0.3804,
+            0.8037,
+            0.5035
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.9812,
+            0.2935,
+            0.9998,
+            0.3246
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "crawler_crane",
+          "class_ours": "crawler_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5693,
+            0.222,
+            0.6785,
+            0.4569
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1537,
+            0.3195,
+            0.2181,
+            0.4042
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0807,
+            0.1952,
+            0.1435,
+            0.3698
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1018,
+            0.6307,
+            0.1508,
+            0.7044
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1201,
+            0.4313,
+            0.173,
+            0.461
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.1773,
+            0.4236,
+            0.2201,
+            0.4506
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.4802,
+            0.4375,
+            0.5451,
+            0.4745
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.2548,
+            0.3818,
+            0.2711,
+            0.3985
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.2419,
+            0.3561,
+            0.2661,
+            0.3798
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3708,
+            0.3629,
+            0.4019,
+            0.4067
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.7594,
+            0.2981,
+            0.785,
+            0.3293
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_54.png",
+      "width": 1085,
+      "height": 807,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.4589,
+            0.8041,
+            0.5081,
+            0.8742
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5469,
+            0.0664,
+            0.6998,
+            0.5043
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0782,
+            0.085,
+            0.4874,
+            0.5833
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2483,
+            0.8665,
+            0.419,
+            0.9991
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.4435,
+            0.485,
+            0.4863,
+            0.5195
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.2872,
+            0.2494,
+            0.3645,
+            0.513
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_55.png",
+      "width": 1083,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.7243,
+            0.0726,
+            0.8197,
+            0.3587
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.501,
+            0.6824,
+            0.6454,
+            0.9036
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.434,
+            0.7104,
+            0.642,
+            0.9973
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8746,
+            0.1979,
+            0.9852,
+            0.2787
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1054,
+            0.0288,
+            0.1488,
+            0.3221
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_56.png",
+      "width": 1081,
+      "height": 809,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.2203,
+            0.6609,
+            0.2873,
+            0.9213
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.0331,
+            0.4318,
+            0.0935,
+            0.5049
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0363,
+            0.7609,
+            0.1317,
+            0.9253
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.144,
+            0.0,
+            0.1808,
+            0.1965
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3032,
+            0.1801,
+            0.3471,
+            0.2143
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_unknown",
+          "class_ours": "excavator_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.9477,
+            0.3523,
+            1.0,
+            0.4347
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0002,
+            0.34,
+            0.1018,
+            0.4414
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.439,
+            0.0,
+            0.4603,
+            0.2472
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_57.png",
+      "width": 1084,
+      "height": 810,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.2491,
+            0.6817,
+            0.435,
+            0.9103
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0501,
+            0.5286,
+            0.146,
+            0.6405
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3994,
+            0.552,
+            0.6472,
+            0.7381
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.0915,
+            0.3005,
+            0.1321,
+            0.3307
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "backhoe_loader",
+          "class_ours": "backhoe_loader",
+          "conf": 1.0,
+          "bbox": [
+            0.7809,
+            0.3195,
+            0.8122,
+            0.3445
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "excavator_crawler",
+          "class_ours": "excavator_crawler",
+          "conf": 1.0,
+          "bbox": [
+            0.3477,
+            0.4353,
+            0.4299,
+            0.5349
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_unknown",
+          "class_ours": "truck_unknown",
+          "conf": 1.0,
+          "bbox": [
+            0.3429,
+            0.3207,
+            0.4248,
+            0.3473
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_58.png",
+      "width": 1082,
+      "height": 808,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.5608,
+            0.0903,
+            0.6673,
+            0.5269
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.0289,
+            0.2282,
+            0.4134,
+            0.5236
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "truck_crane",
+          "class_ours": "truck_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.8747,
+            0.3342,
+            0.9456,
+            0.5017
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "pile_driver",
+          "class_ours": "pile_driver",
+          "conf": 1.0,
+          "bbox": [
+            0.2704,
+            0.1533,
+            0.7975,
+            0.7949
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.4746,
+            0.1147,
+            0.4858,
+            0.2288
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "telehandler",
+          "class_ours": "telehandler",
+          "conf": 1.0,
+          "bbox": [
+            0.868,
+            0.6835,
+            0.9113,
+            0.7403
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "dump_truck",
+          "class_ours": "dump_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.647,
+            0.6431,
+            0.7344,
+            0.7166
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    },
+    {
+      "image": "Screenshot_59.png",
+      "width": 1079,
+      "height": 805,
+      "speed_ms": {
+        "preprocess": 0.0,
+        "inference": 0.0,
+        "postprocess": 0.0
+      },
+      "detections": [
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.1341,
+            0.2342,
+            0.2357,
+            0.5771
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "tower_crane",
+          "class_ours": "tower_crane",
+          "conf": 1.0,
+          "bbox": [
+            0.3225,
+            0.0,
+            0.3786,
+            0.7956
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        },
+        {
+          "class_raw": "flatbed_truck",
+          "class_ours": "flatbed_truck",
+          "conf": 1.0,
+          "bbox": [
+            0.5201,
+            0.8215,
+            0.7972,
+            1.0
+          ],
+          "activity": "unknown",
+          "engagement": "unknown",
+          "engagement_why": "признаков недостаточно"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+n;class;engagement;why
+1;excavator_crawler;unknown;ковш не в грунте, партнёра нет
+2;crawler_crane;unknown;стрела поднята, опор и груза не видно
+3;drilling_rig;engaged;мачта поднята, обсадная труба в грунте
+4;backhoe_loader;unknown;ковш опущен, признаков работы нет
+5;truck_crane;unknown;стрела опущена, груза нет
+6;truck_crane;engaged;стрелы подняты к каркасу, идёт монтаж
+7;drilling_rig;engaged;мачта вертикально над точкой, рабочие рядом
+8;tower_crane;unknown;дальний план, крюк не разглядеть
+9;excavator_crawler;unknown;партнёр не вплотную
+10;excavator_crawler;engaged;ковш с грунтом на весу, миксер вплотную
+11;tower_crane;unknown;видна только мачта
+12;excavator_crawler;unknown;ковш не в грунте
+13;drilling_rig;not_engaged;мачта у края площадки, вокруг пусто
+14;excavator_crawler;unknown;соседняя техника не вплотную
+15;drilling_rig;engaged;мачта поднята над точкой бурения
+16;excavator_crawler;unknown;стоит на снегу у забора, партнёра нет
+17;drilling_rig;unknown;мачта поднята, но площадка пустая
+18;excavator_crawler;unknown;миксер рядом, но не под погрузкой
+19;excavator_wheeled;unknown;своих признаков работы нет
+20;truck_crane;unknown;стрела поднята, опоры не видны
+21;excavator_crawler;engaged;ковш в грунте на откосе
+22;drilling_rig;engaged;мачта поднята над точкой
+23;drilling_rig;engaged;мачты подняты, идёт бурение
+24;drilling_rig;unknown;мачта поднята, но рядом никого
+25;drilling_rig;unknown;мачту и точку бурения не разглядеть
+26;truck_crane;engaged;выносные опоры выдвинуты
+27;pile_driver;engaged;стрела над арматурным каркасом, рабочие рядом
+28;drilling_rig;engaged;обсадная труба в грунте, вид вблизи
+29;drilling_rig;unknown;дальний план, деталей не видно
+30;drilling_rig;engaged;мачта поднята над точкой
+31;drilling_rig;unknown;узкая рамка, видна только мачта
+32;tower_crane;unknown;крюк и груз не видны
+33;crawler_crane;unknown;стрела поднята, груза нет
+34;excavator_crawler;engaged;ковш в грунте на откосе
+35;crawler_crane;unknown;груза и опор не видно
+36;excavator_crawler;unknown;второй экскаватор — не партнёрская пара
+37;drilling_rig;engaged;мачта поднята над точкой
+38;tower_crane;unknown;крюк и строп не разглядеть
+39;pile_driver;engaged;мачта у здания в рабочем положении
+40;excavator_crawler;unknown;ковш опущен, у забора на снегу

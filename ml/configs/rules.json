@@ -36,7 +36,26 @@
         "telehandler"
       ]
     },
-    "evidence_rule": "Этап считается наблюдаемым, если присутствует вся normative-техника варианта И выполнено одно из двух: видна хотя бы одна specific-машина, либо (когда специфичных в варианте нет) присутствует весь набор целиком, включая logical."
+    "evidence_rule": "Этап считается наблюдаемым, если присутствует вся normative-техника варианта И выполнено одно из двух: видна хотя бы одна specific-машина, либо (когда специфичных в варианте нет) присутствует весь набор целиком, включая logical.",
+    "stage_merges": {
+      "12.3.4+12.3.9": [
+        "12.3.4",
+        "12.3.9"
+      ]
+    },
+    "stage_order": {
+      "field": "order",
+      "note": "технологический порядок: этап не возвращается назад. Используется как порядковое ограничение (D-015): пара «снос / котлован» зрением не разделяется, но снос не идёт после начала котлована на той же захватке"
+    },
+    "work_level": {
+      "field": "work_level",
+      "values": [
+        "below",
+        "above",
+        "any"
+      ],
+      "note": "уровень работ относительно отметки 0. Признак сцены из research/part_M_scene_stage.md: граница качества распознавания стадии проходит ровно по отметке 0 (Ашрапов и соавт.: precision 25-45 на подземных стадиях против 85 на каркасе). Различать три равноценных класса не нужно — достаточно бинарного «ниже нуля / выше нуля»"
+    }
   },
   "rules": [
     {
@@ -85,7 +104,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 0,
+      "work_level": "any"
     },
     {
       "stage_code": "12.3.1",
@@ -137,7 +158,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 1,
+      "work_level": "below"
     },
     {
       "stage_code": "12.3.2",
@@ -223,7 +246,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 2,
+      "work_level": "below"
     },
     {
       "stage_code": "12.3.5",
@@ -301,7 +326,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 3,
+      "work_level": "below"
     },
     {
       "stage_code": "12.3.6",
@@ -367,7 +394,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 4,
+      "work_level": "below"
     },
     {
       "stage_code": "12.3.7",
@@ -413,11 +442,18 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "medium"
+      "confidence": "medium",
+      "order": 5,
+      "work_level": "below"
     },
     {
-      "stage_code": "12.3.4",
-      "stage_name": "Устройство фундаментной плиты",
+      "stage_code": "12.3.4+12.3.9",
+      "stage_name": "Фундамент и подземная часть",
+      "merged_from": [
+        "12.3.4",
+        "12.3.9"
+      ],
+      "merge_reason": "D-011: плита и монолит ниже отметки 0 неразличимы по технике на кадре — комплект машин совпадает (автобетононасос либо башенный кран плюс автобетоносмеситель)",
       "variants": [
         {
           "name": "бетонирование автобетононасосом",
@@ -479,21 +515,7 @@
             "rebar_cage",
             "formwork"
           ]
-        }
-      ],
-      "unexpected": [
-        {
-          "class": "drilling_rig",
-          "note": "гипотеза: сваи должны быть завершены до плиты"
-        }
-      ],
-      "checkable_by_equipment": true,
-      "confidence": "high"
-    },
-    {
-      "stage_code": "12.3.9",
-      "stage_name": "Монолитные работы ниже отметки 0",
-      "variants": [
+        },
         {
           "name": "автобетононасос",
           "required": [
@@ -549,12 +571,19 @@
       ],
       "unexpected": [
         {
+          "class": "drilling_rig",
+          "note": "гипотеза: сваи должны быть завершены до плиты"
+        },
+        {
           "class": "paver",
           "note": "гипотеза"
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "version": 2,
+      "order": 6,
+      "work_level": "below"
     },
     {
       "stage_code": "12.4.28",
@@ -605,7 +634,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 9,
+      "work_level": "above"
     },
     {
       "stage_code": "12.4.14",
@@ -651,7 +682,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "high"
+      "confidence": "high",
+      "order": 11,
+      "work_level": "any"
     },
     {
       "stage_code": "12.5.1",
@@ -697,7 +730,9 @@
         }
       ],
       "checkable_by_equipment": true,
-      "confidence": "medium"
+      "confidence": "medium",
+      "order": 10,
+      "work_level": "any"
     },
     {
       "stage_code": "12.4.31",
@@ -706,7 +741,9 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике»."
+      "note": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике».",
+      "order": 12,
+      "work_level": "above"
     },
     {
       "stage_code": "12.4.11",
@@ -715,7 +752,9 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы."
+      "note": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы.",
+      "order": 13,
+      "work_level": "above"
     },
     {
       "stage_code": "12.3.10",
@@ -724,7 +763,9 @@
       "unexpected": [],
       "checkable_by_equipment": false,
       "confidence": "high",
-      "note": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен."
+      "note": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен.",
+      "order": 14,
+      "work_level": "below"
     }
   ]
 }

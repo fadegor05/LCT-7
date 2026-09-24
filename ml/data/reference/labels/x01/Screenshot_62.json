@@ -1,0 +1,70 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          88.5,
+          7.9
+        ],
+        [
+          397.05723905723903,
+          7.9
+        ],
+        [
+          397.05723905723903,
+          619.9932659932659
+        ],
+        [
+          88.5,
+          619.9932659932659
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "backhoe_loader",
+      "score": null,
+      "points": [
+        [
+          710.1885521885522,
+          360.06060606060606
+        ],
+        [
+          1098.7407407407406,
+          360.06060606060606
+        ],
+        [
+          1098.7407407407406,
+          632.1144781144781
+        ],
+        [
+          710.1885521885522,
+          632.1144781144781
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_62.png",
+  "imageData": null,
+  "imageHeight": 808,
+  "imageWidth": 1216,
+  "description": ""
+}

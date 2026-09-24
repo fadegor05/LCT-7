@@ -1,0 +1,186 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "concrete_mixer",
+      "score": null,
+      "points": [
+        [
+          734.8,
+          213.2
+        ],
+        [
+          910.6,
+          213.2
+        ],
+        [
+          910.6,
+          321.7
+        ],
+        [
+          734.8,
+          321.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          343.7,
+          538.6
+        ],
+        [
+          505.6,
+          538.6
+        ],
+        [
+          505.6,
+          775.6
+        ],
+        [
+          343.7,
+          775.6
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          474.0,
+          402.7
+        ],
+        [
+          631.0,
+          402.7
+        ],
+        [
+          631.0,
+          702.7
+        ],
+        [
+          474.0,
+          702.7
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "tower_crane",
+      "score": null,
+      "points": [
+        [
+          38.3,
+          1.4
+        ],
+        [
+          101.0,
+          1.4
+        ],
+        [
+          101.0,
+          328.3
+        ],
+        [
+          38.3,
+          328.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          1007.1,
+          169.1
+        ],
+        [
+          1184.0,
+          169.1
+        ],
+        [
+          1184.0,
+          263.6
+        ],
+        [
+          1007.1,
+          263.6
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          488.53030303030295,
+          231.51515151515147
+        ],
+        [
+          735.8030303030303,
+          231.51515151515147
+        ],
+        [
+          735.8030303030303,
+          472.7272727272727
+        ],
+        [
+          488.53030303030295,
+          472.7272727272727
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_97.png",
+  "imageData": null,
+  "imageHeight": 810,
+  "imageWidth": 1221,
+  "description": ""
+}

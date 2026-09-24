@@ -1,0 +1,70 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          155.4,
+          197.0
+        ],
+        [
+          803.0757575757575,
+          197.0
+        ],
+        [
+          803.0757575757575,
+          547.8787878787878
+        ],
+        [
+          155.4,
+          547.8787878787878
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          697.0151515151515,
+          426.0606060606059
+        ],
+        [
+          983.0757575757575,
+          426.0606060606059
+        ],
+        [
+          983.0757575757575,
+          727.2727272727273
+        ],
+        [
+          697.0151515151515,
+          727.2727272727273
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_98.png",
+  "imageData": null,
+  "imageHeight": 810,
+  "imageWidth": 1221,
+  "description": ""
+}

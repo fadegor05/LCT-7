@@ -51,9 +51,30 @@ def load_schedule(path: Path) -> dict[str, list[dict]]:
 
 
 def load_rules(path: Path) -> tuple[dict[str, dict], set[str]]:
+    """Правила по коду этапа; укрупнённое правило доступно по каждому исходному коду.
+
+    D-011 сводит неразличимые по технике работы в один наблюдаемый этап (например,
+    фундаментную плиту и монолит ниже нуля). В графике заказчика коды остаются
+    исходными, поэтому объединённое правило регистрируется под всеми ними.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
     specific = set(data["meta"].get("class_specificity", {}).get("specific", []))
-    return {r["stage_code"]: r for r in data["rules"]}, specific
+    rules = {}
+    for r in data["rules"]:
+        rules[r["stage_code"]] = r
+        for code in r.get("merged_from", []):
+            rules[code] = r
+    return rules, specific
+
+
+NO_PROGRESS_SIM = 0.8     # похожесть составов техники, выше которой считаем «то же самое»
+NO_PROGRESS_DAYS = 14     # минимальный разрыв между наблюдениями, иначе сравнивать нечего
+
+
+def load_unusable(path: Path) -> dict[str, dict]:
+    """Кадры, не дошедшие до цепочки: нет даты или нет привязки к площадке."""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("meta", {}).get("unusable_frames", {})
 
 
 def load_states(path: Path) -> dict[str, list[dict]]:
@@ -163,6 +184,31 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
             status, delay = "on_track", 0
             basis = "наблюдения попадают в плановое окно"
 
+        # Отставание — главный вывод системы по ТЗ («отставание либо соответствие
+        # графику», Q&A 18:33), поэтому оно должно попадать в список отклонений,
+        # а не оставаться строкой в таблице статусов.
+        if status == "behind":
+            alerts.append({
+                "type": "stage_behind",
+                "stage_code": code,
+                "window": {"from": first.isoformat(), "to": last.isoformat()},
+                "expected": f"завершение к {stage['end'].isoformat()}",
+                "observed": f"работы этапа наблюдаются {last.isoformat()}",
+                "confidence": "medium" if best["specific_present"] else "low",
+                "observability": "medium",
+                "evidence": sorted({img for st, _ in observed for img in st["images"]})[:4],
+                "rules_fired": [f"{code}/{best['variant']}"],
+                "explanation": (f"Этап «{name}» отстаёт на {delay} дн.: плановое окончание "
+                                f"{stage['end'].isoformat()}, а работы наблюдаются "
+                                f"{last.isoformat()}" +
+                                (f" (подтверждение: {', '.join(best['specific_present'])})."
+                                 if best["specific_present"]
+                                 else " по полному набору универсальной техники.")),
+                "cannot_claim": ("Отставание измерено по снимкам: работы этапа видны после "
+                                 "плановой даты. Объём невыполненных работ и новый срок "
+                                 "завершения по фотографиям не определяются."),
+            })
+
         # Логическая техника отсутствует — повод для алерта, но не для вывода
         # об этапе: в нормах её нет, и по снимку её отсутствие не доказуемо.
         if best["missing_logical"]:
@@ -227,9 +273,86 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
             "basis": "наблюдений в плановом окне нет"}, []
 
 
+MIN_SAMPLES = 10          # меньше — доля простоя статистически бессмысленна
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Интервал Уилсона: в отличие от нормального приближения не схлопывается
+    в точку при доле 0 или 1 и корректен на малых выборках."""
+    if not n:
+        return 0.0, 1.0
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    hw = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return max(0.0, c - hw), min(1.0, c + hw)
+
+
+def work_sampling(states: list[dict]) -> list[dict]:
+    """Доля наблюдений без признаков вовлечённости, по классам техники.
+
+    Метод work sampling (в строительном производственном анализе с 1930-х): одно
+    наблюдение — один мгновенный замер, ответ бинарный, оценка — доля с
+    доверительным интервалом. Вердикта «машина простаивает» по одному кадру не
+    даём: он не наблюдаем (research/part_N_activity.md).
+
+    Интервал — нормальное приближение, z = 1.96. При малом N он широкий, и это
+    честно: на десятке наблюдений доля простоя не измеряется.
+    """
+    agg: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for st in states:
+        for cls, counts in (st.get("engagement") or {}).items():
+            for k, v in counts.items():
+                agg[cls][k] += v
+    out = []
+    for cls, c in sorted(agg.items()):
+        engaged, not_engaged = c.get("engaged", 0), c.get("not_engaged", 0)
+        decided = engaged + not_engaged
+        total = decided + c.get("unknown", 0)
+        if not total:
+            continue
+        row = {"class": cls, "observations": total, "decided": decided,
+               "engaged": engaged, "not_engaged": not_engaged,
+               "unknown": c.get("unknown", 0)}
+        # Порог: на единичных наблюдениях доля не оценивается. Без него отчёт
+        # напечатал бы «0% ±0 п.п.» по одному кадру — ложная точность.
+        if decided >= MIN_SAMPLES:
+            p = not_engaged / decided
+            lo, hi = wilson(not_engaged, decided)
+            row["not_engaged_share"] = round(p, 3)
+            row["ci95"] = [round(lo, 3), round(hi, 3)]
+            row["basis"] = (f"{decided} наблюдений с определённым ответом из {total}; "
+                            f"доля без признаков вовлечённости {p:.0%} "
+                            f"(интервал {lo:.0%}–{hi:.0%})")
+        else:
+            row["basis"] = (f"определённый ответ дан по {decided} наблюдениям из {total} — "
+                            f"меньше порога {MIN_SAMPLES}, доля не оценивается")
+        out.append(row)
+    return out
+
+
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
-                states: list[dict], specific: set[str]) -> dict:
+                states: list[dict], specific: set[str],
+                unusable: dict[str, int] | None = None) -> dict:
     stages, alerts = [], []
+
+    # Дыра в данных — не то же самое, что отсутствие работ. Заказчик просил
+    # предупреждать, что часть площадки или периода вне контроля (Q&A 13:01).
+    sampling = work_sampling(states)
+
+    if unusable:
+        total = sum(unusable.values())
+        reasons = ", ".join(f"{k}: {v}" for k, v in sorted(unusable.items()))
+        alerts.append({
+            "type": "unusable_data",
+            "site_id": site_id,
+            "confidence": "high",
+            "observability": "low",
+            "explanation": f"{total} кадр(ов) площадки не участвуют в анализе ({reasons}). "
+                           f"Выводы по этой площадке построены только на кадрах с датой.",
+            "cannot_claim": "Отсутствие наблюдений на этих кадрах не означает отсутствия работ: "
+                            "кадры исключены из-за неполных данных, а не из-за пустой площадки.",
+        })
     for stage in sorted(plan, key=lambda s: s["start"]):
         status, stage_alerts = stage_status(stage, rules.get(stage["stage_code"]), states, specific)
         stages.append(status)
@@ -262,28 +385,74 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 })
 
     # Отсутствие изменений между соседними наблюдениями.
+    #
+    # Раньше условием было полное совпадение состава техники — на реальных сериях
+    # такого не бывает, и алерт не срабатывал ни разу. Считаем похожесть составов
+    # (Жаккар по классам): при 0.8 и выше состав «практически тот же».
     for prev, cur in zip(states, states[1:]):
-        if prev["equipment"] == cur["equipment"] and prev["equipment"]:
+        a, b = set(prev["equipment"]), set(cur["equipment"])
+        if not a or not b:
+            continue
+        sim = len(a & b) / len(a | b)
+        days = (cur["_date"] - prev["_date"]).days
+        if sim >= NO_PROGRESS_SIM and days >= NO_PROGRESS_DAYS:
             alerts.append({
                 "type": "no_progress",
                 "site_id": site_id,
                 "stage_code": "",
                 "window": {"from": prev["date"], "to": cur["date"]},
-                "expected": "изменение состава техники",
+                "expected": "смена состава техники за период",
                 "observed": ", ".join(f"{k} x{v}" for k, v in cur["equipment"].items()),
                 "confidence": "low",
+                "observability": "medium",
                 "evidence": cur["images"][:4],
                 "rules_fired": [],
-                "explanation": (f"Состав техники не изменился с {prev['date']} по {cur['date']}."),
-                "cannot_claim": ("Одинаковый состав техники не означает отсутствия работ: "
-                                 "между съёмками могли смениться объёмы, а не машины."),
+                "explanation": (f"За {days} дней (с {prev['date']} по {cur['date']}) состав техники "
+                                f"совпадает на {sim:.0%}: те же классы, что и в прошлое наблюдение."),
+                "cannot_claim": ("Одинаковый состав техники не означает отсутствия работ: между "
+                                 "съёмками могли смениться объёмы, а не машины."),
             })
+
+    # Застой этапа: работы одного этапа наблюдаются после планового окончания
+    # на протяжении нескольких наблюдений подряд. Это и есть «прогноз задержки»
+    # в наблюдаемой форме (Q&A 12:52): не модель, а измеренный сдвиг.
+    for stage in plan:
+        rule = rules.get(stage["stage_code"])
+        if not rule or not rule.get("checkable_by_equipment", True):
+            continue
+        seen = [st for st in states
+                if match_stage(st["equipment"], rule, specific)["observed"]]
+        if len(seen) < 3:
+            continue
+        last, first = seen[-1], seen[0]
+        overdue = (last["_date"] - stage["end"]).days
+        if overdue <= 0:
+            continue
+        span = (last["_date"] - first["_date"]).days
+        alerts.append({
+            "type": "stage_stalled",
+            "site_id": site_id,
+            "stage_code": stage["stage_code"],
+            "window": {"from": first["date"], "to": last["date"]},
+            "expected": f"завершение к {stage['end'].isoformat()}",
+            "observed": f"работы этапа наблюдаются на {len(seen)} датах за {span} дн.",
+            "confidence": "medium",
+            "observability": "medium",
+            "evidence": last["images"][:4],
+            "rules_fired": [f"{stage['stage_code']}/stalled"],
+            "explanation": (f"Этап «{stage['stage_name']}» наблюдается на {len(seen)} наблюдениях "
+                            f"подряд и продолжается через {overdue} дн. после планового окончания "
+                            f"{stage['end'].isoformat()}. Признаков перехода к следующему этапу нет."),
+            "cannot_claim": ("Срок завершения по этим данным не предсказывается: объём выполненных "
+                             "работ по снимкам не измеряется, видно только продолжение этапа."),
+        })
 
     return {
         "site_id": site_id,
         "as_of": states[-1]["date"] if states else None,
         "observations": len(states),
         "stages": stages,
+        "equipment_engagement": sampling,
         "alerts": alerts,
     }
 
@@ -300,7 +469,9 @@ def main() -> int:
     rules, specific = load_rules(args.rules)
     states_by_site = load_states(args.state)
 
-    reports = [site_report(site, plan, rules, states_by_site.get(site, []), specific)
+    unusable = load_unusable(args.state)
+    reports = [site_report(site, plan, rules, states_by_site.get(site, []), specific,
+                           unusable.get(site))
                for site, plan in sorted(plans.items())]
     if not reports:
         print("в графике нет ни одной площадки", file=sys.stderr)

@@ -1,0 +1,99 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          341.5,
+          390.1565995525726
+        ],
+        [
+          454.09172259507824,
+          390.1565995525726
+        ],
+        [
+          454.09172259507824,
+          488.4
+        ],
+        [
+          341.5,
+          488.4
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          471.9888143176733,
+          360.6263982102908
+        ],
+        [
+          757.9,
+          360.6263982102908
+        ],
+        [
+          757.9,
+          528.5
+        ],
+        [
+          471.9888143176733,
+          528.5
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          436.64205816554806,
+          185.23489932885906
+        ],
+        [
+          590.1096196868008,
+          185.23489932885906
+        ],
+        [
+          590.1096196868008,
+          479.19463087248323
+        ],
+        [
+          436.64205816554806,
+          479.19463087248323
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=working",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_71.png",
+  "imageData": null,
+  "imageHeight": 807,
+  "imageWidth": 1214,
+  "description": ""
+}

@@ -1,0 +1,41 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "roller",
+      "score": null,
+      "points": [
+        [
+          626.5303030303029,
+          312.4393939393939
+        ],
+        [
+          824.1060606060605,
+          312.4393939393939
+        ],
+        [
+          824.1060606060605,
+          471.2272727272727
+        ],
+        [
+          626.5303030303029,
+          471.2272727272727
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_60.png",
+  "imageData": null,
+  "imageHeight": 807,
+  "imageWidth": 1217,
+  "description": ""
+}

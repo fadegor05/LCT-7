@@ -1,0 +1,331 @@
+{
+  "version": "4.0.6",
+  "flags": {},
+  "checked": false,
+  "shapes": [
+    {
+      "label": "pile_driver",
+      "score": null,
+      "points": [
+        [
+          159.7,
+          528.4
+        ],
+        [
+          243.6,
+          528.4
+        ],
+        [
+          243.6,
+          680.3
+        ],
+        [
+          159.7,
+          680.3
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "crawler_crane",
+      "score": null,
+      "points": [
+        [
+          588.3,
+          276.7
+        ],
+        [
+          678.2,
+          276.7
+        ],
+        [
+          678.2,
+          432.9
+        ],
+        [
+          588.3,
+          432.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          293.5,
+          658.4
+        ],
+        [
+          315.1,
+          658.4
+        ],
+        [
+          315.1,
+          700.0
+        ],
+        [
+          293.5,
+          700.0
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          852.1,
+          539.5
+        ],
+        [
+          899.7,
+          539.5
+        ],
+        [
+          899.7,
+          566.9
+        ],
+        [
+          852.1,
+          566.9
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          337.6371308016877,
+          355.97679324894517
+        ],
+        [
+          385.23206751054846,
+          355.97679324894517
+        ],
+        [
+          385.23206751054846,
+          451.1666666666667
+        ],
+        [
+          337.6371308016877,
+          451.1666666666667
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_crane",
+      "score": null,
+      "points": [
+        [
+          688.9,
+          586.9731800766282
+        ],
+        [
+          744.0613026819922,
+          586.9731800766282
+        ],
+        [
+          744.0613026819922,
+          615.2
+        ],
+        [
+          688.9,
+          615.2
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "excavator_crawler",
+      "score": null,
+      "points": [
+        [
+          416.2869198312236,
+          432.26371308016877
+        ],
+        [
+          454.9367088607595,
+          432.26371308016877
+        ],
+        [
+          454.9367088607595,
+          456.22995780590713
+        ],
+        [
+          416.2869198312236,
+          456.22995780590713
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "drilling_rig",
+      "score": null,
+      "points": [
+        [
+          386.75105485232064,
+          420.28059071729956
+        ],
+        [
+          417.9746835443038,
+          420.28059071729956
+        ],
+        [
+          417.9746835443038,
+          453.52953586497887
+        ],
+        [
+          386.75105485232064,
+          453.52953586497887
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          749.7890295358649,
+          395.30168776371306
+        ],
+        [
+          772.9113924050632,
+          395.30168776371306
+        ],
+        [
+          772.9113924050632,
+          418.2552742616034
+        ],
+        [
+          749.7890295358649,
+          418.2552742616034
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "truck_unknown",
+      "score": null,
+      "points": [
+        [
+          843.8314176245209,
+          474.86590038314165
+        ],
+        [
+          870.0383141762451,
+          474.86590038314165
+        ],
+        [
+          870.0383141762451,
+          505.21072796934857
+        ],
+        [
+          843.8314176245209,
+          505.21072796934857
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "dump_truck",
+      "score": null,
+      "points": [
+        [
+          687.5311720698255,
+          563.5078969243558
+        ],
+        [
+          711.6375727348296,
+          563.5078969243558
+        ],
+        [
+          711.6375727348296,
+          594.0980881130506
+        ],
+        [
+          687.5311720698255,
+          594.0980881130506
+        ]
+      ],
+      "group_id": null,
+      "description": "activity=unknown",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "Screenshot_4.png",
+  "imageData": null,
+  "imageHeight": 809,
+  "imageWidth": 1218,
+  "description": ""
+}
