@@ -12,6 +12,8 @@ dependencies = [
     "pydantic-settings>=2.5",
     "pydantic[email]>=2.9",
     "alembic>=1.14",
+    "openpyxl>=3.1.5",
+    "python-multipart>=0.0.32",
 ]
 
 [dependency-groups]
@@ -22,6 +24,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "httpx>=0.28.1",
     "aiosqlite>=0.22.1",
+    "types-openpyxl>=3.1.5.20260827",
 ]
 
 # Это приложение, а не библиотека — uv ставит только зависимости в окружение,
