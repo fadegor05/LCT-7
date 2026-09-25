@@ -25,15 +25,17 @@ async def health() -> HealthResponse:
 )
 @inject
 async def ready(service: FromDishka[HealthService]) -> ReadyResponse | JSONResponse:
+    detector_status = await service.get_detector_status()
     if await service.check_ready():
-        return ReadyResponse(database=True)
+        return ReadyResponse(database=True, detector=detector_status)
     return JSONResponse(
         status_code=503,
-        content=ReadyResponse(database=False).model_dump(),
+        content=ReadyResponse(database=False, detector=detector_status).model_dump(),
     )
 
 
 @router.get("/version")
 @inject
 async def version(service: FromDishka[HealthService]) -> VersionResponse:
-    return VersionResponse(version=service.get_version())
+    model = await service.get_model_version()
+    return VersionResponse(version=service.get_version(), model=model)

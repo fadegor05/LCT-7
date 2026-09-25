@@ -10,7 +10,11 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.ml.base import DetectorClient, DetectorError
+from app.adapters.ml.base import (
+    DetectionResult,
+    DetectorClient,
+    DetectorError,
+)
 from app.adapters.storage.base import FileStorage, StorageError
 from app.core.settings import Settings
 from app.domains.methodology.catalog import EquipmentCatalog
@@ -268,6 +272,76 @@ class PhotoService:
         photo_read = PhotoRead.model_validate(photo)
         return UploadItem(filename=file_input.filename, photo=photo_read, error=None)
 
+    async def _apply_result(
+        self, photo: Photo, result: DetectionResult, *, keep_same_version: bool
+    ) -> bool:
+        """Применить результат детекции к фотографии.
+
+        Создаёт Detection rows из результата, с семантикой keep vs replace для версий.
+        Если keep_same_version=True и result.model_version совпадает с существующей версией,
+        не заменяет детекции. Если keep_same_version=False, всегда заменяет (удаляет старые).
+
+        Логирует warning если result.width/height отличаются от photo.width/height.
+
+        Args:
+            photo: Photo объект для обновления
+            result: DetectionResult с детекциями
+            keep_same_version: True — сохранить если версия совпадает; False — всегда заменить
+
+        Returns:
+            True если были обработаны новые детекции, False если сохранены старые
+        """
+        # Предупреждение о несовпадении размеров
+        if (
+            result.width is not None
+            and result.height is not None
+            and (result.width != photo.width or result.height != photo.height)
+        ):
+            logger.warning(
+                "Размер изображения %s отличается: photo (%sx%s) vs result (%sx%s)",
+                photo.original_name,
+                photo.width,
+                photo.height,
+                result.width,
+                result.height,
+            )
+
+        # Если keep_same_version=True, проверяем наличие версии
+        if keep_same_version:
+            existing_versions = await self._detections.model_versions(photo.id)
+            if result.model_version in existing_versions:
+                # Сохраняем существующие детекции
+                photo.processing_status = ProcessingStatus.DONE.value
+                return False
+            # Разные версии - заменяем детекции
+            await self._detections.delete_by_photo(photo.id)
+        # Если keep_same_version=False (upload path), детекции ещё не созданы, нечего удалять
+
+        # Обрабатываем новые детекции
+        detection_objects = []
+        for raw_det in result.detections:
+            equipment_type = await self._catalog.by_code(raw_det.class_ours)
+            if equipment_type is None:
+                logger.warning(f"Неизвестный класс оборудования: {raw_det.class_ours}")
+                continue
+
+            detection = Detection(
+                photo_id=photo.id,
+                equipment_type_id=equipment_type.id,
+                bbox=[raw_det.bbox[0], raw_det.bbox[1], raw_det.bbox[2], raw_det.bbox[3]],
+                score=raw_det.conf,
+                model_version=result.model_version,
+            )
+            detection_objects.append(detection)
+
+        # Создаём rows
+        if detection_objects:
+            await self._detections.add_many(detection_objects)
+
+        # Статус done даже если 0 детекций
+        photo.processing_status = ProcessingStatus.DONE.value
+        return True
+
     async def _run_detection(
         self, photo: Photo, content: bytes, filename: str, content_type: str | None
     ) -> None:
@@ -289,7 +363,7 @@ class PhotoService:
         try:
             result = await self._detector.detect(content, filename, content_type)
         except DetectorError as e:
-            logger.warning(f"Детектор вернул ошибку для {filename}: {e}")
+            logger.warning(f"Детектор вернул ошибку для {filename}: {e} (transient={e.transient})")
             photo.processing_status = ProcessingStatus.FAILED.value
             return
         except Exception as e:
@@ -301,32 +375,7 @@ class PhotoService:
             # Детектор отключен - оставляем в pending
             return
 
-        # Обрабатываем детекции
-        detection_objects = []
-        for raw_det in result.detections:
-            # Ищем equipment_type по коду
-            equipment_type = await self._catalog.by_code(raw_det.class_ours)
-            if equipment_type is None:
-                logger.warning(
-                    f"Неизвестный класс оборудования для {filename}: {raw_det.class_ours}"
-                )
-                continue
-
-            detection = Detection(
-                photo_id=photo.id,
-                equipment_type_id=equipment_type.id,
-                bbox=[raw_det.bbox[0], raw_det.bbox[1], raw_det.bbox[2], raw_det.bbox[3]],
-                score=raw_det.conf,
-                model_version=result.model_version,
-            )
-            detection_objects.append(detection)
-
-        # Создаём rows
-        if detection_objects:
-            await self._detections.add_many(detection_objects)
-
-        # Статус done даже если 0 детекций
-        photo.processing_status = ProcessingStatus.DONE.value
+        await self._apply_result(photo, result, keep_same_version=False)
 
     async def _apply_neighbours_dating(
         self, site_id: uuid.UUID, batch_photo_ids: list[uuid.UUID]
@@ -554,6 +603,115 @@ class PhotoService:
         content_type = self._get_content_type_from_key(photo.storage_key)
         return content, content_type
 
+    async def detect_backlog(
+        self, site_id: uuid.UUID, statuses: set[ProcessingStatus]
+    ) -> "DetectBacklogReport":  # noqa: F821
+        """Запустить детекцию для всех необработанных фотографий.
+
+        Если детектор не настроен (не configured) → AppError 409 «Детектор не настроен».
+        Итерирует фотографии со статусами из `statuses`, загружает из storage, запускает detect.
+        - StorageError → photo failed
+        - DetectorError → photo failed; после первой transient ошибки прекращает вызовы детектора
+          и считает оставшиеся as skipped
+        - Success → apply result с replace semantics и mark done
+        - Каждую фотографию коммитит отдельно
+
+        После цикла пересчитывает observations один раз per distinct captured_on (sorted),
+        same error handling as upload_batch.
+
+        processed = done + failed.
+
+        Args:
+            site_id: ID стройки
+            statuses: Набор статусов для обработки (напр. {pending, failed})
+
+        Returns:
+            DetectBacklogReport {processed, done, failed, skipped}
+
+        Raises:
+            AppError(404) если сайт не принадлежит пользователю
+            AppError(409) если детектор не настроен
+        """
+        await self._guard.require(site_id)
+
+        # Проверяем, что детектор настроен
+        if not self._detector.configured:
+            raise AppError("Детектор не настроен", status_code=409)
+
+        # Получаем список фотографий для обработки
+        status_values = {s.value for s in statuses}
+        photos = await self._repository.list_by_status(site_id, status_values)
+
+        done = 0
+        failed = 0
+        skipped = 0
+        detector_down = False
+
+        # Обрабатываем каждую фотографию
+        for photo in photos:
+            if detector_down:
+                # После первой transient ошибки пропускаем остальные
+                skipped += 1
+                continue
+
+            # Получаем байты из storage
+            try:
+                content = await self._storage.get(photo.storage_key)
+            except StorageError:
+                logger.exception(f"Не удалось загрузить {photo.original_name} из хранилища")
+                photo.processing_status = ProcessingStatus.FAILED.value
+                failed += 1
+                await self._session.commit()
+                continue
+
+            # Запускаем детекцию
+            try:
+                result = await self._detector.detect(content, photo.original_name, None)
+            except DetectorError as e:
+                logger.warning(
+                    f"Детектор вернул ошибку для {photo.original_name}: {e} "
+                    f"(transient={e.transient})"
+                )
+                photo.processing_status = ProcessingStatus.FAILED.value
+                failed += 1
+                if e.transient:
+                    detector_down = True
+                    skipped += len(photos) - (done + failed + skipped + 1)
+                await self._session.commit()
+                continue
+            except Exception as e:
+                logger.exception(f"Неожиданная ошибка детектора для {photo.original_name}: {e}")
+                photo.processing_status = ProcessingStatus.FAILED.value
+                failed += 1
+                await self._session.commit()
+                continue
+
+            # Если детектор отключен, оставляем в текущем статусе
+            if result is None:
+                await self._session.commit()
+                continue
+
+            # Применяем результат с keep-if-same-version семантикой
+            await self._apply_result(photo, result, keep_same_version=True)
+            done += 1
+            await self._session.commit()
+
+        # Пересчитываем observations для всех затронутых дат
+        dates_to_recompute = {
+            photo.captured_on for photo in photos if photo.captured_on is not None
+        }
+        for date_value in sorted(dates_to_recompute):
+            try:
+                await self._recalculator.recompute(site_id, date_value)
+            except Exception:
+                logger.exception("Ошибка при пересчёте наблюдений после detect_backlog")
+                await self._session.rollback()
+
+        processed = done + failed
+        from app.domains.photo.schemas import DetectBacklogReport
+
+        return DetectBacklogReport(processed=processed, done=done, failed=failed, skipped=skipped)
+
     async def redetect(self, site_id: uuid.UUID, photo_id: uuid.UUID) -> PhotoDetail:
         """Переобнаружить оборудование на фотографии.
 
@@ -599,40 +757,9 @@ class PhotoService:
         if result is None:
             raise AppError("Детектор не настроен", status_code=409)
 
-        # Проверяем model_version
-        existing_versions = await self._detections.model_versions(photo_id)
-        if result.model_version in existing_versions:
-            # Сохраняем существующие детекции
-            photo.processing_status = ProcessingStatus.DONE.value
-            await self._session.commit()
-        else:
-            # Заменяем все детекции новыми
-            await self._detections.delete_by_photo(photo_id)
-
-            # Обрабатываем новые детекции
-            detection_objects = []
-            for raw_det in result.detections:
-                equipment_type = await self._catalog.by_code(raw_det.class_ours)
-                if equipment_type is None:
-                    logger.warning(
-                        f"Неизвестный класс оборудования при переобнаружении: {raw_det.class_ours}"
-                    )
-                    continue
-
-                detection = Detection(
-                    photo_id=photo_id,
-                    equipment_type_id=equipment_type.id,
-                    bbox=[raw_det.bbox[0], raw_det.bbox[1], raw_det.bbox[2], raw_det.bbox[3]],
-                    score=raw_det.conf,
-                    model_version=result.model_version,
-                )
-                detection_objects.append(detection)
-
-            if detection_objects:
-                await self._detections.add_many(detection_objects)
-
-            photo.processing_status = ProcessingStatus.DONE.value
-            await self._session.commit()
+        # Применяем результат с семантикой keep-if-version-exists
+        await self._apply_result(photo, result, keep_same_version=True)
+        await self._session.commit()
 
         # Trigger observation recalculation after detections are updated
         if photo.captured_on is not None:

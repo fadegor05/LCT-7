@@ -83,3 +83,45 @@ class FakeDetector:
     def configured(self) -> bool:
         """FakeDetector по умолчанию настроен."""
         return True
+
+
+class ScriptedDetector:
+    """Scripted detector that returns results/exceptions in sequence."""
+
+    def __init__(self, sequence: list):
+        """Initialize with a sequence of results or exceptions.
+
+        Args:
+            sequence: List of DetectionResult, Exception, or None values to return in order
+        """
+        self.sequence = sequence
+        self.index = 0
+        self.calls: list[tuple[str, int]] = []
+
+    async def detect(
+        self, image: bytes, filename: str, content_type: str | None = None
+    ) -> DetectionResult | None:
+        """Return next item in sequence."""
+        if self.index >= len(self.sequence):
+            raise RuntimeError(f"ScriptedDetector: ran out of sequence items (index {self.index})")
+
+        self.calls.append((filename, len(image)))
+        item = self.sequence[self.index]
+        self.index += 1
+
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    async def info(self) -> DetectorInfo | None:
+        """Return None (not used in backlog tests)."""
+        return None
+
+    async def ready(self) -> bool:
+        """Return False."""
+        return False
+
+    @property
+    def configured(self) -> bool:
+        """ScriptedDetector is configured."""
+        return True

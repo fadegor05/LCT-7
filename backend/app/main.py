@@ -4,18 +4,23 @@
     granian --interface asgi app.main:app --host 0.0.0.0 --port 8000
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from dishka import AsyncContainer
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
+from app.adapters.ml.base import DetectorClient
 from app.core.settings import get_settings
+from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
 from app.plugins.di import create_container
 from app.plugins.exceptions import register_exception_handlers
 from app.plugins.routing import api_router
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -27,6 +32,15 @@ async def lifespan(app: FastAPI):
     async with app.state.dishka_container() as request_container:
         service = await request_container.get(UserService)
         await service.ensure_stand_user()
+
+    # Проверяем соответствие классов детектора каталогу оборудования
+    try:
+        detector = await app.state.dishka_container.get(DetectorClient)
+        catalog = await app.state.dishka_container.get(EquipmentCatalog)
+        await check_detector_classes(detector, catalog)
+    except Exception as e:
+        logger.warning(f"Ошибка при проверке классов детектора при запуске: {e}")
+
     yield
     await app.state.dishka_container.close()
 

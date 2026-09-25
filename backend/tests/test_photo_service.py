@@ -1,6 +1,7 @@
 """PhotoService тесты: upload_batch, list_photos, get_photo, set_date, get_image, redetect."""
 
 import io
+import logging
 import uuid
 from datetime import UTC, date, timedelta
 from typing import cast
@@ -1900,3 +1901,53 @@ class TestPhotoServiceStorageErrors:
 
         # Старое наблюдение должно быть удалено (так как фото больше не на эту дату)
         assert old_observation_after is None
+
+
+class TestPhotoServiceWidthHeightWarning:
+    """Тесты для warning о несовпадении размеров."""
+
+    @pytest.mark.asyncio
+    async def test_width_height_mismatch_warning(self, container, detector, caplog) -> None:
+        """Width/height несовпадение → warning в лог."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            equipment = EquipmentType(id=uuid.uuid4(), code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+            owner_id = owner.id
+
+        files = [
+            UploadInput(
+                filename="photo.jpg",
+                content=create_jpeg_image(width=100, height=100),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                width=200,
+                height=200,
+                detections=[RawDetection(class_ours="crane", conf=0.95, bbox=(0.1, 0.1, 0.9, 0.9))],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            with caplog.at_level(logging.WARNING):
+                report = await service.upload_batch(site_id, files)
+
+            assert any(
+                "отличается" in record.message and "photo.jpg" in record.message
+                for record in caplog.records
+            ), "Warning about width/height mismatch not found"
+            assert report.uploaded == 1

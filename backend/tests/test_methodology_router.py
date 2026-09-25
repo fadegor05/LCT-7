@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from app.adapters.ml.base import DetectorClient
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.methodology.recalculator import StatusRecalculator
@@ -24,6 +25,7 @@ from app.domains.user.service import UserService
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
+from tests.fakes import FakeDetector
 
 
 async def seed_stand_user(container: AsyncContainer) -> None:
@@ -784,6 +786,13 @@ async def test_status_recalculator_called_on_mutation() -> None:
         def provide_recalculator(self) -> StatusRecalculator:
             return recording_recalculator
 
+    class DetectorProvider(Provider):
+        scope = Scope.APP
+
+        @provide(provides=DetectorClient)
+        def detector(self):
+            return FakeDetector()
+
     # Создаём контейнер с переопределённым рекалькулятором
     test_container = make_async_container(
         TestAppProvider(),
@@ -793,6 +802,7 @@ async def test_status_recalculator_called_on_mutation() -> None:
         ScheduleProvider(),
         MethodologyProvider(),
         RecalculatorProvider(),  # Переопределяет MethodologyProvider's recalculator
+        DetectorProvider(),
         UtilityProvider(),
     )
 
