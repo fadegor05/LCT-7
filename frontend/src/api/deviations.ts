@@ -1,69 +1,65 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+/** Выводы по стройке (домен assessment): статусы этапов, отклонения, итог. Только чтение. */
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { request } from './client'
 import { keys } from './keys'
 import {
-  decisionRecordSchema,
-  deviationListItemSchema,
+  deviationDetailSchema,
   deviationSchema,
+  siteSummarySchema,
   stageStatusSchema,
-  type DecisionInput,
+  type Site,
 } from './schemas'
 
+const base = (siteId: string) => `/sites/${siteId}/assessment`
+
 export const deviationsApi = {
-  all: () => request('/deviations', { schema: z.array(deviationListItemSchema) }),
-  bySite: (siteId: string) =>
-    request(`/sites/${siteId}/deviations`, { schema: z.array(deviationListItemSchema) }),
-  get: (id: string) => request(`/deviations/${id}`, { schema: deviationSchema }),
+  /** Статусы этапов по position; 404 — график не загружен. */
   stageStatuses: (siteId: string) =>
-    request(`/sites/${siteId}/stage-statuses`, { schema: z.array(stageStatusSchema) }),
-  decide: (id: string, data: DecisionInput) =>
-    request(`/deviations/${id}/decision`, {
-      method: 'POST',
-      body: data,
-      schema: decisionRecordSchema,
-    }),
-  /** «Изменить решение»: текущее решение закрывается, история на сервере сохраняется. */
-  undoDecision: (id: string) => request(`/deviations/${id}/decision`, { method: 'DELETE' }),
+    request(`${base(siteId)}/stages`, { schema: z.array(stageStatusSchema) }),
+  list: (siteId: string) =>
+    request(`${base(siteId)}/deviations`, { schema: z.array(deviationSchema) }),
+  get: (siteId: string, id: string) =>
+    request(`${base(siteId)}/deviations/${id}`, { schema: deviationDetailSchema }),
+  summary: (siteId: string) => request(`${base(siteId)}/summary`, { schema: siteSummarySchema }),
 }
 
-export function useAllDeviations() {
-  return useQuery({ queryKey: keys.allDeviations, queryFn: deviationsApi.all })
-}
-
-export function useSiteDeviations(siteId: string) {
-  return useQuery({
-    queryKey: keys.siteDeviations(siteId),
-    queryFn: () => deviationsApi.bySite(siteId),
-  })
-}
-
-export function useDeviation(id: string) {
-  return useQuery({ queryKey: keys.deviation(id), queryFn: () => deviationsApi.get(id) })
-}
-
-export function useStageStatuses(siteId: string) {
+export function useStageStatuses(siteId: string, enabled = true) {
   return useQuery({
     queryKey: keys.stageStatuses(siteId),
     queryFn: () => deviationsApi.stageStatuses(siteId),
+    enabled,
   })
 }
 
-export function useDecision(deviationId: string, siteId: string) {
-  const qc = useQueryClient()
-  const invalidate = () =>
-    Promise.all([
-      qc.invalidateQueries({ queryKey: keys.deviation(deviationId) }),
-      qc.invalidateQueries({ queryKey: keys.siteDeviations(siteId) }),
-      qc.invalidateQueries({ queryKey: keys.allDeviations }),
-    ])
-  const decide = useMutation({
-    mutationFn: (data: DecisionInput) => deviationsApi.decide(deviationId, data),
-    onSuccess: invalidate,
+export function useDeviations(siteId: string) {
+  return useQuery({ queryKey: keys.deviations(siteId), queryFn: () => deviationsApi.list(siteId) })
+}
+
+export function useDeviation(siteId: string, id: string) {
+  return useQuery({
+    queryKey: keys.deviation(siteId, id),
+    queryFn: () => deviationsApi.get(siteId, id),
   })
-  const undo = useMutation({
-    mutationFn: () => deviationsApi.undoDecision(deviationId),
-    onSuccess: invalidate,
+}
+
+export function useSummary(siteId: string) {
+  return useQuery({ queryKey: keys.summary(siteId), queryFn: () => deviationsApi.summary(siteId) })
+}
+
+/** Сквозного списка на бэкенде нет: собираем отклонения по каждой стройке. */
+export function useAllDeviations(sites: readonly Site[]) {
+  return useQueries({
+    queries: sites.map((site) => ({
+      queryKey: keys.deviations(site.id),
+      queryFn: () => deviationsApi.list(site.id),
+    })),
+    combine: (results) => ({
+      isPending: results.some((r) => r.isPending),
+      error: results.find((r) => r.error)?.error ?? null,
+      data: results.flatMap((r, i) =>
+        (r.data ?? []).map((d) => ({ ...d, site_id: sites[i]!.id, site_name: sites[i]!.name })),
+      ),
+    }),
   })
-  return { decide, undo }
 }

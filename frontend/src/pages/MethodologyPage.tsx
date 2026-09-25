@@ -16,7 +16,7 @@ export function MethodologyPage() {
         <SiteShell site={data} crumb="Методика" subtitle={siteSubtitle(data)}>
           <SectionHeader
             title="Методика: этап → техника"
-            description="Правка комплекта пересчитает статусы и отклонения по уже загруженным кадрам, без повторной обработки изображений."
+            description="Правка комплекта пересчитает статусы и отклонения по уже загруженным снимкам, без повторной обработки изображений."
           />
           <MethodologyEditor siteId={siteId} />
         </SiteShell>

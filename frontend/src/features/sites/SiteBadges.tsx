@@ -3,7 +3,7 @@ import { Pill } from '@/components/ui/Pill'
 import { levelLabels } from '@/lib/labels'
 import { verdictText } from './verdict'
 
-export function VerdictBadge({ summary }: { summary: SiteSummary | null }) {
+export function VerdictBadge({ summary }: { summary: SiteSummary | undefined }) {
   if (!summary || summary.verdict === 'insufficient_data') {
     return <Pill tone="dashed">Недостаточно данных</Pill>
   }

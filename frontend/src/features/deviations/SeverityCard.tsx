@@ -1,14 +1,19 @@
 import { Link } from 'react-router'
 import type { DeviationDetail } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatDelay, formatShortDate } from '@/lib/format'
+import { formatShortDate } from '@/lib/format'
 import { SeverityBadge } from './SeverityBadge'
 import styles from './Deviation.module.css'
 
 /** Боковая панель: важность с объяснением и ссылки «Проверить». */
-export function SeverityCard({ deviation: d }: { deviation: DeviationDetail }) {
-  const base = `/sites/${d.site_id}`
-  const delay = formatDelay(d.delay_days_min, d.delay_days_max)
+export function SeverityCard({
+  siteId,
+  deviation: d,
+}: {
+  siteId: string
+  deviation: DeviationDetail
+}) {
+  const base = `/sites/${siteId}`
   return (
     <>
       <Card as="aside" aria-label="Важность">
@@ -16,13 +21,11 @@ export function SeverityCard({ deviation: d }: { deviation: DeviationDetail }) {
         <div>
           <SeverityBadge severity={d.severity} />
         </div>
-        {delay && <p className={styles.big}>{delay}</p>}
-        <p className="sm">{d.severity_reason}</p>
-        {!d.is_hypothesis && (
-          <p className="sm muted">
-            Решения по этому отклонению нет: вывод верен, пока верны график, методика и кадры.
-          </p>
-        )}
+        <p className="sm">
+          {d.is_hypothesis
+            ? 'Гипотеза: есть косвенный признак, но нет доказательства. Проверьте снимки.'
+            : 'Вывод верен, пока верны график, методика и снимки.'}
+        </p>
         <details className="sm">
           <summary>Как считается важность</summary>
           Важность = тип отклонения + отставание в днях + уверенность + наблюдаемость. Потолок
@@ -33,15 +36,10 @@ export function SeverityCard({ deviation: d }: { deviation: DeviationDetail }) {
       <Card as="aside" aria-label="Проверить">
         <p className="lab muted">Проверить</p>
         <div className={styles.links}>
-          {d.observation_date && (
-            <Link to={`${base}/observations?date=${d.observation_date}`}>
-              Наблюдения за {formatShortDate(d.observation_date)}
-            </Link>
-          )}
-          {d.stage_id && <Link to={`${base}/methodology`}>Методика этапа</Link>}
-          <Link to={`${base}/cameras`}>
-            {d.camera_name ? `Зона камеры ${d.camera_name}` : 'Камеры'}
+          <Link to={`${base}/observations?date=${d.period_end}`}>
+            Наблюдения за {formatShortDate(d.period_end)}
           </Link>
+          {d.stage_id && <Link to={`${base}/methodology`}>Методика этапа</Link>}
         </div>
       </Card>
     </>

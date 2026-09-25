@@ -1,68 +1,36 @@
-/** Подписи перечислений в интерфейсе (DataModel §5.7, architecture §7). Меняются только согласованно. */
+/** Подписи перечислений в интерфейсе (architecture §7). Меняются только согласованно. */
 import type {
   Activity,
   DateSource,
   DeviationType,
-  EvidenceState,
   Level,
-  ObjectType,
-  RuleKind,
+  Obligation,
+  ProcessingStatus,
   Severity,
-  SourceType,
-  TimeIssue,
-  WorkDays,
 } from '@/api/schemas'
 
-export const objectTypeLabels: Record<ObjectType, string> = {
-  housing: 'Жильё',
-  education: 'Образование',
-  health: 'Здравоохранение',
-  other: 'Другое',
-}
-
-export const workDaysLabels: Record<WorkDays, string> = {
-  mon_fri: 'Пн–Пт',
-  mon_sat: 'Пн–Сб',
-  all: 'Ежедневно',
-}
-
-export const sourceTypeLabels: Record<SourceType, string> = {
-  photo: 'Фото',
-  video: 'Видео',
-  stream: 'Стрим',
-}
-
 export const dateSourceLabels: Record<DateSource, string> = {
-  exif: 'Метаданные',
+  channel: 'Канал',
+  metadata: 'Метаданные',
   stamp: 'Штамп',
+  neighbours: 'По соседним снимкам',
   manual: 'Вручную',
-  video: 'Видео · старт + смещение',
-  stream: 'Поток',
 }
 
-export const timeIssueLabels: Record<TimeIssue, string> = {
-  stamp_unrecognized: 'Штамп не распознан',
-  no_metadata: 'Метаданных нет',
-  stamp_cropped: 'Штамп обрезан',
-  stamp_low_conf: 'Штамп читается неуверенно',
-  clip_no_start: 'Клип без времени начала',
+export const processingStatusLabels: Record<ProcessingStatus, string> = {
+  pending: 'Не обработан',
+  done: 'Обработан',
+  failed: 'Ошибка детектора',
 }
 
-export const ruleKindLabels: Record<RuleKind, string> = {
+export const obligationLabels: Record<Obligation, string> = {
   normative: 'Нормативная',
   logical: 'Логическая',
   auxiliary: 'Вспомогательная',
 }
 
-export const evidenceLabels: Record<EvidenceState, string> = {
-  marker_confirmed: 'Подтверждено маркером',
-  compatible: 'Совместимо',
-  none: 'Нет',
-  unknown: 'Неизвестно',
-}
-
 export const activityLabels: Record<Activity, string> = {
-  working: 'Работает',
+  works: 'Работает',
   idle: 'Простаивает',
   unknown: 'Неизвестно',
 }
@@ -97,6 +65,4 @@ export function plural(n: number, forms: readonly [string, string, string]): str
   return forms[2]
 }
 
-export const pluralFrames = (n: number) => `${n} ${plural(n, ['кадр', 'кадра', 'кадров'])}`
-export const pluralMachines = (n: number) => `${n} ${plural(n, ['машина', 'машины', 'машин'])}`
-export const pluralWorks = (n: number) => `${n} ${plural(n, ['работа', 'работы', 'работ'])}`
+export const pluralPhotos = (n: number) => `${n} ${plural(n, ['снимок', 'снимка', 'снимков'])}`

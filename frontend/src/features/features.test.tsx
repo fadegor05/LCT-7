@@ -1,54 +1,54 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type {
-  DeviationListItem,
-  ImportIssue,
-  Observation,
-  ObservationDay,
-  Stage,
-} from '@/api/schemas'
-import { buildFrames } from '@/mocks/fixtures'
+import type { Observation, ScheduleReport, Stage, StageStatus } from '@/api/schemas'
+import type { DeviationItem } from '@/lib/deviations'
 import { renderWithProviders } from '@/test/render'
-import { ZoneEditor } from './cameras/ZoneEditor'
 import { DeviationList } from './deviations/DeviationList'
 import { describeIssues } from './new-site/describeIssues'
 import { StagesTable } from './new-site/StagesTable'
-import { CameraStrip } from './observations/CameraStrip'
 import { DayPicker } from './observations/DayPicker'
 import { EquipmentList } from './observations/EquipmentList'
 import { observationSentence } from './overview/observationSentence'
+import { StageStatusTable } from './overview/StageStatusTable'
 import { ObservabilityBadge, VerdictBadge } from './sites/SiteBadges'
 import { verdictText } from './sites/verdict'
 
-const deviation: DeviationListItem = {
+const deviation: DeviationItem = {
   id: 'd1',
   site_id: 's1',
   site_name: 'Стройка',
+  stage_id: null,
+  stage_name: null,
   type: 'idle',
   is_hypothesis: true,
   severity: 'attention',
   confidence: 'low',
-  stage_name: null,
-  title: 'Самосвал простаивает',
-  detected_at: '2026-09-18T10:00:00',
-  decision: null,
+  period_start: '2026-09-17',
+  period_end: '2026-09-18',
+  expected: 'Самосвал работает',
+  observed: 'Самосвал стоит',
+  limits_text: 'Гипотеза',
+  rule_id: null,
+  created_at: '2026-09-18T10:00:00Z',
 }
 
 describe('DeviationList', () => {
-  it('shows site deviations with the waiting marker', () => {
+  it('shows site deviations with the stage and period', () => {
     renderWithProviders(<DeviationList items={[deviation]} />)
     const link = screen.getByRole('link')
     expect(link).toHaveAttribute('href', '/sites/s1/deviations/d1')
     expect(within(link).getByText('Простой техники (гипотеза)')).toBeInTheDocument()
-    expect(within(link).getByText('Ждёт решения')).toBeInTheDocument()
     expect(within(link).getByText('Все этапы')).toBeInTheDocument()
-    expect(within(link).getByText('Самосвал простаивает')).toBeInTheDocument()
+    expect(within(link).getByText('17.09 — 18.09')).toBeInTheDocument()
+    expect(within(link).getByText('18.09.2026')).toBeInTheDocument()
   })
 
-  it('shows the site name in the cross-site list', () => {
-    renderWithProviders(<DeviationList items={[deviation]} showSite />)
+  it('shows the site name and period in the cross-site list', () => {
+    renderWithProviders(
+      <DeviationList items={[{ ...deviation, stage_name: undefined }]} showSite />,
+    )
     expect(screen.getByText('Стройка')).toBeInTheDocument()
-    expect(screen.queryByText('Ждёт решения')).not.toBeInTheDocument()
+    expect(screen.getByText('17.09 — 18.09')).toBeInTheDocument()
   })
 
   it('has an empty state', () => {
@@ -77,21 +77,12 @@ describe('verdict', () => {
     const base = {
       delay_days_min: null,
       delay_days_max: null,
-      measured_stage_name: null,
-      explanation: null,
-      observability: 'high' as const,
-      cameras_total: 1,
-      cameras_reporting: 1,
-      last_frame_at: null,
-      frames_total: 0,
-      frames_without_time: 0,
-      data_age_days: null,
       critical_count: 0,
       attention_count: 0,
     }
     render(
       <>
-        <VerdictBadge summary={null} />
+        <VerdictBadge summary={undefined} />
         <VerdictBadge summary={{ ...base, verdict: 'no_deviations' }} />
         <ObservabilityBadge level="high" />
         <ObservabilityBadge level="low" />
@@ -104,314 +95,234 @@ describe('verdict', () => {
   })
 })
 
+const report = (patch: Partial<ScheduleReport>): ScheduleReport => ({
+  id: 'sch',
+  site_id: 's1',
+  source_filename: 'g.csv',
+  imported_at: '2026-09-01T00:00:00Z',
+  rows_total: 0,
+  rows_parsed: 0,
+  stages_with_dates: 0,
+  stages_without_dates: 0,
+  stages: [],
+  issues: [],
+  ...patch,
+})
+
 describe('describeIssues', () => {
-  const issue = (kind: ImportIssue['kind'], extra: Partial<ImportIssue> = {}): ImportIssue => ({
-    id: kind + (extra.row_number ?? ''),
-    kind,
-    row_number: null,
-    stage_id: null,
-    message: 'Окна А и Б пересекаются',
-    blocking: true,
-    resolved_at: null,
-    ...extra,
-  })
-
-  it('summarises every issue kind', () => {
-    const lines = describeIssues([
-      issue('row_unparsed', { row_number: 14 }),
-      issue('row_unparsed', { row_number: 27 }),
-      issue('no_dates'),
-      issue('no_dates', { id: 'x' }),
-      issue('fuzzy_match'),
-      issue('window_overlap'),
-    ])
-    expect(lines[0]).toBe('2 строки не разобраны (строки 14 и 27 файла: нет названия этапа).')
-    expect(lines[1]).toBe('У 2 этапов нет дат: задайте их вручную.')
-    expect(lines[2]).toBe('Один этап сопоставлен нечётко: подтвердите.')
-    expect(lines[3]).toContain('Окна А и Б пересекаются')
-  })
-
-  it('uses singular forms', () => {
-    const lines = describeIssues([
-      issue('no_dates'),
-      issue('fuzzy_match'),
-      issue('fuzzy_match', { id: 'y' }),
-    ])
+  it('lists unparsed rows and stages without dates', () => {
+    const lines = describeIssues(
+      report({
+        issues: [
+          { id: 'i1', row_number: 4, raw_row: ';;', reason: 'Нет названия этапа.' },
+          { id: 'i2', row_number: 9, raw_row: 'x', reason: 'Некорректная дата' },
+        ],
+        stages_without_dates: 3,
+      }),
+    )
     expect(lines).toEqual([
-      'У одного этапа нет дат: задайте их вручную.',
-      '2 этапа сопоставлены нечётко: подтвердите.',
+      'Строка 4 не разобрана: Нет названия этапа.',
+      'Строка 9 не разобрана: Некорректная дата.',
+      'У 3 этапов нет дат: задайте их вручную, иначе этап не оценивается.',
     ])
-    expect(describeIssues([])).toEqual([])
+  })
+
+  it('uses the singular form and is empty for a clean file', () => {
+    expect(describeIssues(report({ stages_without_dates: 1 }))).toEqual([
+      'У одного этапа нет дат: задайте их вручную, иначе этап не оценивается.',
+    ])
+    expect(describeIssues(report({}))).toEqual([])
   })
 })
 
-describe('StagesTable', () => {
-  const stage = (over: Partial<Stage>): Stage => ({
-    id: 's',
-    seq_no: 1,
-    name: 'Этап',
-    match_kind: 'exact',
-    match_score: null,
-    match_confirmed: true,
-    planned_start: '2026-09-01',
-    planned_end: '2026-09-05',
-    dates_source: 'works',
-    merged_windows: 1,
-    equipment_check: true,
-    not_checked_reason: null,
-    has_marker: true,
-    works: [],
-    ...over,
-  })
+const stage = (patch: Partial<Stage>): Stage => ({
+  id: 'st',
+  name: 'Этап',
+  position: 1,
+  planned_start: '2026-09-01',
+  planned_end: '2026-09-10',
+  dates_source: 'file',
+  ...patch,
+})
 
-  it('renders works, windows and match labels', () => {
-    render(
+describe('StagesTable', () => {
+  it('renders windows and marks manual dates', () => {
+    renderWithProviders(
       <StagesTable
         year={2026}
-        onConfirmMatch={vi.fn()}
         onSetDates={vi.fn()}
         stages={[
-          stage({
-            id: 'a',
-            name: 'Подготовка',
-            merged_windows: 9,
-            works: ['1', '2', '3', '4', '5', '6'].map((n) => ({ id: n, name: `Работа ${n}` })),
-          }),
-          stage({
-            id: 'b',
-            name: 'Ручной',
-            match_kind: 'manual',
-            dates_source: 'manual',
-            equipment_check: false,
-          }),
-          stage({ id: 'c', name: 'Без', match_kind: 'none' }),
+          stage({ id: 'a', name: 'Котлован' }),
+          stage({ id: 'b', name: 'Основание', position: 2, dates_source: 'manual' }),
         ]}
       />,
     )
-    expect(screen.getByText('6 работ')).toBeInTheDocument()
-    expect(screen.getByText('ещё 2')).toBeInTheDocument()
-    expect(screen.getByText('объединено из 9 окон')).toBeInTheDocument()
-    expect(screen.getByText('задано вручную')).toBeInTheDocument()
-    expect(screen.getByText('Вручную')).toBeInTheDocument()
-    expect(screen.getByText('Не сопоставлен')).toBeInTheDocument()
-    expect(screen.getByText('Не проверяется · нет крупной техники')).toBeInTheDocument()
+    const rows = screen.getAllByRole('row').slice(1)
+    expect(rows[0]).toHaveTextContent('1Котлован01.09 — 10.09')
+    expect(within(rows[1]!).getByText('задано вручную')).toBeInTheDocument()
   })
 
-  it('confirms fuzzy matches and validates manual dates', async () => {
-    const onConfirm = vi.fn()
+  it('validates manual dates', async () => {
     const onSetDates = vi.fn()
-    render(
+    renderWithProviders(
       <StagesTable
         year={2026}
-        onConfirmMatch={onConfirm}
         onSetDates={onSetDates}
-        stages={[
-          stage({
-            id: 'f',
-            name: 'Плита',
-            match_kind: 'fuzzy',
-            match_score: 0.74,
-            match_confirmed: false,
-            planned_start: null,
-            planned_end: null,
+        stages={[stage({ id: 'x', name: 'Плита', planned_start: null, planned_end: null })]}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Задать' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Даты в формате дд.мм')
+    await user.type(screen.getByLabelText('Дата начала: Плита'), '10.10')
+    await user.type(screen.getByLabelText('Дата окончания: Плита'), '01.10')
+    await user.click(screen.getByRole('button', { name: 'Задать' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Окончание раньше начала')
+    await user.clear(screen.getByLabelText('Дата окончания: Плита'))
+    await user.type(screen.getByLabelText('Дата окончания: Плита'), '20.10')
+    await user.click(screen.getByRole('button', { name: 'Задать' }))
+    expect(onSetDates).toHaveBeenCalledWith('x', '2026-10-10', '2026-10-20')
+  })
+})
+
+describe('StageStatusTable', () => {
+  const status = (patch: Partial<StageStatus>): StageStatus => ({
+    stage_id: 'st',
+    stage_name: 'Этап',
+    position: 1,
+    status: null,
+    delay_days: null,
+    confidence: null,
+    confidence_reason: null,
+    computed_at: null,
+    ...patch,
+  })
+
+  it('shows plan, status, delay, confidence and linked deviations', () => {
+    renderWithProviders(
+      <StageStatusTable
+        siteId="s1"
+        stages={[stage({ id: 'a' })]}
+        deviations={[{ ...deviation, stage_id: 'a' }]}
+        rows={[
+          status({
+            stage_id: 'a',
+            stage_name: 'Котлован',
+            status: 'behind',
+            delay_days: 4,
+            confidence: 'high',
+            confidence_reason: 'Экскаватор после планового конца',
           }),
+          status({ stage_id: 'b', stage_name: 'Плита', status: 'ahead', delay_days: 2 }),
+          status({ stage_id: 'c', stage_name: 'Засыпка' }),
         ]}
       />,
     )
-    expect(screen.getByText('Справочник · нечёткое · 74%')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Подтвердить сопоставление' }))
-    expect(onConfirm).toHaveBeenCalledWith('f')
-
-    const start = screen.getByLabelText('Дата начала: Плита')
-    const end = screen.getByLabelText('Дата окончания: Плита')
-    await userEvent.click(screen.getByRole('button', { name: 'Задать' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Даты в формате дд.мм')
-    await userEvent.type(start, '05.10')
-    await userEvent.type(end, '23.09')
-    await userEvent.click(screen.getByRole('button', { name: 'Задать' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Окончание раньше начала')
-    await userEvent.clear(end)
-    await userEvent.type(end, '12.10')
-    await userEvent.click(screen.getByRole('button', { name: 'Задать' }))
-    expect(onSetDates).toHaveBeenCalledWith('f', '2026-10-05', '2026-10-12')
+    const [, pit, slab, backfill] = screen.getAllByRole('row')
+    expect(pit).toHaveTextContent('01.09–10.09')
+    expect(pit).toHaveTextContent('Экскаватор после планового конца')
+    expect(pit).toHaveTextContent('отставание 4 дн. · уверенность высокая')
+    expect(within(pit!).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
+      'href',
+      '/sites/s1/deviations/d1',
+    )
+    expect(slab).toHaveTextContent('опережение 2 дн.')
+    expect(slab).toHaveTextContent('—')
+    expect(backfill).toHaveTextContent('Не начата')
   })
 })
 
 describe('observations', () => {
-  const days: ObservationDay[] = [
-    { obs_date: '2026-09-17', frames_total: 2, observability: 'high' },
-    { obs_date: '2026-09-18', frames_total: 3, observability: 'high' },
+  const observation = (patch: Partial<Observation>): Observation => ({
+    id: 'o',
+    site_id: 's1',
+    observed_on: '2026-09-18',
+    photo_count: 3,
+    observability: 'high',
+    observability_notes: null,
+    recomputed_at: '2026-09-18T12:00:00Z',
+    equipment: [],
+    ...patch,
+  })
+  const days = [
+    observation({ observed_on: '2026-09-17', photo_count: 2 }),
+    observation({ observed_on: '2026-09-18', photo_count: 3 }),
   ]
 
-  it('DayPicker switches days and links frames without time', async () => {
+  it('DayPicker switches days and links photos without a date', async () => {
     const onChange = vi.fn()
-    render(<DayPicker days={days} value="2026-09-18" onChange={onChange} withoutTime={7} />)
-    expect(screen.getByRole('button', { name: /Все дни/ })).toHaveTextContent('5 кадров')
+    render(<DayPicker days={days} value="2026-09-18" onChange={onChange} undated={7} />)
+    expect(screen.getByRole('button', { name: /Все дни/ })).toHaveTextContent('5 снимков')
     expect(screen.getByRole('button', { name: /18\.09/ })).toHaveAttribute('aria-pressed', 'true')
     await userEvent.click(screen.getByRole('button', { name: /Все дни/ }))
     await userEvent.click(screen.getByRole('button', { name: /17\.09/ }))
     expect(onChange.mock.calls).toEqual([[null], ['2026-09-17']])
-    expect(screen.getByRole('link', { name: /Без даты/ })).toHaveAttribute('href', '#no-time')
+    expect(screen.getByRole('link', { name: /Без даты/ })).toHaveAttribute('href', '#no-date')
   })
 
-  it('DayPicker hides the no-time chip when all frames have time', () => {
-    render(<DayPicker days={days} value={null} onChange={vi.fn()} withoutTime={0} />)
+  it('DayPicker hides the no-date chip when every photo has a date', () => {
+    render(<DayPicker days={days} value={null} onChange={vi.fn()} undated={0} />)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 
-  const observation: Observation = {
-    obs_date: '2026-09-18',
-    expected_stage_name: 'Котлован',
-    frames_total: 3,
-    observability: 'high',
-    equipment: [
-      {
-        equipment_class: 'excavator',
-        name: 'Экскаватор',
-        min_count: 2,
-        activity: 'working',
-        activity_hypothesis: false,
-        basis_text: 'движение',
-        deviation_id: 'dev-1',
-      },
-      {
-        equipment_class: 'dump_truck',
-        name: 'Самосвал',
-        min_count: 1,
-        activity: 'idle',
-        activity_hypothesis: true,
-        basis_text: 'стоит',
-        deviation_id: null,
-      },
-      {
-        equipment_class: 'truck',
-        name: 'Грузовик',
-        min_count: 1,
-        activity: 'idle',
-        activity_hypothesis: false,
-        basis_text: 'стоит',
-        deviation_id: null,
-      },
-      {
-        equipment_class: 'bulldozer',
-        name: 'Бульдозер',
-        min_count: 1,
-        activity: 'unknown',
-        activity_hypothesis: false,
-        basis_text: 'нет пары',
-        deviation_id: null,
-      },
-    ],
-  }
+  const equipment: Observation['equipment'] = [
+    {
+      equipment_type_id: 'e1',
+      equipment_code: 'excavator_crawler',
+      equipment_title: 'Гусеничный экскаватор',
+      count_min: 2,
+      activity: 'works',
+      confidence: 'high',
+    },
+    {
+      equipment_type_id: 'e2',
+      equipment_code: 'dump_truck',
+      equipment_title: 'Самосвал',
+      count_min: 1,
+      activity: 'idle',
+      confidence: 'medium',
+    },
+    {
+      equipment_type_id: 'e3',
+      equipment_code: 'bulldozer',
+      equipment_title: 'Бульдозер',
+      count_min: 1,
+      activity: 'unknown',
+      confidence: 'low',
+    },
+  ]
 
-  it('EquipmentList shows counts, activity and links to deviations', () => {
-    renderWithProviders(
-      <EquipmentList siteId="s1" stageName="Котлован" items={observation.equipment} />,
+  it('EquipmentList shows counts, activity and confidence', () => {
+    render(
+      <EquipmentList
+        observation={observation({
+          equipment,
+          observability: 'medium',
+          observability_notes: 'Мало снимков',
+        })}
+      />,
     )
-    expect(screen.getByText('Этап: Котлован')).toBeInTheDocument()
+    expect(screen.getByText('Наблюдаемость средняя · Мало снимков')).toBeInTheDocument()
     expect(screen.getByText('не менее 2')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Экскаватор: Работает/ })).toHaveAttribute(
-      'href',
-      '/sites/s1/deviations/dev-1',
-    )
-    expect(screen.getAllByText('Простаивает')).toHaveLength(2)
+    expect(screen.getByText('Работает')).toBeInTheDocument()
+    expect(screen.getByText('Простаивает')).toBeInTheDocument()
     expect(screen.getByText('Неизвестно')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Уверенность: низкая' })).toBeInTheDocument()
   })
 
   it('EquipmentList has an empty state', () => {
-    renderWithProviders(<EquipmentList siteId="s1" stageName={null} items={[]} />)
-    expect(screen.getByText(/Техники на кадрах не найдено/)).toBeInTheDocument()
+    render(<EquipmentList observation={observation({})} />)
+    expect(screen.getByText(/Техники на снимках не найдено/)).toBeInTheDocument()
+    expect(screen.getByText('Наблюдаемость высокая')).toBeInTheDocument()
   })
 
   it('observationSentence summarises the day', () => {
-    expect(observationSentence(observation)).toBe(
-      'Экскаватор 2, самосвал 1, грузовик 1, бульдозер 1 (максимум по кадрам). Простаивает: самосвал (гипотеза), грузовик.',
+    expect(observationSentence(observation({ equipment }))).toBe(
+      'Гусеничный экскаватор 2, самосвал 1, бульдозер 1 (максимум по снимкам). Простаивает: самосвал.',
     )
-    expect(
-      observationSentence({ ...observation, equipment: observation.equipment.slice(0, 1) }),
-    ).toBe('Экскаватор 2 (максимум по кадрам).')
-    expect(observationSentence({ ...observation, equipment: [] })).toBe(
-      'Техники на кадрах не найдено.',
+    expect(observationSentence(observation({ equipment: equipment.slice(0, 1) }))).toBe(
+      'Гусеничный экскаватор 2 (максимум по снимкам).',
     )
-  })
-
-  it('CameraStrip lists frames and scrolls', async () => {
-    const frames = buildFrames().filter(
-      (f) => f.camera_id === 'cam-1' && f.captured_at?.startsWith('2026-09-18'),
-    )
-    render(<CameraStrip name="К-1" frames={frames} withDate={false} classLabel={(c) => c} />)
-    const section = screen.getByRole('region', { name: 'Камера К-1' })
-    expect(section).toHaveTextContent('6 кадров · последний 14:20')
-    expect(screen.getAllByText('Фото')).toHaveLength(6)
-    expect(screen.getByText('08:10')).toBeInTheDocument()
-    const strip = section.querySelector('[class*="frames"]') as HTMLElement
-    strip.scrollBy = vi.fn()
-    await userEvent.click(screen.getByRole('button', { name: 'Вперёд по времени' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Назад по времени' }))
-    expect(strip.scrollBy).toHaveBeenCalledWith({ left: 480, behavior: 'smooth' })
-    expect(strip.scrollBy).toHaveBeenCalledWith({ left: -480, behavior: 'smooth' })
-  })
-
-  it('CameraStrip shows dates in the all-days mode and empty frames', () => {
-    const frames = buildFrames().filter(
-      (f) => f.camera_id === 'cam-2' && f.captured_at?.startsWith('2026-09-18'),
-    )
-    render(<CameraStrip name="К-2" frames={frames} withDate classLabel={(c) => c} />)
-    expect(screen.getByText('18.09 08:20')).toBeInTheDocument()
-    expect(screen.getAllByText('нет техники').length).toBeGreaterThan(0)
-  })
-})
-
-describe('ZoneEditor', () => {
-  function setup(props: Partial<Parameters<typeof ZoneEditor>[0]> = {}) {
-    const onChange = vi.fn()
-    render(<ZoneEditor imageUrl={null} points={[]} closed={false} onChange={onChange} {...props} />)
-    const box = screen.getByTestId('zone-editor')
-    box.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 100 }) as DOMRect
-    return { onChange, box }
-  }
-
-  it('adds vertices in frame fractions', () => {
-    const { onChange, box } = setup()
-    expect(screen.getByText('Кадра пока нет')).toBeInTheDocument()
-    fireEvent.pointerDown(box, { clientX: 50, clientY: 25 })
-    expect(onChange).toHaveBeenCalledWith([[0.25, 0.25]], false)
-  })
-
-  it('closes the contour on the first vertex', () => {
-    const points: [number, number][] = [
-      [0.1, 0.1],
-      [0.5, 0.1],
-      [0.5, 0.5],
-    ]
-    const { onChange } = setup({ points })
-    fireEvent.pointerDown(screen.getByRole('button', { name: 'Замкнуть контур' }))
-    expect(onChange).toHaveBeenCalledWith(points, true)
-  })
-
-  it('drags vertices of a closed zone and ignores clicks on it', () => {
-    const points: [number, number][] = [
-      [0.1, 0.1],
-      [0.5, 0.1],
-      [0.5, 0.5],
-    ]
-    const { onChange, box } = setup({ points, closed: true, imageUrl: '/f.jpg' })
-    expect(box).toHaveStyle({ backgroundImage: 'url(/f.jpg)' })
-    fireEvent.pointerDown(box, { clientX: 10, clientY: 10 })
-    expect(onChange).not.toHaveBeenCalled()
-    fireEvent.pointerDown(screen.getByRole('button', { name: 'Вершина 2' }))
-    fireEvent.pointerMove(box, { clientX: 300, clientY: -20 })
-    expect(onChange).toHaveBeenCalledWith(
-      [
-        [0.1, 0.1],
-        [1, 0],
-        [0.5, 0.5],
-      ],
-      true,
-    )
-    fireEvent.pointerUp(box)
-    onChange.mockClear()
-    fireEvent.pointerMove(box, { clientX: 20, clientY: 20 })
-    expect(onChange).not.toHaveBeenCalled()
+    expect(observationSentence(observation({}))).toBe('Техники на снимках не найдено.')
   })
 })

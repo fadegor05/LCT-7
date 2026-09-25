@@ -1,10 +1,20 @@
 import { Link } from 'react-router'
-import type { Site, SiteSummary } from '@/api/schemas'
+import { useSummary } from '@/api/deviations'
+import { useObservations, useUndatedPhotos } from '@/api/frames'
+import type { SiteSummary } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatShortDateTime } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { levelLabels } from '@/lib/labels'
 import { verdictText } from '@/features/sites/verdict'
 import styles from './Overview.module.css'
+
+const EXPLANATION: Record<SiteSummary['verdict'], string> = {
+  behind:
+    'Худший интервал по этапам с отставанием. Отставание измерено по датам снимков: точность не выше частоты съёмки.',
+  no_deviations: 'Этапы с данными идут по графику.',
+  insufficient_data:
+    'Нет оценённых этапов: график не загружен, снимков нет или наблюдаемость недостаточна для вывода.',
+}
 
 function VerdictCard({ summary }: { summary: SiteSummary }) {
   return (
@@ -19,51 +29,57 @@ function VerdictCard({ summary }: { summary: SiteSummary }) {
       >
         {verdictText(summary)}
       </p>
-      {summary.explanation && <p className="sm">{summary.explanation}</p>}
+      <p className="sm">{EXPLANATION[summary.verdict]}</p>
     </Card>
   )
 }
 
-function DataStateCard({ site, summary }: { site: Site; summary: SiteSummary }) {
+function DataStateCard({ siteId }: { siteId: string }) {
+  const observations = useObservations(siteId).data ?? []
+  const undated = useUndatedPhotos(siteId).data?.length ?? 0
+  const last = observations.at(-1)
+  const dated = observations.reduce((sum, o) => sum + o.photo_count, 0)
   return (
     <Card aria-labelledby="data-state-title">
       <p id="data-state-title" className="lab muted">
         Состояние данных
       </p>
-      <p className="lab">Наблюдаемость {levelLabels[summary.observability].toLowerCase()}</p>
+      <p className="lab">
+        {last
+          ? `Наблюдаемость ${levelLabels[last.observability].toLowerCase()}`
+          : 'Наблюдений пока нет'}
+      </p>
       <dl className={styles.kv}>
         <div>
-          <dt>Камеры</dt>
-          <dd>
-            {summary.cameras_reporting} из {summary.cameras_total} присылают кадры
-          </dd>
+          <dt>Последнее наблюдение</dt>
+          <dd className="data">{formatDate(last?.observed_on)}</dd>
         </div>
         <div>
-          <dt>Последний кадр</dt>
-          <dd className="data">{formatShortDateTime(summary.last_frame_at)}</dd>
+          <dt>Дней наблюдений</dt>
+          <dd className="data">{observations.length}</dd>
         </div>
         <div>
-          <dt>Всего кадров</dt>
-          <dd className="data">{summary.frames_total}</dd>
+          <dt>Всего снимков</dt>
+          <dd className="data">{dated + undated}</dd>
         </div>
         <div>
-          <dt>Без даты или времени</dt>
-          <dd className="data">{summary.frames_without_time}</dd>
+          <dt>Без даты</dt>
+          <dd className="data">{undated}</dd>
         </div>
       </dl>
-      <Link to={`/sites/${site.id}/cameras`} className="sm">
-        Камеры и кадры →
+      <Link to={`/sites/${siteId}/observations`} className="sm">
+        Снимки и наблюдения →
       </Link>
     </Card>
   )
 }
 
-export function SummaryCards({ site }: { site: Site }) {
-  if (!site.summary) return null
+export function SummaryCards({ siteId }: { siteId: string }) {
+  const summary = useSummary(siteId)
   return (
     <div className={styles.top}>
-      <VerdictCard summary={site.summary} />
-      <DataStateCard site={site} summary={site.summary} />
+      {summary.data && <VerdictCard summary={summary.data} />}
+      <DataStateCard siteId={siteId} />
     </div>
   )
 }

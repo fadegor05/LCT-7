@@ -1,4 +1,4 @@
-import { plural, pluralFrames, pluralMachines, pluralWorks } from './labels'
+import { plural, pluralPhotos } from './labels'
 
 describe('plural', () => {
   it.each([
@@ -14,9 +14,9 @@ describe('plural', () => {
     expect(plural(n, ['кадр', 'кадра', 'кадров'])).toBe(word)
   })
 
-  it('has ready-made helpers', () => {
-    expect(pluralFrames(24)).toBe('24 кадра')
-    expect(pluralMachines(1)).toBe('1 машина')
-    expect(pluralWorks(9)).toBe('9 работ')
+  it('has a ready-made helper for photos', () => {
+    expect(pluralPhotos(1)).toBe('1 снимок')
+    expect(pluralPhotos(24)).toBe('24 снимка')
+    expect(pluralPhotos(9)).toBe('9 снимков')
   })
 })

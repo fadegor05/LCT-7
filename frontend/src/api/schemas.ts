@@ -1,19 +1,19 @@
 /**
  * Контракты API (snake_case, как отдаёт FastAPI/Pydantic).
  *
- * Перечисления и поля повторяют docs/DataModel.md §5. Всё, чего текущий backend ещё не
- * отдаёт (например, сводка в списке строек), объявлено необязательным с default —
- * так фронт работает и на моках, и на частично готовом API.
+ * Схемы повторяют Pydantic-схемы backend один в один (`backend/app/domains/<домен>/schemas.py`),
+ * перечисления — StrEnum из `models.py` доменов. При изменении контракта на бэкенде правится
+ * этот файл: Zod-ошибка контракта сразу видна на экране.
  */
 import { z } from 'zod'
 
-// ---------- Перечисления (DataModel §5.7) ----------
+// ---------- Перечисления ----------
 
-export const objectTypeSchema = z.enum(['housing', 'education', 'health', 'other'])
-export const workDaysSchema = z.enum(['mon_fri', 'mon_sat', 'all'])
-export const siteStateSchema = z.enum(['draft', 'active'])
+/** observation.models.Observability / Confidence: три уровня, не число (architecture §7.3). */
 export const levelSchema = z.enum(['high', 'medium', 'low'])
+/** assessment.schemas.SiteSummaryRead.verdict */
 export const verdictSchema = z.enum(['behind', 'no_deviations', 'insufficient_data'])
+/** assessment.models.StageStatusValue */
 export const stageStatusValueSchema = z.enum([
   'ahead',
   'on_track',
@@ -21,23 +21,18 @@ export const stageStatusValueSchema = z.enum([
   'not_started',
   'not_observed',
   'not_checked',
-  'not_due',
 ])
-export const evidenceStateSchema = z.enum(['marker_confirmed', 'compatible', 'none', 'unknown'])
-export const matchKindSchema = z.enum(['exact', 'fuzzy', 'manual', 'none'])
-export const datesSourceSchema = z.enum(['works', 'manual'])
-export const ruleKindSchema = z.enum(['normative', 'logical', 'auxiliary'])
-export const sourceTypeSchema = z.enum(['photo', 'video', 'stream'])
-export const dateSourceSchema = z.enum(['exif', 'stamp', 'manual', 'video', 'stream'])
-export const timeStateSchema = z.enum(['ok', 'needs_review'])
-export const timeIssueSchema = z.enum([
-  'stamp_unrecognized',
-  'no_metadata',
-  'stamp_cropped',
-  'stamp_low_conf',
-  'clip_no_start',
-])
-export const activitySchema = z.enum(['working', 'idle', 'unknown'])
+/** schedule.models.DatesSource */
+export const datesSourceSchema = z.enum(['file', 'manual'])
+/** methodology.models.Obligation */
+export const obligationSchema = z.enum(['normative', 'logical', 'auxiliary'])
+/** photo.models.DateSource */
+export const dateSourceSchema = z.enum(['channel', 'metadata', 'stamp', 'neighbours', 'manual'])
+/** photo.models.ProcessingStatus */
+export const processingStatusSchema = z.enum(['pending', 'done', 'failed'])
+/** observation.models.Activity */
+export const activitySchema = z.enum(['works', 'idle', 'unknown'])
+/** assessment.models.DeviationType */
 export const deviationTypeSchema = z.enum([
   'missing_equipment',
   'stage_mismatch',
@@ -47,23 +42,14 @@ export const deviationTypeSchema = z.enum([
   'out_of_zone',
   'no_progress',
 ])
+/** assessment.models.Severity */
 export const severitySchema = z.enum(['critical', 'attention'])
-export const decisionSchema = z.enum(['confirmed', 'rejected'])
-export const issueKindSchema = z.enum([
-  'row_unparsed',
-  'no_dates',
-  'fuzzy_match',
-  'window_overlap',
-  'no_marker',
-])
-export const ingestStateSchema = z.enum(['queued', 'running', 'done', 'stopped', 'failed'])
-export const evidenceRoleSchema = z.enum(['evidence', 'zone'])
 
 /** Дата без времени: YYYY-MM-DD. */
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const isoDateTime = z.string()
 
-// ---------- Пользователь ----------
+// ---------- Пользователь (user) ----------
 
 export const userSchema = z.object({
   id: z.string(),
@@ -71,344 +57,249 @@ export const userSchema = z.object({
   created_at: isoDateTime,
 })
 
-// ---------- Стройка ----------
-
-export const siteSummarySchema = z.object({
-  verdict: verdictSchema,
-  delay_days_min: z.number().nullable(),
-  delay_days_max: z.number().nullable(),
-  measured_stage_name: z.string().nullable(),
-  explanation: z.string().nullable(),
-  observability: levelSchema,
-  cameras_total: z.number(),
-  cameras_reporting: z.number(),
-  last_frame_at: isoDateTime.nullable(),
-  frames_total: z.number(),
-  frames_without_time: z.number(),
-  data_age_days: z.number().nullable(),
-  critical_count: z.number(),
-  attention_count: z.number(),
-})
+// ---------- Стройка (site) ----------
 
 export const siteSchema = z.object({
   id: z.string(),
   name: z.string(),
   address: z.string().nullable(),
-  object_type: objectTypeSchema.default('other'),
-  work_days: workDaysSchema.default('mon_fri'),
-  timezone: z.string().default('Europe/Moscow'),
-  state: siteStateSchema.default('active'),
+  owner_id: z.string(),
   created_at: isoDateTime,
-  summary: siteSummarySchema.nullable().default(null),
+  updated_at: isoDateTime,
 })
 
+/** SiteCreate / SiteUpdate: пустой адрес уходит как null. */
 export const siteCreateSchema = z.object({
   name: z.string().trim().min(1, 'Укажите название').max(255),
   address: z.string().trim().max(500),
-  object_type: objectTypeSchema,
-  work_days: workDaysSchema,
 })
 
-// ---------- График и этапы ----------
-
-export const importIssueSchema = z.object({
-  id: z.string(),
-  kind: issueKindSchema,
-  row_number: z.number().nullable(),
-  stage_id: z.string().nullable(),
-  message: z.string(),
-  blocking: z.boolean(),
-  resolved_at: isoDateTime.nullable(),
-})
-
-export const scheduleImportSchema = z.object({
-  id: z.string(),
-  site_id: z.string(),
-  file_name: z.string(),
-  file_size: z.number(),
-  works_total: z.number(),
-  rows_failed: z.number(),
-  stages_total: z.number(),
-  window_overlaps: z.number(),
-  checked_stages: z.number(),
-  issues: z.array(importIssueSchema),
-  uploaded_at: isoDateTime,
-})
+// ---------- График (schedule) ----------
 
 export const stageSchema = z.object({
   id: z.string(),
-  seq_no: z.number(),
   name: z.string(),
-  match_kind: matchKindSchema,
-  match_score: z.number().nullable(),
-  match_confirmed: z.boolean(),
+  position: z.number(),
   planned_start: isoDate.nullable(),
   planned_end: isoDate.nullable(),
   dates_source: datesSourceSchema,
-  merged_windows: z.number(),
-  equipment_check: z.boolean(),
-  not_checked_reason: z.string().nullable(),
-  has_marker: z.boolean(),
-  works: z.array(z.object({ id: z.string(), name: z.string() })),
 })
 
-export const stageUpdateSchema = z.object({
-  planned_start: isoDate.nullable().optional(),
-  planned_end: isoDate.nullable().optional(),
-  match_confirmed: z.boolean().optional(),
-  equipment_check: z.boolean().optional(),
-})
-
-// ---------- Методика ----------
-
-export const equipmentClassSchema = z.object({
-  code: z.string(),
-  name_ru: z.string(),
-  group_code: z.string(),
-})
-
-export const kitRuleSchema = z.object({
+export const importIssueSchema = z.object({
   id: z.string(),
-  equipment_class: z.string().nullable(),
-  equipment_group: z.string().nullable(),
-  name: z.string(),
-  rule_kind: ruleKindSchema,
-  source_ref: z.string().nullable(),
-  typical_qty: z.number().nullable(),
-  is_marker: z.boolean(),
+  row_number: z.number(),
+  raw_row: z.string(),
+  reason: z.string(),
 })
 
-export const stageKitSchema = z.object({
-  stage_id: z.string(),
-  stage_name: z.string(),
-  planned_start: isoDate.nullable(),
-  planned_end: isoDate.nullable(),
-  equipment_check: z.boolean(),
-  not_checked_reason: z.string().nullable(),
-  rules: z.array(kitRuleSchema),
-  marker_explanation: z.string().nullable(),
-})
-
-export const kitRuleInputSchema = z.object({
-  equipment_class: z.string().nullable(),
-  equipment_group: z.string().nullable(),
-  rule_kind: ruleKindSchema,
-  source_ref: z.string().nullable(),
-  typical_qty: z.number().int().min(1).nullable(),
-})
-
-export const stageKitUpdateSchema = z.object({
-  equipment_check: z.boolean(),
-  rules: z.array(kitRuleInputSchema),
-})
-
-// ---------- Камеры и кадры ----------
-
-export const pointSchema = z.tuple([z.number(), z.number()])
-
-export const cameraSchema = z.object({
+export const scheduleReportSchema = z.object({
   id: z.string(),
   site_id: z.string(),
-  name: z.string(),
-  stream_url: z.string().nullable(),
-  zone_polygon: z.array(pointSchema).nullable(),
-  frames_count: z.number(),
-  created_at: isoDateTime,
+  source_filename: z.string(),
+  imported_at: isoDateTime,
+  rows_total: z.number(),
+  rows_parsed: z.number(),
+  stages_with_dates: z.number(),
+  stages_without_dates: z.number(),
+  stages: z.array(stageSchema),
+  issues: z.array(importIssueSchema),
 })
 
-export const cameraInputSchema = z.object({
-  name: z.string().trim().min(1, 'Укажите название').max(64),
-  stream_url: z.string().trim().nullable(),
-  zone_polygon: z.array(pointSchema).min(3).nullable(),
+export const stageDatesUpdateSchema = z.object({
+  planned_start: isoDate.nullable().optional(),
+  planned_end: isoDate.nullable().optional(),
 })
 
-export const referenceFrameSchema = z.object({ image_url: z.string() })
+// ---------- Методика (methodology) ----------
+
+export const equipmentTypeSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  title: z.string(),
+  synonyms: z.array(z.string()),
+})
+
+export const requirementSchema = z.object({
+  id: z.string(),
+  equipment_type: equipmentTypeSchema,
+  min_count: z.number(),
+  obligation: obligationSchema,
+  gesn_code: z.string().nullable(),
+  source_note: z.string().nullable(),
+})
+
+export const equipmentSetSchema = z.object({
+  id: z.string(),
+  position: z.number(),
+  requirements: z.array(requirementSchema),
+})
+
+export const ruleSchema = z.object({
+  id: z.string(),
+  stage_id: z.string().nullable(),
+  stage_name: z.string().nullable(),
+  is_verifiable: z.boolean(),
+  unverifiable_reason: z.string().nullable(),
+  updated_at: isoDateTime,
+  sets: z.array(equipmentSetSchema),
+})
+
+export const ruleUpdateSchema = z.object({
+  is_verifiable: z.boolean(),
+  unverifiable_reason: z.string().nullable(),
+})
+
+export const requirementInputSchema = z.object({
+  equipment_type_id: z.string(),
+  min_count: z.number().int().min(1),
+  obligation: obligationSchema,
+  gesn_code: z.string().nullable(),
+  source_note: z.string().nullable(),
+})
+
+export const setWriteSchema = z.object({
+  requirements: z.array(requirementInputSchema).min(1),
+})
+
+// ---------- Снимки (photo) ----------
 
 export const detectionSchema = z.object({
   id: z.string(),
-  equipment_class: z.string(),
-  confidence: z.number(),
-  bbox_x: z.number(),
-  bbox_y: z.number(),
-  bbox_w: z.number(),
-  bbox_h: z.number(),
+  equipment_type_id: z.string(),
+  equipment_code: z.string(),
+  equipment_title: z.string(),
+  /** [x1, y1, x2, y2] в долях кадра 0–1. */
+  bbox: z.array(z.number()),
+  score: z.number(),
+  model_version: z.string(),
 })
 
-export const frameSchema = z.object({
+export const photoSchema = z.object({
   id: z.string(),
-  camera_id: z.string().nullable(),
-  camera_name: z.string().nullable(),
-  ingest_id: z.string().nullable(),
-  source_type: sourceTypeSchema,
-  captured_at: isoDateTime.nullable(),
+  site_id: z.string(),
+  original_name: z.string(),
+  width: z.number(),
+  height: z.number(),
+  captured_on: isoDate.nullable(),
   date_source: dateSourceSchema.nullable(),
-  time_state: timeStateSchema,
-  time_issue: timeIssueSchema.nullable(),
-  image_url: z.string().nullable(),
+  processing_status: processingStatusSchema,
+  uploaded_at: isoDateTime,
+})
+
+export const photoDetailSchema = photoSchema.extend({
   detections: z.array(detectionSchema),
 })
 
-export const needsReviewSchema = z.object({
-  frames: z.array(frameSchema),
-  clips: z.array(
-    z.object({ ingest_id: z.string(), original_name: z.string(), frames_count: z.number() }),
+export const uploadReportSchema = z.object({
+  items: z.array(
+    z.object({
+      filename: z.string(),
+      photo: photoSchema.nullable().optional(),
+      error: z.string().nullable().optional(),
+    }),
   ),
+  uploaded: z.number(),
+  failed: z.number(),
 })
 
-export const ingestSchema = z.object({
-  id: z.string(),
-  site_id: z.string(),
-  camera_id: z.string(),
-  source_type: sourceTypeSchema,
-  state: ingestStateSchema,
-  slice_step_sec: z.number().nullable(),
-  clip_started_at: isoDateTime.nullable(),
-  frames_count: z.number(),
-  last_frame_at: isoDateTime.nullable(),
-})
+// ---------- Наблюдения (observation) ----------
 
-// ---------- Выводы ----------
-
-export const observationDaySchema = z.object({
-  obs_date: isoDate,
-  frames_total: z.number(),
-  observability: levelSchema,
-})
-
-export const observationEquipmentSchema = z.object({
-  equipment_class: z.string(),
-  name: z.string(),
-  min_count: z.number(),
+export const observedEquipmentSchema = z.object({
+  equipment_type_id: z.string(),
+  equipment_code: z.string(),
+  equipment_title: z.string(),
+  count_min: z.number(),
   activity: activitySchema,
-  activity_hypothesis: z.boolean(),
-  basis_text: z.string(),
-  deviation_id: z.string().nullable(),
+  confidence: levelSchema,
 })
 
 export const observationSchema = z.object({
-  obs_date: isoDate,
-  expected_stage_name: z.string().nullable(),
-  frames_total: z.number(),
+  id: z.string(),
+  site_id: z.string(),
+  observed_on: isoDate,
+  photo_count: z.number(),
   observability: levelSchema,
-  equipment: z.array(observationEquipmentSchema),
+  observability_notes: z.string().nullable(),
+  recomputed_at: isoDateTime,
+  equipment: z.array(observedEquipmentSchema),
 })
 
-export const deviationRefSchema = z.object({ id: z.string(), title: z.string() })
+// ---------- Оценка (assessment) ----------
 
 export const stageStatusSchema = z.object({
   stage_id: z.string(),
   stage_name: z.string(),
-  planned_start: isoDate.nullable(),
-  planned_end: isoDate.nullable(),
-  status: stageStatusValueSchema,
-  evidence: evidenceStateSchema,
-  fact_label: z.string().nullable(),
-  delay_days_min: z.number().nullable(),
-  delay_days_max: z.number().nullable(),
+  position: z.number(),
+  /** null — статус ещё не рассчитан (этап не наступил или нет данных). */
+  status: stageStatusValueSchema.nullable(),
+  delay_days: z.number().nullable(),
   confidence: levelSchema.nullable(),
-  basis_text: z.string().nullable(),
-  deviations: z.array(deviationRefSchema),
+  confidence_reason: z.string().nullable(),
+  computed_at: isoDateTime.nullable(),
 })
 
-export const deviationListItemSchema = z.object({
+export const deviationSchema = z.object({
   id: z.string(),
-  site_id: z.string(),
-  site_name: z.string(),
+  stage_id: z.string().nullable(),
   type: deviationTypeSchema,
   is_hypothesis: z.boolean(),
   severity: severitySchema,
   confidence: levelSchema,
-  stage_name: z.string().nullable(),
-  title: z.string(),
-  detected_at: isoDateTime,
-  decision: decisionSchema.nullable(),
+  period_start: isoDate,
+  period_end: isoDate,
+  expected: z.string(),
+  observed: z.string(),
+  limits_text: z.string(),
+  rule_id: z.string().nullable(),
+  created_at: isoDateTime,
 })
 
-export const decisionRecordSchema = z.object({
-  decision: decisionSchema,
-  comment: z.string().nullable(),
-  decided_by_name: z.string(),
-  decided_at: isoDateTime,
+export const deviationDetailSchema = deviationSchema.extend({
+  evidence: z.array(z.object({ photo_id: z.string(), detection_id: z.string().nullable() })),
 })
 
-export const deviationSchema = deviationListItemSchema.extend({
-  stage_id: z.string().nullable(),
-  period_start: isoDate.nullable(),
-  period_end: isoDate.nullable(),
+export const siteSummarySchema = z.object({
+  verdict: verdictSchema,
   delay_days_min: z.number().nullable(),
   delay_days_max: z.number().nullable(),
-  expected_text: z.string(),
-  observed_text: z.string(),
-  limits_text: z.string(),
-  severity_reason: z.string(),
-  cause_text: z.string().nullable(),
-  confidence_reason: z.string(),
-  rule: z
-    .object({
-      name: z.string(),
-      rule_kind: ruleKindSchema,
-      source_ref: z.string().nullable(),
-    })
-    .nullable(),
-  camera_id: z.string().nullable(),
-  camera_name: z.string().nullable(),
-  observation_date: isoDate.nullable(),
-  evidence: z.array(
-    z.object({ frame: frameSchema, role: evidenceRoleSchema, caption: z.string().nullable() }),
-  ),
-  zone_polygon: z.array(pointSchema).nullable(),
-  decision_record: decisionRecordSchema.nullable(),
-})
-
-export const decisionInputSchema = z.object({
-  decision: decisionSchema,
-  comment: z.string().nullable(),
+  critical_count: z.number(),
+  attention_count: z.number(),
 })
 
 // ---------- Типы ----------
 
-export type ObjectType = z.infer<typeof objectTypeSchema>
-export type WorkDays = z.infer<typeof workDaysSchema>
 export type Level = z.infer<typeof levelSchema>
 export type Verdict = z.infer<typeof verdictSchema>
 export type StageStatusValue = z.infer<typeof stageStatusValueSchema>
-export type EvidenceState = z.infer<typeof evidenceStateSchema>
-export type MatchKind = z.infer<typeof matchKindSchema>
-export type RuleKind = z.infer<typeof ruleKindSchema>
-export type SourceType = z.infer<typeof sourceTypeSchema>
+export type DatesSource = z.infer<typeof datesSourceSchema>
+export type Obligation = z.infer<typeof obligationSchema>
 export type DateSource = z.infer<typeof dateSourceSchema>
-export type TimeIssue = z.infer<typeof timeIssueSchema>
+export type ProcessingStatus = z.infer<typeof processingStatusSchema>
 export type Activity = z.infer<typeof activitySchema>
 export type DeviationType = z.infer<typeof deviationTypeSchema>
 export type Severity = z.infer<typeof severitySchema>
-export type Decision = z.infer<typeof decisionSchema>
-export type IngestState = z.infer<typeof ingestStateSchema>
 
 export type User = z.infer<typeof userSchema>
 export type Site = z.infer<typeof siteSchema>
-export type SiteSummary = z.infer<typeof siteSummarySchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
-export type ImportIssue = z.infer<typeof importIssueSchema>
-export type ScheduleImport = z.infer<typeof scheduleImportSchema>
 export type Stage = z.infer<typeof stageSchema>
-export type StageUpdate = z.infer<typeof stageUpdateSchema>
-export type EquipmentClass = z.infer<typeof equipmentClassSchema>
-export type KitRule = z.infer<typeof kitRuleSchema>
-export type KitRuleInput = z.infer<typeof kitRuleInputSchema>
-export type StageKit = z.infer<typeof stageKitSchema>
-export type StageKitUpdate = z.infer<typeof stageKitUpdateSchema>
-export type Point = z.infer<typeof pointSchema>
-export type Camera = z.infer<typeof cameraSchema>
-export type CameraInput = z.infer<typeof cameraInputSchema>
+export type ImportIssue = z.infer<typeof importIssueSchema>
+export type ScheduleReport = z.infer<typeof scheduleReportSchema>
+export type StageDatesUpdate = z.infer<typeof stageDatesUpdateSchema>
+export type EquipmentType = z.infer<typeof equipmentTypeSchema>
+export type Requirement = z.infer<typeof requirementSchema>
+export type EquipmentSet = z.infer<typeof equipmentSetSchema>
+export type Rule = z.infer<typeof ruleSchema>
+export type RuleUpdate = z.infer<typeof ruleUpdateSchema>
+export type RequirementInput = z.infer<typeof requirementInputSchema>
+export type SetWrite = z.infer<typeof setWriteSchema>
 export type Detection = z.infer<typeof detectionSchema>
-export type Frame = z.infer<typeof frameSchema>
-export type NeedsReview = z.infer<typeof needsReviewSchema>
-export type Ingest = z.infer<typeof ingestSchema>
-export type ObservationDay = z.infer<typeof observationDaySchema>
-export type ObservationEquipment = z.infer<typeof observationEquipmentSchema>
+export type Photo = z.infer<typeof photoSchema>
+export type PhotoDetail = z.infer<typeof photoDetailSchema>
+export type UploadReport = z.infer<typeof uploadReportSchema>
+export type ObservedEquipment = z.infer<typeof observedEquipmentSchema>
 export type Observation = z.infer<typeof observationSchema>
 export type StageStatus = z.infer<typeof stageStatusSchema>
-export type DeviationListItem = z.infer<typeof deviationListItemSchema>
-export type DeviationDetail = z.infer<typeof deviationSchema>
-export type DecisionRecord = z.infer<typeof decisionRecordSchema>
-export type DecisionInput = z.infer<typeof decisionInputSchema>
+export type Deviation = z.infer<typeof deviationSchema>
+export type DeviationDetail = z.infer<typeof deviationDetailSchema>
+export type SiteSummary = z.infer<typeof siteSummarySchema>
