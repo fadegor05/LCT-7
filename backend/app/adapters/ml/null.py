@@ -1,6 +1,6 @@
 """NullDetector — детектор, который всегда отключен (возвращает None)."""
 
-from app.adapters.ml.base import DetectionResult
+from app.adapters.ml.base import DetectionResult, DetectorInfo
 
 
 class NullDetector:
@@ -14,3 +14,16 @@ class NullDetector:
     ) -> DetectionResult | None:
         """Всегда возвращает None (детектор отключен)."""
         return None
+
+    async def info(self) -> DetectorInfo | None:
+        """Всегда возвращает None (детектор отключен)."""
+        return None
+
+    async def ready(self) -> bool:
+        """Всегда возвращает False (детектор отключен)."""
+        return False
+
+    @property
+    def configured(self) -> bool:
+        """NullDetector не настроен."""
+        return False

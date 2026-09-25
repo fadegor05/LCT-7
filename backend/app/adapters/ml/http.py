@@ -4,30 +4,75 @@
 
 Контракт ML HTTP-сервиса (см. ml/docs/CONTRACTS.md §1):
 
-    POST /detect (или другой path в url)
+    POST {base}/detect (или {base}/detect если base содержит /detect)
 
     Request: multipart/form-data с полем `file` (изображение)
 
     Response:
     {
-        "model": "yoloe-26s-seg.pt",
+        "model": "mocs_m_best@3f1c9a0b7e21",
+        "image": "Screenshot_26.png",
+        "width": 1219,
+        "height": 809,
+        "speed_ms": {...},
         "detections": [
             {
-                "class_ours": "excavator",
-                "conf": 0.914,
-                "bbox": [0.1, 0.2, 0.3, 0.4]
+                "class_raw": "drilling_rig",
+                "class_ours": "drilling_rig",
+                "conf": 0.88,
+                "bbox": [0.5396, 0.0, 0.6227, 0.6529]
             }
         ]
     }
 
 Поле `bbox` — доли размера кадра [x1, y1, x2, y2], origine top-left.
-Округление: bbox до 4 знаков, conf до 3 знаков (как в CONTRACTS.md).
+Округление: bbox до 4 знаков, conf до 3 знаков.
 """
+
+import asyncio
+import logging
+import re
+from typing import NewType
 
 import httpx
 from pydantic import BaseModel, Field, field_validator
 
-from app.adapters.ml.base import DetectionResult, DetectorError, RawDetection
+from app.adapters.ml.base import DetectionResult, DetectorError, DetectorInfo, RawDetection
+from app.core.settings import DetectorSettings
+
+logger = logging.getLogger(__name__)
+
+# NewType для обозначения DetectorHttpClient
+DetectorHttpClient = NewType("DetectorHttpClient", httpx.AsyncClient)
+
+# Expected contract version
+EXPECTED_CONTRACT = "detect/v1"
+
+
+def normalize_base_url(url: str) -> str:
+    """Нормализовать базовый URL.
+
+    Убирает trailing '/', удаляет '/detect' суффикс (с warning).
+
+    Args:
+        url: Базовый URL
+
+    Returns:
+        Нормализованный URL
+
+    Example:
+        normalize_base_url("http://ml:8000/detect/") -> "http://ml:8000"
+        normalize_base_url("http://ml:8000/") -> "http://ml:8000"
+    """
+    url = url.strip()
+    # Remove trailing / first
+    if url.endswith("/"):
+        url = url[:-1]
+    # Then check for /detect suffix
+    if url.endswith("/detect"):
+        logger.warning(f"URL ends with /detect, removing: {url}")
+        url = url[:-7]
+    return url
 
 
 class _DetectionSchema(BaseModel):
@@ -69,127 +114,365 @@ class _DetectionSchema(BaseModel):
 
 
 class _ResponseSchema(BaseModel):
-    """Pydantic-схема ответа ML-сервиса."""
+    """Pydantic-схема ответа ML-сервиса от /detect."""
 
-    model: str
+    model: str | None = None
+    width: int | None = None
+    height: int | None = None
+    speed_ms: dict[str, float] | None = None
     detections: list[_DetectionSchema] = []
 
     model_config = {"extra": "ignore"}
 
-    @field_validator("model")
-    @classmethod
-    def validate_model(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError("model must be non-empty")
-        return v
+
+class _MetaSchema(BaseModel):
+    """Pydantic-схема ответа ML-сервиса от /meta."""
+
+    model: str | None = None
+    weights: str | None = None
+    class_names: list[str] = Field(default_factory=list)
+    conf: float | None = None
+    device: str | None = None
+    contract: str | None = None
+
+    model_config = {"extra": "ignore"}
+
+
+class _HealthSchema(BaseModel):
+    """Pydantic-схема ответа ML-сервиса от /health."""
+
+    model_loaded: bool = False
+
+    model_config = {"extra": "ignore"}
 
 
 class HttpDetectorClient:
     """Клиент для HTTP ML-сервиса.
 
     Отправляет multipart/form-data запрос с изображением и парсит JSON ответ.
+    Поддерживает retry логику, кэширование, семафор для ограничения одновременных запросов.
 
     Args:
-        url: URL ML-сервиса (базовый path для POST)
-        timeout_s: Timeout для HTTP запроса (default 30.0 сек)
-        client: Инъектированный httpx.AsyncClient (для тестов).
-                Если None, создаётся новый клиент per call.
+        base_url: Базовый URL ML-сервиса (напр. http://ml:8000)
+        client: httpx.AsyncClient для отправки запросов
+        settings: DetectorSettings с параметрами retry и timeout
+        sleep: Функция для задержки (для тестов)
     """
 
     def __init__(
         self,
-        url: str,
-        timeout_s: float = 30.0,
-        client: httpx.AsyncClient | None = None,
+        base_url: str,
+        client: httpx.AsyncClient,
+        settings: DetectorSettings,
+        sleep=asyncio.sleep,
     ):
-        self.url = url
-        self.timeout_s = timeout_s
-        self._client = client
+        """Инициализировать HttpDetectorClient.
+
+        Args:
+            base_url: Базовый URL
+            client: httpx.AsyncClient
+            settings: DetectorSettings
+            sleep: Async функция для ожидания (по умолчанию asyncio.sleep)
+        """
+        self.base_url = normalize_base_url(base_url)
+        self.client = client
+        self.settings = settings
+        self._sleep = sleep
+        self._semaphore = asyncio.Semaphore(settings.max_concurrency)
+        self._info_cache: DetectorInfo | None = None
+        self._info_cache_valid = False
+
+    @property
+    def configured(self) -> bool:
+        """HttpDetectorClient всегда настроен."""
+        return True
+
+    async def _wait_before_retry(self, attempt: int, spent: float) -> float | None:
+        """Подождать перед повтором с exponential backoff.
+
+        Args:
+            attempt: Номер попытки (начиная с 1)
+            spent: Уже потраченное время сна (в секундах)
+
+        Returns:
+            Новая сумма потраченного времени, или None если бюджет исчерпан
+        """
+        backoff_index = min(attempt - 1, len(self.settings.retry_backoff_s) - 1)
+        sleep_time = self.settings.retry_backoff_s[backoff_index]
+        if spent + sleep_time <= self.settings.retry_budget_s:
+            await self._sleep(sleep_time)
+            return spent + sleep_time
+        return None
 
     async def detect(
         self, image: bytes, filename: str, content_type: str | None = None
     ) -> DetectionResult | None:
-        """Отправить изображение на детекцию.
+        """Отправить изображение на детекцию с retry логикой.
 
         Args:
             image: Байты изображения
-            filename: Имя файла для multipart
+            filename: Имя файла для multipart и логирования
             content_type: MIME-тип (напр. "image/jpeg"), опционально
 
         Returns:
-            DetectionResult с округленными detections, или None если детектор отключен
+            DetectionResult с детекциями
 
         Raises:
-            DetectorError: HTTP ошибка, невалидный JSON, ошибка валидации
+            DetectorError: При ошибке, которую нельзя повторить
+                          или исчерпании retry бюджета
         """
-        try:
-            if self._client:
-                # Использовать инъектированный клиент (для тестов)
-                response = await self._client.post(
-                    self.url,
-                    files={"file": (filename, image, content_type)},
-                    timeout=self.timeout_s,
-                )
-            else:
-                # Создать временный клиент per call
-                async with httpx.AsyncClient(timeout=self.timeout_s) as client:
-                    response = await client.post(
-                        self.url,
+        url = f"{self.base_url}/detect"
+        timeout = httpx.Timeout(self.settings.timeout_s, connect=self.settings.connect_timeout_s)
+
+        retry_503_count = 0
+        retry_other_count = 0
+        total_sleep = 0.0
+
+        while True:
+            try:
+                async with self._semaphore:
+                    response = await self.client.post(
+                        url,
                         files={"file": (filename, image, content_type)},
+                        timeout=timeout,
                     )
 
-            # Проверить статус
-            if response.status_code >= 400:
-                raise DetectorError(f"HTTP {response.status_code} от детектора")
+                # Обработка статуса 503
+                if response.status_code == 503:
+                    if retry_503_count < self.settings.retry_503:
+                        retry_503_count += 1
+                        new_spent = await self._wait_before_retry(retry_503_count, total_sleep)
+                        if new_spent is not None:
+                            total_sleep = new_spent
+                            continue
+                    # Исчерпаны попытки
+                    raise DetectorError(
+                        "503 Service Unavailable (exhausted retries)", transient=True
+                    )
 
-            # Парсить JSON
+                # Обработка других 4xx (включая 400, 413, 422)
+                if 400 <= response.status_code < 500:
+                    raise DetectorError(
+                        f"HTTP {response.status_code} from detector",
+                        transient=False,
+                    )
+
+                # Обработка других 5xx
+                if response.status_code >= 500:
+                    if retry_other_count < self.settings.retry_other:
+                        retry_other_count += 1
+                        new_spent = await self._wait_before_retry(retry_other_count, total_sleep)
+                        if new_spent is not None:
+                            total_sleep = new_spent
+                            continue
+                    raise DetectorError(
+                        f"HTTP {response.status_code} from detector (exhausted retries)",
+                        transient=True,
+                    )
+
+                # 200 OK - парсим ответ
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                    except Exception as e:
+                        logger.error(f"Failed to parse JSON response from detector: {e}")
+                        raise DetectorError(
+                            "Invalid JSON response from detector", transient=False
+                        ) from e
+
+                    try:
+                        parsed = _ResponseSchema(**data)
+                    except Exception as e:
+                        logger.error(f"Response schema mismatch from detector: {e}")
+                        raise DetectorError(
+                            "Response schema mismatch from detector", transient=False
+                        ) from e
+
+                    # Получить model_version
+                    model_version = parsed.model
+                    if not model_version:
+                        # Fallback to info()
+                        info = await self.info()
+                        if info is None:
+                            raise DetectorError(
+                                "Missing model in response and info() unavailable",
+                                transient=True,
+                            )
+                        model_version = info.model_version
+
+                    # Конвертировать в RawDetection с округлением и clamping
+                    detections = []
+                    for det in parsed.detections:
+                        x1, y1, x2, y2 = det.bbox
+                        # Clamping
+                        x1 = max(0.0, min(1.0, x1))
+                        y1 = max(0.0, min(1.0, y1))
+                        x2 = max(0.0, min(1.0, x2))
+                        y2 = max(0.0, min(1.0, y2))
+
+                        # Округление
+                        bbox_rounded = (
+                            round(x1, 4),
+                            round(y1, 4),
+                            round(x2, 4),
+                            round(y2, 4),
+                        )
+                        conf_rounded = round(det.conf, 3)
+
+                        detections.append(
+                            RawDetection(
+                                class_ours=det.class_ours,
+                                conf=conf_rounded,
+                                bbox=bbox_rounded,
+                            )
+                        )
+
+                    result = DetectionResult(
+                        model_version=model_version,
+                        detections=detections,
+                        width=parsed.width,
+                        height=parsed.height,
+                    )
+
+                    # Логирование
+                    speed_str = ""
+                    if parsed.speed_ms and "total" in parsed.speed_ms:
+                        speed_str = f" speed_ms.total={parsed.speed_ms['total']}"
+                    logger.info(
+                        "Detected: %s model=%s detections=%d%s",
+                        filename,
+                        model_version,
+                        len(detections),
+                        speed_str,
+                    )
+
+                    return result
+
+                # Неожиданный статус код
+                raise DetectorError(
+                    f"Unexpected HTTP status {response.status_code}", transient=False
+                )
+
+            except DetectorError:
+                raise
+            except httpx.TimeoutException as e:
+                if retry_other_count < self.settings.retry_other:
+                    retry_other_count += 1
+                    new_spent = await self._wait_before_retry(retry_other_count, total_sleep)
+                    if new_spent is not None:
+                        total_sleep = new_spent
+                        continue
+                raise DetectorError("Timeout (exhausted retries)", transient=True) from e
+            except httpx.TransportError as e:
+                if retry_other_count < self.settings.retry_other:
+                    retry_other_count += 1
+                    new_spent = await self._wait_before_retry(retry_other_count, total_sleep)
+                    if new_spent is not None:
+                        total_sleep = new_spent
+                        continue
+                raise DetectorError("Connection error (exhausted retries)", transient=True) from e
+
+    async def info(self) -> DetectorInfo | None:
+        """Получить информацию о детекторе от /meta.
+
+        Результат кэшируется после первого успешного вызова.
+        На ошибку возвращает None и сбрасывает кэш.
+
+        Returns:
+            DetectorInfo или None при ошибке
+        """
+        if self._info_cache_valid:
+            return self._info_cache
+
+        try:
+            url = f"{self.base_url}/meta"
+            timeout = httpx.Timeout(
+                self.settings.timeout_s,
+                connect=self.settings.connect_timeout_s,
+            )
+            response = await self.client.get(url, timeout=timeout)
+
+            if response.status_code != 200:
+                logger.warning(f"Failed to get detector info: HTTP {response.status_code}")
+                self._info_cache_valid = False
+                self._info_cache = None
+                return None
+
             try:
                 data = response.json()
+                parsed = _MetaSchema(**data)
             except Exception as e:
-                raise DetectorError("Ошибка парсинга JSON от детектора") from e
+                logger.warning(f"Failed to parse detector info: {e}")
+                self._info_cache_valid = False
+                self._info_cache = None
+                return None
 
-            # Валидировать через pydantic
-            try:
-                parsed = _ResponseSchema(**data)
-            except Exception as e:
-                raise DetectorError(f"Невалидный ответ от детектора: {str(e)}") from e
+            # Получить model_version (model или weights)
+            model_version = parsed.model or parsed.weights
+            if not model_version:
+                logger.warning("Detector info missing both 'model' and 'weights'")
+                self._info_cache_valid = False
+                self._info_cache = None
+                return None
 
-            # Конвертировать в RawDetection с округлением
-            detections = []
-            for det in parsed.detections:
-                # Clamping bbox в пределы [0, 1]
-                x1, y1, x2, y2 = det.bbox
-                x1 = max(0.0, min(1.0, x1))
-                y1 = max(0.0, min(1.0, y1))
-                x2 = max(0.0, min(1.0, x2))
-                y2 = max(0.0, min(1.0, y2))
+            # Проверить contract
+            if parsed.contract:
+                # Parse "<name>/v<major>[.<minor>]"
+                match = re.match(r"^(\w+)/v(\d+)(?:\.(\d+))?$", parsed.contract)
+                if match:
+                    name, major_str, _minor = match.groups()
+                    major = int(major_str)
+                    if name != "detect" or major != 1:
+                        logger.error(
+                            "Detector contract mismatch: expected '%s', got '%s'",
+                            EXPECTED_CONTRACT,
+                            parsed.contract,
+                        )
+                else:
+                    logger.error("Detector contract format unrecognized: '%s'", parsed.contract)
 
-                # Округление: bbox до 4 знаков, conf до 3
-                bbox_rounded = (
-                    round(x1, 4),
-                    round(y1, 4),
-                    round(x2, 4),
-                    round(y2, 4),
-                )
-                conf_rounded = round(det.conf, 3)
+            info = DetectorInfo(
+                model_version=model_version,
+                class_names=tuple(parsed.class_names),
+                conf_threshold=parsed.conf,
+                device=parsed.device,
+                contract=parsed.contract,
+            )
+            self._info_cache = info
+            self._info_cache_valid = True
+            return info
 
-                detections.append(
-                    RawDetection(
-                        class_ours=det.class_ours,
-                        conf=conf_rounded,
-                        bbox=bbox_rounded,
-                    )
-                )
-
-            return DetectionResult(model_version=parsed.model, detections=detections)
-
-        except DetectorError:
-            # Re-raise DetectorError как есть
-            raise
-        except httpx.TimeoutException as e:
-            raise DetectorError("Timeout при запросе к детектору") from e
-        except httpx.ConnectError as e:
-            raise DetectorError("Ошибка подключения к детектору") from e
         except Exception as e:
-            # Ловим любые другие ошибки (напр. network errors)
-            raise DetectorError(f"Ошибка детектора: {type(e).__name__}") from e
+            logger.warning(f"Unexpected error getting detector info: {e}")
+            self._info_cache_valid = False
+            self._info_cache = None
+            return None
+
+    async def ready(self) -> bool:
+        """Проверить, готов ли детектор (model_loaded).
+
+        Вызывает GET /health и проверяет model_loaded.
+
+        Returns:
+            True если model_loaded=true, False иначе
+        """
+        try:
+            url = f"{self.base_url}/health"
+            timeout = httpx.Timeout(
+                self.settings.timeout_s,
+                connect=self.settings.connect_timeout_s,
+            )
+            response = await self.client.get(url, timeout=timeout)
+
+            if response.status_code != 200:
+                return False
+
+            try:
+                data = response.json()
+                parsed = _HealthSchema(**data)
+                return parsed.model_loaded
+            except Exception:
+                return False
+
+        except Exception:
+            return False
