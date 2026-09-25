@@ -75,3 +75,5 @@ volumes:
   postgres_data:
   storage_data:
   minio_data:
+  ml_weights:
+    name: lct7_ml_weights

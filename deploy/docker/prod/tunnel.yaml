@@ -26,3 +26,6 @@ services:
       - traefik.http.routers.frontend.priority=1
       - traefik.http.routers.frontend.entrypoints=web
       - traefik.http.services.frontend.loadbalancer.server.port=80
+
+  ml:
+    mem_limit: 1536m
