@@ -27,6 +27,7 @@ STATUS_RU = {
     "not_started": "не начат",
     "not_observed": "нет наблюдений",
     "not_checkable": "не проверяется по технике",
+    "no_rule": "нет правила в методике",
 }
 
 ALERT_RU = {
@@ -37,6 +38,8 @@ ALERT_RU = {
     "unexpected_equipment": "непредусмотренная техника",
     "no_progress": "нет изменений",
     "unusable_data": "данные вне анализа",
+    "plan_invalid": "строки плана не разобраны",
+    "unknown_stages": "этапы вне методики",
 }
 
 

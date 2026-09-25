@@ -153,8 +153,13 @@ def stage_status(stage: dict, rule: dict | None, states: list[dict],
             "planned": {"start": stage["start"].isoformat(), "end": stage["end"].isoformat()}}
 
     if rule is None:
-        return {**base, "status": "not_checkable",
-                "basis": "для этапа нет правила в методике"}, []
+        # Это не то же самое, что not_checkable. «Не проверяется по технике» —
+        # свойство этапа (гидроизоляцию по машинам не увидишь). «Нет правила» —
+        # дыра в нашей настройке: заказчик прислал код, которого нет в методике.
+        # Свалить их в один статус опасно: план с чужой нумерацией целиком стал
+        # бы «не проверяется», и система молча выглядела бы работающей.
+        return {**base, "status": "no_rule",
+                "basis": f"кода «{code}» нет в методике configs/rules.json"}, []
     if not rule.get("checkable_by_equipment", True):
         return {**base, "status": "not_checkable",
                 "basis": rule.get("note", "этап не определяется по технике")}, []
@@ -388,7 +393,8 @@ def forecast(stages: list[dict], plan: list[dict]) -> dict:
 
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 states: list[dict], specific: set[str],
-                unusable: dict[str, int] | None = None) -> dict:
+                unusable: dict[str, int] | None = None,
+                plan_issues: list[dict] | None = None) -> dict:
     stages, alerts = [], []
 
     # Дыра в данных — не то же самое, что отсутствие работ. Заказчик просил
@@ -408,10 +414,47 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
             "cannot_claim": "Отсутствие наблюдений на этих кадрах не означает отсутствия работ: "
                             "кадры исключены из-за неполных данных, а не из-за пустой площадки.",
         })
+    # Строки плана, которые не удалось разобрать, — такая же дыра в данных, как
+    # кадр без даты, и прятать её нельзя: по выброшенной строке выводов не будет,
+    # а заказчик считает, что этап под контролем.
+    if plan_issues:
+        reasons = "; ".join(f"{i['stage_code'] or 'без кода'}: {i['reason']}"
+                            for i in plan_issues[:5])
+        more = f" и ещё {len(plan_issues) - 5}" if len(plan_issues) > 5 else ""
+        alerts.append({
+            "type": "plan_invalid",
+            "site_id": site_id,
+            "confidence": "high",
+            "observability": "low",
+            "explanation": (f"{len(plan_issues)} строк(и) календарного плана не разобраны "
+                            f"и не участвуют в выводах ({reasons}{more})."),
+            "cannot_claim": ("По этим этапам система не говорит ничего: строка отброшена "
+                             "из-за ошибки в плане, а не потому, что работы не идут. "
+                             "Исправьте строку и загрузите план заново."),
+        })
+
     for stage in sorted(plan, key=lambda s: s["start"]):
         status, stage_alerts = stage_status(stage, rules.get(stage["stage_code"]), states, specific)
         stages.append(status)
         alerts.extend({**a, "site_id": site_id} for a in stage_alerts)
+
+    # Коды без правила собираем в один алерт по площадке. Поштучно это был бы
+    # шум, а одной строкой видно масштаб: «из 14 этапов методика знает 2».
+    no_rule = [st["stage_code"] for st in stages if st["status"] == "no_rule"]
+    if no_rule:
+        alerts.append({
+            "type": "unknown_stages",
+            "site_id": site_id,
+            "confidence": "high",
+            "observability": "low",
+            "explanation": (f"{len(no_rule)} из {len(stages)} этапов плана не описаны в "
+                            f"методике: {', '.join(no_rule[:8])}"
+                            + (" и др." if len(no_rule) > 8 else "") +
+                            ". По ним система выводов не делает."),
+            "cannot_claim": ("Отсутствие правила — пробел в настройке, а не заключение о "
+                             "стройке. Добавьте этап в configs/rules.json, и он начнёт "
+                             "проверяться без изменения кода."),
+        })
 
     # Неожиданная техника: проверяется по этапам, активным на дату наблюдения.
     for state in states:

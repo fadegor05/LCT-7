@@ -252,3 +252,62 @@ class TestРядКадров:
         from activity_series import analyse
         res = analyse(self.серия([0, 2], [[0.2, 0.3, 0.3, 0.5]] * 2))
         assert "а не работа" in res["cannot_claim"]
+
+
+class TestГрязныйПлан:
+    """Реальные планы приходят с ошибками, и одна строка не должна валить всё.
+
+    Каждая проверка здесь — случай, найденный сквозным прогоном сервиса, а не
+    придуманный: в присланном заказчиком файле были и несуществующие даты, и
+    повторяющиеся этапы.
+    """
+
+    НАБЛЮДЕНИЕ = staticmethod(lambda: [frame("a.png", "s1", "2024-04-24", СВАИ)])
+
+    def test_битая_дата_не_роняет_весь_план(self):
+        плохой = [dict(SCHEDULE[0], planned_start="30.02.2027")]
+        report = build_report(self.НАБЛЮДЕНИЕ(), плохой)
+        assert report["meta"]["plan_rows_rejected"] == 1
+        assert any(a["type"] == "plan_invalid" for a in report["sites"][0]["alerts"])
+
+    def test_площадка_с_полностью_битым_планом_не_исчезает(self):
+        """Иначе предупреждение пропадёт вместе с площадкой — худший исход."""
+        плохой = [dict(SCHEDULE[0], planned_end="30.02.2027")]
+        report = build_report(self.НАБЛЮДЕНИЕ(), плохой)
+        assert len(report["sites"]) == 1
+        assert report["sites"][0]["stages"] == []
+
+    def test_окончание_раньше_начала_отбраковано(self):
+        """Иначе цепочка честно посчитает отставание в сто дней из ничего."""
+        плохой = [dict(SCHEDULE[0], planned_start="2024-06-01", planned_end="2024-01-01")]
+        report = build_report(self.НАБЛЮДЕНИЕ(), плохой)
+        assert report["meta"]["plan_rows_rejected"] == 1
+        assert report["sites"][0]["stages"] == []
+
+    def test_повторяющийся_этап_сводится_в_одну_строку(self):
+        двойной = [SCHEDULE[0], dict(SCHEDULE[0], planned_end="2024-05-31")]
+        report = build_report(self.НАБЛЮДЕНИЕ(), двойной)
+        stages = report["sites"][0]["stages"]
+        assert len(stages) == 1
+        assert stages[0]["planned"]["end"] == "2024-05-31"   # берём самое позднее
+
+    def test_код_без_правила_отличается_от_непроверяемого_этапа(self):
+        """«Нет правила» — дыра в настройке, «не проверяется» — свойство этапа.
+
+        Смешать их значит: план с чужой нумерацией целиком станет «не
+        проверяется», и система будет молча выглядеть работающей.
+        """
+        чужой = [dict(SCHEDULE[0], stage_code="99.9.9", stage_name="Чужой код")]
+        report = build_report(self.НАБЛЮДЕНИЕ(), чужой)
+        assert report["sites"][0]["stages"][0]["status"] == "no_rule"
+        assert any(a["type"] == "unknown_stages" for a in report["sites"][0]["alerts"])
+
+
+def test_копёр_подтверждает_забивные_сваи():
+    """Найдено сквозным прогоном: на p09 девять копров, а этап числился не начатым.
+
+    Методика знала только буронабивные сваи (нужны буровая и кран). Забивные
+    погружаются копровой установкой, и отдельный кран по норме не нужен.
+    """
+    obs = [frame("a.png", "s1", "2024-02-10", ["pile_driver"])]
+    assert build_report(obs, SCHEDULE)["sites"][0]["stages"][0]["status"] == "on_track"
