@@ -51,6 +51,7 @@ weights/       веса (в git не хранятся, качаются скри
 | `tools/match_schedule.py` | статусы этапов и алерты по графику |
 | `tools/parse_schedule.py` | календарный план заказчика (Excel или PDF) в наш формат |
 | `tools/eval_groups.py` | оценка качества на размеченных площадках |
+| `tools/scene_stage.py` | замер: определяется ли стадия по виду сцены (E21) |
 | `tools/train_ours.py` | обучение на смеси наборов |
 | `tools/fetch_weights.py` | загрузка весов из приватного репозитория |
 
