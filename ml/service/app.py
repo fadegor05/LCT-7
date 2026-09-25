@@ -16,12 +16,15 @@ from __future__ import annotations
 
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, Detector
+from service.export import to_csv, to_html, to_xlsx
 from service.pipeline import build_report, summary
 
 MAX_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024))
@@ -124,6 +127,33 @@ def report(req: ReportRequest) -> dict:
     except Exception as exc:
         raise HTTPException(422, f"не удалось построить отчёт: {exc}") from exc
     return {**result, "summary": summary(result)}
+
+
+@app.post("/report/export", summary="Отчёт файлом: CSV, XLSX или HTML для печати")
+def report_export(req: ReportRequest,
+                  fmt: str = Query("xlsx", pattern="^(csv|xlsx|html)$"),
+                  what: str = Query("stages", pattern="^(stages|alerts)$")) -> Response:
+    """Заказчик — департамент: выводы попадают в документооборот, а JSON туда не
+    приложишь. HTML открывается в браузере и сохраняется в PDF без отдельной
+    библиотеки в образе.
+
+    `what` действует только для CSV: в XLSX оба листа, в HTML обе таблицы.
+    """
+    if not req.observations or not req.schedule:
+        raise HTTPException(400, "нужны и наблюдения, и календарный план")
+    result = build_report([o.model_dump() for o in req.observations],
+                          [s.model_dump() for s in req.schedule], conf=req.conf)
+    stamp = datetime.now().strftime("%Y%m%d")
+    if fmt == "csv":
+        body, media, name = to_csv(result, what), "text/csv; charset=utf-8", f"report_{what}_{stamp}.csv"
+    elif fmt == "xlsx":
+        body, media, name = (to_xlsx(result),
+                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                             f"report_{stamp}.xlsx")
+    else:
+        return HTMLResponse(to_html(result))
+    return Response(content=body, media_type=media,
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 @app.post("/detect", response_model=FrameResult, summary="Детекции по одному кадру")
