@@ -3,6 +3,10 @@
 from dishka import Provider, Scope, provide
 
 from app.core.settings import Settings
+from app.domains.methodology.recalculator import (
+    NoopStatusRecalculator,
+    StatusRecalculator,
+)
 from app.domains.observation.policies import (
     ActivityPolicy,
     AggregationPolicy,
@@ -40,6 +44,11 @@ class ObservationProvider(Provider):
     def activity_policy(self, settings: Settings) -> ActivityPolicy:
         """Создать ActivityPolicy."""
         return ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+
+    @provide(scope=Scope.APP, provides=StatusRecalculator)
+    def status_recalculator(self) -> StatusRecalculator:
+        """Предоставить no-op рекалькулятор (заглушка для LCT-11)."""
+        return NoopStatusRecalculator()
 
     observation_repository = provide(ObservationRepository, scope=Scope.REQUEST)
     observed_equipment_repository = provide(ObservedEquipmentRepository, scope=Scope.REQUEST)

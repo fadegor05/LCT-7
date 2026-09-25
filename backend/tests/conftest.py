@@ -24,6 +24,7 @@ from app.adapters.ml.base import DetectorClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
+from app.domains.assessment.provider import AssessmentProvider
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.observation.provider import ObservationProvider
@@ -185,6 +186,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         MethodologyProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
+        AssessmentProvider(),
         UtilityProvider(),
     )
     yield container

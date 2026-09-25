@@ -5,6 +5,7 @@
 """
 
 from app.core.database import Base
+from app.domains.assessment import models as assessment_models  # noqa: F401
 from app.domains.methodology import models as methodology_models  # noqa: F401
 from app.domains.observation import models as observation_models  # noqa: F401
 from app.domains.photo import models as photo_models  # noqa: F401

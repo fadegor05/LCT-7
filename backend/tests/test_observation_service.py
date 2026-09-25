@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.settings import Settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import EquipmentType
+from app.domains.methodology.recalculator import NoopStatusRecalculator
 from app.domains.observation.models import ObservedEquipment
 from app.domains.observation.policies import (
     ActivityPolicy,
@@ -650,6 +651,7 @@ class TestObservationServiceRecompute:
             aggregation=agg_policy,
             observability=obs_policy,
             activity=act_policy,
+            recalculator=NoopStatusRecalculator(),
         )
 
     async def _get_photo_id_for_site(self, request_container, site_id: uuid.UUID) -> uuid.UUID:
@@ -783,6 +785,7 @@ class TestObservationServiceGetObservation:
             aggregation=agg_policy,
             observability=obs_policy,
             activity=act_policy,
+            recalculator=NoopStatusRecalculator(),
         )
 
 
@@ -884,4 +887,5 @@ class TestObservationServiceListObservations:
             aggregation=agg_policy,
             observability=obs_policy,
             activity=act_policy,
+            recalculator=NoopStatusRecalculator(),
         )
