@@ -190,3 +190,65 @@ def test_прогноз_попадает_в_печатную_форму():
     html = to_html(build_report(obs, TestПрогноз.ДВА_ЭТАПА)).decode("utf-8")
     assert "Прогноз сроков" in html
     assert "2024-10-24" in html
+
+
+class TestРядКадров:
+    """Простой по ряду кадров с камеры.
+
+    Данных с камер у нас ещё нет, поэтому логика проверяется на построенных
+    рядах: они задают ровно те случаи, ради которых код и написан.
+    """
+
+    @staticmethod
+    def серия(минуты: list[int], боксы: list[list[float]], cls="excavator_crawler",
+              camera="cam1"):
+        return [{"image": f"{i}.jpg", "camera_id": camera,
+                 "timestamp": f"2026-05-18T09:{m:02d}:00",
+                 "detections": [{"class_ours": cls, "conf": 0.9, "bbox": b}]}
+                for i, (m, b) in enumerate(zip(минуты, боксы))]
+
+    def test_неподвижная_машина_считается_несместившейся(self):
+        from activity_series import analyse
+        кадры = self.серия(list(range(0, 24, 2)), [[0.2, 0.3, 0.3, 0.5]] * 12)
+        row = analyse(кадры)["classes"][0]
+        assert row["still"] == 11 and row["moved"] == 0
+        assert row["still_share"] == 1.0
+
+    def test_едущая_машина_считается_сместившейся(self):
+        from activity_series import analyse
+        боксы = [[0.1 + i * 0.05, 0.3, 0.2 + i * 0.05, 0.5] for i in range(12)]
+        row = analyse(self.серия(list(range(0, 24, 2)), боксы))["classes"][0]
+        assert row["moved"] == 11 and row["still"] == 0
+
+    def test_мало_наблюдений_доля_не_оценивается(self):
+        """Три пары — не выборка. Молчать честнее, чем назвать 100%."""
+        from activity_series import analyse
+        row = analyse(self.серия([0, 2, 4, 6], [[0.2, 0.3, 0.3, 0.5]] * 4))["classes"][0]
+        assert "still_share" not in row
+        assert "меньше порога" in row["basis"]
+
+    def test_сдвиг_камеры_не_принимается_за_движение_техники(self):
+        """Если сместилось всё сразу — подвинули камеру, а не поехала техника."""
+        from activity_series import analyse
+        def кадр(i, dx):
+            return {"image": f"{i}.jpg", "camera_id": "cam1",
+                    "timestamp": f"2026-05-18T09:{i * 2:02d}:00",
+                    "detections": [{"class_ours": "excavator_crawler", "conf": 0.9,
+                                    "bbox": [x + dx, 0.3, x + 0.1 + dx, 0.5]}
+                                   for x in (0.1, 0.4, 0.7)]}
+        кадры = [кадр(0, 0.0), кадр(1, 0.05)]
+        res = analyse(кадры)
+        assert res["meta"]["frames_skipped_camera_moved"] == 1
+        assert res["classes"] == []
+
+    def test_большой_разрыв_между_кадрами_не_сравнивается(self):
+        """За час машина успеет уехать и вернуться — «не сместилась» пусто."""
+        from activity_series import analyse
+        res = analyse(self.серия([0, 59], [[0.2, 0.3, 0.3, 0.5]] * 2))
+        assert res["meta"]["pairs_skipped_gap"] == 1
+        assert res["classes"] == []
+
+    def test_результат_несёт_оговорку(self):
+        from activity_series import analyse
+        res = analyse(self.серия([0, 2], [[0.2, 0.3, 0.3, 0.5]] * 2))
+        assert "а не работа" in res["cannot_claim"]
