@@ -22,14 +22,20 @@ export const user: User = {
 
 /** Часть справочника техники backend (methodology/seed.py). */
 export const equipmentTypes: EquipmentType[] = [
-  ['excavator_crawler', 'Гусеничный экскаватор'],
-  ['excavator_wheeled', 'Колёсный экскаватор'],
-  ['bulldozer', 'Бульдозер'],
-  ['dump_truck', 'Самосвал'],
-  ['concrete_mixer', 'Автобетоносмеситель'],
-  ['concrete_pump', 'Автобетононасос'],
-  ['truck_crane', 'Автокран'],
-].map(([code, title]) => ({ id: `eq-${code}`, code: code!, title: title!, synonyms: [] }))
+  { code: 'excavator_crawler', title: 'Гусеничный экскаватор', is_coarse: false },
+  { code: 'excavator_wheeled', title: 'Колёсный экскаватор', is_coarse: false },
+  { code: 'bulldozer', title: 'Бульдозер', is_coarse: false },
+  { code: 'dump_truck', title: 'Самосвал', is_coarse: false },
+  { code: 'concrete_mixer', title: 'Автобетоносмеситель', is_coarse: false },
+  { code: 'concrete_pump', title: 'Автобетононасос', is_coarse: false },
+  { code: 'truck_crane', title: 'Автокран', is_coarse: false },
+].map((eq) => ({
+  id: `eq-${eq.code}`,
+  code: eq.code,
+  title: eq.title,
+  synonyms: [],
+  is_coarse: eq.is_coarse,
+}))
 
 export const equipmentByCode = (code: string) => equipmentTypes.find((e) => e.code === code)!
 

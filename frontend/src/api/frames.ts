@@ -4,7 +4,14 @@ import { z } from 'zod'
 import { env } from '@/lib/env'
 import { request } from './client'
 import { keys } from './keys'
-import { observationSchema, photoDetailSchema, photoSchema, uploadReportSchema } from './schemas'
+import type { ProcessingStatus } from './schemas'
+import {
+  detectBacklogReportSchema,
+  observationSchema,
+  photoDetailSchema,
+  photoSchema,
+  uploadReportSchema,
+} from './schemas'
 
 export const framesApi = {
   observations: (siteId: string) =>
@@ -37,6 +44,13 @@ export const framesApi = {
     request(`/sites/${siteId}/photos/${photoId}/detect`, {
       method: 'POST',
       schema: photoDetailSchema,
+    }),
+  /** Распознавание необработанных снимков; statuses — фильтр по processing_status. */
+  detectBacklog: (siteId: string, statuses?: ProcessingStatus[]) =>
+    request(`/sites/${siteId}/photos/detect`, {
+      method: 'POST',
+      query: statuses && statuses.length > 0 ? { status: statuses.join(',') } : undefined,
+      schema: detectBacklogReportSchema,
     }),
 }
 
@@ -94,4 +108,10 @@ export function useSetPhotoDate(siteId: string) {
 
 export function useRedetectPhoto(siteId: string) {
   return useSiteMutation(siteId, (photoId: string) => framesApi.redetect(siteId, photoId))
+}
+
+export function useDetectBacklog(siteId: string) {
+  return useSiteMutation(siteId, (statuses?: ProcessingStatus[]) =>
+    framesApi.detectBacklog(siteId, statuses),
+  )
 }

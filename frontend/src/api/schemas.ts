@@ -117,6 +117,7 @@ export const equipmentTypeSchema = z.object({
   code: z.string(),
   title: z.string(),
   synonyms: z.array(z.string()),
+  is_coarse: z.boolean().default(false),
 })
 
 export const requirementSchema = z.object({
@@ -200,6 +201,13 @@ export const uploadReportSchema = z.object({
   ),
   uploaded: z.number(),
   failed: z.number(),
+})
+
+export const detectBacklogReportSchema = z.object({
+  processed: z.number().int(),
+  done: z.number().int(),
+  failed: z.number().int(),
+  skipped: z.number().int(),
 })
 
 // ---------- Наблюдения (observation) ----------
@@ -303,3 +311,4 @@ export type StageStatus = z.infer<typeof stageStatusSchema>
 export type Deviation = z.infer<typeof deviationSchema>
 export type DeviationDetail = z.infer<typeof deviationDetailSchema>
 export type SiteSummary = z.infer<typeof siteSummarySchema>
+export type DetectBacklogReport = z.infer<typeof detectBacklogReportSchema>
