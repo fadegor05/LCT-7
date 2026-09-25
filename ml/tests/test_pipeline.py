@@ -145,3 +145,48 @@ class TestСводка:
         s = summary(report)
         assert s["statuses"]["behind"] == 1
         assert s["sites"] == 1
+
+
+class TestПрогноз:
+    """Прогноз — арифметика графика, а не модель производительности.
+
+    Проверяем ровно два свойства: сдвиг появляется только при задержке и
+    равен ей; оговорка про объём работ едет вместе с числом.
+    """
+
+    ДВА_ЭТАПА = SCHEDULE + [
+        {"site_id": "s1", "stage_code": "12.3.6", "stage_name": "Монолит выше нуля",
+         "planned_start": "2024-04-01", "planned_end": "2024-09-30"},
+    ]
+
+    def test_в_графике_сдвига_нет(self):
+        obs = [frame("a.png", "s1", "2024-02-10", СВАИ)]
+        f = build_report(obs, self.ДВА_ЭТАПА)["sites"][0]["forecast"]
+        assert f["shift_days"] == 0
+
+    def test_задержка_переносится_на_завершение(self):
+        """Сваи видны через 24 дня после срока — на столько же съезжает весь план."""
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        f = build_report(obs, self.ДВА_ЭТАПА)["sites"][0]["forecast"]
+        assert f["shift_days"] == 24
+        assert f["planned_completion"] == "2024-09-30"
+        assert f["projected_completion"] == "2024-10-24"
+
+    def test_сдвиг_достаётся_последующему_этапу(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        f = build_report(obs, self.ДВА_ЭТАПА)["sites"][0]["forecast"]
+        позже = [s for s in f["stages"] if s["stage_code"] == "12.3.6"]
+        assert позже and позже[0]["shift_days"] == 24
+
+    def test_прогноз_несёт_оговорку(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        f = build_report(obs, self.ДВА_ЭТАПА)["sites"][0]["forecast"]
+        assert "объём по снимкам не измеряется" in f["cannot_claim"]
+        assert "верхняя оценка" in f["assumption"]
+
+
+def test_прогноз_попадает_в_печатную_форму():
+    obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+    html = to_html(build_report(obs, TestПрогноз.ДВА_ЭТАПА)).decode("utf-8")
+    assert "Прогноз сроков" in html
+    assert "2024-10-24" in html

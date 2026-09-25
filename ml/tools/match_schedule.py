@@ -28,7 +28,7 @@ import csv
 import json
 import sys
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 
@@ -331,6 +331,61 @@ def work_sampling(states: list[dict]) -> list[dict]:
     return out
 
 
+def forecast(stages: list[dict], plan: list[dict]) -> dict:
+    """Прогноз сроков: насколько сдвинется завершение, если задержка не нагоняется.
+
+    Чего мы **не** делаем: не предсказываем срок по объёму выполненных работ —
+    объём по снимкам не измеряется (D-016). Здесь арифметика графика, а не модель.
+
+    Допущение одно и названо явно: этапы идут последовательно, и задержка
+    переносится на те, что начинаются после окончания задержавшегося. Если
+    подрядчик нагонит темп или пустит работы параллельно, сдвиг будет меньше.
+    Поэтому это **верхняя оценка**, и в отчёте она помечена как таковая.
+    """
+    delayed = [(st["stage_code"], st.get("delay_days") or 0, st["planned"]["end"])
+               for st in stages
+               if st["status"] in ("behind", "not_started") and st.get("delay_days")]
+    if not delayed:
+        return {"shift_days": 0, "basis": "задержавшихся этапов нет"}
+
+    by_code = {st["stage_code"]: st for st in stages}
+    shifted = []
+    for item in plan:
+        code = item["stage_code"]
+        own = by_code.get(code, {}).get("delay_days") or 0
+        # сдвиг от предшественников: берём максимум по тем, что должны были
+        # закончиться до начала этого этапа
+        inherited = max((d for c, d, end in delayed
+                         if parse_date(end) <= item["start"] and c != code), default=0)
+        total = max(own, inherited)
+        if total:
+            shifted.append({
+                "stage_code": code,
+                "stage_name": item["stage_name"],
+                "planned_end": item["end"].isoformat(),
+                "projected_end": (item["end"] + timedelta(days=total)).isoformat(),
+                "shift_days": total,
+            })
+
+    worst = max((s["shift_days"] for s in shifted), default=0)
+    last_planned = max(item["end"] for item in plan)
+    return {
+        "shift_days": worst,
+        "planned_completion": last_planned.isoformat(),
+        "projected_completion": (last_planned + timedelta(days=worst)).isoformat(),
+        "stages": shifted,
+        "basis": (f"наибольшая наблюдаемая задержка {worst} дн. переносится на "
+                  f"последующие этапы; завершение сдвигается с "
+                  f"{last_planned.isoformat()} на "
+                  f"{(last_planned + timedelta(days=worst)).isoformat()}"),
+        "assumption": ("этапы считаются последовательными, задержка не нагоняется. "
+                       "Это верхняя оценка сдвига"),
+        "cannot_claim": ("Срок не рассчитан по объёму выполненных работ: объём по "
+                         "снимкам не измеряется. Это перенос наблюдаемой задержки по "
+                         "графику, а не прогноз производительности подрядчика."),
+    }
+
+
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 states: list[dict], specific: set[str],
                 unusable: dict[str, int] | None = None) -> dict:
@@ -453,6 +508,7 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
         "observations": len(states),
         "stages": stages,
         "equipment_engagement": sampling,
+        "forecast": forecast(stages, plan),
         "alerts": alerts,
     }
 

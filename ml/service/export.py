@@ -172,6 +172,23 @@ def to_html(report: dict, title: str = "Отчёт о ходе работ") -> b
                      for row in rows)
         return f"<table><thead><tr>{th}</tr></thead><tbody>{tr}</tbody></table>"
 
+    def forecast_block(site: dict) -> str:
+        """Прогноз печатается словами: в документообороте читают текст, не JSON."""
+        f = site.get("forecast") or {}
+        if not f.get("shift_days"):
+            return ""
+        return (f"<p><b>{escape(str(site['site_id']))}:</b> сдвиг "
+                f"{f['shift_days']} дн., завершение "
+                f"{escape(str(f.get('planned_completion', '')))} → "
+                f"{escape(str(f.get('projected_completion', '')))}. "
+                f"<i>{escape(str(f.get('assumption', '')))}.</i></p>")
+
+    forecasts = "".join(forecast_block(site) for site in report["sites"])
+    forecast_html = ("<h2>Прогноз сроков</h2>" + forecasts +
+                     "<p class='empty'>Срок не рассчитан по объёму выполненных работ: "
+                     "объём по снимкам не измеряется. Это перенос наблюдаемой задержки "
+                     "по графику.</p>") if forecasts else ""
+
     return f"""<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>{escape(title)}</title>
 <style>
@@ -193,6 +210,7 @@ def to_html(report: dict, title: str = "Отчёт о ходе работ") -> b
 {table(STAGE_HEAD, _stage_rows(report))}
 <h2>Отклонения</h2>
 {table(ALERT_HEAD, _alert_rows(report))}
+{forecast_html}
 <div class="note"><b>Как читать.</b> «Нет наблюдений» — утверждение о наших данных,
  а не о стройке: снимков за период не было. «Не проверяется по технике» — этап,
  который по видимой технике определить нельзя. Колонка «чего система не
