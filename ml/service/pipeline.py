@@ -132,6 +132,15 @@ def build_report(observations: list[dict], schedule: list[dict],
                for site in sorted(set(plans) | set(plan_issues))]
 
     covered = sum(s["n_images"] for s in states)
+
+    # Площадка, по которой есть снимки, но нет ни одной строки плана, не попадёт
+    # ни в один отчёт: сравнивать не с чем. Молча потерять её нельзя — снимки
+    # сняты, обработаны и посчитаны использованными, а на выходе о площадке нет
+    # ни слова. Для заказчика это выглядит так, будто объекта не существует.
+    observed_sites = {s["site_id"] for s in states if s["site_id"]}
+    without_plan = sorted(observed_sites - set(plans) - set(plan_issues))
+    frames_without_plan = sum(s["n_images"] for s in states if s["site_id"] in without_plan)
+
     return {
         "meta": {
             "frames_in": len(records),
@@ -139,6 +148,8 @@ def build_report(observations: list[dict], schedule: list[dict],
             "frames_unusable": sum(sum(v.values()) for v in unusable.values()),
             "observations": len(states),
             "sites": len(reports),
+            "sites_without_plan": without_plan,
+            "frames_without_plan": frames_without_plan,
             "conf": conf,
             "rules": Path(rules_path).name,
             "plan_rows_in": len(schedule),

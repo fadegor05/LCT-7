@@ -7,6 +7,7 @@
     python -m pytest tests/ -q
 """
 
+import re
 import sys
 import zipfile
 from datetime import date
@@ -18,7 +19,7 @@ sys.path.insert(0, str(ML / "tools"))
 
 from service.export import to_csv, to_html, to_xlsx      # noqa: E402
 from service.pipeline import build_report, summary        # noqa: E402
-from parse_schedule import parse_date                     # noqa: E402
+from parse_schedule import classify_rows, parse_date     # noqa: E402
 
 
 def frame(name, site, day, classes):
@@ -311,3 +312,66 @@ def test_копёр_подтверждает_забивные_сваи():
     """
     obs = [frame("a.png", "s1", "2024-02-10", ["pile_driver"])]
     assert build_report(obs, SCHEDULE)["sites"][0]["stages"][0]["status"] == "on_track"
+
+
+class TestРазборПлана:
+    """Баланс строк: каждая строка файла обязана попасть ровно в одну корзину.
+
+    Проверка не формальная. На реальном файле заказчика (374 строки) отчёт о
+    разборе объяснял судьбу 284, а 90 исчезали без следа: у них просто не было
+    дат. Строка «12.3.1 Устройство котлована» была среди них — оператор увидел
+    бы знакомый этап в плане и решил, что тот под контролем.
+    """
+
+    МАППИНГ = [(re.compile("котлован", re.I), "12.3.1", "Устройство котлована")]
+
+    @staticmethod
+    def строка(name, num="1", start="", end=""):
+        return {"num": num, "name": name, "start": start, "end": end}
+
+    def test_баланс_сходится(self):
+        raw = [self.строка("Устройство котлована", start="2024-01-15", end="2024-03-31"),
+               self.строка("Устройство котлована без дат"),
+               self.строка("Монтаж лифтов", start="2024-01-15", end="2024-03-31"),
+               self.строка("Котлован с битой датой", start="30.02.2027", end="2024-03-31")]
+        out, skipped, bad, no_dates, _ = classify_rows(raw, self.МАППИНГ, "s1")
+        assert len(out) + len(skipped) + len(no_dates) == len(raw)
+
+    def test_этап_без_дат_виден_отдельно(self):
+        """Самый опасный случай: название знакомое, а выводов не будет."""
+        raw = [self.строка("Устройство котлована")]
+        _, _, _, no_dates, mapped = classify_rows(raw, self.МАППИНГ, "s1")
+        assert len(no_dates) == 1
+        assert mapped == [("12.3.1", "Устройство котлована")]
+
+    def test_битая_дата_считается_и_не_прерывает_разбор(self):
+        raw = [self.строка("Устройство котлована", start="30.02.2027", end="2024-03-31"),
+               self.строка("Устройство котлована", start="2024-01-15", end="2024-03-31")]
+        out, _, bad, _, _ = classify_rows(raw, self.МАППИНГ, "s1")
+        assert len(bad) == 1 and len(out) == 1
+
+    def test_строка_без_нашего_этапа_не_попадает_в_план(self):
+        raw = [self.строка("Монтаж слаботочных систем", start="2024-01-15", end="2024-03-31")]
+        out, skipped, _, _, _ = classify_rows(raw, self.МАППИНГ, "s1")
+        assert out == [] and len(skipped) == 1
+
+
+class TestПлощадкаБезПлана:
+    def test_снимки_без_плана_не_исчезают_молча(self):
+        """Снимки сняты и обработаны, а сравнивать не с чем.
+
+        Без счётчика для заказчика это выглядит так, будто объекта не
+        существует: кадры учтены как использованные, а в отчёте о площадке нет
+        ни слова. Найдено сквозным прогоном на реальных данных — так пропадала
+        площадка p07.
+        """
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ),
+               frame("b.png", "чужая", "2024-04-24", СВАИ)]
+        meta = build_report(obs, SCHEDULE)["meta"]
+        assert meta["sites_without_plan"] == ["чужая"]
+        assert meta["frames_without_plan"] == 1
+
+    def test_когда_все_площадки_в_плане_счётчик_пуст(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        meta = build_report(obs, SCHEDULE)["meta"]
+        assert meta["sites_without_plan"] == []
