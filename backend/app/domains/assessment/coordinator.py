@@ -1,6 +1,7 @@
 """Оркестрация переучёта статусов этапов и отклонений (LCT-11)."""
 
 import uuid
+from collections.abc import Callable
 from datetime import date
 from typing import cast
 
@@ -54,6 +55,7 @@ class RecomputeCoordinator:
         photo_repo: PhotoRepository,
         detection_repo: DetectionRepository,
         session: AsyncSession,
+        today: Callable[[], date] = date.today,
     ) -> None:
         """Инициализировать RecomputeCoordinator.
 
@@ -70,6 +72,7 @@ class RecomputeCoordinator:
             photo_repo: PhotoRepository.
             detection_repo: DetectionRepository.
             session: AsyncSession для персистирования.
+            today: Callable for getting reference date (default: date.today).
         """
         self._engine = engine
         self._stage_status_repo = stage_status_repo
@@ -83,6 +86,7 @@ class RecomputeCoordinator:
         self._photo_repo = photo_repo
         self._detection_repo = detection_repo
         self._session = session
+        self._today = today
 
     async def recompute_site(self, site_id: uuid.UUID) -> None:
         """Полный идемпотентный переучёт статусов и отклонений для объекта.
@@ -210,7 +214,7 @@ class RecomputeCoordinator:
 
             # Шаг 5: Запустить engine
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, date.today()
+                stages, rules_by_stage, observations, self._today()
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)

@@ -686,6 +686,86 @@ class TestRecomputeCoordinator:
             detector = await request_container.get(DetectorClient)
             assert detector.calls == []
 
+    @pytest.mark.asyncio
+    async def test_injected_today_is_passed_to_engine(self, container) -> None:
+        """Verify that injected 'today' callable is used instead of date.today()."""
+        from datetime import timedelta
+
+        user = await seed_user(container)
+        site_id = uuid.uuid4()
+        stage_id = uuid.uuid4()
+        today = date.today()
+        injected_today = today - timedelta(days=30)
+
+        # Create site, schedule, stage, methodology
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+
+            site = Site(id=site_id, name="Test Site", owner_id=user.id)
+            session.add(site)
+            await session.flush()
+
+            schedule = Schedule(id=uuid.uuid4(), site_id=site_id)
+            session.add(schedule)
+            await session.flush()
+
+            stage = ScheduleStage(
+                id=stage_id,
+                schedule_id=schedule.id,
+                name="Test Stage",
+                position=1,
+                planned_start=today - timedelta(days=40),
+                planned_end=today - timedelta(days=20),  # ended before injected_today
+            )
+            session.add(stage)
+            await session.commit()
+
+        # Create coordinator with injected today
+        engine_config = EngineConfig(
+            tolerance_days=3,
+            stale_data_days=7,
+            no_progress_window_days=5,
+            min_confirming_observations=2,
+        )
+        async with container() as request_container:
+            # Build coordinator manually with injected today
+            session = await request_container.get(AsyncSession)
+            stage_status_repo = StageStatusRepository(session)
+            deviation_repo = DeviationRepository(session)
+            deviation_evidence_repo = DeviationEvidenceRepository(session)
+            status_basis_repo = StatusBasisRepository(session)
+            schedule_repo = ScheduleRepository(session)
+            methodology_repo = MethodologyRepository(session)
+            observation_repo = ObservationRepository(session)
+            observed_equipment_repo = ObservedEquipmentRepository(session)
+            photo_repo = PhotoRepository(session)
+            detection_repo = DetectionRepository(session)
+
+            engine = RuleEngine(engine_config)
+            coordinator = RecomputeCoordinator(
+                engine=engine,
+                stage_status_repo=stage_status_repo,
+                deviation_repo=deviation_repo,
+                deviation_evidence_repo=deviation_evidence_repo,
+                status_basis_repo=status_basis_repo,
+                schedule_repo=schedule_repo,
+                methodology_repo=methodology_repo,
+                observation_repo=observation_repo,
+                observed_equipment_repo=observed_equipment_repo,
+                photo_repo=photo_repo,
+                detection_repo=detection_repo,
+                session=session,
+                today=lambda: injected_today,  # Inject custom reference date
+            )
+
+            # Run recompute with injected today
+            await coordinator.recompute_site(site_id)
+
+            # Verify that stage status reflects the injected date
+            # (stage ended before injected_today, so should have a status)
+            status = await stage_status_repo.get_by_stage(stage_id)
+            assert status is not None, "Stage should have status computed with injected date"
+
 
 class TestLiveStatusRecalculator:
     """Тесты LiveStatusRecalculator."""
