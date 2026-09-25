@@ -88,15 +88,17 @@ class FakeDetector:
 class ScriptedDetector:
     """Scripted detector that returns results/exceptions in sequence."""
 
-    def __init__(self, sequence: list):
+    def __init__(self, sequence: list, configured: bool = True):
         """Initialize with a sequence of results or exceptions.
 
         Args:
             sequence: List of DetectionResult, Exception, or None values to return in order
+            configured: Whether detector is configured (default True)
         """
         self.sequence = sequence
         self.index = 0
         self.calls: list[tuple[str, int]] = []
+        self._configured = configured
 
     async def detect(
         self, image: bytes, filename: str, content_type: str | None = None
@@ -123,5 +125,5 @@ class ScriptedDetector:
 
     @property
     def configured(self) -> bool:
-        """ScriptedDetector is configured."""
-        return True
+        """ScriptedDetector is configured (configurable via constructor)."""
+        return self._configured

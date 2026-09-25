@@ -161,8 +161,6 @@ async def test_ready_with_configured_detector(client: AsyncClient) -> None:
     # ready depends on FakeDetector.ready_value which defaults to False
 
 
-
-
 async def test_version_returns_model_from_info(client: AsyncClient) -> None:
     """Version → model from detector.info()."""
     response = await client.get("/version")
