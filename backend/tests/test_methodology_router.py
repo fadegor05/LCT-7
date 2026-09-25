@@ -47,6 +47,7 @@ async def seed_equipment_types(container: AsyncContainer) -> None:
                 code=equipment_data["code"],
                 title=equipment_data["title"],
                 synonyms=equipment_data["synonyms"],
+                is_coarse=equipment_data.get("is_coarse", False),
             )
             session.add(equipment_type)
 
@@ -109,13 +110,14 @@ async def test_get_equipment_types_returns_200_with_list(
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 20
+    assert len(data) == 25  # 20 обычных + 5 coarse
 
     # Проверить структуру первого элемента
     first = data[0]
     assert "id" in first
     assert "code" in first
     assert "title" in first
+    assert "is_coarse" in first
     assert "synonyms" in first
     assert isinstance(first["synonyms"], list)
 

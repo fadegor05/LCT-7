@@ -20,6 +20,18 @@ class TestDefaultRulesStructure:
                         f"Код {req.equipment_code} не найден в EQUIPMENT_SEED"
                     )
 
+    def test_default_rules_never_reference_coarse_codes(self):
+        """DEFAULT_RULES никогда не ссылаются на grubые коды оборудования."""
+        rule_set = DefaultRuleSet()
+        coarse_codes = {item["code"] for item in EQUIPMENT_SEED if item.get("is_coarse", False)}
+
+        for rule in rule_set.rules:
+            for requirement_set in rule.sets:
+                for req in requirement_set:
+                    assert req.equipment_code not in coarse_codes, (
+                        f"Правило {rule.stage_key} ссылается на grubый код {req.equipment_code}"
+                    )
+
     def test_every_set_has_at_least_one_normative(self):
         """Каждый набор требований содержит хотя бы одно нормативное требование."""
         rule_set = DefaultRuleSet()

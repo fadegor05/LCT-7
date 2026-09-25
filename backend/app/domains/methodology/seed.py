@@ -101,4 +101,34 @@ EQUIPMENT_SEED: list[dict] = [
         "title": "Телескопический погрузчик",
         "synonyms": ["телескопический погрузчик", "телеман", "telehandler"],
     },
+    {
+        "code": "excavator_unknown",
+        "title": "Экскаватор (тип не определён)",
+        "synonyms": [],
+        "is_coarse": True,
+    },
+    {
+        "code": "crane_unknown",
+        "title": "Кран (тип не определён)",
+        "synonyms": [],
+        "is_coarse": True,
+    },
+    {
+        "code": "drilling_unknown",
+        "title": "Буровая техника (тип не определён)",
+        "synonyms": [],
+        "is_coarse": True,
+    },
+    {
+        "code": "truck_unknown",
+        "title": "Грузовик (тип не определён)",
+        "synonyms": [],
+        "is_coarse": True,
+    },
+    {
+        "code": "loader_unknown",
+        "title": "Погрузчик (тип не определён)",
+        "synonyms": [],
+        "is_coarse": True,
+    },
 ]

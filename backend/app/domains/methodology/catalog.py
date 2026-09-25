@@ -18,6 +18,7 @@ class EquipmentTypeInfo:
     code: str
     title: str
     synonyms: tuple[str, ...] | list[str]
+    is_coarse: bool = False
 
 
 class EquipmentCatalog:
@@ -50,6 +51,7 @@ class EquipmentCatalog:
                             code=eq.code,
                             title=eq.title,
                             synonyms=tuple(eq.synonyms),
+                            is_coarse=eq.is_coarse,
                         )
                         for eq in equipment_types
                     ]
