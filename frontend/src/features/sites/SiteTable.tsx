@@ -1,12 +1,35 @@
 import { Link } from 'react-router'
+import { useSummary } from '@/api/deviations'
+import { useObservations } from '@/api/frames'
 import type { Site } from '@/api/schemas'
-import { Pill } from '@/components/ui/Pill'
-import { daysAgo, formatDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { ObservabilityBadge, VerdictBadge } from './SiteBadges'
 import styles from './SiteTable.module.css'
 
-/** Порог «Данные устарели» в днях — в проде приходит из конфигурации сервера (§9). */
-const STALE_DAYS = 7
+/** Строка стройки: итог и последнее наблюдение приходят отдельными запросами по стройке. */
+function SiteRow({ site }: { site: Site }) {
+  const summary = useSummary(site.id).data
+  const last = useObservations(site.id).data?.at(-1)
+  return (
+    <Link to={`/sites/${site.id}`} className={`${styles.grid} ${styles.row}`}>
+      <span className={styles.name}>
+        <span className={styles.title}>{site.name}</span>
+        {site.address && <span className="sm muted">{site.address}</span>}
+      </span>
+      <span>
+        <VerdictBadge summary={summary} />
+      </span>
+      <span className={`data ${styles.count}`} aria-label="Критично">
+        {summary?.critical_count ?? 0}
+      </span>
+      <span className={`data ${styles.count}`} aria-label="Внимание">
+        {summary?.attention_count ?? 0}
+      </span>
+      <span className={`data ${styles.last}`}>{formatDate(last?.observed_on)}</span>
+      <span>{last ? <ObservabilityBadge level={last.observability} /> : '—'}</span>
+    </Link>
+  )
+}
 
 export function SiteTable({ sites }: { sites: readonly Site[] }) {
   return (
@@ -19,38 +42,9 @@ export function SiteTable({ sites }: { sites: readonly Site[] }) {
         <span>Последнее наблюдение</span>
         <span>Наблюдаемость</span>
       </div>
-      {sites.map((site) => {
-        const s = site.summary
-        return (
-          <Link key={site.id} to={`/sites/${site.id}`} className={`${styles.grid} ${styles.row}`}>
-            <span className={styles.name}>
-              <span className={styles.title}>{site.name}</span>
-              {site.address && <span className="sm muted">{site.address}</span>}
-            </span>
-            <span>
-              <VerdictBadge summary={s} />
-            </span>
-            <span className={`data ${styles.count}`} aria-label="Критично">
-              {s?.critical_count ?? 0}
-            </span>
-            <span className={`data ${styles.count}`} aria-label="Внимание">
-              {s?.attention_count ?? 0}
-            </span>
-            <span className={styles.last}>
-              <span className="data">{formatDate(s?.last_frame_at)}</span>
-              {s?.data_age_days != null &&
-                (s.data_age_days > STALE_DAYS ? (
-                  <Pill tone="caution" icon="clock">
-                    Данные устарели · {s.data_age_days} дн.
-                  </Pill>
-                ) : (
-                  <span className="sm muted">{daysAgo(s.data_age_days)}</span>
-                ))}
-            </span>
-            <span>{s ? <ObservabilityBadge level={s.observability} /> : '—'}</span>
-          </Link>
-        )
-      })}
+      {sites.map((site) => (
+        <SiteRow key={site.id} site={site} />
+      ))}
     </section>
   )
 }

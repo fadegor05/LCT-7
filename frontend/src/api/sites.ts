@@ -4,16 +4,18 @@ import { request } from './client'
 import { keys } from './keys'
 import { siteSchema, userSchema, type SiteCreate } from './schemas'
 
+/** Пустой адрес в форме — это «нет адреса» (null) на бэкенде. */
+const toBody = (data: Partial<SiteCreate>) =>
+  data.address === undefined ? data : { ...data, address: data.address.trim() || null }
+
 export const sitesApi = {
   me: () => request('/users/me', { schema: userSchema }),
   list: () => request('/sites', { schema: z.array(siteSchema) }),
   get: (siteId: string) => request(`/sites/${siteId}`, { schema: siteSchema }),
   create: (data: SiteCreate) =>
-    request('/sites', { method: 'POST', body: data, schema: siteSchema }),
+    request('/sites', { method: 'POST', body: toBody(data), schema: siteSchema }),
   update: (siteId: string, data: Partial<SiteCreate>) =>
-    request(`/sites/${siteId}`, { method: 'PATCH', body: data, schema: siteSchema }),
-  activate: (siteId: string) =>
-    request(`/sites/${siteId}/activate`, { method: 'POST', schema: siteSchema }),
+    request(`/sites/${siteId}`, { method: 'PATCH', body: toBody(data), schema: siteSchema }),
 }
 
 export function useMe() {
@@ -32,7 +34,10 @@ export function useCreateSite() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: sitesApi.create,
-    onSuccess: (site) => qc.setQueryData(keys.site(site.id), site),
+    onSuccess: async (site) => {
+      qc.setQueryData(keys.site(site.id), site)
+      await qc.invalidateQueries({ queryKey: keys.sites })
+    },
   })
 }
 
@@ -40,14 +45,6 @@ export function useUpdateSite(siteId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Partial<SiteCreate>) => sitesApi.update(siteId, data),
-    onSuccess: (site) => qc.setQueryData(keys.site(siteId), site),
-  })
-}
-
-export function useActivateSite(siteId: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: () => sitesApi.activate(siteId),
     onSuccess: async (site) => {
       qc.setQueryData(keys.site(siteId), site)
       await qc.invalidateQueries({ queryKey: keys.sites })

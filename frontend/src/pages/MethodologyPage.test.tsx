@@ -3,105 +3,172 @@ import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import { renderRoute } from '@/test/render'
 
-const editor = () => screen.getByRole('button', { name: 'Сохранить' }).closest('section')!
+const kit = (n: number) => screen.getByRole('region', { name: `Комплект ${n}` })
+const stageButton = (name: RegExp) => screen.getByRole('button', { name })
 
 describe('MethodologyPage', () => {
-  it('shows stages with their markers and selects one', async () => {
+  it('shows stages with their kits and markers and selects one', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
     const pit = await screen.findByRole('button', { name: /Разработка котлована/ })
-    expect(pit).toHaveTextContent('Комплект 1 · маркер: экскаватор')
-    expect(screen.getByRole('button', { name: /Подготовка территории/ })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await user.click(pit)
+    expect(pit).toHaveTextContent('1 комплект · маркер: гусеничный экскаватор')
     expect(pit).toHaveAttribute('aria-pressed', 'true')
+    expect(stageButton(/Устройство фундамента/)).toHaveTextContent(
+      '2 комплекта · маркер: автобетононасос, автокран',
+    )
+    expect(stageButton(/Подготовка территории/)).toHaveTextContent('Не проверяется по технике')
+    expect(screen.getByText('01.09 — 14.09')).toBeInTheDocument()
+    expect(within(kit(1)).getByText('Маркер')).toBeInTheDocument()
+    expect(within(kit(1)).getByText('по смыслу работы: вывоз грунта')).toBeInTheDocument()
+
+    await user.click(stageButton(/Подготовка территории/))
     expect(
-      screen.getByRole('heading', { level: 2, name: 'Разработка котлована' }),
+      screen.getByRole('heading', { level: 2, name: 'Подготовка территории' }),
     ).toBeInTheDocument()
-    expect(within(editor()).getByText('Маркер')).toBeInTheDocument()
-    expect(within(editor()).getByText(/Отличает этап от соседних/)).toBeInTheDocument()
+    expect(screen.getByText('Нет правила в базовом наборе — задайте комплект')).toBeInTheDocument()
   })
 
-  it('edits a kit and the server recomputes markers', async () => {
+  it('edits a kit and saves it to the server', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await user.click(await screen.findByRole('button', { name: /Устройство основания/ }))
-    const card = editor()
-    const save = within(card).getByRole('button', { name: 'Сохранить' })
+    await screen.findByRole('region', { name: 'Комплект 1' })
+    const save = within(kit(1)).getByRole('button', { name: 'Сохранить' })
     expect(save).toBeDisabled()
 
-    await user.click(within(card).getByRole('button', { name: 'Убрать машину: Каток' }))
-    expect(within(card).getByText('Есть несохранённые изменения.')).toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: 'Отмена' }))
-    expect(within(card).getByText('Каток')).toBeInTheDocument()
+    await user.click(within(kit(1)).getByRole('button', { name: 'Убрать машину: Самосвал' }))
+    expect(within(kit(1)).getByText('Есть несохранённые изменения.')).toBeInTheDocument()
+    await user.click(within(kit(1)).getByRole('button', { name: 'Отмена' }))
+    expect(within(kit(1)).getByText('Самосвал')).toBeInTheDocument()
 
-    await user.click(within(card).getByRole('button', { name: 'Добавить машину' }))
-    await user.selectOptions(within(card).getByLabelText('Машина'), 'Грузовик')
-    await user.selectOptions(within(card).getByLabelText('Вид правила'), 'Вспомогательная')
-    await user.click(within(card).getByRole('button', { name: 'Добавить' }))
-    const qty = within(card).getByLabelText('Типовое количество: Грузовик')
-    await user.type(qty, '3')
-    await user.clear(within(card).getByLabelText('Типовое количество: Каток'))
+    await user.click(within(kit(1)).getByRole('button', { name: 'Добавить машину' }))
+    await user.selectOptions(within(kit(1)).getByLabelText('Машина'), 'Бульдозер')
+    await user.selectOptions(within(kit(1)).getByLabelText('Обязательность'), 'Вспомогательная')
+    await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
+    expect(within(kit(1)).getByText('Укажите номер ГЭСН или источник')).toBeInTheDocument()
+    await user.type(within(kit(1)).getByLabelText('ГЭСН или источник'), '01-01-036-01')
+    await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
+    const qty = within(kit(1)).getByLabelText('Минимум машин: Бульдозер')
+    await user.tripleClick(qty)
+    await user.keyboard('2')
     await user.click(save)
+
     await vi.waitFor(() =>
-      expect(within(editor()).getByLabelText('Типовое количество: Грузовик')).toHaveValue('3'),
+      expect(within(kit(1)).getByLabelText('Минимум машин: Бульдозер')).toHaveValue('2'),
     )
-    expect(within(editor()).getByText('Вспомогательная')).toBeInTheDocument()
-    expect(within(editor()).getByLabelText('Типовое количество: Каток')).toHaveValue('')
+    expect(within(kit(1)).getByText('Вспомогательная')).toBeInTheDocument()
+    expect(within(kit(1)).getByText('ГЭСН 01-01-036-01')).toBeInTheDocument()
+    expect(within(kit(1)).getByRole('button', { name: 'Сохранить' })).toBeDisabled()
   })
 
-  it('turns equipment check off and a stage without machines warns', async () => {
+  it('does not save a kit without a marker', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await user.click(await screen.findByRole('button', { name: /Разработка котлована/ }))
-    const card = editor()
-    await user.click(within(card).getByRole('button', { name: 'Убрать машину: Экскаватор' }))
-    await user.click(within(card).getByRole('button', { name: 'Убрать машину: Самосвал' }))
-    expect(within(card).getByText('В комплекте нет техники')).toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: 'Добавить машину' }))
-    await user.click(within(card).getAllByRole('button', { name: 'Отмена' })[0]!)
+    await screen.findByRole('region', { name: 'Комплект 1' })
+    await user.click(
+      within(kit(1)).getByRole('button', { name: 'Убрать машину: Гусеничный экскаватор' }),
+    )
+    expect(within(kit(1)).getByText('В комплекте нет маркера')).toBeInTheDocument()
+    expect(within(kit(1)).getByRole('button', { name: 'Сохранить' })).toBeDisabled()
+  })
 
-    await user.click(within(card).getByRole('button', { name: 'Не проверяется' }))
-    expect(within(card).getByText('Этап не проверяется по технике')).toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: 'Сохранить' }))
+  it('adds an alternative kit and deletes one', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    await screen.findByRole('region', { name: 'Комплект 1' })
+
+    await user.click(screen.getByRole('button', { name: 'Добавить комплект' }))
+    await user.click(within(kit(2)).getAllByRole('button', { name: 'Отмена' }).at(-1)!)
+    expect(screen.queryByRole('region', { name: 'Комплект 2' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Добавить комплект' }))
+    await user.selectOptions(within(kit(2)).getByLabelText('Машина'), 'Колёсный экскаватор')
+    await user.type(within(kit(2)).getByLabelText('ГЭСН или источник'), 'по смыслу работы')
+    await user.click(within(kit(2)).getByRole('button', { name: 'Добавить' }))
+    await user.click(within(kit(2)).getByRole('button', { name: 'Сохранить' }))
     await vi.waitFor(() =>
-      expect(screen.getByRole('button', { name: /Разработка котлована/ })).toHaveTextContent(
-        'Не проверяется по технике',
+      expect(stageButton(/Разработка котлована/)).toHaveTextContent(
+        '2 комплекта · маркер: гусеничный экскаватор, колёсный экскаватор',
       ),
     )
-    // Соседи потеряли общего соседа — у подготовки и основания маркеры остались.
-    expect(screen.getByRole('button', { name: /Устройство основания/ })).toHaveTextContent(
-      'маркер: каток',
+
+    await user.click(screen.getByRole('button', { name: 'Удалить комплект 1' }))
+    await vi.waitFor(() =>
+      expect(stageButton(/Разработка котлована/)).toHaveTextContent(
+        '1 комплект · маркер: колёсный экскаватор',
+      ),
     )
+    // Последний комплект проверяемого этапа удалить нельзя — это правило backend.
+    await user.click(screen.getByRole('button', { name: 'Удалить комплект 1' }))
+    expect(
+      await screen.findByText(/Нельзя удалить последний комплект проверяемого этапа/),
+    ).toBeInTheDocument()
   })
 
-  it('shows a stage without markers and save errors', async () => {
+  it('turns equipment check off with a reason and back on', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    await screen.findByRole('region', { name: 'Комплект 1' })
+    await user.click(screen.getByRole('button', { name: 'Не проверяется' }))
+    await user.click(screen.getAllByRole('button', { name: 'Отмена' })[0]!)
+    expect(screen.getByRole('region', { name: 'Комплект 1' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Не проверяется' }))
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(screen.getByText('Укажите причину')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Почему этап не проверяется'), 'Работы вне кадра')
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    await vi.waitFor(() =>
+      expect(stageButton(/Разработка котлована/)).toHaveTextContent('Не проверяется по технике'),
+    )
+    expect(screen.getByText('Работы вне кадра')).toBeInTheDocument()
+
+    await user.click(stageButton(/Благоустройство/))
+    await user.click(screen.getByRole('button', { name: 'Проверяется' }))
+    expect(screen.getByText('После сохранения добавьте комплект техники.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+    expect(await screen.findByText('Комплектов нет')).toBeInTheDocument()
+    expect(stageButton(/Благоустройство/)).toHaveTextContent('0 комплектов · маркеров нет')
+  })
+
+  it('shows save errors from the server', async () => {
     server.use(
-      http.put('/api/sites/:siteId/methodology/:stageId', () =>
-        HttpResponse.json({ detail: 'Нельзя' }, { status: 409 }),
+      http.put('/api/sites/:siteId/methodology/sets/:setId', () =>
+        HttpResponse.json({ detail: 'Нельзя' }, { status: 422 }),
+      ),
+      http.patch('/api/sites/:siteId/methodology/rules/:ruleId', () =>
+        HttpResponse.json({ detail: 'Правило не найдено' }, { status: 404 }),
       ),
     )
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await user.click(await screen.findByRole('button', { name: /Обратная засыпка/ }))
-    await user.click(within(editor()).getByRole('button', { name: 'Добавить машину' }))
-    await user.click(within(editor()).getByRole('button', { name: 'Добавить' }))
-    await user.click(within(editor()).getByRole('button', { name: 'Сохранить' }))
-    expect(await screen.findByText('Нельзя')).toBeInTheDocument()
+    await screen.findByRole('region', { name: 'Комплект 1' })
+    await user.click(within(kit(1)).getByRole('button', { name: 'Убрать машину: Самосвал' }))
+    await user.click(within(kit(1)).getByRole('button', { name: 'Сохранить' }))
+    expect(await within(kit(1)).findByText('Нельзя')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Не проверяется' }))
+    await user.type(screen.getByLabelText('Почему этап не проверяется'), 'Причина')
+    await user.click(screen.getAllByRole('button', { name: 'Сохранить' })[0]!)
+    expect(await screen.findByText('Правило не найдено')).toBeInTheDocument()
   })
 
-  it('reports when every class is already in the kit', async () => {
+  it('reports when every machine is already in the kit', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await user.click(await screen.findByRole('button', { name: /Бетонирование плиты/ }))
-    const card = editor()
-    for (let i = 0; i < 6; i++) {
-      await user.click(within(card).getByRole('button', { name: 'Добавить машину' }))
-      await user.click(within(card).getByRole('button', { name: 'Добавить' }))
+    await screen.findByRole('region', { name: 'Комплект 1' })
+    for (let i = 0; i < 5; i++) {
+      await user.click(within(kit(1)).getByRole('button', { name: 'Добавить машину' }))
+      await user.type(within(kit(1)).getByLabelText('ГЭСН или источник'), 'x')
+      await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
     }
-    await user.click(within(card).getByRole('button', { name: 'Добавить машину' }))
-    expect(within(card).getByText('Все классы техники уже в комплекте.')).toBeInTheDocument()
+    await user.click(within(kit(1)).getByRole('button', { name: 'Добавить машину' }))
+    expect(within(kit(1)).getByText('Вся техника справочника уже в комплекте.')).toBeInTheDocument()
   })
 
-  it('handles a site without stages', async () => {
+  it('handles a site without stages or schedule', async () => {
+    server.use(http.get('/api/sites/:siteId/methodology', () => HttpResponse.json([])))
     renderRoute('/sites/site-synthetic/methodology')
     expect(await screen.findByText('В графике нет этапов.')).toBeInTheDocument()
+
+    server.use(
+      http.get('/api/sites/:siteId/methodology', () =>
+        HttpResponse.json({ detail: 'График не загружен' }, { status: 404 }),
+      ),
+    )
+    renderRoute('/sites/site-synthetic/methodology')
+    expect(await screen.findByText('График не загружен')).toBeInTheDocument()
   })
 })

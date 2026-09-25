@@ -2,18 +2,39 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { request } from './client'
 import { keys } from './keys'
-import { equipmentClassSchema, stageKitSchema, type StageKitUpdate } from './schemas'
+import {
+  equipmentSetSchema,
+  equipmentTypeSchema,
+  ruleSchema,
+  type RuleUpdate,
+  type SetWrite,
+} from './schemas'
 
 export const methodologyApi = {
+  /** Правила по этапам графика; сервер лениво создаёт их из базового набора. 404 — нет графика. */
   list: (siteId: string) =>
-    request(`/sites/${siteId}/methodology`, { schema: z.array(stageKitSchema) }),
-  update: (siteId: string, stageId: string, data: StageKitUpdate) =>
-    request(`/sites/${siteId}/methodology/${stageId}`, {
+    request(`/sites/${siteId}/methodology`, { schema: z.array(ruleSchema) }),
+  updateRule: (siteId: string, ruleId: string, data: RuleUpdate) =>
+    request(`/sites/${siteId}/methodology/rules/${ruleId}`, {
+      method: 'PATCH',
+      body: data,
+      schema: ruleSchema,
+    }),
+  createSet: (siteId: string, ruleId: string, data: SetWrite) =>
+    request(`/sites/${siteId}/methodology/rules/${ruleId}/sets`, {
+      method: 'POST',
+      body: data,
+      schema: equipmentSetSchema,
+    }),
+  replaceSet: (siteId: string, setId: string, data: SetWrite) =>
+    request(`/sites/${siteId}/methodology/sets/${setId}`, {
       method: 'PUT',
       body: data,
-      schema: stageKitSchema,
+      schema: equipmentSetSchema,
     }),
-  equipmentClasses: () => request('/equipment-classes', { schema: z.array(equipmentClassSchema) }),
+  deleteSet: (siteId: string, setId: string) =>
+    request(`/sites/${siteId}/methodology/sets/${setId}`, { method: 'DELETE' }),
+  equipmentTypes: () => request('/equipment-types', { schema: z.array(equipmentTypeSchema) }),
 }
 
 export function useMethodology(siteId: string) {
@@ -23,20 +44,44 @@ export function useMethodology(siteId: string) {
   })
 }
 
-export function useEquipmentClasses() {
+export function useEquipmentTypes() {
   return useQuery({
-    queryKey: keys.equipmentClasses,
-    queryFn: methodologyApi.equipmentClasses,
+    queryKey: keys.equipmentTypes,
+    queryFn: methodologyApi.equipmentTypes,
     staleTime: Infinity,
   })
 }
 
-export function useUpdateStageKit(siteId: string) {
+/** Правка методики пересчитывает выводы стройки: сбрасываем всё по ней. */
+function useMethodologyMutation<TArgs, TResult>(
+  siteId: string,
+  fn: (args: TArgs) => Promise<TResult>,
+) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ stageId, data }: { stageId: string; data: StageKitUpdate }) =>
-      methodologyApi.update(siteId, stageId, data),
-    // Правка методики пересчитывает выводы стройки: сбрасываем всё по ней.
+    mutationFn: fn,
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.site(siteId) }),
   })
+}
+
+export function useUpdateRule(siteId: string) {
+  return useMethodologyMutation(siteId, ({ ruleId, data }: { ruleId: string; data: RuleUpdate }) =>
+    methodologyApi.updateRule(siteId, ruleId, data),
+  )
+}
+
+export function useCreateSet(siteId: string) {
+  return useMethodologyMutation(siteId, ({ ruleId, data }: { ruleId: string; data: SetWrite }) =>
+    methodologyApi.createSet(siteId, ruleId, data),
+  )
+}
+
+export function useReplaceSet(siteId: string) {
+  return useMethodologyMutation(siteId, ({ setId, data }: { setId: string; data: SetWrite }) =>
+    methodologyApi.replaceSet(siteId, setId, data),
+  )
+}
+
+export function useDeleteSet(siteId: string) {
+  return useMethodologyMutation(siteId, (setId: string) => methodologyApi.deleteSet(siteId, setId))
 }

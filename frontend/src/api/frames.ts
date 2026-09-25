@@ -1,67 +1,54 @@
+/** Снимки (домен photo) и наблюдения за дату (домен observation). */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
+import { env } from '@/lib/env'
 import { request } from './client'
 import { keys } from './keys'
-import {
-  frameSchema,
-  ingestSchema,
-  needsReviewSchema,
-  observationDaySchema,
-  observationSchema,
-  type SourceType,
-} from './schemas'
-
-export interface IngestInput {
-  source_type: SourceType
-  camera_id: string
-  files: File[]
-  slice_step_sec?: number
-  clip_started_at?: string | null
-}
+import { observationSchema, photoDetailSchema, photoSchema, uploadReportSchema } from './schemas'
 
 export const framesApi = {
-  observationDays: (siteId: string) =>
-    request(`/sites/${siteId}/observations`, { schema: z.array(observationDaySchema) }),
+  observations: (siteId: string) =>
+    request(`/sites/${siteId}/observations`, { schema: z.array(observationSchema) }),
   observation: (siteId: string, date: string) =>
     request(`/sites/${siteId}/observations/${date}`, { schema: observationSchema }),
-  frames: (siteId: string, date: string | null) =>
-    request(`/sites/${siteId}/frames`, { query: { date }, schema: z.array(frameSchema) }),
-  needsReview: (siteId: string) =>
-    request(`/sites/${siteId}/frames/needs-review`, { schema: needsReviewSchema }),
-  confirmFrameTime: (frameId: string, capturedAt: string) =>
-    request(`/frames/${frameId}`, {
-      method: 'PATCH',
-      body: { captured_at: capturedAt },
-      schema: frameSchema,
+  /** Все снимки стройки; `undated` — только снимки без даты. */
+  photos: (siteId: string, undated = false) =>
+    request(`/sites/${siteId}/photos`, {
+      query: { undated: undated || undefined },
+      schema: z.array(photoSchema),
     }),
-  setClipStart: (ingestId: string, clipStartedAt: string) =>
-    request(`/ingests/${ingestId}`, {
-      method: 'PATCH',
-      body: { clip_started_at: clipStartedAt },
-      schema: ingestSchema,
-    }),
-  createIngest: (siteId: string, input: IngestInput) => {
+  /** Пачка снимков (multipart `files`); ошибка одного файла не прерывает остальные. */
+  upload: (siteId: string, files: readonly File[]) => {
     const form = new FormData()
-    form.append('source_type', input.source_type)
-    form.append('camera_id', input.camera_id)
-    if (input.slice_step_sec) form.append('slice_step_sec', String(input.slice_step_sec))
-    if (input.clip_started_at) form.append('clip_started_at', input.clip_started_at)
-    input.files.forEach((file) => form.append('files', file))
-    return request(`/sites/${siteId}/ingests`, { method: 'POST', body: form, schema: ingestSchema })
+    files.forEach((file) => form.append('files', file))
+    return request(`/sites/${siteId}/photos`, {
+      method: 'POST',
+      body: form,
+      schema: uploadReportSchema,
+    })
   },
-  streams: (siteId: string) =>
-    request(`/sites/${siteId}/ingests`, {
-      query: { source_type: 'stream' },
-      schema: z.array(ingestSchema),
+  setDate: (siteId: string, photoId: string, capturedOn: string) =>
+    request(`/sites/${siteId}/photos/${photoId}/date`, {
+      method: 'PATCH',
+      body: { captured_on: capturedOn },
+      schema: photoSchema,
     }),
-  stopIngest: (ingestId: string) =>
-    request(`/ingests/${ingestId}/stop`, { method: 'POST', schema: ingestSchema }),
+  redetect: (siteId: string, photoId: string) =>
+    request(`/sites/${siteId}/photos/${photoId}/detect`, {
+      method: 'POST',
+      schema: photoDetailSchema,
+    }),
 }
 
-export function useObservationDays(siteId: string) {
+/** Снимок с рамками найденной техники: PNG рисует сервер (`/annotated`). */
+export function annotatedImageUrl(siteId: string, photoId: string): string {
+  return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`
+}
+
+export function useObservations(siteId: string) {
   return useQuery({
-    queryKey: keys.observationDays(siteId),
-    queryFn: () => framesApi.observationDays(siteId),
+    queryKey: keys.observations(siteId),
+    queryFn: () => framesApi.observations(siteId),
   })
 }
 
@@ -73,25 +60,18 @@ export function useObservation(siteId: string, date: string | null) {
   })
 }
 
-export function useFrames(siteId: string, date: string | null) {
+export function usePhotos(siteId: string) {
+  return useQuery({ queryKey: keys.photos(siteId), queryFn: () => framesApi.photos(siteId) })
+}
+
+export function useUndatedPhotos(siteId: string) {
   return useQuery({
-    queryKey: keys.frames(siteId, date),
-    queryFn: () => framesApi.frames(siteId, date),
+    queryKey: keys.undatedPhotos(siteId),
+    queryFn: () => framesApi.photos(siteId, true),
   })
 }
 
-export function useNeedsReview(siteId: string) {
-  return useQuery({
-    queryKey: keys.needsReview(siteId),
-    queryFn: () => framesApi.needsReview(siteId),
-  })
-}
-
-export function useStreams(siteId: string) {
-  return useQuery({ queryKey: keys.streams(siteId), queryFn: () => framesApi.streams(siteId) })
-}
-
-/** Любая правка входа (время кадра, новые кадры) пересчитывает стройку — сбрасываем её кэш. */
+/** Любая правка входа (дата снимка, новые снимки) пересчитывает стройку — сбрасываем её кэш. */
 function useSiteMutation<TArgs, TResult>(siteId: string, fn: (args: TArgs) => Promise<TResult>) {
   const qc = useQueryClient()
   return useMutation({
@@ -100,26 +80,18 @@ function useSiteMutation<TArgs, TResult>(siteId: string, fn: (args: TArgs) => Pr
   })
 }
 
-export function useConfirmFrameTime(siteId: string) {
+export function useUploadPhotos(siteId: string) {
+  return useSiteMutation(siteId, (files: readonly File[]) => framesApi.upload(siteId, files))
+}
+
+export function useSetPhotoDate(siteId: string) {
   return useSiteMutation(
     siteId,
-    ({ frameId, capturedAt }: { frameId: string; capturedAt: string }) =>
-      framesApi.confirmFrameTime(frameId, capturedAt),
+    ({ photoId, capturedOn }: { photoId: string; capturedOn: string }) =>
+      framesApi.setDate(siteId, photoId, capturedOn),
   )
 }
 
-export function useSetClipStart(siteId: string) {
-  return useSiteMutation(
-    siteId,
-    ({ ingestId, clipStartedAt }: { ingestId: string; clipStartedAt: string }) =>
-      framesApi.setClipStart(ingestId, clipStartedAt),
-  )
-}
-
-export function useCreateIngest(siteId: string) {
-  return useSiteMutation(siteId, (input: IngestInput) => framesApi.createIngest(siteId, input))
-}
-
-export function useStopIngest(siteId: string) {
-  return useSiteMutation(siteId, (ingestId: string) => framesApi.stopIngest(ingestId))
+export function useRedetectPhoto(siteId: string) {
+  return useSiteMutation(siteId, (photoId: string) => framesApi.redetect(siteId, photoId))
 }

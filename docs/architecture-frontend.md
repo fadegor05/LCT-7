@@ -28,18 +28,20 @@ main.tsx              точка входа; при VITE_USE_MOCKS=true снач
 app/                  App (QueryClient + Router), routes.tsx, queryClient.ts
 api/                  контракты и доступ к API
   client.ts           request(): fetch + разбор ошибок FastAPI + проверка Zod-схемой
-  schemas.ts          Zod-схемы и типы (перечисления DataModel §5.7)
+  schemas.ts          Zod-схемы и типы — копия Pydantic-схем backend (app/domains/*/schemas.py)
   keys.ts             ключи TanStack Query
-  sites.ts … deviations.ts   функции API + хуки useX / useXMutation по доменам
+  sites.ts, schedule.ts, methodology.ts   функции API + хуки по доменам backend
+  frames.ts           снимки (photo) и наблюдения (observation)
+  deviations.ts       выводы (assessment): статусы этапов, отклонения, итог
 components/ui/        дизайн-система LCT-7: Button, Segmented, TextField, SelectField, Pill,
                       StatusBadge, ConfidenceMeter, DateSourceBadge, Callout, Card, Dialog,
                       Breadcrumbs, Stepper, FrameView, FileDrop, QueryState, Icon
 components/layout/    AppLayout (шапка), PageHeader/SectionHeader, SiteShell (вкладки объекта)
 features/<домен>/     составные компоненты экранов: sites, new-site, methodology, overview,
-                      observations, cameras, deviations
+                      observations, deviations
 pages/                по странице на экран макета, собирают features
 lib/                  env, форматирование дат, подписи перечислений, сортировка отклонений
-mocks/                fixtures.ts (демо «Березники»), db.ts (in-memory бэкенд), handlers.ts
+mocks/                fixtures.ts (демо «Березники»), db.ts (in-memory бэкенд с правилами backend), handlers.ts
 styles/               tokens.css (токены LCT-7), global.css
 test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute / renderWithProviders)
 ```
@@ -55,47 +57,47 @@ test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute 
 | 2 · Новая стройка | `/sites/new`, `/sites/:id/setup` | `NewSitePage` | UC-1 |
 | 3 · Методика (шаг 2) | `/sites/:id/setup/methodology` | `NewSiteMethodologyPage` | UC-2 |
 | 3а · Методика объекта | `/sites/:id/methodology` | `MethodologyPage` | UC-2 |
-| 4, 4а · Камеры | `/sites/:id/cameras` | `CamerasPage` + `CameraDialog` | UC-6 |
 | 5 · Обзор | `/sites/:id` | `SiteOverviewPage` | UC-4 |
 | 6 · Наблюдения | `/sites/:id/observations?date=` | `ObservationsPage` + `AddFramesDialog` | UC-7, UC-3, UC-8 |
-| 7, 7а · Отклонение | `/sites/:id/deviations/:deviationId` | `DeviationPage` + `DecisionPanel` | UC-5, UC-10 |
+| 7 · Отклонение | `/sites/:id/deviations/:deviationId` | `DeviationPage` | UC-5 |
 
-Черновик стройки (`state = draft`) создаётся при первой загрузке графика, после чего URL
-становится `/sites/:id/setup`: шаг 1 можно открыть заново, «Далее» сохраняет поля объекта.
-«Создать стройку» на шаге 2 вызывает `POST /sites/:id/activate`; блокирующие проблемы импорта
-сервер возвращает 409, текст показывается на странице.
+Стройка создаётся при первой загрузке графика (черновика в backend нет), после чего URL
+становится `/sites/:id/setup`: шаг 1 можно открыть заново, «Далее» сохраняет название и адрес.
+Шаг 2 правит методику уже созданной стройки; «Готово» ведёт на обзор.
+
+Экраны макета без поддержки в backend не подключены: 4 «Камеры» (в backend нет камер и зон),
+7а «Решение по гипотезе» (нет эндпоинтов решений), стримы и видео (backend принимает только фото).
 
 ## 4. Контракт API
 
 Базовый путь — `VITE_API_BASE_URL` (по умолчанию `/api`). Поля в snake_case, как отдаёт Pydantic.
-Полные формы — `src/api/schemas.ts`. Эндпоинты, которые использует фронт:
+`src/api/schemas.ts` повторяет Pydantic-схемы backend один в один (ключи и nullable сверены с
+OpenAPI backend), перечисления — StrEnum из `models.py` доменов. Эндпоинты, которые использует фронт:
 
 | Метод и путь | Назначение |
 |---|---|
-| `GET /users/me` | стендовый пользователь (подпись решений) — **есть в backend** |
-| `GET/POST /sites`, `GET/PATCH /sites/{id}` | стройки; в ответе `object_type`, `work_days`, `state`, `summary` — **CRUD есть, доп. поля — нет** |
-| `POST /sites/{id}/activate` | черновик → активная стройка, 409 при блокирующих проблемах |
-| `GET /sites/{id}/schedule-imports/current`, `POST /sites/{id}/schedule-imports` (multipart `file`) | импорт графика со статистикой и `issues` |
-| `GET /sites/{id}/stages`, `PATCH /sites/{id}/stages/{stageId}` | крупные этапы: ручные даты, подтверждение сопоставления |
-| `GET /sites/{id}/methodology`, `PUT /sites/{id}/methodology/{stageId}` | комплект этапа; маркеры вычисляет сервер |
-| `GET /equipment-classes` | справочник классов техники |
-| `GET/POST /sites/{id}/cameras`, `PATCH /cameras/{id}` | камеры, `zone_polygon` в долях кадра |
-| `POST /reference-frames` `{stream_url}` | один опорный кадр со стрима (не сохраняется) |
-| `GET /sites/{id}/observations`, `GET /sites/{id}/observations/{date}` | дни наблюдений; техника за дату |
-| `GET /sites/{id}/frames?date=` | кадры с детекциями (без `date` — все) |
-| `GET /sites/{id}/frames/needs-review`, `PATCH /frames/{id}`, `PATCH /ingests/{id}` | кадры без времени, подтверждение времени и старта клипа |
-| `POST /sites/{id}/ingests` (multipart), `GET /sites/{id}/ingests?source_type=stream`, `POST /ingests/{id}/stop` | загрузка фото/видео, стримы |
-| `GET /sites/{id}/stage-statuses` | таблица этапов обзора |
-| `GET /deviations`, `GET /sites/{id}/deviations`, `GET /deviations/{id}` | отклонения: сквозной список, по стройке, карточка |
-| `POST/DELETE /deviations/{id}/decision` | решение по гипотезе и «Изменить решение» |
+| `GET /users/me` | стендовый пользователь |
+| `GET/POST /sites`, `GET/PATCH /sites/{id}` | стройки: `name`, `address` |
+| `GET /sites/{id}/schedule` (404 — графика нет), `POST /sites/{id}/schedule/import` (multipart `file`) | отчёт импорта: счётчики строк, этапы, `issues` |
+| `PATCH /sites/{id}/schedule/stages/{stageId}` | ручные даты этапа (`dates_source = manual`) |
+| `GET /equipment-types` | справочник техники |
+| `GET /sites/{id}/methodology` | правила этапов с комплектами; сервер лениво создаёт их из базового набора |
+| `PATCH /sites/{id}/methodology/rules/{ruleId}` | проверяется ли этап по технике и почему нет |
+| `POST /sites/{id}/methodology/rules/{ruleId}/sets`, `PUT/DELETE /sites/{id}/methodology/sets/{setId}` | комплекты техники; без нормативной техники — 422 |
+| `GET /sites/{id}/photos` (`?undated=true`), `POST /sites/{id}/photos` (multipart `files`) | снимки и загрузка пачки (`UploadReport` по каждому файлу) |
+| `PATCH /sites/{id}/photos/{photoId}/date`, `POST /sites/{id}/photos/{photoId}/detect` | ручная дата снимка, повторная детекция |
+| `GET /sites/{id}/photos/{photoId}/annotated` | снимок с рамками техники (PNG рисует сервер) |
+| `GET /sites/{id}/observations`, `GET /sites/{id}/observations/{date}` | наблюдения по датам и техника за дату |
+| `GET /sites/{id}/assessment/stages` (404 — графика нет) | статусы этапов; `status = null` — этап ещё не оценивался |
+| `GET /sites/{id}/assessment/deviations`, `GET /sites/{id}/assessment/deviations/{id}` | отклонения стройки, карточка с доказательствами |
+| `GET /sites/{id}/assessment/summary` | итог по объекту |
 
-Сейчас backend реализует только `/users/me` и CRUD `/sites`. Схемы фронта объявляют новые поля
-стройки с `default`, поэтому экран «Стройки» работает и с текущим backend (итог — «Недостаточно
-данных»). Остальные эндпоинты — предложение контракта для бэкенда; при расхождении правится
-`schemas.ts`, а Zod-ошибка контракта сразу видна на экране.
+Чего backend не отдаёт и что фронт собирает сам: итог и последнее наблюдение в списке строек —
+отдельными запросами по каждой стройке; сквозной список отклонений — объединением списков строек;
+заголовок отклонения — из типа и названия этапа; плановое окно в таблице статусов — из графика.
 
-Инвалидация кэша: ключи строятся как `['site', id, …]`. Любая правка входа (методика, камера,
-время кадра, новые кадры) сбрасывает `['site', id]` целиком — это повторяет серверное правило
+Инвалидация кэша: ключи строятся как `['site', id, …]`. Любая правка входа (график, методика,
+дата снимка, новые снимки) сбрасывает `['site', id]` целиком — это повторяет серверное правило
 «правка входа → пересчёт всех выводов стройки».
 
 ## 5. Моки и переключение на реальный API
@@ -109,9 +111,10 @@ test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute 
 Где задаётся флаг: `frontend/.env.development` (по умолчанию `true`), `.env` в корне для `make dev`
 (`VITE_USE_MOCKS`), разово — `pnpm dev:mocks` / `pnpm dev:api`. Прод-образ собирается без флага.
 
-Моки — это не статичные JSON, а маленький in-memory бэкенд (`mocks/db.ts`): создание стройки,
-разбор графика с проблемами как в макете, пересчёт маркеров методики, подтверждение времени,
-решения по гипотезам. Благодаря этому все сценарии UC-1…UC-10 проходятся в браузере без backend.
+Моки — это не статичные JSON, а маленький in-memory бэкенд (`mocks/db.ts`) с правилами backend:
+404 для чужой стройки и отсутствующего графика, ленивое создание правил методики, валидация
+комплектов (422), пересчёт наблюдений по снимкам (максимум по снимкам), ручная дата не в будущем.
+Статусы этапов и отклонения демо-стройки — готовые выводы движка; у новых строек их нет.
 Чтобы подключить реальный эндпоинт, код экранов не меняется: достаточно выключить флаг.
 
 ## 6. Тесты
@@ -140,8 +143,8 @@ test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute 
 
 ## 8. Что не сделано и следующие шаги
 
-- «Изменить состав» крупного этапа (перенос работы между этапами, объединение соседних) — нужен
-  эндпоинт перегруппировки; на экране пока только ручные даты и подтверждение сопоставления.
+- Камеры и рабочие зоны, видео и стримы, решения по гипотезам — ждут эндпоинтов в backend.
+- Список строек делает по два запроса на стройку (итог и наблюдения): при росте числа строек
+  нужен агрегирующий эндпоинт.
 - Печатная версия обзора (P2) — сейчас `window.print()` без отдельной печатной вёрстки.
-- Реальные изображения кадров: `image_url` поддержан, моки отдают заглушку-«снимок».
 - Адаптив под узкие экраны — базовый (макет десктопный, 1440 px).

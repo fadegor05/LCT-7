@@ -1,692 +1,550 @@
 /**
- * In-memory «бэкенд» моков. Держит изменяемое состояние (стройки, этапы, камеры, кадры,
- * решения) и повторяет простые правила сервера: пересчёт маркеров, проблемы импорта,
- * сводку по стройке. Тесты вызывают resetDb() перед каждым кейсом.
+ * In-memory «бэкенд» для моков. Повторяет правила backend, которые видны фронту: 404 для
+ * чужой стройки и отсутствующего графика, ленивое создание правил методики, валидацию
+ * комплектов (422), пересчёт наблюдений по снимкам. Статусы этапов и отклонения — готовые
+ * выводы движка для демо-стройки; у новых строек движок ещё ничего не посчитал.
  */
 import type {
-  Camera,
-  DecisionRecord,
+  Detection,
   DeviationDetail,
-  DeviationListItem,
-  Frame,
-  ImportIssue,
-  Ingest,
-  KitRule,
+  EquipmentSet,
+  Level,
   Observation,
-  ScheduleImport,
+  Photo,
+  Rule,
+  RuleUpdate,
+  ScheduleReport,
+  SetWrite,
   Site,
   Stage,
-  StageKit,
+  StageDatesUpdate,
   StageStatus,
+  SiteSummary,
+  UploadReport,
 } from '@/api/schemas'
-import { sortDeviations, visibleDeviations } from '@/lib/deviations'
-import * as fx from './fixtures'
+import {
+  BEREZNIKI,
+  DEFAULT_RULES,
+  DEVIATION_SEEDS,
+  equipmentByCode,
+  equipmentTypes,
+  NO_RULE_REASON,
+  PHOTO_SEEDS,
+  sites as siteFixtures,
+  STAGE_TEMPLATE,
+  STATUS_SEEDS,
+  SYNTHETIC,
+  templateIssues,
+  TODAY,
+  user,
+} from './fixtures'
 
-interface StageRow extends Stage {
-  site_id: string
-  rules: KitRule[]
+/** Ошибка домена с HTTP-кодом — хендлер превращает её в `{detail}`. */
+export class MockError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message)
+  }
 }
 
-interface ImportRow extends Omit<
-  ScheduleImport,
-  'issues' | 'stages_total' | 'window_overlaps' | 'checked_stages'
-> {
-  unparsedRows: number[]
-}
+type StoredPhoto = Photo & { detections: Detection[] }
 
 interface State {
   sites: Site[]
-  stages: StageRow[]
-  imports: ImportRow[]
-  cameras: Omit<Camera, 'frames_count'>[]
-  frames: Frame[]
-  ingests: Ingest[]
-  clips: { ingest_id: string; site_id: string; original_name: string; frames_count: number }[]
-  decisions: Record<string, DecisionRecord>
+  schedules: Map<string, ScheduleReport>
+  rules: Map<string, Rule[]>
+  photos: StoredPhoto[]
+  observations: Map<string, Observation[]>
+  statuses: Map<string, Map<string, Omit<StageStatus, 'stage_id' | 'stage_name' | 'position'>>>
+  deviations: Map<string, DeviationDetail[]>
   seq: number
 }
 
 let state: State
 
-function seedStages(siteId: string, prefix: string): StageRow[] {
-  return fx.stageSeeds().map((seed) => ({
-    ...seed,
-    id: `${prefix}${seed.id}`,
-    site_id: siteId,
-    works: seed.works.map((name, i) => ({ id: `${prefix}${seed.id}-w${i}`, name })),
-    rules: seed.rules.map((r, i) => ({ ...r, id: `${prefix}${seed.id}-r${i}` })),
-  }))
-}
-
-export function resetDb(): void {
-  state = {
-    sites: structuredClone(fx.sites),
-    stages: seedStages(fx.BEREZNIKI, ''),
-    imports: [
-      {
-        id: 'imp-berezniki',
-        site_id: fx.BEREZNIKI,
-        file_name: 'grafik_berezniki.xlsx',
-        file_size: 24 * 1024,
-        works_total: 38,
-        rows_failed: 0,
-        uploaded_at: '2026-08-20T10:05:00+05:00',
-        unparsedRows: [],
-      },
-    ],
-    cameras: structuredClone(fx.cameras),
-    frames: fx.buildFrames(),
-    ingests: [
-      {
-        id: 'ing-stream-3',
-        site_id: fx.BEREZNIKI,
-        camera_id: 'cam-3',
-        source_type: 'stream',
-        state: 'running',
-        slice_step_sec: 1200,
-        clip_started_at: null,
-        frames_count: 38,
-        last_frame_at: '2026-09-18T14:00:00+05:00',
-      },
-    ],
-    clips: [
-      {
-        ingest_id: 'ing-clip-1',
-        site_id: fx.BEREZNIKI,
-        original_name: 'k2_morning.mp4',
-        frames_count: 24,
-      },
-    ],
-    decisions: {},
-    seq: 1,
-  }
-  recomputeMarkers(fx.BEREZNIKI)
-}
-
-export const nextId = (prefix: string) => `${prefix}-${state.seq++}`
-export const nowIso = () => `${fx.TODAY}T15:00:00${fx.TZ}`
+const now = () => new Date().toISOString()
+const nextId = (prefix: string) => `${prefix}-${++state.seq}`
 
 // ---------- Стройки ----------
 
 export function listSites(): Site[] {
-  return state.sites.filter((s) => s.state === 'active').map(withSummary)
+  return state.sites
 }
 
-export function findSite(id: string): Site | undefined {
-  const site = state.sites.find((s) => s.id === id)
-  return site && withSummary(site)
+export function getSite(siteId: string): Site {
+  const site = state.sites.find((s) => s.id === siteId)
+  if (!site) throw new MockError(404, 'Стройка не найдена')
+  return site
 }
 
-function withSummary(site: Site): Site {
-  if (!site.summary) return site
-  const devs = visibleDeviations(siteDeviations(site.id))
-  const ok = state.frames.filter((f) => frameSite(f) === site.id)
-  return {
-    ...site,
-    summary: {
-      ...site.summary,
-      frames_total: ok.filter((f) => f.time_state === 'ok').length,
-      frames_without_time: ok.filter((f) => f.time_state === 'needs_review').length,
-      critical_count: devs.filter((d) => d.severity === 'critical').length,
-      attention_count: devs.filter((d) => d.severity === 'attention').length,
-    },
-  }
-}
-
-export function createSite(
-  data: Pick<Site, 'name' | 'address' | 'object_type' | 'work_days'>,
-): Site {
+export function createSite(data: { name: string; address?: string | null }): Site {
   const site: Site = {
-    ...data,
     id: nextId('site'),
-    timezone: 'Europe/Moscow',
-    state: 'draft',
-    created_at: nowIso(),
-    summary: null,
+    name: data.name,
+    address: data.address ?? null,
+    owner_id: user.id,
+    created_at: now(),
+    updated_at: now(),
   }
   state.sites.push(site)
   return site
 }
 
-export function updateSite(id: string, patch: Partial<Site>): Site | undefined {
-  const site = state.sites.find((s) => s.id === id)
-  if (!site) return undefined
-  Object.assign(site, patch)
-  return withSummary(site)
-}
-
-/** Активация черновика. Возвращает текст ошибки, если есть блокирующие проблемы импорта. */
-export function activateSite(id: string): Site | string {
-  const site = state.sites.find((s) => s.id === id)!
-  const current = currentImport(id)
-  if (!current) return 'Загрузите график работ'
-  if (current.issues.some((i) => i.blocking))
-    return 'Сначала исправьте блокирующие проблемы графика'
-  site.state = 'active'
-  site.summary = {
-    verdict: 'insufficient_data',
-    delay_days_min: null,
-    delay_days_max: null,
-    measured_stage_name: null,
-    explanation: 'Кадров пока нет: загрузите фото на вкладке «Наблюдения».',
-    observability: 'low',
-    cameras_total: 0,
-    cameras_reporting: 0,
-    last_frame_at: null,
-    frames_total: 0,
-    frames_without_time: 0,
-    data_age_days: null,
-    critical_count: 0,
-    attention_count: 0,
-  }
+export function updateSite(siteId: string, data: { name?: string; address?: string | null }): Site {
+  const site = getSite(siteId)
+  if (data.name !== undefined) site.name = data.name
+  if (data.address !== undefined) site.address = data.address
+  site.updated_at = now()
   return site
 }
 
 // ---------- График ----------
 
-function stagesOf(siteId: string): StageRow[] {
-  return state.stages.filter((s) => s.site_id === siteId).sort((a, b) => a.seq_no - b.seq_no)
-}
-
-export function listStages(siteId: string): Stage[] {
-  return stagesOf(siteId).map(({ site_id: _s, rules: _r, ...stage }) => stage)
-}
-
-export function uploadSchedule(siteId: string, fileName: string, fileSize: number): ScheduleImport {
-  state.imports = state.imports.filter((i) => i.site_id !== siteId)
-  state.stages = state.stages.filter((s) => s.site_id !== siteId)
-  const stages = seedStages(siteId, `${siteId}-`)
-  // Как в макете: у «Бетонирования плиты» в файле нет дат, «Отделка» сопоставлена нечётко.
-  const conc = stages.find((s) => s.name === 'Бетонирование плиты')!
-  conc.planned_start = null
-  conc.planned_end = null
-  const finish = stages.find((s) => s.name === 'Внутренняя отделка')!
-  finish.match_kind = 'fuzzy'
-  finish.match_score = 0.74
-  finish.match_confirmed = false
-  state.stages.push(...stages)
-  state.imports.push({
-    id: nextId('imp'),
-    site_id: siteId,
-    file_name: fileName,
-    file_size: fileSize,
-    works_total: 38,
-    rows_failed: 2,
-    uploaded_at: nowIso(),
-    unparsedRows: [14, 27],
-  })
-  recomputeMarkers(siteId)
-  return currentImport(siteId)!
-}
-
-function overlaps(a: StageRow, b: StageRow): boolean {
-  if (!a.planned_start || !a.planned_end || !b.planned_start || !b.planned_end) return false
-  return a.planned_start <= b.planned_end && b.planned_start <= a.planned_end
-}
-
-export function currentImport(siteId: string): ScheduleImport | null {
-  const row = state.imports.find((i) => i.site_id === siteId)
-  if (!row) return null
-  const { unparsedRows, ...rest } = row
-  const stages = stagesOf(siteId)
-  const issues: ImportIssue[] = unparsedRows.map((n) => ({
-    id: `${row.id}-row-${n}`,
-    kind: 'row_unparsed',
-    row_number: n,
-    stage_id: null,
-    message: `Строка ${n} файла не разобрана: нет названия этапа`,
-    blocking: false,
-    resolved_at: null,
+function buildSchedule(siteId: string, filename: string): ScheduleReport {
+  const scheduleId = nextId('schedule')
+  const stages: Stage[] = STAGE_TEMPLATE.map((seed, i) => ({
+    id: `${siteId}-stage-${i + 1}`,
+    name: seed.name,
+    position: i + 1,
+    planned_start: seed.start,
+    planned_end: seed.end,
+    dates_source: 'file',
   }))
-  let overlapCount = 0
-  stages.forEach((stage, i) => {
-    if (!stage.planned_start || !stage.planned_end) {
-      issues.push({
-        id: `${stage.id}-no-dates`,
-        kind: 'no_dates',
-        row_number: null,
-        stage_id: stage.id,
-        message: `У этапа «${stage.name}» нет дат: задайте их вручную`,
-        blocking: true,
-        resolved_at: null,
-      })
-    }
-    if (!stage.match_confirmed) {
-      issues.push({
-        id: `${stage.id}-fuzzy`,
-        kind: 'fuzzy_match',
-        row_number: null,
-        stage_id: stage.id,
-        message: `Этап «${stage.name}» сопоставлен нечётко: подтвердите`,
-        blocking: true,
-        resolved_at: null,
-      })
-    }
-    const next = stages[i + 1]
-    if (next && overlaps(stage, next)) {
-      overlapCount++
-      issues.push({
-        id: `${stage.id}-overlap`,
-        kind: 'window_overlap',
-        row_number: null,
-        stage_id: stage.id,
-        message: `Окна этапов «${stage.name}» и «${next.name}» пересекаются`,
-        blocking: true,
-        resolved_at: null,
-      })
-    }
-  })
+  const withDates = stages.filter((s) => s.planned_start && s.planned_end).length
+  const issues = templateIssues(scheduleId)
   return {
-    ...rest,
-    stages_total: stages.length,
-    window_overlaps: overlapCount,
-    checked_stages: stages.filter((s) => s.equipment_check).length,
+    id: scheduleId,
+    site_id: siteId,
+    source_filename: filename,
+    imported_at: now(),
+    rows_total: stages.length + issues.length,
+    rows_parsed: stages.length,
+    stages_with_dates: withDates,
+    stages_without_dates: stages.length - withDates,
+    stages,
     issues,
   }
 }
 
-export function updateStage(
-  siteId: string,
-  stageId: string,
-  patch: Partial<Stage>,
-): Stage | undefined {
-  const stage = stagesOf(siteId).find((s) => s.id === stageId)
-  if (!stage) return undefined
-  if (patch.planned_start !== undefined || patch.planned_end !== undefined)
-    stage.dates_source = 'manual'
-  if (patch.match_confirmed)
-    stage.match_kind = stage.match_kind === 'fuzzy' ? 'manual' : stage.match_kind
-  Object.assign(stage, patch)
-  recomputeMarkers(siteId)
-  return listStages(siteId).find((s) => s.id === stageId)
+export function getSchedule(siteId: string): ScheduleReport {
+  getSite(siteId)
+  const schedule = state.schedules.get(siteId)
+  if (!schedule) throw new MockError(404, 'График не загружен')
+  return schedule
+}
+
+export function importSchedule(siteId: string, filename: string): ScheduleReport {
+  getSite(siteId)
+  // В тестах имя файла теряется (jsdom → Node FormData): проверяем только явное расширение.
+  if (/\.\w+$/.test(filename) && !/\.(csv|xlsx)$/i.test(filename)) {
+    throw new MockError(422, 'Неподдерживаемый формат файла: нужен CSV или XLSX')
+  }
+  // Переимпорт заменяет график целиком: правила и выводы по старым этапам уходят вместе с ним.
+  const schedule = buildSchedule(siteId, filename)
+  state.schedules.set(siteId, schedule)
+  state.rules.delete(siteId)
+  state.statuses.delete(siteId)
+  state.deviations.delete(siteId)
+  return schedule
+}
+
+export function updateStageDates(siteId: string, stageId: string, data: StageDatesUpdate): Stage {
+  const stage = getSchedule(siteId).stages.find((s) => s.id === stageId)
+  if (!stage) throw new MockError(404, 'Этап не найден')
+  const start = data.planned_start !== undefined ? data.planned_start : stage.planned_start
+  const end = data.planned_end !== undefined ? data.planned_end : stage.planned_end
+  if (start && end && end < start) {
+    throw new MockError(422, 'Дата окончания раньше даты начала')
+  }
+  Object.assign(stage, { planned_start: start, planned_end: end, dates_source: 'manual' })
+  return stage
 }
 
 // ---------- Методика ----------
 
-const classCode = (r: Pick<KitRule, 'equipment_class' | 'equipment_group'>) =>
-  r.equipment_class ?? r.equipment_group ?? ''
+export function listEquipmentTypes() {
+  return equipmentTypes
+}
 
-/**
- * Маркер — нормативная машина этапа, которой нет в комплектах соседних проверяемых этапов
- * (architecture §7.5: логическое требование маркером быть не может).
- */
-function recomputeMarkers(siteId: string): void {
-  const stages = stagesOf(siteId)
-  stages.forEach((stage, i) => {
-    const neighbours = [stages[i - 1], stages[i + 1]].filter((s): s is StageRow =>
-      Boolean(s?.equipment_check),
+function materializeRules(stages: readonly Stage[]): Rule[] {
+  return stages.map((stage) => {
+    const ruleId = `${stage.id}-rule`
+    const match = DEFAULT_RULES.find((r) =>
+      r.keywords.some((k) => stage.name.toLowerCase().includes(k)),
     )
-    const neighbourCodes = new Set(neighbours.flatMap((s) => s.rules.map(classCode)))
-    stage.rules.forEach((r) => {
-      r.is_marker =
-        stage.equipment_check && r.rule_kind === 'normative' && !neighbourCodes.has(classCode(r))
-    })
-    stage.has_marker = stage.rules.some((r) => r.is_marker)
+    const sets: EquipmentSet[] = (match?.sets ?? []).map((seeds, i) => ({
+      id: `${ruleId}-set-${i + 1}`,
+      position: i + 1,
+      requirements: seeds.map(([code, obligation, gesn, note], j) => ({
+        id: `${ruleId}-set-${i + 1}-req-${j + 1}`,
+        equipment_type: equipmentByCode(code),
+        min_count: 1,
+        obligation,
+        gesn_code: gesn,
+        source_note: note,
+      })),
+    }))
+    return {
+      id: ruleId,
+      stage_id: stage.id,
+      stage_name: stage.name,
+      is_verifiable: Boolean(match),
+      unverifiable_reason: match ? null : NO_RULE_REASON,
+      updated_at: now(),
+      sets,
+    }
   })
 }
 
-function markerExplanation(stage: StageRow, stages: StageRow[]): string | null {
-  const markers = stage.rules.filter((r) => r.is_marker).map((r) => r.name.toLowerCase())
-  if (!stage.equipment_check) return null
-  if (markers.length === 0) {
-    return 'Маркеров нет: вся техника этапа встречается у соседей. Этап не даст дат и дней отставания, только статус «совместимо».'
+export function listRules(siteId: string): Rule[] {
+  const schedule = getSchedule(siteId)
+  if (!state.rules.has(siteId)) state.rules.set(siteId, materializeRules(schedule.stages))
+  return state.rules.get(siteId)!
+}
+
+function findRule(siteId: string, ruleId: string): Rule {
+  const rule = listRules(siteId).find((r) => r.id === ruleId)
+  if (!rule) throw new MockError(404, 'Правило не найдено')
+  return rule
+}
+
+function findSet(siteId: string, setId: string): { rule: Rule; set: EquipmentSet } {
+  for (const rule of listRules(siteId)) {
+    const set = rule.sets.find((s) => s.id === setId)
+    if (set) return { rule, set }
   }
-  const i = stages.indexOf(stage)
-  const neighbours = [stages[i - 1], stages[i + 1]]
-    .filter((s): s is StageRow => Boolean(s))
-    .map((s) => s.name.toLowerCase())
-  const around = neighbours.length ? ` (${neighbours.join(' и ')})` : ''
-  return `Отличает этап от соседних${around}: ${markers.join(', ')}. Только маркеры задают начало и окончание этапа и отставание в днях; общая техника даёт лишь статус «совместимо».`
+  throw new MockError(404, 'Комплект не найден')
 }
 
-export function listMethodology(siteId: string): StageKit[] {
-  const stages = stagesOf(siteId)
-  return stages.map((stage) => ({
-    stage_id: stage.id,
-    stage_name: stage.name,
-    planned_start: stage.planned_start,
-    planned_end: stage.planned_end,
-    equipment_check: stage.equipment_check,
-    not_checked_reason: stage.not_checked_reason,
-    rules: stage.rules,
-    marker_explanation: markerExplanation(stage, stages),
-  }))
-}
-
-export function updateStageKit(
-  siteId: string,
-  stageId: string,
-  data: { equipment_check: boolean; rules: Omit<KitRule, 'id' | 'name' | 'is_marker'>[] },
-): StageKit | undefined {
-  const stage = stagesOf(siteId).find((s) => s.id === stageId)
-  if (!stage) return undefined
-  stage.equipment_check = data.equipment_check
-  stage.not_checked_reason = data.equipment_check
-    ? null
-    : (stage.not_checked_reason ?? 'Отключено инженером')
-  stage.rules = data.rules.map((r) => ({
-    ...r,
-    id: nextId('rule'),
-    name: fx.className(classCode(r)),
-    is_marker: false,
-  }))
-  recomputeMarkers(siteId)
-  return listMethodology(siteId).find((k) => k.stage_id === stageId)
-}
-
-// ---------- Камеры ----------
-
-export function listCameras(siteId: string): Camera[] {
-  return state.cameras
-    .filter((c) => c.site_id === siteId)
-    .map((c) => ({ ...c, frames_count: state.frames.filter((f) => f.camera_id === c.id).length }))
-}
-
-export function saveCamera(
-  siteId: string,
-  cameraId: string | null,
-  data: Pick<Camera, 'name' | 'stream_url' | 'zone_polygon'>,
-): Camera | string {
-  const clash = state.cameras.find(
-    (c) => c.site_id === siteId && c.name === data.name && c.id !== cameraId,
-  )
-  if (clash) return `Камера «${data.name}» уже есть на объекте`
-  let camera = cameraId ? state.cameras.find((c) => c.id === cameraId) : undefined
-  if (camera) {
-    Object.assign(camera, data)
-  } else {
-    camera = { ...data, id: nextId('cam'), site_id: siteId, created_at: nowIso() }
-    state.cameras.push(camera)
+export function updateRule(siteId: string, ruleId: string, data: RuleUpdate): Rule {
+  const rule = findRule(siteId, ruleId)
+  const reason = data.unverifiable_reason?.trim()
+  if (!data.is_verifiable && !reason) {
+    throw new MockError(422, 'Укажите причину, почему этап не проверяется')
   }
-  return listCameras(siteId).find((c) => c.id === camera.id)!
+  rule.is_verifiable = data.is_verifiable
+  rule.unverifiable_reason = data.is_verifiable ? null : reason!
+  rule.updated_at = now()
+  return rule
 }
 
-export function cameraSite(cameraId: string): string | undefined {
-  return state.cameras.find((c) => c.id === cameraId)?.site_id
-}
-
-// ---------- Кадры и наблюдения ----------
-
-function frameSite(frame: Frame): string | undefined {
-  return frame.camera_id ? cameraSite(frame.camera_id) : undefined
-}
-
-const frameDate = (frame: Frame) => frame.captured_at?.slice(0, 10) ?? null
-
-export function listFrames(siteId: string, date: string | null): Frame[] {
-  return state.frames
-    .filter((f) => frameSite(f) === siteId && f.time_state === 'ok')
-    .filter((f) => !date || frameDate(f) === date)
-    .sort((a, b) => (a.captured_at ?? '').localeCompare(b.captured_at ?? ''))
-}
-
-export function observationDays(siteId: string) {
-  const byDate = new Map<string, number>()
-  for (const f of listFrames(siteId, null)) {
-    const d = frameDate(f)!
-    byDate.set(d, (byDate.get(d) ?? 0) + 1)
-  }
-  return [...byDate.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([obs_date, frames_total]) => ({
-      obs_date,
-      frames_total,
-      observability: 'high' as const,
-    }))
-}
-
-/** Наблюдение за дату: число машин — максимум по кадрам, а не сумма (architecture §8.1). */
-export function observation(siteId: string, date: string): Observation | undefined {
-  const frames = listFrames(siteId, date)
-  if (frames.length === 0) return undefined
-  const maxByClass = new Map<string, number>()
-  for (const frame of frames) {
-    const counts = new Map<string, number>()
-    frame.detections.forEach((d) =>
-      counts.set(d.equipment_class, (counts.get(d.equipment_class) ?? 0) + 1),
+function buildSet(id: string, position: number, data: SetWrite): EquipmentSet {
+  if (data.requirements.length === 0) throw new MockError(422, 'Комплект пуст')
+  if (!data.requirements.some((r) => r.obligation === 'normative')) {
+    throw new MockError(
+      422,
+      'Логическое требование не может быть единственным доказательством этапа: добавьте нормативное требование',
     )
-    counts.forEach((n, code) => maxByClass.set(code, Math.max(maxByClass.get(code) ?? 0, n)))
   }
-  const activity = fx.activityByDay[date] ?? {}
-  const expected = stagesOf(siteId).find(
-    (s) => s.planned_start && s.planned_end && s.planned_start <= date && date <= s.planned_end,
-  )
   return {
-    obs_date: date,
-    expected_stage_name: expected?.name ?? null,
-    frames_total: frames.length,
-    observability: 'high',
-    equipment: [...maxByClass.entries()].map(([code, min_count]) => {
-      const a = activity[code]
+    id,
+    position,
+    requirements: data.requirements.map((r, i) => {
+      const type = equipmentTypes.find((e) => e.id === r.equipment_type_id)
+      if (!type) throw new MockError(422, 'Неизвестный тип техники')
+      const gesn = r.gesn_code?.trim() || null
+      const note = r.source_note?.trim() || null
+      if (!gesn && !note) throw new MockError(422, 'Укажите номер ГЭСН или источник требования')
       return {
-        equipment_class: code,
-        name: fx.className(code),
-        min_count,
-        activity: a?.activity ?? 'unknown',
-        activity_hypothesis: a?.hypothesis ?? false,
-        basis_text: a?.basis ?? 'Пары кадров для сравнения нет. Оснований для вывода нет.',
-        deviation_id: a?.deviation_id ?? null,
+        id: `${id}-req-${i + 1}`,
+        equipment_type: type,
+        min_count: r.min_count,
+        obligation: r.obligation,
+        gesn_code: gesn,
+        source_note: note,
       }
     }),
   }
 }
 
-export function needsReview(siteId: string) {
-  return {
-    frames: state.frames.filter((f) => frameSite(f) === siteId && f.time_state === 'needs_review'),
-    clips: state.clips.filter((c) => c.site_id === siteId).map(({ site_id: _s, ...clip }) => clip),
-  }
+export function createSet(siteId: string, ruleId: string, data: SetWrite): EquipmentSet {
+  const rule = findRule(siteId, ruleId)
+  const position = Math.max(0, ...rule.sets.map((s) => s.position)) + 1
+  const set = buildSet(nextId('set'), position, data)
+  rule.sets.push(set)
+  rule.updated_at = now()
+  return set
 }
 
-export function confirmFrameTime(frameId: string, capturedAt: string): Frame | undefined {
-  const frame = state.frames.find((f) => f.id === frameId)
-  if (!frame) return undefined
-  Object.assign(frame, {
-    captured_at: capturedAt,
-    date_source: 'manual',
-    time_state: 'ok',
-    time_issue: null,
-  } satisfies Partial<Frame>)
-  return frame
+export function replaceSet(siteId: string, setId: string, data: SetWrite): EquipmentSet {
+  const { rule, set } = findSet(siteId, setId)
+  const next = buildSet(set.id, set.position, data)
+  rule.sets = rule.sets.map((s) => (s.id === setId ? next : s))
+  rule.updated_at = now()
+  return next
 }
 
-export function setClipStart(ingestId: string, clipStartedAt: string): Ingest | undefined {
-  const clip = state.clips.find((c) => c.ingest_id === ingestId)
-  if (!clip) return undefined
-  state.clips = state.clips.filter((c) => c !== clip)
-  state.frames
-    .filter((f) => f.ingest_id === ingestId && f.time_state === 'needs_review')
-    .forEach((f) =>
-      Object.assign(f, {
-        captured_at: clipStartedAt,
-        date_source: 'video',
-        time_state: 'ok',
-        time_issue: null,
-      }),
+export function deleteSet(siteId: string, setId: string): void {
+  const { rule } = findSet(siteId, setId)
+  if (rule.is_verifiable && rule.sets.length === 1) {
+    throw new MockError(
+      422,
+      'Нельзя удалить последний комплект проверяемого этапа: добавьте другой комплект или пометьте этап непроверяемым',
     )
-  return {
-    id: ingestId,
-    site_id: clip.site_id,
-    camera_id: 'cam-2',
-    source_type: 'video',
-    state: 'done',
-    slice_step_sec: 300,
-    clip_started_at: clipStartedAt,
-    frames_count: clip.frames_count,
-    last_frame_at: null,
   }
+  rule.sets = rule.sets.filter((s) => s.id !== setId)
+  rule.updated_at = now()
 }
 
-export function createIngest(
-  siteId: string,
-  input: {
-    source_type: Ingest['source_type']
-    camera_id: string
-    files: File[]
-    slice_step_sec: number | null
-    clip_started_at: string | null
-  },
-): Ingest {
-  const camera = state.cameras.find((c) => c.id === input.camera_id)
-  const ingest: Ingest = {
-    id: nextId('ing'),
-    site_id: siteId,
-    camera_id: input.camera_id,
-    source_type: input.source_type,
-    state: input.source_type === 'stream' ? 'running' : 'done',
-    slice_step_sec: input.slice_step_sec,
-    clip_started_at: input.clip_started_at,
-    frames_count: input.files.length,
-    last_frame_at: null,
+// ---------- Снимки и наблюдения ----------
+
+const toPhoto = ({ detections: _, ...photo }: StoredPhoto): Photo => photo
+
+function detections(photoId: string, codes: readonly string[]): Detection[] {
+  return codes.map((code, i) => {
+    const type = equipmentByCode(code)
+    const x = 0.08 + (i % 2) * 0.46
+    return {
+      id: `${photoId}-d${i}`,
+      equipment_type_id: type.id,
+      equipment_code: type.code,
+      equipment_title: type.title,
+      bbox: [x, 0.35, x + 0.38, 0.75],
+      score: 0.82,
+      model_version: 'yoloe-mock',
+    }
+  })
+}
+
+function observability(done: number): Level {
+  if (done >= 3) return 'high'
+  if (done >= 2) return 'medium'
+  return 'low'
+}
+
+/** Как ObservationService.recompute: максимум по снимкам, а не сумма; без снимков — записи нет. */
+function recompute(siteId: string, date: string): void {
+  const list = (state.observations.get(siteId) ?? []).filter((o) => o.observed_on !== date)
+  const photos = state.photos.filter((p) => p.site_id === siteId && p.captured_on === date)
+  if (photos.length > 0) {
+    const counts = new Map<string, number>()
+    for (const photo of photos) {
+      const perPhoto = new Map<string, number>()
+      for (const d of photo.detections)
+        perPhoto.set(d.equipment_code, (perPhoto.get(d.equipment_code) ?? 0) + 1)
+      for (const [code, n] of perPhoto) counts.set(code, Math.max(counts.get(code) ?? 0, n))
+    }
+    const done = photos.filter((p) => p.processing_status === 'done').length
+    list.push({
+      id: `obs-${siteId}-${date}`,
+      site_id: siteId,
+      observed_on: date,
+      photo_count: photos.length,
+      observability: observability(done),
+      observability_notes: done < 3 ? 'Мало обработанных снимков за дату' : null,
+      recomputed_at: now(),
+      equipment: [...counts].map(([code, count]) => {
+        const type = equipmentByCode(code)
+        return {
+          equipment_type_id: type.id,
+          equipment_code: code,
+          equipment_title: type.title,
+          count_min: count,
+          activity: code === 'excavator_crawler' ? 'works' : 'unknown',
+          confidence: photos.some((p) => p.date_source === 'manual') ? 'medium' : 'high',
+        }
+      }),
+    })
   }
-  state.ingests.push(ingest)
-  input.files.forEach((_file, i) => {
-    // Моки «находят» время в EXIF у фото и берут старт клипа у видео, если он задан.
-    const known = input.source_type === 'photo' || Boolean(input.clip_started_at)
-    state.frames.push({
-      id: nextId('fr'),
-      camera_id: input.camera_id,
-      camera_name: camera?.name ?? null,
-      ingest_id: ingest.id,
-      source_type: input.source_type,
-      captured_at: known
-        ? `${fx.TODAY}T${String(15 + Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10).padStart(2, '0')}:00${fx.TZ}`
-        : null,
-      date_source: known ? (input.source_type === 'photo' ? 'exif' : 'video') : null,
-      time_state: known ? 'ok' : 'needs_review',
-      time_issue: known ? null : 'clip_no_start',
-      image_url: null,
-      detections: [],
+  state.observations.set(
+    siteId,
+    list.sort((a, b) => a.observed_on.localeCompare(b.observed_on)),
+  )
+}
+
+export function listObservations(siteId: string): Observation[] {
+  getSite(siteId)
+  return state.observations.get(siteId) ?? []
+}
+
+export function getObservation(siteId: string, date: string): Observation {
+  const observation = listObservations(siteId).find((o) => o.observed_on === date)
+  if (!observation) throw new MockError(404, 'Наблюдение не найдено')
+  return observation
+}
+
+export function listPhotos(siteId: string, undated: boolean): Photo[] {
+  getSite(siteId)
+  return state.photos
+    .filter((p) => p.site_id === siteId && (!undated || p.captured_on === null))
+    .map(toPhoto)
+}
+
+export function findPhoto(siteId: string, photoId: string): StoredPhoto {
+  getSite(siteId)
+  const photo = state.photos.find((p) => p.site_id === siteId && p.id === photoId)
+  if (!photo) throw new MockError(404, 'Снимок не найден')
+  return photo
+}
+
+/** Мок распознаёт дату из имени файла вида `…2026-09-18….jpg`, иначе снимок остаётся без даты. */
+export function uploadPhotos(
+  siteId: string,
+  files: readonly { name: string; type: string }[],
+): UploadReport {
+  getSite(siteId)
+  if (files.length === 0) throw new MockError(422, 'Нет файлов')
+  const touched = new Set<string>()
+  const items = files.map((file) => {
+    if (!file.type.startsWith('image/')) {
+      return { filename: file.name, photo: null, error: 'Файл не является изображением' }
+    }
+    const date = /\d{4}-\d{2}-\d{2}/.exec(file.name)?.[0] ?? null
+    const id = nextId('ph')
+    const photo: StoredPhoto = {
+      id,
+      site_id: siteId,
+      original_name: file.name,
+      width: 1920,
+      height: 1080,
+      captured_on: date,
+      date_source: date ? 'metadata' : null,
+      processing_status: 'done',
+      uploaded_at: now(),
+      detections: detections(id, ['dump_truck']),
+    }
+    state.photos.push(photo)
+    if (date) touched.add(date)
+    return { filename: file.name, photo: toPhoto(photo), error: null }
+  })
+  touched.forEach((date) => recompute(siteId, date))
+  const failed = items.filter((i) => i.error).length
+  return { items, uploaded: items.length - failed, failed }
+}
+
+export function setPhotoDate(siteId: string, photoId: string, capturedOn: string): Photo {
+  const photo = findPhoto(siteId, photoId)
+  if (capturedOn > TODAY) throw new MockError(422, 'Дата съёмки не может быть в будущем')
+  const previous = photo.captured_on
+  Object.assign(photo, { captured_on: capturedOn, date_source: 'manual' })
+  if (previous) recompute(siteId, previous)
+  recompute(siteId, capturedOn)
+  return toPhoto(photo)
+}
+
+export function redetect(siteId: string, photoId: string): StoredPhoto {
+  const photo = findPhoto(siteId, photoId)
+  photo.processing_status = 'done'
+  if (photo.captured_on) recompute(siteId, photo.captured_on)
+  return photo
+}
+
+// ---------- Оценка ----------
+
+export function listStageStatuses(siteId: string): StageStatus[] {
+  const statuses = state.statuses.get(siteId)
+  return getSchedule(siteId).stages.map((stage) => {
+    const s = statuses?.get(stage.id)
+    return {
+      stage_id: stage.id,
+      stage_name: stage.name,
+      position: stage.position,
+      status: s?.status ?? null,
+      delay_days: s?.delay_days ?? null,
+      confidence: s?.confidence ?? null,
+      confidence_reason: s?.confidence_reason ?? null,
+      computed_at: s?.computed_at ?? null,
+    }
+  })
+}
+
+export function listDeviations(siteId: string): Omit<DeviationDetail, 'evidence'>[] {
+  getSite(siteId)
+  return (state.deviations.get(siteId) ?? []).map(({ evidence: _, ...d }) => d)
+}
+
+export function getDeviation(siteId: string, id: string): DeviationDetail {
+  getSite(siteId)
+  const deviation = state.deviations.get(siteId)?.find((d) => d.id === id)
+  if (!deviation) throw new MockError(404, 'Отклонение не найдено')
+  return deviation
+}
+
+/** Как AssessmentService.get_summary. */
+export function getSummary(siteId: string): SiteSummary {
+  const deviations = listDeviations(siteId)
+  const counts = {
+    critical_count: deviations.filter((d) => d.severity === 'critical').length,
+    attention_count: deviations.filter((d) => d.severity === 'attention').length,
+  }
+  const statuses = [...(state.statuses.get(siteId)?.values() ?? [])]
+  const insufficient = { verdict: 'insufficient_data', delay_days_min: null, delay_days_max: null }
+  if (!state.schedules.has(siteId) || statuses.length === 0)
+    return { ...insufficient, ...counts } as SiteSummary
+  const meaningful = statuses.filter((s) => !['not_observed', 'not_checked'].includes(s.status!))
+  if (meaningful.length === 0) return { ...insufficient, ...counts } as SiteSummary
+  const behind = statuses.filter((s) => s.status === 'behind')
+  if (behind.length > 0) {
+    const delays = behind.map((s) => s.delay_days).filter((d): d is number => d !== null)
+    return {
+      verdict: 'behind',
+      delay_days_min: delays.length ? Math.min(...delays) : null,
+      delay_days_max: delays.length ? Math.max(...delays) : null,
+      ...counts,
+    }
+  }
+  return { verdict: 'no_deviations', delay_days_min: null, delay_days_max: null, ...counts }
+}
+
+// ---------- Начальное состояние ----------
+
+function seedBerezniki(): void {
+  const schedule = buildSchedule(BEREZNIKI, 'grafik_berezniki.xlsx')
+  state.schedules.set(BEREZNIKI, schedule)
+  const stageId = (position: number) => schedule.stages[position - 1]!.id
+
+  PHOTO_SEEDS.forEach(([date, codes], i) => {
+    const id = `ph-${i + 1}`
+    state.photos.push({
+      id,
+      site_id: BEREZNIKI,
+      original_name: `IMG_${String(i + 1).padStart(4, '0')}.jpg`,
+      width: 1920,
+      height: 1080,
+      captured_on: date,
+      date_source: date ? 'metadata' : null,
+      processing_status: date ? 'done' : 'pending',
+      uploaded_at: '2026-09-18T11:00:00Z',
+      detections: detections(id, codes),
     })
   })
-  if (input.source_type === 'video' && !input.clip_started_at) {
-    state.clips.push({
-      ingest_id: ingest.id,
-      site_id: siteId,
-      original_name: input.files[0]?.name ?? 'video',
-      frames_count: input.files.length,
-    })
-  }
-  return ingest
-}
+  new Set(PHOTO_SEEDS.map(([d]) => d)).forEach((d) => d && recompute(BEREZNIKI, d))
 
-export function listStreams(siteId: string): Ingest[] {
-  return state.ingests.filter((i) => i.site_id === siteId && i.source_type === 'stream')
-}
-
-export function stopIngest(ingestId: string): Ingest | undefined {
-  const ingest = state.ingests.find((i) => i.id === ingestId)
-  if (ingest) ingest.state = 'stopped'
-  return ingest
-}
-
-// ---------- Выводы ----------
-
-export function stageStatuses(siteId: string): StageStatus[] {
-  if (fx.stageStatuses[siteId]) return fx.stageStatuses[siteId]
-  // Новая стройка: кадров нет — этапы либо не наступили, либо не проверяются.
-  return stagesOf(siteId).map((s) => ({
-    stage_id: s.id,
-    stage_name: s.name,
-    planned_start: s.planned_start,
-    planned_end: s.planned_end,
-    status: s.equipment_check ? (s.has_marker ? 'not_observed' : 'not_checked') : 'not_checked',
-    evidence: 'unknown',
-    fact_label: null,
-    delay_days_min: null,
-    delay_days_max: null,
-    confidence: null,
-    basis_text: s.equipment_check ? 'Кадров пока нет' : 'Нет крупной техники',
-    deviations: [],
-  }))
-}
-
-function frameById(id: string): Frame {
-  return state.frames.find((f) => f.id === id)!
-}
-
-function toDetail(seed: (typeof fx.deviations)[number]): DeviationDetail {
-  const record = state.decisions[seed.id] ?? null
-  return {
-    ...seed,
-    site_name: state.sites.find((s) => s.id === seed.site_id)?.name ?? '',
-    decision: record?.decision ?? null,
-    decision_record: record,
-    evidence: seed.evidence.map((e) => ({
-      frame: frameById(e.frame_id),
-      role: e.role,
-      caption: e.caption,
-    })),
-  }
-}
-
-function toListItem(d: DeviationDetail): DeviationListItem {
-  const {
-    id,
-    site_id,
-    site_name,
-    type,
-    is_hypothesis,
-    severity,
-    confidence,
-    stage_name,
-    title,
-    detected_at,
-    decision,
-  } = d
-  return {
-    id,
-    site_id,
-    site_name,
-    type,
-    is_hypothesis,
-    severity,
-    confidence,
-    stage_name,
-    title,
-    detected_at,
-    decision,
-  }
-}
-
-export function siteDeviations(siteId: string): DeviationListItem[] {
-  return sortDeviations(
-    fx.deviations.filter((d) => d.site_id === siteId).map((d) => toListItem(toDetail(d))),
-  )
-}
-
-export function allDeviations(): DeviationListItem[] {
-  const active = new Set(listSites().map((s) => s.id))
-  return sortDeviations(
-    visibleDeviations(
-      fx.deviations.filter((d) => active.has(d.site_id)).map((d) => toListItem(toDetail(d))),
+  state.statuses.set(
+    BEREZNIKI,
+    new Map(
+      Object.entries(STATUS_SEEDS).map(([position, s]) => [
+        stageId(Number(position)),
+        { ...s, computed_at: '2026-09-18T11:00:00Z' },
+      ]),
     ),
   )
+  const rules = listRules(BEREZNIKI)
+  state.deviations.set(
+    BEREZNIKI,
+    DEVIATION_SEEDS.map(({ stage, ...d }) => ({
+      ...d,
+      stage_id: stage ? stageId(stage) : null,
+      rule_id: stage ? (rules[stage - 1]?.id ?? null) : null,
+    })),
+  )
 }
 
-export function findDeviation(id: string): DeviationDetail | undefined {
-  const seed = fx.deviations.find((d) => d.id === id)
-  return seed && toDetail(seed)
-}
-
-export function decide(
-  id: string,
-  decision: DecisionRecord['decision'],
-  comment: string | null,
-): DecisionRecord {
-  const record: DecisionRecord = {
-    decision,
-    comment: comment?.trim() || null,
-    decided_by_name: fx.user.full_name,
-    decided_at: `2026-09-21T10:42:00${fx.TZ}`,
+export function resetDb(): void {
+  state = {
+    sites: siteFixtures.map((s) => ({ ...s })),
+    schedules: new Map(),
+    rules: new Map(),
+    photos: [],
+    observations: new Map(),
+    statuses: new Map(),
+    deviations: new Map(),
+    seq: 0,
   }
-  state.decisions[id] = record
-  return record
+  seedBerezniki()
+  state.schedules.set(SYNTHETIC, buildSchedule(SYNTHETIC, 'synthetic.csv'))
 }
 
-export function undoDecision(id: string): void {
-  delete state.decisions[id]
-}
-
-// Начальное состояние — в конце модуля, когда все хелперы уже объявлены.
 resetDb()

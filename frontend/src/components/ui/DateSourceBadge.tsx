@@ -6,10 +6,10 @@ import styles from './DateSourceBadge.module.css'
 type Kind = 'received' | 'inferred' | 'manual'
 
 const KIND: Record<DateSource, Kind> = {
-  exif: 'received',
-  stream: 'received',
+  channel: 'received',
+  metadata: 'received',
   stamp: 'inferred',
-  video: 'inferred',
+  neighbours: 'inferred',
   manual: 'manual',
 }
 
@@ -19,7 +19,7 @@ const TITLE: Record<Kind, string> = {
   manual: 'Дата введена инженером',
 }
 
-/** Источник времени кадра обязателен в интерфейсе (architecture §7.4). */
+/** Источник даты снимка обязателен в интерфейсе (architecture §7.4). */
 export function DateSourceBadge({ source }: { source: DateSource }) {
   const kind = KIND[source]
   return (

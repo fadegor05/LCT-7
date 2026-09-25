@@ -9,33 +9,41 @@ describe('SiteOverviewPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('Березники, [адрес объекта] · данные на 18.09.2026'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Отставание от 4 дней')).toBeInTheDocument()
-    expect(screen.getByText('4 из 4 присылают кадры')).toBeInTheDocument()
+    expect(screen.getByText('Березники, [адрес объекта]')).toBeInTheDocument()
+    expect(await screen.findByText('Отставание 4 дней')).toBeInTheDocument()
+    expect(await screen.findByText('Наблюдаемость высокая')).toBeInTheDocument()
+    expect(screen.getByText('Всего снимков').nextSibling).toHaveTextContent('14')
+    expect(await screen.findByText('Без даты')).toBeInTheDocument()
+    await vi.waitFor(() => expect(screen.getByText('Без даты').nextSibling).toHaveTextContent('2'))
 
     expect(await screen.findByRole('heading', { name: 'Отклонения: 3' })).toBeInTheDocument()
     expect(
-      screen.getByText('1 критичное, 1 гипотеза ждёт вашего решения. Сначала самые важные.'),
+      screen.getByText('1 критичное, 1 гипотеза: проверьте снимки. Сначала самые важные.'),
     ).toBeInTheDocument()
 
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
     const pit = within(table).getByRole('row', { name: /Разработка котлована/ })
     expect(within(pit).getByText('Отставание')).toBeInTheDocument()
-    expect(within(pit).getByText('от 4 дн. · уверенность средняя')).toBeInTheDocument()
-    expect(within(pit).getByRole('link', { name: 'Самосвал вне зоны' })).toHaveAttribute(
+    expect(within(pit).getByText('01.09–14.09')).toBeInTheDocument()
+    expect(within(pit).getByText('отставание 4 дн. · уверенность высокая')).toBeInTheDocument()
+    expect(within(pit).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
       'href',
-      '/sites/site-berezniki/deviations/dev-idle-dump',
+      '/sites/site-berezniki/deviations/dev-idle-truck',
     )
+    const backfill = within(table).getByRole('row', { name: /Обратная засыпка/ })
+    expect(within(backfill).getByText('Не начата')).toBeInTheDocument()
 
     expect(
       await screen.findByRole('heading', { name: 'Последнее наблюдение · 18.09' }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByText(/максимум по кадрам\)\. Простаивает: самосвал \(гипотеза\)/),
+      screen.getByText('Гусеничный экскаватор 2, самосвал 1 (максимум по снимкам).'),
     ).toBeInTheDocument()
-    expect(await screen.findAllByRole('img', { name: /Кадр К-/ })).toHaveLength(3)
+    const photos = await screen.findAllByRole('img', { name: /Снимок IMG_/ })
+    expect(photos).toHaveLength(3)
+    expect(photos[0]).toHaveStyle({
+      backgroundImage: 'url(/api/sites/site-berezniki/photos/ph-9/annotated)',
+    })
   })
 
   it('prints the report', async () => {
@@ -45,24 +53,33 @@ describe('SiteOverviewPage', () => {
     expect(print).toHaveBeenCalled()
   })
 
-  it('handles a site without frames or deviations', async () => {
+  it('handles a site without photos or deviations', async () => {
     renderRoute('/sites/site-synthetic')
     expect(await screen.findByText('Недостаточно данных')).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Отклонения: 1' })).toBeInTheDocument()
-    expect(screen.getByText('Сначала самые важные.')).toBeInTheDocument()
+    expect(await screen.findByText('Наблюдений пока нет')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Отклонения: 0' })).toBeInTheDocument()
+    expect(screen.getByText('Отклонений не выявлено.', { selector: 'p.sm' })).toBeInTheDocument()
+    const table = await screen.findByRole('table', { name: 'Статусы этапов' })
+    expect(within(table).getAllByText('Не начата')).toHaveLength(6)
     expect(screen.queryByRole('heading', { name: /Последнее наблюдение/ })).not.toBeInTheDocument()
+  })
+
+  it('asks for a schedule when there is none', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/schedule', () =>
+        HttpResponse.json({ detail: 'График не загружен' }, { status: 404 }),
+      ),
+    )
+    renderRoute('/sites/site-synthetic')
+    expect(await screen.findByText('График не загружен')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Загрузить график' })).toHaveAttribute(
+      'href',
+      '/sites/site-synthetic/setup',
+    )
   })
 
   it('shows a clear error for unknown sites', async () => {
     renderRoute('/sites/nope')
     expect(await screen.findByText('Стройка не найдена')).toBeInTheDocument()
-  })
-
-  it('describes an empty deviation list', async () => {
-    server.use(http.get('/api/sites/:siteId/deviations', () => HttpResponse.json([])))
-    renderRoute('/sites/site-berezniki')
-    expect(
-      await screen.findByText('Отклонений не выявлено.', { selector: 'p.sm' }),
-    ).toBeInTheDocument()
   })
 })
