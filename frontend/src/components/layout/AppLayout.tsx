@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import { Logo } from '@/components/ui/Logo'
 import { env } from '@/lib/env'
 import styles from './AppLayout.module.css'
 
@@ -7,7 +8,8 @@ export function AppLayout() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to="/sites" className={styles.logo}>
-          LCT-7
+          <Logo />
+          Веха
         </Link>
         <nav className={styles.nav} aria-label="Основная навигация">
           <NavLink to="/sites" className={styles.navLink}>
