@@ -1,12 +1,15 @@
 """Оркестрация переучёта статусов этапов и отклонений (LCT-11)."""
 
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import date
 from typing import Protocol, cast
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.settings import AsOfMode
 from app.domains.assessment.engine import (
     DeviationResult,
     EquipmentRequirementInput,
@@ -44,6 +47,19 @@ class Clock(Protocol):
     def __call__(self) -> date: ...
 
 
+@dataclass(frozen=True)
+class AsOfConfig:
+    """Настройка режима опорной даты расчёта (LCT-14). См. AsOfMode."""
+
+    mode: AsOfMode
+    fixed_date: date | None
+
+
+# Модульный singleton для дефолта конструктора (см. today = date.today выше) —
+# избегает B008 (вызов в аргументах по умолчанию); AsOfConfig frozen, безопасно делить.
+_DEFAULT_AS_OF_CONFIG = AsOfConfig(mode=AsOfMode.TODAY, fixed_date=None)
+
+
 class RecomputeCoordinator:
     """Оркестратор полного переучёта статусов этапов и отклонений для объекта (site).
 
@@ -67,6 +83,7 @@ class RecomputeCoordinator:
         equipment_catalog: EquipmentCatalog,
         session: AsyncSession,
         today: Clock = date.today,
+        as_of_config: AsOfConfig = _DEFAULT_AS_OF_CONFIG,
     ) -> None:
         """Инициализировать RecomputeCoordinator.
 
@@ -86,6 +103,7 @@ class RecomputeCoordinator:
                 отклонений (LCT-15).
             session: AsyncSession для персистирования.
             today: Clock — callable для получения текущей даты (default: date.today).
+            as_of_config: AsOfConfig — режим опорной даты (default: today, как раньше).
         """
         self._engine = engine
         self._stage_status_repo = stage_status_repo
@@ -101,6 +119,30 @@ class RecomputeCoordinator:
         self._equipment_catalog = equipment_catalog
         self._session = session
         self._today = today
+        self._as_of_config = as_of_config
+
+    def _resolve_as_of(self, observations: Sequence[ObservationInput]) -> date:
+        """Определить опорную дату расчёта для площадки (LCT-14).
+
+        last_observation — дата последнего наблюдения НА ЭТОЙ площадке
+        (как в ML-отчёте: as_of = states[-1]["date"]). Нужно для демо на
+        площадках из разных лет — общая на всё окружение дата не подходит,
+        а "последнее наблюдение" у каждой площадки согласовано с её же
+        данными. Площадка без наблюдений — fallback на self._today()
+        (мерить нечего). fixed без настроенной даты — тоже fallback на
+        self._today() (тихо, не ошибка).
+        """
+        if self._as_of_config.mode == AsOfMode.LAST_OBSERVATION:
+            if observations:
+                return max(o.observed_on for o in observations)
+            return self._today()
+
+        if self._as_of_config.mode == AsOfMode.FIXED:
+            if self._as_of_config.fixed_date is not None:
+                return self._as_of_config.fixed_date
+            return self._today()
+
+        return self._today()
 
     async def recompute_site(self, site_id: uuid.UUID) -> None:
         """Полный идемпотентный переучёт статусов и отклонений для объекта.
@@ -227,9 +269,10 @@ class RecomputeCoordinator:
                 )
 
             # Шаг 5: Запустить engine
+            reference_date = self._resolve_as_of(observations)
             equipment_names = {item.id: item.title for item in await self._equipment_catalog.all()}
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, self._today(), equipment_names
+                stages, rules_by_stage, observations, reference_date, equipment_names
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)
