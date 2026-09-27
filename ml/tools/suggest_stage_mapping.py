@@ -53,6 +53,12 @@ sys.path.insert(0, str(ML / "tools"))
 RULES = ML / "configs" / "rules.json"
 MAPPING = ML / "configs" / "stage_mapping.json"
 
+SYSTEM_CHECK = (
+    "Ты проверяешь чужие отнесения строительных работ к этапам. Будь строг: "
+    "отвечай ok только когда работа действительно относится к названному этапу. "
+    "Сомневаешься — отвечай no. Формат ответа: «номер|ok» или «номер|no»."
+)
+
 SYSTEM = (
     "Ты помогаешь сопоставить названия строительных работ из календарного плана "
     "с закрытым списком этапов. Отвечай только кодом этапа из списка или словом "
@@ -87,14 +93,85 @@ def already_mapped(name: str) -> str | None:
     return None
 
 
-def build_prompt(names: list[str], stages: dict[str, str]) -> str:
-    catalog = "\n".join(f"{code} — {title}" for code, title in stages.items())
+def load_hints() -> dict[str, str]:
+    """Границы этапов словами: где похожая работа относится к другому этапу.
+
+    Лежат в `configs/stage_mapping.json` рядом с правилами и правятся
+    пользователем. Это методика, а не подпорка под модель: те же границы нужны
+    человеку, который разбирает план руками.
+    """
+    data = json.loads(MAPPING.read_text(encoding="utf-8"))
+    return data.get("stage_hints", {})
+
+
+def examples(limit: int = 8) -> list[tuple[str, str]]:
+    """Примеры из действующей таблицы: показать формат на знакомых случаях."""
+    data = json.loads(MAPPING.read_text(encoding="utf-8"))
+    out = []
+    for rule in data["rules"]:
+        sample = rule["pattern"].split("|")[0].strip()
+        if sample.isalpha() and len(sample) > 4:
+            out.append((sample, rule["stage_code"]))
+        if len(out) >= limit:
+            break
+    return out
+
+
+def build_prompt(names: list[str], stages: dict[str, str],
+                 hints: dict[str, str] | None = None,
+                 shots: list[tuple[str, str]] | None = None) -> str:
+    """Запрос на разбор: каталог этапов, их границы, примеры и список работ."""
+    hints = hints or {}
+    lines = []
+    for code, title in stages.items():
+        lines.append(f"{code} — {title}")
+        if hints.get(code):
+            lines.append(f"    {hints[code]}")
+    catalog = "\n".join(lines)
+
+    shown = ""
+    if shots:
+        shown = "Примеры:\n" + "\n".join(f"«{n}» → {c}" for n, c in shots) + "\n\n"
+
     listed = "\n".join(f"{i + 1}. {n}" for i, n in enumerate(names))
-    return (f"Список этапов:\n{catalog}\n\n"
+    return (f"Список этапов:\n{catalog}\n\n{shown}"
             f"Названия работ:\n{listed}\n\n"
             f"Для каждой работы верни строку вида «номер|код_этапа». "
-            f"Если подходящего этапа нет — «номер|none». "
+            f"Если подходящего этапа нет или ты не уверен — «номер|none»: "
+            f"пропуск дешевле ошибки, такую работу разберёт человек. "
             f"Ровно {len(names)} строк, без заголовков и пояснений.")
+
+
+def build_check_prompt(pairs: list[tuple[str, str, str]], hints: dict[str, str]) -> str:
+    """Второй проход: модель проверяет собственные ответы.
+
+    Первый проход отвечает на вопрос «какой этап подходит», и модель склонна
+    найти хоть какой-нибудь. Второй ставит другой вопрос — «это точно он?» — и
+    на нём видны натяжки вроде «отселение жильцов → снос зданий».
+    """
+    listed = []
+    for i, (name, code, title) in enumerate(pairs, 1):
+        hint = hints.get(code, "")
+        listed.append(f"{i}. Работа «{name}» отнесена к этапу {code} — {title}."
+                      + (f" Граница этапа: {hint}" if hint else ""))
+    return ("Проверь каждое отнесение. Ответь строкой «номер|ok», если работа "
+            "действительно относится к этому этапу, или «номер|no», если это "
+            "другой этап либо работа вообще не про эту стадию.\n\n"
+            + "\n".join(listed)
+            + f"\n\nРовно {len(pairs)} строк, без пояснений.")
+
+
+def parse_check(text: str, count: int) -> set[int]:
+    """Номера, которые второй проход подтвердил."""
+    kept = set()
+    for line in text.splitlines():
+        parts = line.strip().split("|")
+        if len(parts) != 2 or not parts[0].strip().isdigit():
+            continue
+        index = int(parts[0].strip())
+        if 1 <= index <= count and parts[1].strip().lower().startswith("ok"):
+            kept.add(index)
+    return kept
 
 
 def models(base_url: str, api_key: str, timeout: int = 30) -> list[str]:
@@ -107,11 +184,12 @@ def models(base_url: str, api_key: str, timeout: int = 30) -> list[str]:
     return [m.get("id", "") for m in data.get("data", [])]
 
 
-def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600) -> str:
+def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600,
+        system: str = "") -> str:
     body = json.dumps({
         "model": model,
         "temperature": 0,
-        "messages": [{"role": "system", "content": SYSTEM},
+        "messages": [{"role": "system", "content": system or SYSTEM},
                      {"role": "user", "content": prompt}],
     }).encode("utf-8")
     request = urllib.request.Request(
@@ -162,6 +240,10 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true", help="показать запрос и выйти")
     ap.add_argument("--list-models", action="store_true",
                     help="спросить у провайдера, какие модели доступны, и выйти")
+    ap.add_argument("--no-check", action="store_true",
+                    help="без второго прохода самопроверки")
+    ap.add_argument("--no-hints", action="store_true",
+                    help="без границ этапов и примеров — для замера, что они дают")
     ap.add_argument("--timeout", type=int, default=600,
                     help="сколько ждать ответ, секунд: локальная модель на первом "
                          "запросе грузится в память и может думать минутами")
@@ -202,7 +284,9 @@ def main() -> int:
         print("разбирать нечего: действующая таблица покрывает все названия")
         return 0
 
-    prompt = build_prompt(unique, stages)
+    hints = load_hints() if not args.no_hints else {}
+    shots = examples() if not args.no_hints else None
+    prompt = build_prompt(unique, stages, hints, shots)
     base_url, api_key, model = (from_env("LLM_BASE_URL"), from_env("LLM_API_KEY"),
                                 from_env("LLM_MODEL"))
 
@@ -224,6 +308,25 @@ def main() -> int:
                          f"Попробуйте меньше названий за раз (--limit) или больше "
                          f"времени (--timeout).")
     suggestions = parse_answer(answer, unique, stages)
+    first_pass = len(suggestions)
+
+    withdrawn: list[dict] = []
+    if suggestions and not args.no_check:
+        pairs = [(s["name"], s["stage_code"], s["stage_name"]) for s in suggestions]
+        try:
+            verdict = ask(build_check_prompt(pairs, hints), base_url, api_key, model,
+                          timeout=args.timeout, system=SYSTEM_CHECK)
+            kept = parse_check(verdict, len(pairs))
+            # Пустой ответ второго прохода не должен молча стереть весь разбор:
+            # это отказ проверяющего, а не отвод всех предложений.
+            if kept:
+                withdrawn = [s for i, s in enumerate(suggestions, 1) if i not in kept]
+                suggestions = [s for i, s in enumerate(suggestions, 1) if i in kept]
+                print(f"второй проход отозвал: {len(withdrawn)} из {first_pass}")
+            else:
+                print("второй проход не дал разбираемого ответа — оставляем первый")
+        except Exception as exc:
+            print(f"второй проход не выполнен ({exc}) — оставляем результат первого")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps({
@@ -233,6 +336,9 @@ def main() -> int:
                      "стоит человек — это условие, при котором языковая модель "
                      "вообще допущена в проект."),
         "model": model,
+        "passes": {"first": first_pass, "withdrawn_by_check": len(withdrawn),
+                   "kept": len(suggestions)},
+        "withdrawn": withdrawn,
         "suggestions": suggestions,
     }, ensure_ascii=False, indent=1), encoding="utf-8")
 
