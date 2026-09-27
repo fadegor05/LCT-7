@@ -124,48 +124,66 @@ curl -X POST http://localhost/api/sites/{id}/photos/detect?status=pending,failed
   образ@sha, если достижима).
 - `/api/version`: добавлено поле `"model"` (версия, или `null` если ML недоступен).
 
-## Включить автоматический деплой
+## Стенд в Yandex Cloud (veha-stand)
 
-`.github/workflows/cd.yml` — каркас. Job `build-push` рабочий (собирает образы и
-кладёт в GHCR по ручному запуску), job `deploy` пропускается, пока не выставлена
-переменная `DEPLOY_ENABLED`.
+С 27.09.2026 стенд живёт на ВМ в Yandex Cloud: 4 vCPU (Intel Ice Lake, 100%),
+8 ГБ, SSD 30 ГБ, Ubuntu 24.04, статический IP `81.26.184.6`. До появления домена
+работает по HTTP через `make deploy-tunnel`: роутинг только по пути, без `Host(...)`.
 
-Порядок включения:
+Что важно знать про сеть Yandex Cloud:
 
-1. Один раз собрать и опубликовать образы: **Actions → CD (шаблон) → Run
-   workflow**. Появятся пакеты `ghcr.io/refaxd/lct-7/backend` и `.../frontend`.
-   Если пакеты приватные — на хосте нужен `docker login ghcr.io` с PAT
-   (`read:packages`).
-2. Выбрать способ доставки — **вариант A или B** ниже, раскомментировать
-   соответствующий блок в `cd.yml`.
-3. Завести секреты окружения `prod` (Settings → Environments → prod).
-4. Выставить переменную `DEPLOY_ENABLED=true` (Settings → Secrets and variables
-   → Actions → Variables) и убрать шаг-заглушку `Что нужно заполнить`.
-5. Когда деплой поедет — включить автотриггер: в `cd.yml` раскомментировать
-   `push: tags: ['v*']`.
+* **Docker Hub недоступен** (таймаут на `registry-1.docker.io`). В
+  `/etc/docker/daemon.json` на ВМ прописано зеркало `https://mirror.gcr.io`, через
+  него идут `postgres`, `traefik`, `coollabsio/minio` и базовые образы.
+* **`download.pytorch.org` и `registry.npmjs.org` недоступны**, поэтому образы
+  `ml` и `frontend` на ВМ не собираются. Их собирает GitHub Actions и кладёт в GHCR,
+  ВМ только тянет готовое.
+* GHCR, GitHub и HuggingFace с ВМ доступны.
 
-### Вариант A — self-hosted runner на домашнем ПК (рекомендуется)
+Раскладка на ВМ:
 
-За NAT и туннелем входящего SSH нет, а runner сам ходит на GitHub — ничего
-пробрасывать не надо. Ставится один раз: Settings → Actions → Runners → New
-self-hosted runner, метки `self-hosted`, `xxprod`. В job'е `deploy` тогда
-`runs-on: [self-hosted, xxprod]`, а шаги — обычные локальные команды
-(`make deploy-tunnel`).
+```
+/opt/veha/
+├── .env            # только на ВМ: DOMAIN=<IP>, пароли PostgreSQL и MinIO, DETECTOR__URL
+├── makefile        # выкладывает CD из того же коммита, что и образы
+└── deploy/         # compose-файлы и versions.env (теги sha-<коммит> ставит CD)
+```
 
-Минус: runner выполняет код из репозитория на домашней машине — форки к PR
-допускать нельзя (для self-hosted это и так требует подтверждения).
+Группа безопасности `veha-sg`: входящие 80, 443 и 22 (TCP), исходящие все.
+8080 (дашборд Traefik без пароля) наружу закрыт.
 
-### Вариант B — деплой по SSH
+Веса детектора кладутся в том `lct7_ml_weights` один раз, после первого деплоя
+(нужен образ `ml`):
 
-Нужен доступный извне SSH. Секреты окружения `prod`:
+```bash
+cd /opt/veha && HF_TOKEN=<токен> make ml-weights && docker compose restart ml
+```
 
-| Секрет | Что это |
-|---|---|
-| `DEPLOY_HOST` | хост или IP |
-| `DEPLOY_PORT` | порт SSH |
-| `DEPLOY_USER` | пользователь с правом на docker |
-| `DEPLOY_SSH_KEY` | приватный ключ ed25519 без пароля, только под деплой |
-| `GHCR_PULL_TOKEN` | PAT с `read:packages`, если пакеты приватные |
+## Автоматический деплой
+
+`.github/workflows/cd.yml` на каждый push в `main` (и по ручному запуску):
+
+1. собирает `backend`, `frontend`, `ml` и публикует в GHCR с тегами `sha-<коммит>`
+   и `latest`;
+2. выкладывает на ВМ `makefile` и `deploy/` из того же коммита;
+3. логинится в GHCR на ВМ временным `GITHUB_TOKEN` (живёт, пока идёт job —
+   отдельный PAT не нужен), ставит теги `sha-<коммит>` в `deploy/versions.env`
+   и делает `make deploy-tunnel`;
+4. проверяет `http://<IP>/api/health`.
+
+Job `deploy` запускается, только если выставлено всё ниже (Settings → Secrets and
+variables → Actions; нужны права администратора репозитория):
+
+| Что | Имя | Значение |
+|---|---|---|
+| секрет | `DEPLOY_HOST` | `81.26.184.6` |
+| секрет | `DEPLOY_USER` | `veha` |
+| секрет | `DEPLOY_SSH_KEY` | приватный ключ `~/.ssh/ci_deploy` с ВМ (ключ только под деплой) |
+| переменная | `DEPLOY_ENABLED` | `true` |
+| переменная | `DEPLOY_URL` | `http://81.26.184.6` |
+
+Откат — ручной запуск workflow на нужном коммите (Actions → CD → Run workflow,
+ветка или тег).
 
 ## GPU (RTX 2060 SUPER)
 
