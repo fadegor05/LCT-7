@@ -1076,9 +1076,8 @@ class TestRecomputeCoordinatorAsOfMode:
 
         # Явно передаём as_of_config=None — дефолт (AsOfMode.TODAY) не должен
         # регрессировать по сравнению с поведением до LCT-14.
-        async with container() as request_container:
-            coordinator = await create_coordinator(container, engine_config, as_of_config=None)
-            await coordinator.recompute_site(site_id)
+        coordinator = await create_coordinator(container, engine_config, as_of_config=None)
+        await coordinator.recompute_site(site_id)
 
         async with container() as request_container:
             repo = StageStatusRepository(await request_container.get(AsyncSession))
@@ -1090,6 +1089,204 @@ class TestRecomputeCoordinatorAsOfMode:
             dev_repo = DeviationRepository(await request_container.get(AsyncSession))
             deviations = await dev_repo.list_by_site(site_id)
             assert not any(d.type == DeviationType.STALE_DATA.value for d in deviations)
+
+    @pytest.mark.asyncio
+    async def test_fixed_mode_uses_configured_date(self, container) -> None:
+        """fixed берёт настроенную дату, а не реальное "сегодня"."""
+        user = await seed_user(container)
+        site_id = uuid.uuid4()
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        equipment_set_id = uuid.uuid4()
+        equipment_type_id = uuid.uuid4()
+
+        # Наблюдение — задолго до реального "сегодня" (2026): если бы
+        # опорной датой было date.today(), stale_data сработал бы.
+        obs_date = date(2024, 3, 15)
+        fixed_date = obs_date
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+
+            site = Site(id=site_id, name="Test Site", owner_id=user.id)
+            session.add(site)
+
+            schedule = Schedule(id=uuid.uuid4(), site_id=site_id)
+            session.add(schedule)
+            await session.flush()
+
+            stage = ScheduleStage(
+                id=stage_id,
+                schedule_id=schedule.id,
+                name="Stage 1",
+                position=1,
+                planned_start=obs_date - timedelta(days=3),
+                planned_end=obs_date + timedelta(days=3),
+            )
+            session.add(stage)
+
+            eq_type = EquipmentType(id=equipment_type_id, code="crane", title="Crane", synonyms=[])
+            session.add(eq_type)
+            await session.flush()
+
+            rule = MethodologyRule(
+                id=rule_id,
+                site_id=site_id,
+                stage_id=stage_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+            )
+            session.add(rule)
+            await session.flush()
+
+            equipment_set = EquipmentSet(id=equipment_set_id, rule_id=rule_id, position=1)
+            session.add(equipment_set)
+            await session.flush()
+
+            requirement = EquipmentRequirement(
+                id=uuid.uuid4(),
+                set_id=equipment_set_id,
+                equipment_type_id=equipment_type_id,
+                min_count=1,
+                obligation=Obligation.NORMATIVE.value,
+                gesn_code="01.001",
+            )
+            session.add(requirement)
+
+            observation = Observation(
+                id=uuid.uuid4(),
+                site_id=site_id,
+                observed_on=obs_date,
+                photo_count=1,
+                observability="high",
+            )
+            session.add(observation)
+            await session.flush()
+
+            observed_eq = ObservedEquipment(
+                id=uuid.uuid4(),
+                observation_id=observation.id,
+                equipment_type_id=equipment_type_id,
+                count_min=1,
+                activity="works",
+                confidence="high",
+            )
+            session.add(observed_eq)
+            await session.commit()
+
+        engine_config = EngineConfig(
+            tolerance_days=3,
+            stale_data_days=7,
+            no_progress_window_days=5,
+            min_confirming_observations=1,
+        )
+
+        # Базовая проверка: с обычным поведением (реальное date.today())
+        # 2024-е наблюдение — данные из прошлого на годы, stale_data ДОЛЖЕН
+        # сработать. Подтверждает, что as-of дата здесь значима.
+        coordinator = await create_coordinator(container, engine_config)
+        await coordinator.recompute_site(site_id)
+
+        async with container() as request_container:
+            dev_repo = DeviationRepository(await request_container.get(AsyncSession))
+            deviations = await dev_repo.list_by_site(site_id)
+            assert any(d.type == DeviationType.STALE_DATA.value for d in deviations), (
+                "expected stale_data with real date.today() as baseline "
+                "(2024 observation is years old)"
+            )
+
+        # Теперь пересчитываем в режиме fixed с настроенной датой, равной
+        # дате наблюдения: stale_data больше не должен сработать.
+        as_of_config = AsOfConfig(mode=AsOfMode.FIXED, fixed_date=fixed_date)
+        coordinator = await create_coordinator(container, engine_config, as_of_config)
+        await coordinator.recompute_site(site_id)
+
+        async with container() as request_container:
+            dev_repo = DeviationRepository(await request_container.get(AsyncSession))
+            deviations = await dev_repo.list_by_site(site_id)
+            assert not any(d.type == DeviationType.STALE_DATA.value for d in deviations), (
+                "stale_data should not fire when as-of is the configured fixed date"
+            )
+
+            status_repo = StageStatusRepository(await request_container.get(AsyncSession))
+            status = await status_repo.get_by_stage(stage_id)
+            assert status is not None
+            assert status.status == StageStatusValue.ON_TRACK.value
+
+    @pytest.mark.asyncio
+    async def test_fixed_mode_without_configured_date_falls_back_to_today(self, container) -> None:
+        """fixed без настроенной даты (as_of_override не задан) — тихий
+        fallback на обычное поведение (self._today()), без падения."""
+        user = await seed_user(container)
+        site_id = uuid.uuid4()
+        # Отличается от реального date.today(), чтобы можно было отличить
+        # "упало в fallback на self._today()" от "проигнорировало fallback".
+        injected_today = date(2023, 6, 1)
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+
+            site = Site(id=site_id, name="Test Site", owner_id=user.id)
+            session.add(site)
+
+            # График без этапов и без единого наблюдения на площадке.
+            schedule = Schedule(id=uuid.uuid4(), site_id=site_id)
+            session.add(schedule)
+            await session.commit()
+
+        engine_config = EngineConfig(
+            tolerance_days=3,
+            stale_data_days=7,
+            no_progress_window_days=5,
+            min_confirming_observations=2,
+        )
+        as_of_config = AsOfConfig(mode=AsOfMode.FIXED, fixed_date=None)
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            stage_status_repo = StageStatusRepository(session)
+            deviation_repo = DeviationRepository(session)
+            deviation_evidence_repo = DeviationEvidenceRepository(session)
+            status_basis_repo = StatusBasisRepository(session)
+            schedule_repo = ScheduleRepository(session)
+            methodology_repo = MethodologyRepository(session)
+            observation_repo = ObservationRepository(session)
+            observed_equipment_repo = ObservedEquipmentRepository(session)
+            photo_repo = PhotoRepository(session)
+            detection_repo = DetectionRepository(session)
+
+            engine = RuleEngine(engine_config)
+            coordinator = RecomputeCoordinator(
+                engine=engine,
+                stage_status_repo=stage_status_repo,
+                deviation_repo=deviation_repo,
+                deviation_evidence_repo=deviation_evidence_repo,
+                status_basis_repo=status_basis_repo,
+                schedule_repo=schedule_repo,
+                methodology_repo=methodology_repo,
+                observation_repo=observation_repo,
+                observed_equipment_repo=observed_equipment_repo,
+                photo_repo=photo_repo,
+                detection_repo=detection_repo,
+                session=session,
+                today=lambda: injected_today,
+                as_of_config=as_of_config,
+            )
+
+            # Не должно падать, несмотря на отсутствие настроенной даты.
+            await coordinator.recompute_site(site_id)
+
+        async with container() as request_container:
+            dev_repo = DeviationRepository(await request_container.get(AsyncSession))
+            deviations = await dev_repo.list_by_site(site_id)
+            stale = next((d for d in deviations if d.type == DeviationType.STALE_DATA.value), None)
+            # Без наблюдений stale_data всегда срабатывает (latest_obs_on is None).
+            assert stale is not None
+            # Опорная дата упала обратно именно на self._today() (инжектированный
+            # Clock), а не на реальное date.today() — период отклонения
+            # датирован ИМЕННО инжектированной датой.
+            assert stale.period_start == injected_today
+            assert stale.period_end == injected_today
 
 
 class TestLiveStatusRecalculator:
