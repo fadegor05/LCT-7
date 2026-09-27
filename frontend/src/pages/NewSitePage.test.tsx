@@ -9,6 +9,15 @@ const file = () =>
   })
 
 describe('creating a site', () => {
+  it('shows recognized column names in the upload hint', () => {
+    renderRoute('/sites/new')
+    expect(
+      screen.getByText(
+        'CSV или XLSX до 5 МБ: колонки «Название» (или «Наименование»/«Этап»), «Начало», «Окончание». Техника в файле не нужна.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('walks through both steps', async () => {
     const { user, router } = renderRoute('/sites/new')
     expect(screen.getByRole('heading', { name: 'Новая стройка' })).toBeInTheDocument()
