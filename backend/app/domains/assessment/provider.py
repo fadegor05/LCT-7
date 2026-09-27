@@ -3,7 +3,7 @@
 from dishka import Provider, Scope, provide
 
 from app.core.settings import Settings
-from app.domains.assessment.coordinator import Clock, RecomputeCoordinator
+from app.domains.assessment.coordinator import AsOfConfig, Clock, RecomputeCoordinator
 from app.domains.assessment.engine import EngineConfig, RuleEngine
 from app.domains.assessment.recalculator import LiveStatusRecalculator
 from app.domains.assessment.repository import (
@@ -42,6 +42,22 @@ class AssessmentProvider(Provider):
         from datetime import date
 
         return date.today  # type: ignore[return-value]
+
+    @provide(scope=Scope.APP)
+    def as_of_config(self, settings: Settings) -> AsOfConfig | None:
+        """Режим опорной даты расчёта (LCT-14) — из настроек.
+
+        Тип возврата — AsOfConfig | None, а не просто AsOfConfig: Dishka
+        разрешает зависимости конструктора по точной аннотации типа, а
+        RecomputeCoordinator.__init__ принимает as_of_config именно как
+        AsOfConfig | None (см. Step 2) — без этого auto-wiring падает с
+        GraphMissingFactoryError. Сам провайдер всегда возвращает
+        конкретный AsOfConfig, никогда None.
+        """
+        return AsOfConfig(
+            mode=settings.assessment.as_of_mode,
+            fixed_date=settings.assessment.as_of_override,
+        )
 
     stage_status_repository = provide(StageStatusRepository, scope=Scope.REQUEST)
     deviation_repository = provide(DeviationRepository, scope=Scope.REQUEST)
