@@ -190,6 +190,13 @@ class ScheduleParser:
         Returns:
             dict с ключами 'name', 'start', 'end' и индексами колонок,
             или None если не найдена колонка с названием
+
+        Known limitation: the short synonym "этап" in NAME_HEADERS means a cell
+        like "Сроки исполнения этапа" or "Начало этапа" could incorrectly match
+        as a name column if scanned before the true name/start/end cell. This is
+        inherent to the brief's constraint that NAME_HEADERS/START_HEADERS/END_HEADERS
+        cannot be changed. Current test data and real files avoid this through
+        column ordering, but future templates should verify this behavior.
         """
         result: dict[str, int] = {}
 
