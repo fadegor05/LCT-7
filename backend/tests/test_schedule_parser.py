@@ -331,6 +331,21 @@ class TestScheduleParserHeaders:
         assert result.rows[0].start == date(2026, 4, 1)
         assert result.rows[0].end == date(2026, 4, 20)
 
+    def test_date_labeled_column_not_mistaken_for_name(self):
+        """ "Дата начала этапа"/"Дата окончания этапа" не должны перехватывать
+        колонку названия только из-за слова "этап" внутри — start/end
+        проверяются раньше слабого синонима имени в каждой ячейке."""
+        content = (
+            "Дата начала этапа;Этап;Дата окончания этапа\n01.03.2026;Котлован;30.04.2026\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Котлован"
+        assert result.rows[0].start == date(2026, 3, 1)
+        assert result.rows[0].end == date(2026, 4, 30)
+
 
 class TestScheduleParserDateFormats:
     """Тесты для различных форматов дат."""
@@ -426,6 +441,18 @@ class TestScheduleParserRows:
         assert len(result.issues) == 1
         assert result.issues[0].reason == "Пустое название"
         assert result.issues[0].row_number == 2
+
+    def test_name_looking_like_date_produces_issue(self):
+        """Если в колонке названия оказалось значение, похожее на дату
+        (шапка распозналась неверно, колонки перепутаны) — это issue,
+        а не тихо принятая мусорная строка."""
+        content = "Название;Начало;Окончание\n01.03.2026;;\n".encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 0
+        assert len(result.issues) == 1
+        assert "дат" in result.issues[0].reason.lower()
 
     def test_blank_rows_skipped(self):
         """Пустые строки пропускаются и не считаются в rows_total."""

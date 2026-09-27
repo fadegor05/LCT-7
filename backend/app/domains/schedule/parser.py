@@ -181,7 +181,7 @@ class ScheduleParser:
             # Fallback на точку с запятой
             return ";"
 
-    def _find_header(self, row: list | tuple) -> dict[str, int] | None:
+    def _find_header(self, row: Sequence[object]) -> dict[str, int] | None:
         """Найти индексы колонок имени, начала и окончания в строке.
 
         Совпадение — по подстроке, а не по точному равенству: реальные
@@ -211,8 +211,16 @@ class ScheduleParser:
 
         return result
 
-    def _match_header_row(self, row: list | tuple, *, allow_weak_name: bool) -> dict[str, int]:
-        """Один проход поиска шапки по строке (см. _find_header)."""
+    def _match_header_row(self, row: Sequence[object], *, allow_weak_name: bool) -> dict[str, int]:
+        """Один проход поиска шапки по строке (см. _find_header).
+
+        В каждой ячейке start/end проверяются РАНЬШЕ имени: короткий слабый
+        синоним "этап" — это стем, который остаётся подстрокой в любой
+        словоформе ("этапа", "этапу"...), поэтому легко встречается внутри
+        составных подписей вроде "Дата начала этапа"/"Дата окончания этапа".
+        Без этого приоритета такая ячейка ошибочно забирала бы колонку
+        имени, хотя на самом деле это колонка даты.
+        """
         result: dict[str, int] = {}
         name_synonyms = (
             self.NAME_HEADERS if allow_weak_name else self.NAME_HEADERS - self.WEAK_NAME_SYNONYMS
@@ -224,12 +232,12 @@ class ScheduleParser:
             cell_str = str(cell).lower().strip()
             if not cell_str:
                 continue
-            if "name" not in result and any(syn in cell_str for syn in name_synonyms):
-                result["name"] = idx
-            elif "start" not in result and any(syn in cell_str for syn in self.START_HEADERS):
+            if "start" not in result and any(syn in cell_str for syn in self.START_HEADERS):
                 result["start"] = idx
             elif "end" not in result and any(syn in cell_str for syn in self.END_HEADERS):
                 result["end"] = idx
+            elif "name" not in result and any(syn in cell_str for syn in name_synonyms):
+                result["name"] = idx
 
         return result
 
@@ -374,6 +382,23 @@ class ScheduleParser:
                 raw_row = " | ".join(str(cell) if cell is not None else "" for cell in row_data)
                 issues.append(
                     ParsedIssue(row_number=row_num, raw_row=raw_row, reason="Пустое название")
+                )
+                continue
+
+            # Страховка: если в колонке названия оказалось значение, похожее
+            # на дату — скорее всего колонки перепутаны (шапка распозналась
+            # неверно). Явная ошибка лучше тихо принятой мусорной строки.
+            name_as_date, _name_date_error = self._parse_date(name)
+            if name_as_date is not None:
+                raw_row = " | ".join(str(cell) if cell is not None else "" for cell in row_data)
+                issues.append(
+                    ParsedIssue(
+                        row_number=row_num,
+                        raw_row=raw_row,
+                        reason=(
+                            "Название колонки похоже на дату — проверьте, не перепутаны ли колонки"
+                        ),
+                    )
                 )
                 continue
 
