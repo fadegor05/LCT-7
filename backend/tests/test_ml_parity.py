@@ -1,13 +1,14 @@
-"""Тест паритета: статусы этапов backend vs ML /report.
+"""Тест паритета: статусы этапов backend против ML /report на демо-наборе.
 
-Сравнивает статусы этапов, рассчитанные backend'ом, со статусами из ML-отчёта.
-Использует фиксированные фреймы, расписание и детекции из ml_demo.
-Вставляет реальное оборудование и использует реальные сервисы приложения.
+Прогоняет через настоящие сервисы бэкенда те же кадры, детекции и график, по которым
+ML построил отчёт `fixtures/ml_demo/report.json`, с той же датой расчёта на площадку
+(`as_of` из отчёта), и сравнивает статусы этапов.
 
-ВАЖНО: Backend использует date.today() (2026-09-25), ML использует последнюю дату
-наблюдений из отчёта (2026-07-15). Разницу >2 месяцев в reference date объясняет
-большинство различий в статусах (backend помечает работы после 2026-07-15 как "behind",
-ML видит их в плановых окнах). Тест использует monkeypatch для синхронизации дат.
+Тест работает как храповик. Известные расхождения перечислены в KNOWN_DIVERGENCES
+вместе с обеими сторонами. Тест падает, если:
+- появилось расхождение, которого нет в списке (регрессия бэкенда);
+- у известного расхождения изменился статус с любой стороны;
+- известное расхождение исчезло (бэкенд догнал ML) — тогда запись надо удалить.
 """
 
 import csv
@@ -55,59 +56,27 @@ ML_STATUS_TO_BACKEND: dict[str, StageStatusValue] = {
     "not_checkable": StageStatusValue.NOT_CHECKED,
 }
 
-# Явный словарь разрешённых различий
-# Каждый сайт использует свой per-site as_of из ML report для assessment
-# Разработчик внёс RecomputeCoordinator(today=Callable) для поддержки injection
-ALLOWED_DIFFERENCES: dict[tuple[str, str], str] = {
-    (
-        "p02",
-        "12.3.1",
-    ): "stage_name не в DEFAULT_RULES (MethodologyService.list_rules)",
-    (
-        "p02",
-        "12.3.2",
-    ): "planned_end < as_of: backend=behind (RuleEngine логика)",
-    (
-        "p03",
-        "12.3.6",
-    ): "нет observations (ObservationRecalculator)",
-    (
-        "p03",
-        "12.3.4",
-    ): "backend=None: окно не началось (coordinator.py:216)",
-    (
-        "p04",
-        "12.4.28",
-    ): "planned_end < as_of: backend=behind",
-    (
-        "p05",
-        "12.3.9",
-    ): "planned_end < as_of: backend=behind",
-    (
-        "p08",
-        "12.3.1",
-    ): "разная логика RuleEngine (ahead vs on_track)",
-    (
-        "p08",
-        "12.4.14",
-    ): "stage_name не в DEFAULT_RULES (MethodologyService.list_rules)",
-    (
-        "p09",
-        "12.3.2",
-    ): "planned_end < as_of: backend=behind",
-    (
-        "p10",
-        "12.3.1",
-    ): "planned_end < as_of: backend=behind",
-    ("p10", "12.3.2"): "backend=None: нет observations",
-    (
-        "p11",
-        "12.3.1",
-    ): "backend=None: нет фото (site_as_of=None)",
-    (
-        "p11",
-        "12.3.10",
-    ): "backend=None: нет observations (не верифицируется)",
+# Известные расхождения на демо-наборе: (площадка, код этапа) -> (статус ML, статус бэкенда).
+# None у бэкенда — этап не получил статуса вовсе. Причины разобраны не до конца; по коду
+# движка видно (аудит 25.09): бэкенд не отличает специфичную технику от общей (у ML это
+# class_specificity в ml/configs/rules.json); до начала окна этапа движок этап не
+# оценивает, поэтому «опережение» там недостижимо; отставание считается от первой даты,
+# когда техника попала в кадр, даже если до этого снимков не было.
+# Правило: список только сокращается. Добавить запись — значит признать регрессию.
+KNOWN_DIVERGENCES: dict[tuple[str, str], tuple[str, str | None]] = {
+    ("p02", "12.3.1"): ("on_track", "not_checked"),
+    ("p02", "12.3.2"): ("on_track", "behind"),
+    ("p03", "12.3.4"): ("ahead", None),
+    ("p03", "12.3.6"): ("not_started", "not_observed"),
+    ("p04", "12.4.28"): ("not_started", "behind"),
+    ("p05", "12.3.9"): ("not_started", "behind"),
+    ("p08", "12.3.1"): ("on_track", "ahead"),
+    ("p08", "12.4.14"): ("not_observed", "not_checked"),
+    ("p09", "12.3.2"): ("not_started", "behind"),
+    ("p10", "12.3.1"): ("not_started", "behind"),
+    ("p10", "12.3.2"): ("not_observed", None),
+    ("p11", "12.3.1"): ("not_observed", None),
+    ("p11", "12.3.10"): ("not_checkable", None),
 }
 
 
@@ -120,13 +89,13 @@ def load_ml_fixtures() -> tuple[list[dict], list[dict], dict, dict[str, date | N
     """
     fixture_dir = Path(__file__).parent / "fixtures" / "ml_demo"
 
-    with open(fixture_dir / "frames.json") as f:
+    with open(fixture_dir / "frames.json", encoding="utf-8") as f:
         frames = json.load(f)
 
-    with open(fixture_dir / "schedule_demo.csv") as f:
+    with open(fixture_dir / "schedule_demo.csv", encoding="utf-8") as f:
         schedule = list(csv.DictReader(f, delimiter=";"))
 
-    with open(fixture_dir / "report.json") as f:
+    with open(fixture_dir / "report.json", encoding="utf-8") as f:
         report = json.load(f)
 
     # ML использует PER-SITE "as_of" из report (ml/tools/match_schedule.py:452)
@@ -482,28 +451,23 @@ class TestMLParity:
         print(f"  Совпадений: {matched_pairs}/{total_pairs} ({pct}%)")
         print(f"  Несовпадений: {len(mismatched_pairs)}")
 
-        if mismatched_pairs:
-            print("\n  Найденные различия (используют per-site as_of из ML report):")
-            print("\n  # Скопируйте эту таблицу в ALLOWED_DIFFERENCES:")
-            for site_id, stage_code, _stage_name, _ml_status, _backend_status in mismatched_pairs:
-                print(f"    ('{site_id}', '{stage_code}'): \"TODO\",")
+        observed = {
+            (site_id, stage_code): (ml_status, backend_status)
+            for site_id, stage_code, _name, ml_status, backend_status in mismatched_pairs
+        }
+        for (site_id, stage_code), (ml_status, backend_status) in sorted(observed.items()):
+            print(f"    • {site_id}/{stage_code}: ML={ml_status}, backend={backend_status}")
 
-            print("\n  Подробно:")
-            for site_id, stage_code, stage_name, ml_status, backend_status in mismatched_pairs:
-                print(
-                    f"    • {site_id}/{stage_code} ({stage_name}): "
-                    f"ML={ml_status}, backend={backend_status}"
-                )
+        new = {k: v for k, v in observed.items() if k not in KNOWN_DIVERGENCES}
+        changed = {
+            k: (KNOWN_DIVERGENCES[k], v)
+            for k, v in observed.items()
+            if k in KNOWN_DIVERGENCES and KNOWN_DIVERGENCES[k] != v
+        }
+        fixed = sorted(k for k in KNOWN_DIVERGENCES if k not in observed)
 
-            # Проверяем, что нет лишних допусков
-            if ALLOWED_DIFFERENCES:
-                for (site_id, stage_code), _reason in ALLOWED_DIFFERENCES.items():
-                    found = any(
-                        s == site_id and c == stage_code for s, c, _, _, _ in mismatched_pairs
-                    )
-                    assert found, (
-                        f"Допуск ({site_id}, {stage_code}) больше не нужен. "
-                        f"Удалите из ALLOWED_DIFFERENCES."
-                    )
+        assert not new, f"Новые расхождения с ML (регрессия бэкенда): {new}"
+        assert not changed, f"Изменились известные расхождения (было -> стало): {changed}"
+        assert not fixed, f"Расхождения исчезли, удалите из KNOWN_DIVERGENCES: {fixed}"
 
         print(f"\n✅ Тест завершён: {matched_pairs}/{total_pairs} совпадений")

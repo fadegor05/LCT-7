@@ -27,6 +27,7 @@ from app.domains.photo.models import DateSource, Detection, Photo, ProcessingSta
 from app.domains.photo.recalculator import ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.schemas import (
+    DetectBacklogReport,
     DetectionRead,
     PhotoDetail,
     PhotoRead,
@@ -605,7 +606,7 @@ class PhotoService:
 
     async def detect_backlog(
         self, site_id: uuid.UUID, statuses: set[ProcessingStatus]
-    ) -> "DetectBacklogReport":  # noqa: F821
+    ) -> DetectBacklogReport:
         """Запустить детекцию для всех необработанных фотографий.
 
         Если детектор не настроен (не configured) → AppError 409 «Детектор не настроен».
@@ -708,7 +709,6 @@ class PhotoService:
                 await self._session.rollback()
 
         processed = done + failed
-        from app.domains.photo.schemas import DetectBacklogReport
 
         return DetectBacklogReport(processed=processed, done=done, failed=failed, skipped=skipped)
 
