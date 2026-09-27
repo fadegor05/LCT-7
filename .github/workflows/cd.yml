@@ -84,6 +84,10 @@ jobs:
           push: ${{ env.PUSH_IMAGES == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Yandex Container Registry не принимает индекс манифестов с аттестациями
+          # ("Cannot read manifest data"), поэтому публикуем голый образ.
+          provenance: false
+          sbom: false
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
@@ -129,3 +133,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Yandex Container Registry не принимает индекс манифестов с аттестациями
+          # ("Cannot read manifest data"), поэтому публикуем голый образ.
+          provenance: false
+          sbom: false
