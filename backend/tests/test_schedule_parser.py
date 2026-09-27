@@ -182,6 +182,62 @@ class TestScheduleParserHeaders:
         with pytest.raises(ScheduleFormatError, match="Не найдена колонка"):
             parser.parse("schedule.csv", content)
 
+    def test_substring_header_match_long_official_name(self):
+        """Совпадение по подстроке: длинная официальная формулировка колонки."""
+        content = (
+            "Наименование этапа выполнения контракта и (или) комплекса работ;"
+            "Начало;Окончание\n"
+            "Работа 1;01.01.2025;02.01.2025\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2025, 1, 1)
+        assert result.rows[0].end == date(2025, 1, 2)
+
+    def test_two_row_header_xlsx(self):
+        """Шапка на 2 строки: имя в строке 1, начало/окончание — в строке 2
+        (повторяет структуру реального шаблона графика СМР: объединённая
+        ячейка "Сроки исполнения этапа" в строке 1, а фактические
+        подзаголовки "Начало"/"Окончание" — в строке 2)."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "№"
+        ws["B1"] = "Наименование этапа выполнения контракта и (или) комплекса работ"
+        ws["C1"] = "Сроки исполнения этапа"
+        ws["C2"] = "Начало выполнения работ"
+        ws["D2"] = "Окончание выполнения работ"
+        ws["A3"] = "1."
+        ws["B3"] = "Работы подготовительного периода"
+        ws["C3"] = date(2026, 4, 10)
+        ws["D3"] = date(2026, 5, 22)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работы подготовительного периода"
+        assert result.rows[0].start == date(2026, 4, 10)
+        assert result.rows[0].end == date(2026, 5, 22)
+
+    def test_no_name_column_error_lists_recognized_headers(self):
+        """Ошибка при отсутствии колонки с названием перечисляет
+        распознаваемые названия, сохраняя префикс "Не найдена колонка"."""
+        content = "Начало;Окончание\n01.01.2025;02.01.2025\n".encode()
+        parser = ScheduleParser()
+
+        with pytest.raises(ScheduleFormatError, match="Не найдена колонка") as exc_info:
+            parser.parse("schedule.csv", content)
+
+        assert "название" in str(exc_info.value).lower()
+
 
 class TestScheduleParserDateFormats:
     """Тесты для различных форматов дат."""

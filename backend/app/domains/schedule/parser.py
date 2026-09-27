@@ -101,18 +101,13 @@ class ScheduleParser:
         if not all_rows:
             raise ScheduleFormatError("Файл пуст")
 
-        # Найти заголовок в первых 10 непустых строк
-        header = None
-        header_row_idx = 0
-        for idx, (_row_num, row) in enumerate(all_rows[:10]):
-            candidate = self._find_header(row)
-            if candidate:
-                header = candidate
-                header_row_idx = idx
-                break
-
-        if header is None:
-            raise ScheduleFormatError("Не найдена колонка с названием работы")
+        located = self._locate_header(all_rows)
+        if located is None:
+            raise ScheduleFormatError(
+                "Не найдена колонка с названием работы. Распознаваемые названия: "
+                + ", ".join(sorted(self.NAME_HEADERS))
+            )
+        header, header_row_idx = located
 
         # Распарсить строки данных (все строки после заголовка)
         data_rows = all_rows[header_row_idx + 1 :]
@@ -153,18 +148,13 @@ class ScheduleParser:
         if not all_rows:
             raise ScheduleFormatError("Файл пуст")
 
-        # Найти заголовок в первых 10 непустых строк
-        header = None
-        header_row_idx = 0
-        for idx, (_row_num, row) in enumerate(all_rows[:10]):
-            candidate = self._find_header(row)
-            if candidate:
-                header = candidate
-                header_row_idx = idx
-                break
-
-        if header is None:
-            raise ScheduleFormatError("Не найдена колонка с названием работы")
+        located = self._locate_header(all_rows)
+        if located is None:
+            raise ScheduleFormatError(
+                "Не найдена колонка с названием работы. Распознаваемые названия: "
+                + ", ".join(sorted(self.NAME_HEADERS))
+            )
+        header, header_row_idx = located
 
         # Распарсить строки данных
         data_rows = all_rows[header_row_idx + 1 :]
@@ -189,21 +179,31 @@ class ScheduleParser:
     def _find_header(self, row: list | tuple) -> dict[str, int] | None:
         """Найти индексы колонок имени, начала и окончания в строке.
 
+        Совпадение — по подстроке, а не по точному равенству: реальные
+        шаблоны используют длинные официальные формулировки («Наименование
+        этапа выполнения контракта и (или) комплекса работ и (или)...»),
+        которые не совпадают целиком ни с одним коротким синонимом, хотя
+        явно его содержат. При нескольких ячейках одной категории побеждает
+        первая найденная — детерминированно и безопасно для двухстрочного
+        случая, где могут встретиться и короткая, и длинная формулировки.
+
         Returns:
             dict с ключами 'name', 'start', 'end' и индексами колонок,
             или None если не найдена колонка с названием
         """
-        result = {}
+        result: dict[str, int] = {}
 
         for idx, cell in enumerate(row):
             if cell is None:
                 continue
             cell_str = str(cell).lower().strip()
-            if cell_str in self.NAME_HEADERS:
+            if not cell_str:
+                continue
+            if "name" not in result and any(syn in cell_str for syn in self.NAME_HEADERS):
                 result["name"] = idx
-            elif cell_str in self.START_HEADERS:
+            elif "start" not in result and any(syn in cell_str for syn in self.START_HEADERS):
                 result["start"] = idx
-            elif cell_str in self.END_HEADERS:
+            elif "end" not in result and any(syn in cell_str for syn in self.END_HEADERS):
                 result["end"] = idx
 
         # Проверить, что найдена колонка с названием
@@ -211,6 +211,59 @@ class ScheduleParser:
             return None
 
         return result
+
+    def _merge_header_rows(self, row: Sequence[object], next_row: Sequence[object]) -> list[object]:
+        """Объединить шапку из двух соседних строк в одну для матчинга.
+
+        Официальные шаблоны часто разносят подзаголовки по двум строкам
+        (например, объединённая ячейка "Сроки исполнения этапа" в строке N,
+        а фактические "Начало"/"Окончание" — в строке N+1). Берём непустую
+        ячейку из второй строки, иначе — из первой.
+        """
+        length = max(len(row), len(next_row))
+        merged: list[object] = []
+        for i in range(length):
+            first = row[i] if i < len(row) else None
+            second = next_row[i] if i < len(next_row) else None
+            merged.append(second if (second is not None and str(second).strip()) else first)
+        return merged
+
+    def _locate_header(
+        self, all_rows: Sequence[tuple[int, Sequence[object]]]
+    ) -> tuple[dict[str, int], int] | None:
+        """Найти шапку в первых 10 непустых строках.
+
+        Пробует сначала текущую строку как есть, затем — объединение
+        текущей и следующей строки (для шапки, разбитой на 2 строки).
+
+        Returns:
+            (header, header_row_idx), где header_row_idx — индекс в
+            all_rows последней строки шапки (данные начинаются со
+            следующей записи), либо None, если шапка не найдена.
+        """
+        limit = min(10, len(all_rows))
+        for idx in range(limit):
+            row = all_rows[idx][1]
+            candidate = self._find_header(row)
+            best_candidate = candidate
+            best_idx = idx
+
+            # Также пробуем объединение текущей и следующей строки
+            if idx + 1 < limit:
+                next_row = all_rows[idx + 1][1]
+                merged = self._merge_header_rows(row, next_row)
+                merged_candidate = self._find_header(merged)
+                # Предпочитаем объединённый результат, если он полнее (имеет больше колонок)
+                if merged_candidate and (
+                    not best_candidate or len(merged_candidate) > len(best_candidate)
+                ):
+                    best_candidate = merged_candidate
+                    best_idx = idx + 1
+
+            if best_candidate:
+                return best_candidate, best_idx
+
+        return None
 
     def _parse_data_rows(
         self, data_rows: Sequence[tuple[int, Sequence[object]]], header: dict[str, int]
