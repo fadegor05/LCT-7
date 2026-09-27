@@ -1,4 +1,4 @@
-"""Общие фикстуры бэкенда: контейнер на in-memory SQLite, приложение, HTTP-клиент.
+"""Общие фикстуры бэкенда: контейнер на файловом SQLite, приложение, HTTP-клиент.
 
 Схема создаётся из метаданных (`create_all`), а не миграциями: миграции проверяются
 отдельно (`alembic upgrade --sql head`), а тестам нужна только схема.
@@ -12,13 +12,13 @@ import pytest
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import StaticPool
 
 from app.adapters.ml.base import DetectorClient
 from app.adapters.storage.base import FileStorage
@@ -51,20 +51,37 @@ class TestAppProvider(Provider):
 
 
 class TestDatabaseProvider(Provider):
-    """Тот же контракт, что у DatabaseProvider, но поверх SQLite в памяти.
+    """Тот же контракт, что у DatabaseProvider, но поверх файлового SQLite.
 
-    StaticPool обязателен: без него каждое соединение получает свою пустую базу.
+    Файл (а не `:memory:` + StaticPool) даёт каждой сессии свой физический коннект,
+    как в проде с Postgres (см. `app/plugins/di.py`). Раньше все сессии в тесте
+    делили один SQLite-коннект через StaticPool: закрытие одной сессии шлёт ROLLBACK
+    на этот единственный коннект и может незаметно снести ещё не закоммиченный,
+    но уже flush()-нутый write другой, независимой сессии, если та в этот момент
+    держит открытую транзакцию на том же коннекте. WAL + busy_timeout нужны, чтобы
+    параллельные писатели на один файл не падали с "database is locked".
     """
 
     scope = Scope.APP
 
+    def __init__(self, db_path: Path) -> None:
+        super().__init__()
+        self.db_path = db_path
+
     @provide
     async def engine(self) -> AsyncIterable[AsyncEngine]:
         engine = create_async_engine(
-            "sqlite+aiosqlite:///:memory:",
-            poolclass=StaticPool,
+            f"sqlite+aiosqlite:///{self.db_path}",
             connect_args={"check_same_thread": False},
         )
+
+        @event.listens_for(engine.sync_engine, "connect")
+        def _set_sqlite_pragma(dbapi_connection: object, connection_record: object) -> None:
+            cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
+            cursor.close()
+
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
         yield engine
@@ -176,10 +193,11 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
     # Normal (correct) behavior:
     storage_root = tmp_path / "storage"
     storage_root.mkdir(parents=True, exist_ok=True)
+    db_path = tmp_path / "test.db"
 
     container = make_async_container(
         TestAppProvider(),
-        TestDatabaseProvider(),
+        TestDatabaseProvider(db_path=db_path),
         UserProvider(),
         SiteProvider(),
         ScheduleProvider(),
