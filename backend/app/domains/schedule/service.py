@@ -139,8 +139,14 @@ class ScheduleService:
                 status_code=409,
             ) from e
 
-        # Строим отчёт
-        return await self._build_report(schedule)
+        # Строим отчёт до пересчёта: при ошибке он откатывает сессию, и ORM-объекты протухают
+        report = await self._build_report(schedule)
+
+        # Этапы с наступившим окном сразу получают статус («не наблюдалось», пока нет
+        # кадров). Без пересчёта обзор показывал бы их «не начатыми» до первого наблюдения.
+        await self._recalculator.recalculate(site_id)
+
+        return report
 
     async def get_schedule(self, site_id: uuid.UUID) -> ScheduleReport:
         """Получить отчёт о графике.
@@ -238,6 +244,8 @@ class ScheduleService:
             await self._session.commit()
             # Триггер пересчёта статусов этапов и отклонений
             await self._recalculator.recalculate(site_id)
+            # Сбой пересчёта глушится с rollback, и этап протухает — перечитываем его
+            await self._session.refresh(stage)
 
         return stage
 

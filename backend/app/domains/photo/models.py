@@ -27,6 +27,7 @@ class DateSource(StrEnum):
     CHANNEL = "channel"
     METADATA = "metadata"
     STAMP = "stamp"
+    FILENAME = "filename"
     NEIGHBOURS = "neighbours"
     MANUAL = "manual"
 

@@ -1,9 +1,12 @@
 import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
+import { TODAY } from '@/mocks/fixtures'
 import { server } from '@/mocks/server'
 import { renderRoute } from '@/test/render'
 
 describe('SiteOverviewPage', () => {
+  afterEach(() => vi.useRealTimers())
+
   it('shows verdict, data state, deviations, stages and last observation', async () => {
     renderRoute('/sites/site-berezniki')
     expect(
@@ -54,13 +57,21 @@ describe('SiteOverviewPage', () => {
   })
 
   it('handles a site without photos or deviations', async () => {
+    // Бейдж сравнивает плановое начало с сегодняшним днём — фиксируем «сегодня» моков.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(`${TODAY}T12:00:00`) })
     renderRoute('/sites/site-synthetic')
     expect(await screen.findByText('Недостаточно данных')).toBeInTheDocument()
     expect(await screen.findByText('Наблюдений пока нет')).toBeInTheDocument()
+    // Итог называет настоящую причину, а не все сразу (bug-reports/002).
+    expect(screen.getByText(/Нет наблюдений: снимки ещё не загружены/)).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Отклонения: 0' })).toBeInTheDocument()
-    expect(screen.getByText('Отклонений не выявлено.', { selector: 'p.sm' })).toBeInTheDocument()
+    // «Отклонений не выявлено.» — один раз, в пустом списке, а не ещё и в подзаголовке.
+    expect(screen.getAllByText('Отклонений не выявлено.')).toHaveLength(1)
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
-    expect(within(table).getAllByText('Не начата')).toHaveLength(6)
+    // Окно наступило, кадров нет — «не наблюдалось», а не «не начата» (bug-reports/002).
+    expect(within(table).getAllByText('Не наблюдалось')).toHaveLength(3)
+    expect(within(table).getAllByText('Не начата')).toHaveLength(2)
+    expect(within(table).getAllByText('Не оценён')).toHaveLength(1)
     expect(screen.queryByRole('heading', { name: /Последнее наблюдение/ })).not.toBeInTheDocument()
   })
 

@@ -35,11 +35,17 @@ function buildUrl(path: string, query?: Query): string {
   return qs ? `${url}?${qs}` : url
 }
 
+/**
+ * Текст ошибки для интерфейса. Строковый `detail` пишет сервис бэкенда — по-русски и для
+ * пользователя. Список в `detail` (422) — ошибки валидации FastAPI/pydantic: они
+ * по-английски и для разработчика, поэтому показываем общий текст, а сырые сообщения
+ * остаются в `ApiError.detail` и в консоли.
+ */
 function errorMessage(detail: unknown, status: number): string {
   if (typeof detail === 'string') return detail
-  if (Array.isArray(detail) && detail.length > 0) {
-    const first = detail[0] as { msg?: unknown }
-    if (typeof first.msg === 'string') return first.msg
+  if (Array.isArray(detail)) {
+    console.warn('Ошибка валидации запроса', detail)
+    return 'Проверьте введённые данные'
   }
   return `Ошибка запроса (${status})`
 }

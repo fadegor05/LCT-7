@@ -55,8 +55,9 @@ class AggregationPolicy:
                 Если несколько кадров имеют count == max для типа (tie), используем лучший
                 score из этих tied кадров. >= min_score_high -> HIGH, >= min_score_medium
                 -> MEDIUM, иначе LOW.
-              - source_confidence — HIGH, если во всех date_sources нет "stamp"/"neighbours",
-                иначе MEDIUM (штамп/соседи — источник хуже, см. architecture.md §7.3/§7.4).
+              - source_confidence — HIGH, если во всех date_sources нет выведенных
+                источников ("stamp"/"filename"/"neighbours"), иначе MEDIUM (дата выведена
+                сервисом, а не получена со снимком, см. architecture.md §7.3/§7.4).
             - Тип техники без детекций ни на одном кадре в результат не попадает.
         """
         # Для каждого типа техники отслеживаем: (max_count, best_score_from_max_frame)
@@ -89,9 +90,9 @@ class AggregationPolicy:
                 # Если frame_count < current_max, игнорируем score этого кадра
 
         # Определяем source_confidence
-        # HIGH если нет "stamp"/"neighbours", иначе MEDIUM
+        # HIGH если нет выведенных источников даты, иначе MEDIUM
         source_confidence = Confidence.HIGH
-        if any(source in ("stamp", "neighbours") for source in date_sources):
+        if any(source in ("stamp", "filename", "neighbours") for source in date_sources):
             source_confidence = Confidence.MEDIUM
 
         # Строим результат

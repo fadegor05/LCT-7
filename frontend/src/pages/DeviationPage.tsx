@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { useDeviation, useDeviations } from '@/api/deviations'
 import { useSchedule } from '@/api/schedule'
 import { useSite } from '@/api/sites'
+import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
 import { QueryState } from '@/components/ui/QueryState'
 import { DeviationBody } from '@/features/deviations/DeviationBody'
@@ -26,7 +27,7 @@ export function DeviationPage() {
   const link = (id: string) => `/sites/${siteId}/deviations/${id}`
 
   return (
-    <QueryState query={site}>
+    <SiteQueryState query={site}>
       {(siteData) => (
         <QueryState query={deviation}>
           {(d) => {
@@ -61,6 +62,6 @@ export function DeviationPage() {
           }}
         </QueryState>
       )}
-    </QueryState>
+    </SiteQueryState>
   )
 }

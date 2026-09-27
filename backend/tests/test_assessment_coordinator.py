@@ -20,6 +20,7 @@ from app.domains.assessment.repository import (
     StatusBasisRepository,
 )
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.models import (
     EquipmentRequirement,
     EquipmentSet,
@@ -89,6 +90,7 @@ async def create_coordinator(
             photo_repo=photo_repo,
             detection_repo=detection_repo,
             equipment_catalog=equipment_catalog,
+            materializer=await request_container.get(RuleMaterializer),
             session=session,
             **kwargs,
         )
@@ -766,6 +768,7 @@ class TestRecomputeCoordinator:
                 photo_repo=photo_repo,
                 detection_repo=detection_repo,
                 equipment_catalog=equipment_catalog,
+                materializer=await request_container.get(RuleMaterializer),
                 session=session,
                 today=lambda: injected_today,  # Inject custom reference date
             )
@@ -972,6 +975,7 @@ class TestRecomputeCoordinatorAsOfMode:
                 photo_repo=photo_repo,
                 detection_repo=detection_repo,
                 equipment_catalog=equipment_catalog,
+                materializer=await request_container.get(RuleMaterializer),
                 session=session,
                 today=lambda: injected_today,
                 as_of_config=as_of_config,
@@ -1277,6 +1281,7 @@ class TestRecomputeCoordinatorAsOfMode:
                 photo_repo=photo_repo,
                 detection_repo=detection_repo,
                 equipment_catalog=equipment_catalog,
+                materializer=await request_container.get(RuleMaterializer),
                 session=session,
                 today=lambda: injected_today,
                 as_of_config=as_of_config,

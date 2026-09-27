@@ -10,6 +10,7 @@ import {
   formatWindow,
   parseRuDate,
   parseRuDateTime,
+  todayIso,
 } from './format'
 
 describe('format', () => {
@@ -47,6 +48,12 @@ describe('format', () => {
     expect(formatFileSize(512)).toBe('512 Б')
     expect(formatFileSize(24 * 1024)).toBe('24 КБ')
     expect(formatFileSize(3.5 * 1024 * 1024)).toBe('3,5 МБ')
+  })
+
+  it('gives today in local time as YYYY-MM-DD', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 8, 7, 23, 30) })
+    expect(todayIso()).toBe('2026-09-07')
+    vi.useRealTimers()
   })
 
   it('parses ru dates with validation', () => {

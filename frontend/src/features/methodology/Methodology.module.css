@@ -108,3 +108,32 @@
 .footer > p {
   flex-grow: 1;
 }
+
+@media (width <= 720px) {
+  .layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .aside {
+    width: 100%;
+  }
+
+  .editorHead,
+  .footer {
+    flex-wrap: wrap;
+  }
+
+  /* Машина и удаление сверху, под ними обязательность, ниже минимум и маркер. */
+  .rule {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .ruleObligation {
+    grid-column: 1 / -1;
+  }
+
+  .ruleRemove {
+    grid-area: 1 / 2;
+  }
+}

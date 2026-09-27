@@ -72,7 +72,7 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
                 <Icon name="truck" size={24} />
                 <span className="lab">{r.equipment_type.title}</span>
               </span>
-              <span className="sm">
+              <span className={`sm ${styles.ruleObligation}`}>
                 {obligationLabels[r.obligation]}
                 <br />
                 <span className="muted">{r.gesn_code ? `ГЭСН ${r.gesn_code}` : r.source_note}</span>
@@ -101,6 +101,7 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
                 variant="ghost"
                 size="icon"
                 icon="close"
+                className={styles.ruleRemove}
                 aria-label={`Убрать машину: ${r.equipment_type.title}`}
                 onClick={() => setDrafts((list) => list.filter((x) => x.key !== r.key))}
               />

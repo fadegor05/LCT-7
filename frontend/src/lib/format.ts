@@ -63,6 +63,12 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} МБ`
 }
 
+/** Сегодня в локальном времени браузера: YYYY-MM-DD, как даты с сервера. */
+export function todayIso(): string {
+  const now = new Date()
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 /** «дд.мм» или «дд.мм.гггг» → YYYY-MM-DD. Год по умолчанию берётся из `fallbackYear`. */
 export function parseRuDate(value: string, fallbackYear: number): string | null {
   const match = /^\s*(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s*$/.exec(value)

@@ -208,7 +208,9 @@ class PhotoService:
 
         # Шаг (c): Разрешение даты
         try:
-            resolved_date = await self._resolver.resolve(file_input.content)
+            resolved_date = await self._resolver.resolve(
+                file_input.content, filename=file_input.filename
+            )
         except InvalidImageError:
             logger.warning("Не удалось определить дату для %s", file_input.filename)
             return UploadItem(
@@ -668,7 +670,7 @@ class PhotoService:
             # Попытка заполнить дату из штампа, если фото без даты (LCT-13)
             if photo.captured_on is None:
                 try:
-                    resolved = await self._resolver.resolve(content)
+                    resolved = await self._resolver.resolve(content, filename=photo.original_name)
                 except InvalidImageError:
                     resolved = None
                 if resolved is not None and resolved.captured_on is not None:

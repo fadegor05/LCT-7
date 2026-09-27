@@ -9,6 +9,7 @@ const KIND: Record<DateSource, Kind> = {
   channel: 'received',
   metadata: 'received',
   stamp: 'inferred',
+  filename: 'inferred',
   neighbours: 'inferred',
   manual: 'manual',
 }
