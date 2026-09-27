@@ -109,8 +109,16 @@ def parse_time(value: str) -> datetime | None:
 
 
 def analyse(frames: list[dict], moved: float = 0.10, still: float = 0.03,
-            max_gap: int = 10, camera_moved: float = 0.8) -> dict:
-    """Ряды кадров по камерам → доли неподвижных наблюдений по классам."""
+            max_gap: int = 10, camera_moved: float = 0.8,
+            conf: float = 0.25) -> dict:
+    """Ряды кадров по камерам → доли неподвижных наблюдений по классам.
+
+    Порог уверенности применяется **здесь и один раз**: прогон детектора пишет
+    всё подряд от 0.05, чтобы порог можно было менять без повторного прогона.
+    Если отфильтровать в одном месте и забыть в другом, счётчики разъедутся —
+    так и случилось при первом прогоне на камерах: доля связанных объектов
+    вышла больше единицы.
+    """
     by_camera: dict[str, list[dict]] = defaultdict(list)
     skipped_no_time = 0
     for fr in frames:
@@ -118,10 +126,13 @@ def analyse(frames: list[dict], moved: float = 0.10, still: float = 0.03,
         if stamp is None:
             skipped_no_time += 1
             continue
-        by_camera[fr.get("camera_id") or ""].append({**fr, "_t": stamp})
+        kept = [d for d in fr.get("detections", []) if d.get("conf", 1.0) >= conf]
+        by_camera[fr.get("camera_id") or ""].append({**fr, "_t": stamp,
+                                                     "detections": kept})
 
     counts: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     pairs_used = frames_skipped = gaps_skipped = 0
+    linkable = linked_count = 0
 
     for cam, series in by_camera.items():
         series.sort(key=lambda f: f["_t"])
@@ -130,7 +141,14 @@ def analyse(frames: list[dict], moved: float = 0.10, still: float = 0.03,
             if minutes <= 0 or minutes > max_gap:
                 gaps_skipped += 1
                 continue
-            linked = link(prev.get("detections", []), cur.get("detections", []))
+            before, after = prev["detections"], cur["detections"]
+            linked = link(before, after)
+            # Машины, которых связать не удалось, — это отдельная величина, а не
+            # ноль. Связывание требует перекрытия рамок, значит не связывается в
+            # первую очередь то, что уехало далеко. Если их не считать,
+            # «доля без смещения» окажется завышенной просто по построению.
+            linkable += min(len(before), len(after))
+            linked_count += len(linked)
             if not linked:
                 continue
             shifts = [(p, c, shift(p["bbox"], c["bbox"])) for p, c in linked]
@@ -160,6 +178,12 @@ def analyse(frames: list[dict], moved: float = 0.10, still: float = 0.03,
             row["interval"] = [round(low, 3), round(high, 3)]
             row["basis"] = (f"{c['still']} наблюдений без смещения из {decided} "
                             f"определённых; интервал Уилсона 95%")
+            # Нижняя граница: считаем, что каждая несвязанная машина уехала.
+            # Правда лежит между этой оценкой и верхней — сузить её может только
+            # более частая съёмка.
+            if linkable:
+                lost = 1 - linked_count / linkable
+                row["still_share_floor"] = round(row["still_share"] * (1 - lost), 3)
         else:
             row["basis"] = (f"определённых наблюдений {decided} — меньше порога "
                             f"{MIN_SAMPLES}, доля не оценивается")
@@ -169,16 +193,21 @@ def analyse(frames: list[dict], moved: float = 0.10, still: float = 0.03,
         "classes": classes,
         "meta": {"cameras": len(by_camera), "frames": len(frames),
                  "pairs_used": pairs_used,
+                 "objects_linkable": linkable, "objects_linked": linked_count,
+                 "linked_share": round(linked_count / linkable, 3) if linkable else None,
                  "frames_without_time": skipped_no_time,
                  "frames_skipped_camera_moved": frames_skipped,
                  "pairs_skipped_gap": gaps_skipped,
                  "thresholds": {"moved": moved, "still": still,
-                                "max_gap_minutes": max_gap}},
+                                "max_gap_minutes": max_gap, "conf": conf}},
         "cannot_claim": ("Измеряется смещение рамки между кадрами, а не работа. "
                          "Машина без смещения может работать с места (экскаватор "
                          "копает, кран поворачивает стрелу), поэтому величина "
                          "названа «доля наблюдений без смещения», а не «доля "
-                         "простоя». Метод верен только для неподвижной камеры."),
+                         "простоя». Метод верен только для неподвижной камеры. "
+                         "Связать удаётся не все машины, а несвязанные — это в "
+                         "первую очередь уехавшие, поэтому доля завышена: нижняя "
+                         "оценка в поле still_share_floor."),
     }
 
 
@@ -191,11 +220,14 @@ def main() -> None:
     ap.add_argument("--still", type=float, default=0.03, help="ниже — «не сместилась»")
     ap.add_argument("--max-gap", type=int, default=10,
                     help="максимальный разрыв между кадрами, минут")
+    ap.add_argument("--conf", type=float, default=0.25,
+                    help="порог уверенности детекций")
     ap.add_argument("--out", type=Path, default=ML / "data/processed/activity_series.json")
     args = ap.parse_args()
 
     data = json.loads(args.dets.read_text(encoding="utf-8"))
-    result = analyse(data["images"], args.moved, args.still, args.max_gap)
+    result = analyse(data["images"], args.moved, args.still, args.max_gap,
+                     conf=args.conf)
 
     for row in result["classes"]:
         share = row.get("still_share")
