@@ -482,22 +482,37 @@ class TestApp:
         service.app.MAX_BYTES = original_max
 
     def test_stamp_with_synthetic_image_returns_null_date(self):
-        """POST /stamp с синтетическим кадром (без штампа) возвращает null date."""
+        """POST /stamp с синтетическим кадром (без штампа) возвращает null date.
+
+        Подставляем фейковый StampReader (без реального RapidOCR) — как и
+        Detector-тесты, не требует torch/ultralytics/rapidocr_onnxruntime.
+        """
         client = self.create_test_client()
 
-        # Создаём простой PNG без штампа
-        img = Image.new("RGB", (640, 480), color="blue")
-        buf = io.BytesIO()
-        img.save(buf, "PNG")
-        png_bytes = buf.getvalue()
+        class FakeStampReader:
+            def read_bytes(self, data: bytes) -> dict:
+                return {"date": None, "text": None, "roi": None}
 
-        response = client.post("/stamp", files={"file": ("test.png", png_bytes)})
-        assert response.status_code == 200
-        data = response.json()
-        assert "date" in data
-        assert "text" in data
-        assert "roi" in data
-        assert data["date"] is None
+        import service.app
+
+        service.app._stamp_reader = FakeStampReader()
+
+        try:
+            # Создаём простой PNG без штампа
+            img = Image.new("RGB", (640, 480), color="blue")
+            buf = io.BytesIO()
+            img.save(buf, "PNG")
+            png_bytes = buf.getvalue()
+
+            response = client.post("/stamp", files={"file": ("test.png", png_bytes)})
+            assert response.status_code == 200
+            data = response.json()
+            assert "date" in data
+            assert "text" in data
+            assert "roi" in data
+            assert data["date"] is None
+        finally:
+            service.app._stamp_reader = None
 
 
 class TestContract:

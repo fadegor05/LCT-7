@@ -161,6 +161,7 @@ def read_stamp_array(img: np.ndarray, ocr, *, name: str = "") -> StampResult:
         return StampResult(name, None, None, None, 0, None,
                            "штамп не найден или не читается — нужна ручная привязка")
 
+    # Голоса считаются по разным гипотезам: одна может дать несколько строк.
     votes = Counter()
     for date, _, variant, _ in hits:
         votes[date] = len({v for d, _, v, _ in hits if d == date})
