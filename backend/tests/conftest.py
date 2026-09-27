@@ -64,9 +64,10 @@ class TestDatabaseProvider(Provider):
 
     scope = Scope.APP
 
-    def __init__(self, db_path: Path) -> None:
+    def __init__(self, db_path: Path, foreign_keys: bool = False) -> None:
         super().__init__()
         self.db_path = db_path
+        self.foreign_keys = foreign_keys
 
     @provide
     async def engine(self) -> AsyncIterable[AsyncEngine]:
@@ -80,6 +81,8 @@ class TestDatabaseProvider(Provider):
             cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA busy_timeout=5000")
+            if self.foreign_keys:
+                cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
 
         async with engine.begin() as connection:
@@ -178,6 +181,37 @@ class TestPhotoProvider(Provider):
             settings=settings,
             recalculator=recalculator,
         )
+
+
+def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncContainer:
+    storage_root = tmp_path / "storage"
+    storage_root.mkdir(parents=True, exist_ok=True)
+    return make_async_container(
+        TestAppProvider(),
+        TestDatabaseProvider(db_path=tmp_path / "test.db", foreign_keys=foreign_keys),
+        UserProvider(),
+        SiteProvider(),
+        ScheduleProvider(),
+        MethodologyProvider(),
+        TestPhotoProvider(storage_root=storage_root),
+        ObservationProvider(),
+        AssessmentProvider(),
+        UtilityProvider(),
+    )
+
+
+@pytest.fixture
+async def fk_container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
+    """Контейнер, где SQLite проверяет внешние ключи, как Postgres.
+
+    SQLite по умолчанию их не проверяет, и неверный порядок INSERT в одном flush
+    (потомок раньше родителя) в обычных тестах проходит, а в проде даёт 500.
+    Общий контейнер так не настроен: фикстуры многих тестов кладут родителя и
+    потомка в один flush. Используйте для путей, где порядок вставки важен.
+    """
+    container = _make_container(tmp_path, foreign_keys=True)
+    yield container
+    await container.close()
 
 
 @pytest.fixture
