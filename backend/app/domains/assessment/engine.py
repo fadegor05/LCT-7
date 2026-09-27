@@ -666,6 +666,9 @@ class RuleEngine:
         if not logical_ids:
             return []
 
+        # В отличие от _check_missing_equipment (булев факт «маркер есть/нет»),
+        # здесь нужно перечислить КАКИЕ именно logical-типы отсутствуют —
+        # поэтому разница множеств, а не any().
         present_ids = {eq.equipment_type_id for eq in latest_obs.equipment if eq.count_min >= 1}
         missing_ids = logical_ids - present_ids
         if not missing_ids:
