@@ -20,6 +20,7 @@ sys.path.insert(0, str(ML / "tools"))
 from service.export import to_csv, to_html, to_xlsx      # noqa: E402
 from service.pipeline import build_report, summary        # noqa: E402
 from parse_schedule import classify_rows, parse_date     # noqa: E402
+import suggest_stage_mapping as suggest                  # noqa: E402
 
 
 def frame(name, site, day, classes):
@@ -435,3 +436,47 @@ class TestРеестрНеподвижнойТехники:
         кадр["detections"][1]["bbox"] = [0.60, 0.02, 0.70, 0.30]   # та же зона
         state = build_report([кадр], self.ПЛАН)
         assert state["sites"][0]["stages"][0]["status"] == "on_track"
+
+
+class TestПодсказкиЯзыковойМодели:
+    """Языковая модель выбирает из списка, а не сочиняет.
+
+    Она допущена в проект в одном месте — разбор названий работ из плана
+    заказчика — и только потому, что там её ответ проверяем кодом и между ней и
+    выводом стоит человек. Эти проверки следят именно за границей, а не за
+    качеством подсказок.
+    """
+
+    ЭТАПЫ = {"12.3.2": "Устройство свай", "12.4.31": "Кровля"}
+    НАЗВАНИЯ = ["Устройство буронабивных свай", "Монтаж кровельного покрытия",
+                "Пусконаладка лифтов"]
+
+    def test_несуществующий_код_этапа_отвергается(self):
+        """Модель может выдать правдоподобный, но выдуманный код."""
+        ответ = "1|12.3.2\n2|99.9.9\n3|none"
+        got = suggest.parse_answer(ответ, self.НАЗВАНИЯ, self.ЭТАПЫ)
+        assert [g["stage_code"] for g in got] == ["12.3.2"]
+
+    def test_none_означает_отсутствие_соответствия(self):
+        got = suggest.parse_answer("1|none\n2|none\n3|none", self.НАЗВАНИЯ, self.ЭТАПЫ)
+        assert got == []
+
+    def test_болтовня_вместо_ответа_не_ломает_разбор(self):
+        """Модель любит добавить вступление — его не должно быть в результате."""
+        ответ = ("Конечно! Вот соответствия:\n1|12.3.2\nНадеюсь, это помогло.")
+        got = suggest.parse_answer(ответ, self.НАЗВАНИЯ, self.ЭТАПЫ)
+        assert len(got) == 1 and got[0]["stage_name"] == "Устройство свай"
+
+    def test_ссылка_на_несуществующую_строку_отбрасывается(self):
+        got = suggest.parse_answer("99|12.3.2", self.НАЗВАНИЯ, self.ЭТАПЫ)
+        assert got == []
+
+    def test_подсказка_помечена_источником(self):
+        got = suggest.parse_answer("1|12.3.2", self.НАЗВАНИЯ, self.ЭТАПЫ)
+        assert got[0]["source"] == "llm-suggestion"
+
+    def test_в_запросе_перечислены_все_допустимые_этапы(self):
+        prompt = suggest.build_prompt(self.НАЗВАНИЯ, self.ЭТАПЫ)
+        for code in self.ЭТАПЫ:
+            assert code in prompt
+        assert "none" in prompt

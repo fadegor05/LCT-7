@@ -56,6 +56,7 @@ weights/       веса (в git не хранятся, качаются скри
 | `tools/eval_external.py` | оценка на внешнем наборе теми же группами классов |
 | `tools/activity_series.py` | простой по ряду кадров с камеры (D-018) |
 | `tools/registered_equipment.py` | реестр неподвижной техники по камерам (D-019) |
+| `tools/suggest_stage_mapping.py` | языковая модель предлагает «работа → этап» (D-020) |
 | `tools/train_ours.py` | обучение на смеси наборов |
 | `tools/fetch_weights.py` | загрузка весов из приватного репозитория |
 
