@@ -274,6 +274,137 @@ class TestDeviationStageMismatch:
         assert deviation.is_hypothesis is False
         assert len(deviation.limits_text) > 0
 
+    def test_stage_mismatch_uses_equipment_names_when_provided(self):
+        """observed содержит переданное имя техники, а не UUID."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        expected_equipment_id = uuid.uuid4()
+        observed_equipment_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=expected_equipment_id,
+                        obligation="normative",
+                        min_count=1,
+                    )
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=observed_equipment_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    )
+                ],
+            )
+        ]
+
+        equipment_names = {observed_equipment_id: "Самосвал"}
+
+        result = engine.compute_site(stages, rules, observations, today, equipment_names)
+
+        mismatch = [d for d in result.deviations if d.type == DeviationType.STAGE_MISMATCH]
+        assert len(mismatch) == 1
+        assert "Самосвал" in mismatch[0].observed
+        assert str(observed_equipment_id) not in mismatch[0].observed
+
+    def test_stage_mismatch_falls_back_to_uuid_without_names(self):
+        """Без equipment_names (дефолт None) — поведение как раньше, UUID в тексте."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        expected_equipment_id = uuid.uuid4()
+        observed_equipment_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=expected_equipment_id,
+                        obligation="normative",
+                        min_count=1,
+                    )
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=observed_equipment_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    )
+                ],
+            )
+        ]
+
+        result = engine.compute_site(stages, rules, observations, today)
+
+        mismatch = [d for d in result.deviations if d.type == DeviationType.STAGE_MISMATCH]
+        assert len(mismatch) == 1
+        assert str(observed_equipment_id) in mismatch[0].observed
+
 
 class TestDeviationIdle:
     """Тесты отклонения idle."""
@@ -779,3 +910,296 @@ class TestNotCheckedStageProducesNoDeviations:
         # Не должно быть отклонений для этого этапа (кроме возможного stale_data)
         stage_deviations = [d for d in result.deviations if d.stage_id == stage_id]
         assert len(stage_deviations) == 0
+
+
+class TestDeviationMissingLogicalEquipment:
+    """Тесты отклонения missing_logical_equipment (LCT-15)."""
+
+    def test_missing_logical_equipment_high_observability_absent(self):
+        """Высокая наблюдаемость, logical-техника отсутствует -> предупреждение."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        marker_id = uuid.uuid4()
+        logical_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=marker_id,
+                        obligation="normative",
+                        min_count=1,
+                    ),
+                    EquipmentRequirementInput(
+                        equipment_type_id=logical_id,
+                        obligation="logical",
+                        min_count=1,
+                    ),
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=marker_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    )
+                    # logical_id отсутствует
+                ],
+            )
+        ]
+
+        equipment_names = {marker_id: "Экскаватор", logical_id: "Самосвал"}
+
+        result = engine.compute_site(stages, rules, observations, today, equipment_names)
+
+        warnings = [
+            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
+        ]
+        assert len(warnings) == 1
+        warning = warnings[0]
+        assert warning.severity == Severity.ATTENTION
+        assert warning.is_hypothesis is True
+        assert "Самосвал" in warning.observed
+        assert len(warning.limits_text) > 0
+
+    def test_no_warning_when_logical_equipment_present(self):
+        """Logical-техника присутствует -> предупреждения нет."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        marker_id = uuid.uuid4()
+        logical_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=marker_id,
+                        obligation="normative",
+                        min_count=1,
+                    ),
+                    EquipmentRequirementInput(
+                        equipment_type_id=logical_id,
+                        obligation="logical",
+                        min_count=1,
+                    ),
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=marker_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    ),
+                    ObservedEquipmentInput(
+                        equipment_type_id=logical_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    ),
+                ],
+            )
+        ]
+
+        result = engine.compute_site(stages, rules, observations, today)
+
+        warnings = [
+            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
+        ]
+        assert len(warnings) == 0
+
+    def test_no_warning_without_logical_requirements(self):
+        """У правила нет logical-требований -> предупреждения не бывает."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        marker_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=marker_id,
+                        obligation="normative",
+                        min_count=1,
+                    ),
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=marker_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    ),
+                ],
+            )
+        ]
+
+        result = engine.compute_site(stages, rules, observations, today)
+
+        warnings = [
+            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
+        ]
+        assert len(warnings) == 0
+
+    def test_no_warning_low_observability(self):
+        """Низкая наблюдаемость -> предупреждения по отсутствию не бывает
+        (как и у missing_equipment — нельзя быть уверенным в отсутствии)."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        engine = RuleEngine(config)
+
+        today = date(2024, 1, 20)
+        stage_id = uuid.uuid4()
+        rule_id = uuid.uuid4()
+        marker_id = uuid.uuid4()
+        logical_id = uuid.uuid4()
+
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=rule_id,
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=marker_id,
+                        obligation="normative",
+                        min_count=1,
+                    ),
+                    EquipmentRequirementInput(
+                        equipment_type_id=logical_id,
+                        obligation="logical",
+                        min_count=1,
+                    ),
+                ],
+            )
+        }
+
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="low",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=marker_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    ),
+                ],
+            )
+        ]
+
+        result = engine.compute_site(stages, rules, observations, today)
+
+        warnings = [
+            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
+        ]
+        assert len(warnings) == 0

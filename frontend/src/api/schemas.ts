@@ -35,6 +35,7 @@ export const activitySchema = z.enum(['works', 'idle', 'unknown'])
 /** assessment.models.DeviationType */
 export const deviationTypeSchema = z.enum([
   'missing_equipment',
+  'missing_logical_equipment',
   'stage_mismatch',
   'stale_data',
   'idle',
