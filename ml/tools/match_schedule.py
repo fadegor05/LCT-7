@@ -28,6 +28,7 @@ import csv
 import json
 import sys
 from collections import Counter, defaultdict
+from statistics import median
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -391,6 +392,102 @@ def forecast(stages: list[dict], plan: list[dict]) -> dict:
     }
 
 
+CONFIDENCE_REASON = {
+    "high": "Подтверждено прямым признаком, не требующим истолкования.",
+    "medium": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+    "low": "Подтверждено только универсальной техникой либо единичным наблюдением.",
+}
+
+# Отклонения, которые говорят о НАШИХ ДАННЫХ, а не о стройке. Они не гипотезы:
+# «кадры без даты» — установленный факт, просто факт о данных.
+ABOUT_DATA = {"unusable_data", "plan_invalid", "unknown_stages", "registered_equipment"}
+
+# Отклонения, которые остаются гипотезой при любой уверенности: их основание —
+# предположение методики, а не норматив.
+ALWAYS_HYPOTHESIS = {"unexpected_equipment", "no_progress"}
+
+# Отклонения, по которым инспектору надо выезжать. Остальное — «обратить внимание».
+SITE_CLAIMS = {"stage_behind", "stage_not_started", "stage_stalled", "missing_equipment"}
+
+
+def severity_of(alert: dict) -> tuple[str, str]:
+    """Важность отклонения и объяснение, почему она такая.
+
+    Важность не назначается вручную по типу: она выводится из того, утверждает
+    ли отклонение что-то о стройке, и насколько данные это позволяют. Иначе
+    список отклонений сортируется по вкусу автора, а не по делу.
+    """
+    if alert["type"] in ABOUT_DATA:
+        return "attention", ("Отклонение о полноте данных, а не о ходе работ: "
+                             "выезд на площадку оно не требует.")
+    if alert["type"] not in SITE_CLAIMS:
+        return "attention", ("Основание — предположение методики, а не норматив: "
+                             "нужна проверка человеком.")
+    if alert.get("confidence") == "low":
+        return "attention", ("Вывод о стройке, но уверенность низкая: подтверждение "
+                             "неспецифичной техникой либо малое число наблюдений.")
+    if alert.get("observability") == "low":
+        return "attention", ("Вывод о стройке, но наблюдаемость низкая: снимки "
+                             "покрывают не всю площадку или не весь период.")
+    return "critical", ("Вывод о ходе работ, подтверждённый наблюдениями достаточной "
+                        "уверенности и наблюдаемости.")
+
+
+def is_hypothesis(alert: dict) -> bool:
+    """Отличает утверждение от предположения.
+
+    Фронтенд показывает гипотезы отдельной пометкой, и это правильно: инспектор
+    должен видеть, где система утверждает, а где предполагает.
+    """
+    if alert["type"] in ABOUT_DATA:
+        return False
+    if alert["type"] in ALWAYS_HYPOTHESIS:
+        return True
+    return alert.get("confidence") == "low" or alert.get("observability") == "low"
+
+
+def rule_ref(rules: dict[str, dict], fired: list[str]) -> dict | None:
+    """Ссылка на норму по сработавшему правилу: название, вид и источник.
+
+    В `configs/rules.json` у каждой позиции комплекта уже есть `obligation`
+    (normative / logical / auxiliary) и `source` с номером ГЭСН. Фронтенд эти
+    поля отрисовывает, но наружу они до сих пор не выходили.
+    """
+    if not fired:
+        return None
+    code, _, variant_name = fired[0].partition("/")
+    rule = rules.get(code)
+    if not rule:
+        return None
+    for variant in rule.get("variants", []):
+        if variant.get("name") != variant_name:
+            continue
+        required = variant.get("required", [])
+        kinds = {item.get("obligation") for item in required}
+        sources = [item.get("source") for item in required if item.get("source")]
+        return {
+            "name": f"{rule['stage_name']}: {variant_name}",
+            "rule_kind": "normative" if "normative" in kinds else (
+                "logical" if "logical" in kinds else "auxiliary"),
+            "source_ref": sources[0] if sources else None,
+        }
+    return {"name": rule["stage_name"], "rule_kind": "logical", "source_ref": None}
+
+
+def observation_step(states: list[dict]) -> int | None:
+    """Типичный промежуток между наблюдениями, дней. Нужен для верхней границы.
+
+    Точность оценки отставания не выше частоты съёмки: если снимают раз в
+    неделю, «отстаёт на 3 дня» и «отстаёт на 10 дней» по нашим данным
+    неразличимы. Медиана устойчивее среднего к одиночным длинным перерывам.
+    """
+    dates = sorted({s["_date"] for s in states})
+    if len(dates) < 2:
+        return None
+    gaps = [(b - a).days for a, b in zip(dates, dates[1:]) if (b - a).days > 0]
+    return int(median(gaps)) if gaps else None
+
+
 def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                 states: list[dict], specific: set[str],
                 unusable: dict[str, int] | None = None,
@@ -568,10 +665,38 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
                              "работ по снимкам не измеряется, видно только продолжение этапа."),
         })
 
+    # Обогащение в одном месте, а не в десяти точках создания алертов: так
+    # правила выставления важности видны целиком и не разъезжаются.
+    step = observation_step(states)
+    for alert in alerts:
+        severity, why = severity_of(alert)
+        alert["severity"] = severity
+        alert["severity_reason"] = why
+        alert["is_hypothesis"] = is_hypothesis(alert)
+        alert["confidence_reason"] = CONFIDENCE_REASON.get(
+            alert.get("confidence", ""), "Уверенность не оценивалась для этого типа отклонения.")
+        # Фронтенд называет оговорку limits_text; оставляем и cannot_claim,
+        # чтобы не ломать тех, кто уже читает отчёт.
+        alert["limits_text"] = alert.get("cannot_claim")
+        alert["rule"] = rule_ref(rules, alert.get("rules_fired", []))
+
+    for stage in stages:
+        delay = stage.get("delay_days")
+        if not delay:
+            stage["delay_days_min"] = stage["delay_days_max"] = None
+            continue
+        # Нижняя граница — измеренный сдвиг. Верхняя — он же плюс промежуток
+        # между наблюдениями: между двумя съёмками этап мог закончиться в любой
+        # день, и точнее этих данных не сделать. Нет второго наблюдения —
+        # верхняя граница неизвестна, и мы пишем None, а не выдумываем.
+        stage["delay_days_min"] = delay
+        stage["delay_days_max"] = delay + step if step else None
+
     return {
         "site_id": site_id,
         "as_of": states[-1]["date"] if states else None,
         "observations": len(states),
+        "observation_step_days": step,
         "stages": stages,
         "equipment_engagement": sampling,
         "forecast": forecast(stages, plan),

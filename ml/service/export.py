@@ -30,6 +30,8 @@ STATUS_RU = {
     "no_rule": "нет правила в методике",
 }
 
+SEVERITY_RU = {"critical": "критично", "attention": "внимание"}
+
 ALERT_RU = {
     "stage_behind": "отставание этапа",
     "stage_not_started": "этап не начат",
@@ -54,7 +56,10 @@ def _stage_rows(report: dict) -> list[list]:
                 stage["stage_code"], stage["stage_name"],
                 planned.get("start", ""), planned.get("end", ""),
                 STATUS_RU.get(stage["status"], stage["status"]),
-                stage.get("delay_days", ""), stage.get("basis", ""),
+                stage.get("delay_days_min") or stage.get("delay_days", ""),
+                stage.get("delay_days_max") if stage.get("delay_days_max") is not None
+                else ("неизвестно" if stage.get("delay_days") else ""),
+                stage.get("basis", ""),
             ])
     return rows
 
@@ -64,12 +69,16 @@ def _alert_rows(report: dict) -> list[list]:
     for site in report["sites"]:
         for alert in site.get("alerts", []):
             window = alert.get("window") or {}
+            rule = alert.get("rule") or {}
             rows.append([
                 site["site_id"],
-                ALERT_RU.get(alert["type"], alert["type"]),
+                SEVERITY_RU.get(alert.get("severity", ""), ""),
+                ALERT_RU.get(alert["type"], alert["type"])
+                + (" (гипотеза)" if alert.get("is_hypothesis") else ""),
                 alert.get("stage_code", ""),
                 window.get("from", ""), window.get("to", ""),
                 alert.get("confidence", ""),
+                rule.get("source_ref") or "",
                 alert.get("explanation", ""),
                 alert.get("cannot_claim", ""),
                 ", ".join(alert.get("evidence", [])[:4]),
@@ -78,9 +87,11 @@ def _alert_rows(report: dict) -> list[list]:
 
 
 STAGE_HEAD = ["Площадка", "Наблюдения на дату", "Код этапа", "Этап",
-              "План: начало", "План: окончание", "Статус", "Отклонение, дн.", "Основание"]
-ALERT_HEAD = ["Площадка", "Тип отклонения", "Код этапа", "Период с", "Период по",
-              "Уверенность", "Описание", "Чего система не утверждает", "Снимки"]
+              "План: начало", "План: окончание", "Статус", "Отклонение, дн.",
+              "Отклонение не более, дн.", "Основание"]
+ALERT_HEAD = ["Площадка", "Важность", "Тип отклонения", "Код этапа", "Период с",
+              "Период по", "Уверенность", "Основание (норма)", "Описание",
+              "Чего система не утверждает", "Снимки"]
 
 
 def to_csv(report: dict, what: str = "stages") -> bytes:
@@ -215,6 +226,10 @@ def to_html(report: dict, title: str = "Отчёт о ходе работ") -> b
 <h2>Отклонения</h2>
 {table(ALERT_HEAD, _alert_rows(report))}
 {forecast_html}
+<div class="note"><b>Про отклонение в днях.</b> Нижняя граница — измеренный сдвиг.
+ Верхняя — он же плюс промежуток между съёмками: между двумя кадрами этап мог
+ закончиться в любой день, и точнее этих данных не сделать. «Неизвестно» означает,
+ что второго наблюдения нет и сравнивать не с чем.</div>
 <div class="note"><b>Как читать.</b> «Нет наблюдений» — утверждение о наших данных,
  а не о стройке: снимков за период не было. «Не проверяется по технике» — этап,
  который по видимой технике определить нельзя. Колонка «чего система не

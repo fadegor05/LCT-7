@@ -480,3 +480,63 @@ class TestПодсказкиЯзыковойМодели:
         for code in self.ЭТАПЫ:
             assert code in prompt
         assert "none" in prompt
+
+
+class TestВажностьИГраницы:
+    """Поля, которые рисует фронтенд: важность, гипотеза, диапазон, норма.
+
+    Контракт отчёта и `frontend/src/api/schemas.ts` разошлись: интерфейс уже
+    показывает уровень важности, пометку гипотезы, ссылку на норму и диапазон
+    отставания, а отчёт их не отдавал. Проверки следят за тем, чтобы важность
+    выводилась из данных, а не назначалась по вкусу.
+    """
+
+    def test_отставание_с_подтверждением_критично(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        alert = [a for a in build_report(obs, SCHEDULE)["sites"][0]["alerts"]
+                 if a["type"] == "stage_behind"][0]
+        assert alert["severity"] == "critical"
+        assert not alert["is_hypothesis"]
+        assert alert["severity_reason"]
+
+    def test_отклонение_о_данных_не_критично_и_не_гипотеза(self):
+        """«Кадры без даты» — установленный факт о данных, выезжать на него незачем."""
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ), frame("b.png", "s1", "", СВАИ)]
+        alert = [a for a in build_report(obs, SCHEDULE)["sites"][0]["alerts"]
+                 if a["type"] == "unusable_data"][0]
+        assert alert["severity"] == "attention"
+        assert alert["is_hypothesis"] is False
+
+    def test_ссылка_на_гэсн_выходит_наружу(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        alert = [a for a in build_report(obs, SCHEDULE)["sites"][0]["alerts"]
+                 if a["type"] == "stage_behind"][0]
+        assert alert["rule"]["source_ref"].startswith("ГЭСН")
+        assert alert["rule"]["rule_kind"] in ("normative", "logical", "auxiliary")
+
+    def test_у_каждого_отклонения_есть_важность_и_оговорка(self):
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ), frame("b.png", "s1", "", СВАИ)]
+        for a in build_report(obs, SCHEDULE)["sites"][0]["alerts"]:
+            assert a["severity"] in ("critical", "attention")
+            assert a["limits_text"] == a["cannot_claim"]
+            assert a["confidence_reason"]
+
+    def test_диапазон_отставания_шире_при_редкой_съёмке(self):
+        """Точность оценки не выше частоты съёмки — это должно быть видно в числах."""
+        часто = [frame("a.png", "s1", "2024-04-20", СВАИ),
+                 frame("b.png", "s1", "2024-04-22", СВАИ),
+                 frame("c.png", "s1", "2024-04-24", СВАИ)]
+        редко = [frame("a.png", "s1", "2024-02-24", СВАИ),
+                 frame("b.png", "s1", "2024-03-25", СВАИ),
+                 frame("c.png", "s1", "2024-04-24", СВАИ)]
+        a = build_report(часто, SCHEDULE)["sites"][0]["stages"][0]
+        b = build_report(редко, SCHEDULE)["sites"][0]["stages"][0]
+        assert a["delay_days_min"] == b["delay_days_min"] == 24
+        assert a["delay_days_max"] < b["delay_days_max"]
+
+    def test_без_второго_наблюдения_верхняя_граница_неизвестна(self):
+        """Выдумывать её нельзя: сравнивать не с чем."""
+        obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
+        stage = build_report(obs, SCHEDULE)["sites"][0]["stages"][0]
+        assert stage["delay_days_min"] == 24
+        assert stage["delay_days_max"] is None

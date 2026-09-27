@@ -97,7 +97,17 @@ def build_prompt(names: list[str], stages: dict[str, str]) -> str:
             f"Ровно {len(names)} строк, без заголовков и пояснений.")
 
 
-def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 120) -> str:
+def models(base_url: str, api_key: str, timeout: int = 30) -> list[str]:
+    """Что предлагает провайдер. Полезно, когда название модели неизвестно."""
+    request = urllib.request.Request(
+        base_url.rstrip("/") + "/models",
+        headers={"Authorization": f"Bearer {api_key}"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        data = json.load(response)
+    return [m.get("id", "") for m in data.get("data", [])]
+
+
+def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600) -> str:
     body = json.dumps({
         "model": model,
         "temperature": 0,
@@ -150,9 +160,22 @@ def main() -> int:
     ap.add_argument("--site", default="p00", help="идентификатор площадки для разбора плана")
     ap.add_argument("--limit", type=int, default=60, help="сколько названий отправлять за раз")
     ap.add_argument("--dry-run", action="store_true", help="показать запрос и выйти")
+    ap.add_argument("--list-models", action="store_true",
+                    help="спросить у провайдера, какие модели доступны, и выйти")
+    ap.add_argument("--timeout", type=int, default=600,
+                    help="сколько ждать ответ, секунд: локальная модель на первом "
+                         "запросе грузится в память и может думать минутами")
     ap.add_argument("-o", "--out", type=Path,
                     default=ML / "data/processed/stage_mapping_suggested.json")
     args = ap.parse_args()
+
+    if args.list_models:
+        base_url, api_key = from_env("LLM_BASE_URL"), from_env("LLM_API_KEY")
+        if not (base_url and api_key):
+            raise SystemExit("нет LLM_BASE_URL или LLM_API_KEY в ml/.env")
+        for name in models(base_url, api_key):
+            print(" ", name)
+        return 0
 
     stages = load_stages()
     names: list[str] = []
@@ -194,7 +217,12 @@ def main() -> int:
         return 0
 
     print(f"модель: {model}")
-    answer = ask(prompt, base_url, api_key, model)
+    try:
+        answer = ask(prompt, base_url, api_key, model, timeout=args.timeout)
+    except Exception as exc:
+        raise SystemExit(f"провайдер не ответил за {args.timeout} с: {exc}\n"
+                         f"Попробуйте меньше названий за раз (--limit) или больше "
+                         f"времени (--timeout).")
     suggestions = parse_answer(answer, unique, stages)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
