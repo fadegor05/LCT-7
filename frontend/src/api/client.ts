@@ -51,6 +51,19 @@ function errorMessage(detail: unknown, status: number): string {
 }
 
 /**
+ * Тело ответа как JSON. На 500 сервер и прокси отдают простой текст («Internal Server Error»):
+ * это не JSON, и текст ошибки разбора не должен попадать в интерфейс.
+ */
+function parseJson(text: string): unknown {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Единственная точка обращения к API. Ответ проверяется Zod-схемой: расхождение контракта
  * всплывает сразу как ApiError, а не как `undefined` глубоко в компоненте.
  */
@@ -68,8 +81,7 @@ export async function request<S extends z.ZodType | undefined = undefined>(
   }
 
   const response = await fetch(buildUrl(path, query), { method, headers, body: payload, signal })
-  const text = await response.text()
-  const data: unknown = text ? JSON.parse(text) : undefined
+  const data = parseJson(await response.text())
 
   if (!response.ok) {
     const detail = (data as { detail?: unknown } | undefined)?.detail

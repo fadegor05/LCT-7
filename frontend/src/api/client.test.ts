@@ -69,6 +69,15 @@ describe('request', () => {
     warn.mockRestore()
   })
 
+  it('does not leak a JSON parse error for a plain-text 500', async () => {
+    server.use(
+      http.post('/api/upload', () => new HttpResponse('Internal Server Error', { status: 500 })),
+    )
+    const error = await request('/upload', { method: 'POST' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 500, message: 'Ошибка запроса (500)' })
+  })
+
   it('falls back to a generic message', async () => {
     server.use(http.get('/api/boom', () => new HttpResponse(null, { status: 500 })))
     await expect(request('/boom')).rejects.toThrow('Ошибка запроса (500)')

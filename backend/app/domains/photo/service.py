@@ -251,11 +251,13 @@ class PhotoService:
 
         self._session.add(photo)
 
-        # Шаг (f): Детекция
-        await self._run_detection(photo, file_input.content, file_input.filename, content_type)
-
-        # Шаг (g): Коммит (будет имплицитный flush перед commit)
+        # Шаги (f) и (g): детекция и коммит. Ошибка БД на любом из них — ошибка этого
+        # файла, а не 500 на всю пачку.
         try:
+            # Вставить снимок до детекций: relationship между ними нет, и в общем flush
+            # SQLAlchemy может записать детекции первыми — Postgres отклонит их по FK.
+            await self._session.flush()
+            await self._run_detection(photo, file_input.content, file_input.filename, content_type)
             await self._session.commit()
         except Exception:
             logger.exception("Не удалось сохранить снимок в БД")
