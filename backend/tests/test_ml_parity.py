@@ -30,6 +30,7 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import EquipmentType
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.methodology.seed import EQUIPMENT_SEED
@@ -318,6 +319,7 @@ async def run_recalculation(
         observed_equipment_repo = await request_container.get(ObservedEquipmentRepository)
         photo_repo = await request_container.get(PhotoRepository)
         detection_repo = await request_container.get(DetectionRepository)
+        equipment_catalog = await request_container.get(EquipmentCatalog)
         engine = await request_container.get(RuleEngine)
 
         # Создаём coordinator с инъектированным reference_date
@@ -337,6 +339,7 @@ async def run_recalculation(
             observed_equipment_repo=observed_equipment_repo,
             photo_repo=photo_repo,
             detection_repo=detection_repo,
+            equipment_catalog=equipment_catalog,
             session=session,
             today=get_reference_date,
         )

@@ -18,6 +18,7 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import (
     EquipmentRequirement,
     EquipmentSet,
@@ -66,6 +67,7 @@ async def create_coordinator(
         observed_equipment_repo = ObservedEquipmentRepository(session)
         photo_repo = PhotoRepository(session)
         detection_repo = DetectionRepository(session)
+        equipment_catalog = await request_container.get(EquipmentCatalog)
 
         engine = RuleEngine(engine_config)
         coordinator = RecomputeCoordinator(
@@ -80,6 +82,7 @@ async def create_coordinator(
             observed_equipment_repo=observed_equipment_repo,
             photo_repo=photo_repo,
             detection_repo=detection_repo,
+            equipment_catalog=equipment_catalog,
             session=session,
         )
         return coordinator
@@ -740,6 +743,7 @@ class TestRecomputeCoordinator:
             observed_equipment_repo = ObservedEquipmentRepository(session)
             photo_repo = PhotoRepository(session)
             detection_repo = DetectionRepository(session)
+            equipment_catalog = await request_container.get(EquipmentCatalog)
 
             engine = RuleEngine(engine_config)
             coordinator = RecomputeCoordinator(
@@ -754,6 +758,7 @@ class TestRecomputeCoordinator:
                 observed_equipment_repo=observed_equipment_repo,
                 photo_repo=photo_repo,
                 detection_repo=detection_repo,
+                equipment_catalog=equipment_catalog,
                 session=session,
                 today=lambda: injected_today,  # Inject custom reference date
             )
