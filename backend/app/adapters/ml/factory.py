@@ -3,9 +3,11 @@
 import httpx
 
 from app.adapters.ml.base import DetectorClient
-from app.adapters.ml.http import HttpDetectorClient
+from app.adapters.ml.http import HttpDetectorClient, normalize_base_url
 from app.adapters.ml.null import NullDetector
+from app.adapters.ml.stamp import HttpStampReader
 from app.core.settings import Settings
+from app.domains.photo.date_resolver import NullStampOcr, StampOcr
 
 
 def create_detector(
@@ -31,3 +33,22 @@ def create_detector(
             settings=settings.detector,
         )
     return NullDetector()
+
+
+def create_stamp_reader(
+    settings: Settings,
+    client: httpx.AsyncClient | None,
+) -> StampOcr:
+    """NullStampOcr если STAMP_ENABLED=false, URL пустой, или клиент недоступен."""
+    if (
+        settings.detector.stamp_enabled
+        and settings.detector.url
+        and settings.detector.url.strip()
+        and client is not None
+    ):
+        return HttpStampReader(
+            base_url=normalize_base_url(settings.detector.url),
+            client=client,
+            settings=settings.detector,
+        )
+    return NullStampOcr()

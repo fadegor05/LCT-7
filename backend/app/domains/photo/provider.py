@@ -7,13 +7,13 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.base import DetectorClient
-from app.adapters.ml.factory import create_detector
+from app.adapters.ml.factory import create_detector, create_stamp_reader
 from app.adapters.ml.http import DetectorHttpClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.factory import create_storage
 from app.core.settings import Settings
 from app.domains.methodology.catalog import EquipmentCatalog
-from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
+from app.domains.photo.date_resolver import DateResolver, StampOcr
 from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.service import PhotoService
@@ -51,9 +51,9 @@ class PhotoProvider(Provider):
         return create_detector(settings, http_client)  # type: ignore
 
     @provide(scope=Scope.APP)
-    def stamp_ocr(self) -> StampOcr:
+    def stamp_ocr(self, settings: Settings, http_client: DetectorHttpClient) -> StampOcr:
         """Создать OCR для чтения штампов."""
-        return NullStampOcr()
+        return create_stamp_reader(settings, http_client)  # type: ignore
 
     @provide(scope=Scope.APP)
     def date_resolver(self, ocr: StampOcr) -> DateResolver:

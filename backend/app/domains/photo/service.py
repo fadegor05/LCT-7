@@ -208,7 +208,7 @@ class PhotoService:
 
         # Шаг (c): Разрешение даты
         try:
-            resolved_date = await asyncio.to_thread(self._resolver.resolve, file_input.content)
+            resolved_date = await self._resolver.resolve(file_input.content)
         except InvalidImageError:
             logger.warning("Не удалось определить дату для %s", file_input.filename)
             return UploadItem(
@@ -664,6 +664,16 @@ class PhotoService:
                 failed += 1
                 await self._session.commit()
                 continue
+
+            # Попытка заполнить дату из штампа, если фото без даты (LCT-13)
+            if photo.captured_on is None:
+                try:
+                    resolved = await self._resolver.resolve(content)
+                except InvalidImageError:
+                    resolved = None
+                if resolved is not None and resolved.captured_on is not None:
+                    photo.captured_on = resolved.captured_on
+                    photo.date_source = resolved.source.value if resolved.source else None
 
             # Запускаем детекцию
             try:
