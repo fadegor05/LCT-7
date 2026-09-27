@@ -135,55 +135,91 @@ curl -X POST http://localhost/api/sites/{id}/photos/detect?status=pending,failed
 * **Docker Hub недоступен** (таймаут на `registry-1.docker.io`). В
   `/etc/docker/daemon.json` на ВМ прописано зеркало `https://mirror.gcr.io`, через
   него идут `postgres`, `traefik`, `coollabsio/minio` и базовые образы.
-* **`download.pytorch.org` и `registry.npmjs.org` недоступны**, поэтому образы
-  `ml` и `frontend` на ВМ не собираются. Их собирает GitHub Actions и кладёт в GHCR,
-  ВМ только тянет готовое.
-* GHCR, GitHub и HuggingFace с ВМ доступны.
+* **`download.pytorch.org`, `registry.npmjs.org` и `api.github.com` недоступны**,
+  поэтому образы `ml` и `frontend` на ВМ не собираются. Их собирает GitHub Actions
+  и кладёт в Yandex Container Registry, ВМ только тянет готовое.
+* **GitHub с ВМ доступен с перебоями**: `ghcr.io` ответил на 7 запросов из 20,
+  скачивание образа обрывалось. Поэтому реестр — `cr.yandex` (15 из 15 изнутри
+  облака, доступен и из-за рубежа, откуда пушат раннеры GitHub).
+* HuggingFace и PyPI с ВМ доступны.
 
 Раскладка на ВМ:
 
 ```
 /opt/veha/
-├── .env            # только на ВМ: DOMAIN=<IP>, пароли PostgreSQL и MinIO, DETECTOR__URL
-├── makefile        # выкладывает CD из того же коммита, что и образы
-└── deploy/         # compose-файлы и versions.env (теги sha-<коммит> ставит CD)
+├── .env                 # только на ВМ: DOMAIN=<IP>, пароли PostgreSQL и MinIO, DETECTOR__URL
+├── .deployed-revision   # коммит, который сейчас выкачен
+├── bin/autodeploy.sh    # копия deploy/autodeploy/autodeploy.sh
+├── makefile             # приезжают в посылке из того же коммита, что и образы
+└── deploy/
 ```
 
 Группа безопасности `veha-sg`: входящие 80, 443 и 22 (TCP), исходящие все.
 8080 (дашборд Traefik без пароля) наружу закрыт.
 
-Веса детектора кладутся в том `lct7_ml_weights` один раз, после первого деплоя
-(нужен образ `ml`):
+**Входящие соединения с зарубежных адресов до ВМ не доходят** (проверено с ~35
+узлов check-host: SYN-пакеты не появляются на интерфейсе, при группе безопасности
+`0.0.0.0/0`). С российских адресов стенд и SSH доступны. Отсюда:
+
+* открывать стенд и заходить по SSH — без VPN, либо с VPN, который пускает
+  российские адреса напрямую (`81.26.184.6` в исключениях);
+* доставка из GitHub Actions по SSH невозможна — раннеры за рубежом;
+* self-hosted runner тоже не вариант: с ВМ недоступен `api.github.com`.
+
+Веса детектора лежат в томе `lct7_ml_weights` (скачаны 27.09). Если том пропадёт:
 
 ```bash
-cd /opt/veha && HF_TOKEN=<токен> make ml-weights && docker compose restart ml
+read -rs HF_TOKEN && export HF_TOKEN
+docker run --rm -e HF_TOKEN -v lct7_ml_weights:/weights -v /opt/veha/tools:/tools:ro   python:3.12-slim sh -c "pip install -q huggingface_hub && python /tools/fetch_weights.py --out /weights"
+unset HF_TOKEN
 ```
 
 ## Автоматический деплой
 
-`.github/workflows/cd.yml` на каждый push в `main` (и по ручному запуску):
+Деплой устроен «от ВМ»: она сама забирает обновления, входящих соединений не нужно.
 
-1. собирает `backend`, `frontend`, `ml` и публикует в GHCR с тегами `sha-<коммит>`
-   и `latest`;
-2. выкладывает на ВМ `makefile` и `deploy/` из того же коммита;
-3. логинится в GHCR на ВМ временным `GITHUB_TOKEN` (живёт, пока идёт job —
-   отдельный PAT не нужен), ставит теги `sha-<коммит>` в `deploy/versions.env`
-   и делает `make deploy-tunnel`;
-4. проверяет `http://<IP>/api/health`.
+1. **GitHub Actions** (`.github/workflows/cd.yml`) на каждый push в `main` собирает
+   `backend`, `frontend`, `ml` и публикует в Yandex Container Registry с тегами
+   `sha-<коммит>` и `latest`. Последним публикуется образ-«посылка» `deploy`
+   (`deploy/autodeploy/Dockerfile`): `makefile` и `deploy/` того же коммита, в метке —
+   полный sha.
+2. **Таймер на ВМ** (`veha-autodeploy.timer`, раз в две минуты) запускает
+   `autodeploy.sh`: тянет `deploy:latest`, и если коммит новый — раскладывает файлы,
+   ставит теги `sha-<коммит>`, делает `make deploy-tunnel` и проверяет
+   `/api/health`.
 
-Job `deploy` запускается, только если выставлено всё ниже (Settings → Secrets and
-variables → Actions; нужны права администратора репозитория):
+Настройка реестра (один раз, в консоли Yandex Cloud):
 
-| Что | Имя | Значение |
-|---|---|---|
-| секрет | `DEPLOY_HOST` | `81.26.184.6` |
-| секрет | `DEPLOY_USER` | `veha` |
-| секрет | `DEPLOY_SSH_KEY` | приватный ключ `~/.ssh/ci_deploy` с ВМ (ключ только под деплой) |
-| переменная | `DEPLOY_ENABLED` | `true` |
-| переменная | `DEPLOY_URL` | `http://81.26.184.6` |
+1. Container Registry → создать реестр `veha`, его ID (`crp…`) вписать в
+   `REGISTRY=cr.yandex/<ID>` в `deploy/versions.env`.
+2. Реестр → Права доступа → роль `container-registry.images.puller` для «Все
+   пользователи» (`system:allUsers`): образы публичные, ВМ тянет без токена. Весов в
+   образах нет.
+3. Сервисный аккаунт `veha-ci` с ролью `container-registry.images.pusher` на реестр,
+   авторизованный ключ в JSON.
+4. GitHub → Settings → Secrets and variables → Actions: секрет `YC_SA_JSON_KEY` —
+   JSON ключа целиком, переменная `YC_REGISTRY_ID` — ID реестра. Пока переменной нет,
+   CD собирает образы, но никуда не публикует.
+5. По желанию — политика очистки реестра: хранить последние 5 тегов, чтобы старые
+   образы ML (≈2.5 ГБ каждый) не копили плату за хранение.
 
-Откат — ручной запуск workflow на нужном коммите (Actions → CD → Run workflow,
-ветка или тег).
+Журнал и ручной запуск:
+
+```bash
+journalctl -u veha-autodeploy -n 50 --no-pager   # что делал деплой
+sudo systemctl start veha-autodeploy              # проверить обновления прямо сейчас
+cat /opt/veha/.deployed-revision                  # какой коммит выкачен
+```
+
+Откат — revert в `main`: новый коммит соберётся и выкатится так же.
+
+Установка таймера (один раз, уже сделано 27.09):
+
+```bash
+sudo install -m 755 -o veha -g veha deploy/autodeploy/autodeploy.sh /opt/veha/bin/autodeploy.sh
+sudo cp deploy/autodeploy/veha-autodeploy.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now veha-autodeploy.timer
+```
 
 ## GPU (RTX 2060 SUPER)
 
@@ -208,7 +244,7 @@ services:
 
 ## Чего в шаблоне намеренно нет
 
-* Бэкапов postgres (том `postgres_data` живёт только на этом ПК).
+* Бэкапов postgres (том `postgres_data` живёт только на ВМ).
 * Ротации секретов и хранилища для них — `.env` правится руками на хосте.
-* Блокировки деплоя при красном CI: `cd.yml` запускается вручную и на статус
-  CI не смотрит.
+* Блокировки деплоя при красном CI: `cd.yml` запускается на push в `main` и
+  на статус CI не смотрит.

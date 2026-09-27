@@ -1,12 +1,19 @@
-# Деплой стенда в Yandex Cloud (ВМ veha-stand).
+# Сборка образов для стенда в Yandex Cloud (ВМ veha-stand).
 #
 # Образы собираются здесь, а не на ВМ: из сети Yandex Cloud недоступны Docker Hub,
-# download.pytorch.org и registry.npmjs.org, так что сборка ml и frontend на ВМ
-# не проходит. ВМ только тянет готовые образы из GHCR и перезапускает compose.
+# download.pytorch.org и registry.npmjs.org, так что ml и frontend на ВМ не собрать.
 #
-# Триггеры: push в main и ручной запуск. Job `deploy` выполняется, только когда
-# в репозитории выставлена переменная DEPLOY_ENABLED=true и заведены секреты
-# (список — deploy/README.md, раздел «Автоматический деплой»).
+# Доставки отсюда на ВМ нет: входящие соединения с зарубежных адресов (а раннеры
+# GitHub — за рубежом) до ВМ не доходят, а api.github.com недоступен с ВМ, так что
+# и self-hosted runner не работает. ВМ сама забирает обновления: последним job'ом
+# публикуется образ-«посылка» deploy с makefile и deploy/, по его появлению
+# таймер на ВМ выкатывает коммит (deploy/autodeploy/, deploy/README.md).
+#
+# Реестр — Yandex Container Registry, а не GHCR: с ВМ GitHub доступен с перебоями
+# (ghcr.io отвечал на 7 запросов из 20), а cr.yandex стабилен и изнутри облака, и
+# из-за рубежа, откуда пушат раннеры. На чтение реестр открыт всем (роль
+# container-registry.images.puller у system:allUsers), ВМ тянет без токена.
+# Настройка: переменная YC_REGISTRY_ID и секрет YC_SA_JSON_KEY — deploy/README.md.
 name: CD
 
 on:
@@ -15,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       push_images:
-        description: Публиковать образы в GHCR (без этого деплой не запускается)
+        description: Публиковать образы в реестр (без этого стенд не обновится)
         type: boolean
         default: true
       tag:
@@ -28,9 +35,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGISTRY: ghcr.io
+  # Пока реестр не настроен, имя-заглушка: сборка проходит, публикация выключена.
+  REGISTRY: cr.yandex/${{ vars.YC_REGISTRY_ID || 'not-configured' }}
   # На push входов нет, поэтому публикуем всегда; при ручном запуске — по флагу.
-  PUSH_IMAGES: ${{ github.event_name == 'push' || inputs.push_images }}
+  PUSH_IMAGES: ${{ (github.event_name == 'push' || inputs.push_images) && vars.YC_REGISTRY_ID != '' }}
 
 jobs:
   build-push:
@@ -38,7 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -48,21 +55,22 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Логин в GHCR
+      # Сервисный аккаунт с ролью container-registry.images.pusher, авторизованный
+      # ключ в JSON целиком лежит в секрете.
+      - name: Логин в Yandex Container Registry
         if: env.PUSH_IMAGES == 'true'
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.YC_SA_JSON_KEY }}
 
-      # Имя образа приводится к нижнему регистру самим action:
-      # fadegor05/LCT-7 -> ghcr.io/fadegor05/lct-7/<service>
+      # cr.yandex/<id реестра>/<service>
       - name: Теги и метки
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ matrix.service }}
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
@@ -79,57 +87,45 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-  deploy:
-    name: деплой на стенд
+  # Посылка публикуется последней: когда ВМ её видит, образы сервисов с тем же
+  # тегом sha-<коммит> уже лежат в реестре.
+  bundle:
+    name: посылка для стенда
     needs: build-push
+    if: (github.event_name == 'push' || inputs.push_images) && vars.YC_REGISTRY_ID != ''
     runs-on: ubuntu-latest
-    if: vars.DEPLOY_ENABLED == 'true' && (github.event_name == 'push' || inputs.push_images)
     permissions:
       contents: read
-      packages: read
-    environment:
-      name: prod
-      url: ${{ vars.DEPLOY_URL }}
-    env:
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      # Каталог стенда на ВМ: там лежит .env, который в git не попадает.
-      DEPLOY_DIR: /opt/veha
     steps:
       - uses: actions/checkout@v4
 
-      - name: SSH-ключ деплоя
-        run: |
-          install -m 700 -d ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy
-          chmod 600 ~/.ssh/deploy
-          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+      - uses: docker/setup-buildx-action@v3
 
-      # Compose-файлы и makefile едут из того же коммита, что и образы:
-      # иначе на ВМ могут оказаться сервисы, которых нет в свежих образах.
-      - name: Выложить compose-файлы
-        run: |
-          tar czf - makefile deploy \
-            | ssh -i ~/.ssh/deploy "$DEPLOY_USER@$DEPLOY_HOST" "tar xzf - -C $DEPLOY_DIR"
+      # Сервисный аккаунт с ролью container-registry.images.pusher, авторизованный
+      # ключ в JSON целиком лежит в секрете.
+      - name: Логин в Yandex Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.YC_SA_JSON_KEY }}
 
-      # GITHUB_TOKEN живёт только пока идёт job — отдельный PAT на ВМ не нужен.
-      # Пароль передаётся через stdin, в командную строку и логи он не попадает.
-      - name: Обновить стенд
-        run: |
-          TAG="sha-${GITHUB_SHA::7}"
-          echo "${{ secrets.GITHUB_TOKEN }}" | ssh -i ~/.ssh/deploy "$DEPLOY_USER@$DEPLOY_HOST" \
-            "docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
-          ssh -i ~/.ssh/deploy "$DEPLOY_USER@$DEPLOY_HOST" "set -e
-            cd $DEPLOY_DIR
-            sed -i 's|^BACKEND_TAG=.*|BACKEND_TAG=$TAG|;s|^FRONTEND_TAG=.*|FRONTEND_TAG=$TAG|;s|^ML_TAG=.*|ML_TAG=$TAG|' deploy/versions.env
-            make deploy-tunnel
-            docker image prune -f
-            docker logout ghcr.io"
+      # Метка org.opencontainers.image.revision (полный sha коммита) — по ней ВМ
+      # понимает, что посылка новая, и берёт теги образов.
+      - name: Теги и метки
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/deploy
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Смоук после деплоя
-        run: |
-          for i in $(seq 1 30); do
-            curl -fsS "http://$DEPLOY_HOST/api/health" && exit 0
-            sleep 5
-          done
-          echo "стенд не отвечает на /api/health" && exit 1
+      - name: Сборка и публикация
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/autodeploy/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
