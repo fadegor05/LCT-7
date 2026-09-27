@@ -307,6 +307,8 @@ def main() -> int:
     ap.add_argument("-o", "--out", type=Path, default=ML / "data/processed/camera_stamps.csv")
     ap.add_argument("--learn", action="store_true", help="построить эталоны знаков и выйти")
     ap.add_argument("--limit", type=int, default=0, help="сколько кадров на камеру (0 — все)")
+    ap.add_argument("--only", nargs="*", metavar="КАМЕРА",
+                    help="обработать только эти подпапки")
     ap.add_argument("--ocr-fallback", action="store_true",
                     help="для кадров, где эталоны не справились, пробовать OCR (медленно)")
     args = ap.parse_args()
@@ -318,7 +320,10 @@ def main() -> int:
     templates = load_templates()
     fallback = OcrFallback() if args.ocr_fallback else None
     rows, unread, by_ocr = [], [], 0
+    wanted = set(args.only or [])
     for folder in sorted(p for p in args.cameras.iterdir() if p.is_dir()):
+        if wanted and folder.name not in wanted:
+            continue
         files = sorted(folder.glob("*.jpg"))
         if args.limit:
             files = files[:args.limit]
