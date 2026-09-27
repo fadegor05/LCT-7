@@ -8,6 +8,7 @@
 5. Ручной ввод — вводит инженер
 """
 
+import asyncio
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -26,29 +27,19 @@ class InvalidImageError(Exception):
 
 
 class StampOcr(Protocol):
-    """Протокол для OCR чтения текста со штампа на кадре.
+    """Протокол чтения даты со штампа на кадре (LCT-13: через ML-сервис)."""
 
-    Синхронный интерфейс; вызывающая сторона будет выполнять в потоке.
-    """
-
-    def read_text(self, image: Image.Image) -> str:
-        """Прочитать текст с изображения.
-
-        Args:
-            image: PIL Image object.
-
-        Returns:
-            Распознанный текст (может быть пустой строкой).
-        """
+    async def read_date(self, content: bytes) -> date | None:
+        """Прочитать дату со штампа. Возвращает None, если штамп не найден
+        или не прошёл проверку — это не ошибка."""
         ...
 
 
 class NullStampOcr:
-    """Заглушка OCR, всегда возвращающая пустую строку."""
+    """Заглушка: штамп никогда не читается."""
 
-    def read_text(self, image: Image.Image) -> str:
-        """Возвращает пустую строку (нет результата OCR)."""
-        return ""
+    async def read_date(self, content: bytes) -> date | None:
+        return None
 
 
 @dataclass(frozen=True)
@@ -184,18 +175,18 @@ class DateResolver:
         """Инициализация DateResolver.
 
         Args:
-            ocr: Объект с интерфейсом StampOcr для чтения текста с изображения.
-                 Если None, используется NullStampOcr (всегда пустая строка).
+            ocr: Объект с интерфейсом StampOcr для чтения даты со штампа.
+                 Если None, используется NullStampOcr.
         """
         self.ocr = ocr if ocr is not None else NullStampOcr()
 
-    def resolve(self, content: bytes, channel_date: date | None = None) -> ResolvedDate:
+    async def resolve(self, content: bytes, channel_date: date | None = None) -> ResolvedDate:
         """Разрешить дату съёмки из различных источников.
 
         Проходит цепочку источников в порядке приоритета:
         1. channel_date (если передан)
         2. EXIF DateTimeOriginal / DateTime / DateTimeDigitized
-        3. Stamp OCR (читает текст и парсит дату)
+        3. Stamp OCR (читает дату и парсит)
 
         Исключения при чтении изображения распространяются.
         Исключения в OCR НЕ распространяются (результат: нет даты).
@@ -216,10 +207,11 @@ class DateResolver:
 
         # Открываем изображение для последующих проверок (EXIF, OCR)
         try:
-            image = Image.open(BytesIO(content))
-            image.load()
+            image = await asyncio.to_thread(self._open_image, content)
         except (OSError, Image.UnidentifiedImageError) as e:
             raise InvalidImageError(f"Failed to read image: {e}") from e
+        except InvalidImageError:
+            raise
         except Exception as e:
             raise InvalidImageError(f"Invalid or corrupt image: {e}") from e
 
@@ -229,12 +221,18 @@ class DateResolver:
             return ResolvedDate(captured_on=exif_date, source=DateSource.METADATA)
 
         # 3. Stamp OCR
-        stamp_date = self._extract_stamp_date(image)
+        stamp_date = await self._extract_stamp_date(content)
         if stamp_date is not None:
             return ResolvedDate(captured_on=stamp_date, source=DateSource.STAMP)
 
         # 4. Ничего не найдено
         return ResolvedDate(captured_on=None, source=None)
+
+    @staticmethod
+    def _open_image(content: bytes) -> Image.Image:
+        image = Image.open(BytesIO(content))
+        image.load()
+        return image
 
     def _extract_exif_date(self, image: Image.Image) -> date | None:
         """Извлечь дату из EXIF-метаданных изображения.
@@ -316,24 +314,10 @@ class DateResolver:
         except (ValueError, IndexError, AttributeError):
             return None
 
-    def _extract_stamp_date(self, image: Image.Image) -> date | None:
-        """Извлечь дату из распознавания штампа через OCR.
-
-        Исключения в OCR НЕ распространяются.
-
-        Args:
-            image: PIL Image object.
-
-        Returns:
-            date если парсинг текста OCR успешен, иначе None.
-        """
+    async def _extract_stamp_date(self, content: bytes) -> date | None:
+        """Извлечь дату через OCR-адаптер. Исключения НЕ распространяются
+        (as before) — сеть/ML-сервис недоступен -> просто нет даты со штампа."""
         try:
-            text = self.ocr.read_text(image)
+            return await self.ocr.read_date(content)
         except Exception:
-            # OCR ошибка — игнорируем и возвращаем None
             return None
-
-        if not text:
-            return None
-
-        return parse_stamp_date(text)

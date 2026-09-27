@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 ML = Path(__file__).resolve().parents[1]
 DEFAULT_WEIGHTS = ML / "weights" / "mocs_m_best.pt"
 DEFAULT_IMGSZ = 960          # размер обучения; на другом качество падает
@@ -145,6 +147,33 @@ class Detector:
             "contract": CONTRACT,
             "class_names": self.class_names,
         }
+
+
+@dataclass
+class StampReader:
+    """Ленивая загрузка RapidOCR: не грузить веса, пока штамп не нужен."""
+
+    _ocr: Any = field(default=None, init=False, repr=False)
+
+    @property
+    def ocr(self):
+        if self._ocr is None:
+            from rapidocr_onnxruntime import RapidOCR
+            self._ocr = RapidOCR()
+        return self._ocr
+
+    def warmup(self) -> None:
+        import numpy as np
+        from tools.read_date_stamp import read_stamp_array
+        read_stamp_array(np.zeros((200, 200, 3), dtype="uint8"), self.ocr)
+
+    def read_bytes(self, data: bytes) -> dict:
+        from PIL import Image, ImageOps
+        from tools.read_date_stamp import read_stamp_for_service
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
+        img = np.asarray(img.convert("RGB"))
+        return read_stamp_for_service(img, self.ocr)
 
 
 def main() -> int:

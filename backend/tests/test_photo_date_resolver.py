@@ -10,7 +10,6 @@
 
 import io
 from datetime import date
-from unittest.mock import Mock
 
 import pytest
 from PIL import Image
@@ -144,13 +143,12 @@ class TestParseStampDate:
 class TestNullStampOcr:
     """Тестирование NullStampOcr (заглушка)."""
 
-    def test_null_stamp_ocr_returns_empty_string(self) -> None:
-        """NullStampOcr всегда возвращает пустую строку."""
+    @pytest.mark.asyncio
+    async def test_null_stamp_ocr_returns_none(self) -> None:
+        """NullStampOcr.read_date всегда возвращает None."""
         ocr = NullStampOcr()
-        # Создаём простое изображение для теста
-        img = Image.new("RGB", (100, 100), color="white")
-        result = ocr.read_text(img)
-        assert result == ""
+        result = await ocr.read_date(b"image_bytes")
+        assert result is None
 
 
 # ============================================================================
@@ -296,7 +294,8 @@ class TestInvalidImageError:
 class TestDateResolver:
     """Тестирование основного класса DateResolver."""
 
-    def test_date_resolver_with_default_ocr(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_with_default_ocr(self) -> None:
         """DateResolver по умолчанию использует NullStampOcr."""
         resolver = DateResolver()
         # Создаём простое изображение (без EXIF, без channel_date)
@@ -305,17 +304,20 @@ class TestDateResolver:
         img.save(buffer, format="PNG")
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
-        # Без channel_date и EXIF, NullStampOcr вернёт пустую строку
-        # parse_stamp_date("") вернёт None
+        result = await resolver.resolve(content)
+        # Без channel_date и EXIF, NullStampOcr вернёт None
         assert result.captured_on is None
         assert result.source is None
 
     def test_date_resolver_with_custom_ocr(self) -> None:
         """DateResolver можно инициализировать с кастомным OCR."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "25.03.2026"
 
+        # Создаём fake async OCR для проверки инициализации
+        class FakeOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2026, 3, 25)
+
+        mock_ocr = FakeOcr()
         resolver = DateResolver(ocr=mock_ocr)
         assert resolver.ocr is mock_ocr
 
@@ -323,7 +325,8 @@ class TestDateResolver:
     # Priority 1: channel_date
     # ========================================================================
 
-    def test_date_resolver_channel_date_priority(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_channel_date_priority(self) -> None:
         """channel_date имеет наивысший приоритет."""
         resolver = DateResolver()
         img = Image.new("RGB", (100, 100), color="white")
@@ -332,11 +335,12 @@ class TestDateResolver:
         content = buffer.getvalue()
 
         channel_date = date(2026, 1, 1)
-        result = resolver.resolve(content, channel_date=channel_date)
+        result = await resolver.resolve(content, channel_date=channel_date)
         assert result.captured_on == channel_date
         assert result.source == DateSource.CHANNEL
 
-    def test_date_resolver_channel_date_ignores_exif(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_channel_date_ignores_exif(self) -> None:
         """channel_date имеет приоритет над EXIF."""
         resolver = DateResolver()
 
@@ -349,7 +353,7 @@ class TestDateResolver:
         content = buffer.getvalue()
 
         channel_date = date(2026, 1, 1)
-        result = resolver.resolve(content, channel_date=channel_date)
+        result = await resolver.resolve(content, channel_date=channel_date)
         assert result.captured_on == channel_date
         assert result.source == DateSource.CHANNEL
 
@@ -357,7 +361,8 @@ class TestDateResolver:
     # Priority 2: EXIF metadata
     # ========================================================================
 
-    def test_date_resolver_exif_datetimeoriginal_tag_9003(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_exif_datetimeoriginal_tag_9003(self) -> None:
         """EXIF DateTimeOriginal (tag 0x9003) читается из Exif IFD."""
         resolver = DateResolver()
 
@@ -372,11 +377,12 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on == date(2026, 3, 25)
         assert result.source == DateSource.METADATA
 
-    def test_date_resolver_exif_datetime_tag_0132_fallback(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_exif_datetime_tag_0132_fallback(self) -> None:
         """EXIF DateTime (tag 0x0132) используется как fallback."""
         resolver = DateResolver()
 
@@ -387,11 +393,12 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on == date(2026, 5, 10)
         assert result.source == DateSource.METADATA
 
-    def test_date_resolver_exif_datetimedigitized_tag_9004(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_exif_datetimedigitized_tag_9004(self) -> None:
         """EXIF DateTimeDigitized (tag 0x9004) поддерживается."""
         resolver = DateResolver()
 
@@ -403,11 +410,12 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on == date(2026, 7, 20)
         assert result.source == DateSource.METADATA
 
-    def test_date_resolver_exif_garbage_value_ignored(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_exif_garbage_value_ignored(self) -> None:
         """Мусор в EXIF (например, 0000:00:00) игнорируется."""
         resolver = DateResolver()
 
@@ -418,12 +426,13 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         # Без других источников вернём (None, None)
         assert result.captured_on is None
         assert result.source is None
 
-    def test_date_resolver_exif_empty_value_ignored(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_exif_empty_value_ignored(self) -> None:
         """Пустое значение EXIF игнорируется."""
         resolver = DateResolver()
 
@@ -434,71 +443,30 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on is None
         assert result.source is None
 
     # ========================================================================
-    # Priority 3: Stamp OCR
+    # Priority 3: Stamp OCR (old sync interface — kept for backward compat check)
     # ========================================================================
 
-    def test_date_resolver_stamp_ocr_parsing(self) -> None:
-        """Штамп на кадре читается через OCR и парсится."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "Дата: 25.03.2026"
+    def test_date_resolver_null_ocr_has_async_interface(self) -> None:
+        """NullStampOcr имеет async интерфейс read_date."""
+        ocr = NullStampOcr()
+        # Проверяем, что метод существует
+        assert hasattr(ocr, "read_date")
+        assert callable(ocr.read_date)
 
-        resolver = DateResolver(ocr=mock_ocr)
+    @pytest.mark.asyncio
+    async def test_date_resolver_stamp_ocr_exception_not_propagated(self) -> None:
+        """Исключение в async OCR НЕ должно распространяться."""
 
-        img = Image.new("RGB", (100, 100), color="white")
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        content = buffer.getvalue()
+        class FailingOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                raise RuntimeError("OCR crashed")
 
-        result = resolver.resolve(content)
-        assert result.captured_on == date(2026, 3, 25)
-        assert result.source == DateSource.STAMP
-
-    def test_date_resolver_stamp_ocr_priority_over_nothing(self) -> None:
-        """Stamp имеет приоритет над отсутствием информации."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "2026-03-25"
-
-        resolver = DateResolver(ocr=mock_ocr)
-
-        img = Image.new("RGB", (100, 100), color="white")
-        buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        content = buffer.getvalue()
-
-        result = resolver.resolve(content)
-        assert result.captured_on == date(2026, 3, 25)
-        assert result.source == DateSource.STAMP
-
-    def test_date_resolver_exif_priority_over_stamp(self) -> None:
-        """EXIF имеет приоритет над stamp OCR."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "10.01.2020"
-
-        resolver = DateResolver(ocr=mock_ocr)
-
-        img = Image.new("RGB", (100, 100), color="white")
-        exif = Image.Exif()
-        exif[0x0132] = "2026:03:25 14:22:00"
-        buffer = io.BytesIO()
-        img.save(buffer, format="JPEG", exif=exif)
-        content = buffer.getvalue()
-
-        result = resolver.resolve(content)
-        # EXIF дата должна быть выбрана, а не stamp
-        assert result.captured_on == date(2026, 3, 25)
-        assert result.source == DateSource.METADATA
-
-    def test_date_resolver_stamp_ocr_exception_not_propagated(self) -> None:
-        """Исключение в OCR НЕ должно распространяться, метод продолжает работу."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.side_effect = RuntimeError("OCR crashed")
-
-        resolver = DateResolver(ocr=mock_ocr)
+        resolver = DateResolver(ocr=FailingOcr())
 
         img = Image.new("RGB", (100, 100), color="white")
         buffer = io.BytesIO()
@@ -506,23 +474,26 @@ class TestDateResolver:
         content = buffer.getvalue()
 
         # Должно работать без исключений
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on is None
         assert result.source is None
 
-    def test_date_resolver_stamp_ocr_returns_no_date(self) -> None:
-        """OCR может вернуть текст, в котором нет даты."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "Просто текст без даты"
+    @pytest.mark.asyncio
+    async def test_date_resolver_stamp_ocr_returns_no_date(self) -> None:
+        """Async OCR может вернуть None, если дата не найдена."""
 
-        resolver = DateResolver(ocr=mock_ocr)
+        class NoDateOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return None  # Никаких дат не найдено
+
+        resolver = DateResolver(ocr=NoDateOcr())
 
         img = Image.new("RGB", (100, 100), color="white")
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on is None
         assert result.source is None
 
@@ -530,7 +501,8 @@ class TestDateResolver:
     # No information
     # ========================================================================
 
-    def test_date_resolver_no_info_returns_none_none(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_no_info_returns_none_none(self) -> None:
         """Без channel, EXIF, и stamp вернём (None, None)."""
         resolver = DateResolver()
 
@@ -539,7 +511,7 @@ class TestDateResolver:
         img.save(buffer, format="PNG")
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
         assert result.captured_on is None
         assert result.source is None
 
@@ -547,32 +519,37 @@ class TestDateResolver:
     # Invalid image bytes
     # ========================================================================
 
-    def test_date_resolver_invalid_image_raises_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_invalid_image_raises_error(self) -> None:
         """Нечитаемые байты изображения вызывают InvalidImageError."""
         resolver = DateResolver()
         content = b"Not a real image"
 
         with pytest.raises(InvalidImageError):
-            resolver.resolve(content)
+            await resolver.resolve(content)
 
-    def test_date_resolver_corrupt_image_raises_error(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_corrupt_image_raises_error(self) -> None:
         """Повреждённое изображение вызывает InvalidImageError."""
         resolver = DateResolver()
         content = b"\xff\xd8\xff\xe0" + b"corrupt data"
 
         with pytest.raises(InvalidImageError):
-            resolver.resolve(content)
+            await resolver.resolve(content)
 
     # ========================================================================
     # Integration tests: all priorities combined
     # ========================================================================
 
-    def test_date_resolver_full_chain_channel_beats_all(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_full_chain_channel_beats_all(self) -> None:
         """Полная цепочка: channel > EXIF > stamp."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "01.06.2025"
 
-        resolver = DateResolver(ocr=mock_ocr)
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2025, 6, 1)
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
 
         img = Image.new("RGB", (100, 100), color="white")
         exif = Image.Exif()
@@ -582,17 +559,20 @@ class TestDateResolver:
         content = buffer.getvalue()
 
         channel_date = date(2026, 5, 10)
-        result = resolver.resolve(content, channel_date=channel_date)
+        result = await resolver.resolve(content, channel_date=channel_date)
 
         assert result.captured_on == channel_date
         assert result.source == DateSource.CHANNEL
 
-    def test_date_resolver_full_chain_exif_beats_stamp(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_full_chain_exif_beats_stamp(self) -> None:
         """EXIF выигрывает у stamp."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "01.06.2025"
 
-        resolver = DateResolver(ocr=mock_ocr)
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2025, 6, 1)
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
 
         img = Image.new("RGB", (100, 100), color="white")
         exif = Image.Exif()
@@ -601,24 +581,27 @@ class TestDateResolver:
         img.save(buffer, format="JPEG", exif=exif)
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
 
         assert result.captured_on == date(2026, 2, 14)
         assert result.source == DateSource.METADATA
 
-    def test_date_resolver_full_chain_stamp_fallback(self) -> None:
+    @pytest.mark.asyncio
+    async def test_date_resolver_full_chain_stamp_fallback(self) -> None:
         """Stamp используется когда нет channel и EXIF."""
-        mock_ocr = Mock()
-        mock_ocr.read_text.return_value = "15.07.2024"
 
-        resolver = DateResolver(ocr=mock_ocr)
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2024, 7, 15)
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
 
         img = Image.new("RGB", (100, 100), color="white")
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         content = buffer.getvalue()
 
-        result = resolver.resolve(content)
+        result = await resolver.resolve(content)
 
         assert result.captured_on == date(2024, 7, 15)
         assert result.source == DateSource.STAMP
@@ -659,3 +642,92 @@ class TestEdgeCases:
         text = "Снято: !!!25.03.2026??? в городе"
         result = parse_stamp_date(text)
         assert result == date(2026, 3, 25)
+
+
+class TestDateResolverAsync:
+    """Тестирование асинхронной работы DateResolver (LCT-13)."""
+
+    @pytest.mark.asyncio
+    async def test_date_resolver_async_stamp_reading(self) -> None:
+        """DateResolver.resolve async работает со штампом через async OCR."""
+
+        # Создаём fake async OCR
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2026, 4, 15)
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
+
+        # Создаём простое изображение без EXIF
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        content = buffer.getvalue()
+
+        result = await resolver.resolve(content)
+        assert result.captured_on == date(2026, 4, 15)
+        assert result.source == DateSource.STAMP
+
+    @pytest.mark.asyncio
+    async def test_date_resolver_async_stamp_exception_swallowed(self) -> None:
+        """DateResolver.resolve глотает исключения из async OCR."""
+
+        class FailingAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                raise RuntimeError("ML сервис недоступен")
+
+        resolver = DateResolver(ocr=FailingAsyncOcr())
+
+        # Создаём простое изображение без EXIF
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        content = buffer.getvalue()
+
+        # Должно вернуться (None, None), а не выброситься исключение
+        result = await resolver.resolve(content)
+        assert result.captured_on is None
+        assert result.source is None
+
+    @pytest.mark.asyncio
+    async def test_date_resolver_async_exif_priority_over_stamp(self) -> None:
+        """EXIF имеет приоритет над async stamp OCR."""
+
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2010, 1, 1)  # Старая дата со штампа
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
+
+        # Создаём JPEG с EXIF DateTime
+        img = Image.new("RGB", (100, 100), color="white")
+        exif = Image.Exif()
+        exif[0x0132] = "2026:03:25 14:22:00"  # DateTime
+        buffer = io.BytesIO()
+        img.save(buffer, format="JPEG", exif=exif)
+        content = buffer.getvalue()
+
+        result = await resolver.resolve(content)
+        # EXIF дата должна быть выбрана
+        assert result.captured_on == date(2026, 3, 25)
+        assert result.source == DateSource.METADATA
+
+    @pytest.mark.asyncio
+    async def test_date_resolver_async_channel_priority_over_stamp(self) -> None:
+        """channel_date имеет приоритет над async stamp OCR."""
+
+        class FakeAsyncOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2010, 1, 1)
+
+        resolver = DateResolver(ocr=FakeAsyncOcr())
+
+        img = Image.new("RGB", (100, 100), color="white")
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        content = buffer.getvalue()
+
+        channel_date = date(2026, 6, 1)
+        result = await resolver.resolve(content, channel_date=channel_date)
+        assert result.captured_on == channel_date
+        assert result.source == DateSource.CHANNEL

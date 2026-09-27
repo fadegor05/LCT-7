@@ -21,11 +21,12 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, Detector
+from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, Detector, StampReader
 from service.pipeline import build_report, summary
 
 MAX_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024))
 _detector: Detector | None = None
+_stamp_reader: StampReader | None = None
 
 
 class Detection(BaseModel):
@@ -71,6 +72,12 @@ class FrameResult(BaseModel):
     detections: list[Detection]
 
 
+class StampResponse(BaseModel):
+    date: str | None
+    text: str | None
+    roi: str | None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Модель грузится и прогревается на старте: первый запрос не должен ждать
@@ -93,6 +100,13 @@ def detector() -> Detector:
     return _detector
 
 
+def stamp_reader() -> StampReader:
+    global _stamp_reader
+    if _stamp_reader is None:
+        _stamp_reader = StampReader()
+    return _stamp_reader
+
+
 @app.get("/health", summary="Жив ли сервис")
 def health() -> dict:
     return {"status": "ok", "model_loaded": _detector is not None}
@@ -102,7 +116,7 @@ def health() -> dict:
 def meta() -> dict:
     """Версия весов и пороги — чтобы в журнале бэкенда было видно, какая модель
     дала ответ. Без этого через месяц не разобраться, откуда взялась детекция."""
-    return detector().meta()
+    return {**detector().meta(), "stamp": True}
 
 
 @app.post("/report", summary="Статусы этапов и алерты по площадкам")
@@ -141,3 +155,17 @@ async def detect(file: UploadFile = File(description="снимок площад�
     except Exception as exc:                   # битый файл, неизвестный формат
         raise HTTPException(422, f"не удалось обработать кадр: {exc}") from exc
     return FrameResult(**result)
+
+
+@app.post("/stamp", response_model=StampResponse, summary="Дата, впечатанная в кадр")
+async def stamp(file: UploadFile = File(description="снимок площадки")) -> StampResponse:
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "пустой файл")
+    if len(data) > MAX_BYTES:
+        raise HTTPException(413, f"файл больше {MAX_BYTES // 1048576} МБ")
+    try:
+        result = stamp_reader().read_bytes(data)
+    except Exception as exc:
+        raise HTTPException(422, f"не удалось обработать кадр: {exc}") from exc
+    return StampResponse(**result)
