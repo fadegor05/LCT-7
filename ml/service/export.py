@@ -40,6 +40,7 @@ ALERT_RU = {
     "unusable_data": "данные вне анализа",
     "plan_invalid": "строки плана не разобраны",
     "unknown_stages": "этапы вне методики",
+    "registered_equipment": "техника из реестра, не распознана",
 }
 
 

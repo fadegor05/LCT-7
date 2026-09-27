@@ -375,3 +375,63 @@ class TestПлощадкаБезПлана:
         obs = [frame("a.png", "s1", "2024-04-24", СВАИ)]
         meta = build_report(obs, SCHEDULE)["meta"]
         assert meta["sites_without_plan"] == []
+
+
+class TestРеестрНеподвижнойТехники:
+    """Техника, внесённая оператором, не должна выдавать себя за распознанную.
+
+    Башенный кран стоит неделями на одной точке, и детектор на низком близком
+    ракурсе не находит его ни разу из тринадцати (E26). В эксплуатации это
+    решается настройкой, а не дообучением. Но раз вывод опирается на ручной
+    ввод, отчёт обязан сказать об этом сам.
+    """
+
+    ПЛАН = [{"site_id": "s1", "stage_code": "12.4.28",
+             "stage_name": "Монолитный каркас выше отметки 0",
+             "planned_start": "2024-01-15", "planned_end": "2024-06-30"}]
+
+    @staticmethod
+    def кадр(classes, registered=()):
+        dets = []
+        for i, cls in enumerate(classes):
+            x = 0.05 + i * 0.15
+            dets.append({"class_raw": cls, "class_ours": cls, "conf": 0.9,
+                         "bbox": [x, 0.2, x + 0.1, 0.6], "source": "detected"})
+        for i, cls in enumerate(registered):
+            x = 0.60 + i * 0.15
+            dets.append({"class_raw": cls, "class_ours": cls,
+                         "bbox": [x, 0.02, x + 0.1, 0.3], "source": "registered"})
+        return {"image": "a.png", "site_id": "s1", "date": "2024-03-10",
+                "width": 1000, "height": 800, "detections": dets}
+
+    def test_без_реестра_этап_не_подтверждается(self):
+        """Комплекту нужен башенный кран, а детектор его не видит."""
+        report = build_report([self.кадр(["concrete_mixer"])], self.ПЛАН)
+        assert report["sites"][0]["stages"][0]["status"] != "on_track"
+
+    def test_с_реестром_этап_подтверждается(self):
+        report = build_report([self.кадр(["concrete_mixer"], ["tower_crane"])], self.ПЛАН)
+        assert report["sites"][0]["stages"][0]["status"] == "on_track"
+
+    def test_отчёт_сам_сообщает_об_источнике(self):
+        site = build_report([self.кадр(["concrete_mixer"], ["tower_crane"])],
+                            self.ПЛАН)["sites"][0]
+        alert = [a for a in site["alerts"] if a["type"] == "registered_equipment"]
+        assert alert, [a["type"] for a in site["alerts"]]
+        assert "не распознана" in alert[0]["explanation"]
+        assert "не наблюдение" in alert[0]["cannot_claim"]
+
+    def test_запись_реестра_не_режется_порогом_уверенности(self):
+        """У утверждения оператора нет уверенности — выдумывать её нельзя."""
+        obs = [self.кадр(["concrete_mixer"], ["tower_crane"])]
+        assert all("conf" not in d for d in obs[0]["detections"]
+                   if d["source"] == "registered")
+        report = build_report(obs, self.ПЛАН, conf=0.9)
+        assert report["sites"][0]["stages"][0]["status"] == "on_track"
+
+    def test_распознанное_не_подменяется_записью(self):
+        """Если система видит машину сама, реестр не должен её удваивать."""
+        кадр = self.кадр(["concrete_mixer", "tower_crane"], ["tower_crane"])
+        кадр["detections"][1]["bbox"] = [0.60, 0.02, 0.70, 0.30]   # та же зона
+        state = build_report([кадр], self.ПЛАН)
+        assert state["sites"][0]["stages"][0]["status"] == "on_track"

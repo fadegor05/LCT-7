@@ -27,7 +27,7 @@ import argparse
 import csv
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -431,6 +431,29 @@ def site_report(site_id: str, plan: list[dict], rules: dict[str, dict],
             "cannot_claim": ("По этим этапам система не говорит ничего: строка отброшена "
                              "из-за ошибки в плане, а не потому, что работы не идут. "
                              "Исправьте строку и загрузите план заново."),
+        })
+
+    # Часть техники могла прийти не из распознавания, а из реестра неподвижных
+    # машин (tools/registered_equipment.py). Это утверждение оператора, и отчёт
+    # обязан сказать об этом сам: иначе ручной ввод неотличим от зрения.
+    from_registry: Counter = Counter()
+    for state in states:
+        for cls, n in (state.get("registered_equipment") or {}).items():
+            from_registry[cls] = max(from_registry[cls], n)
+    if from_registry:
+        listed = ", ".join(f"{cls} x{n}" for cls, n in sorted(from_registry.items()))
+        alerts.append({
+            "type": "registered_equipment",
+            "site_id": site_id,
+            "confidence": "high",
+            "observability": "low",
+            "explanation": (f"В выводах по этой площадке учтена техника из реестра "
+                            f"неподвижных машин: {listed}. Она не распознана на снимках, "
+                            f"а внесена оператором при настройке камеры."),
+            "cannot_claim": ("Присутствие этой техники система не проверяла по кадрам: "
+                             "это запись в настройке, а не наблюдение. Если машину "
+                             "увезли раньше срока, отчёт об этом не узнает — период "
+                             "действия записи задаёт оператор."),
         })
 
     for stage in sorted(plan, key=lambda s: s["start"]):
