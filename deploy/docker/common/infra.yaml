@@ -17,7 +17,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   minio:
-    image: minio/minio:latest
+    # minio/minio:latest больше не тянется: с 15.10.2025 MinIO ушла на source-only
+    # дистрибуцию и убрала образы из Docker Hub. Тег ниже — комьюнити-пересборка
+    # последнего апстрим-релиза (тот же контракт env/entrypoint, оба бинаря minio+mc).
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -35,7 +38,8 @@ services:
       retries: 20
 
   minio-init:
-    image: minio/mc:latest
+    # см. комментарий у сервиса minio — тот же образ, в нём есть бинарь mc
+    image: coollabsio/minio:RELEASE.2025-10-15T17-29-55Z
     restart: on-failure
     depends_on:
       minio:
