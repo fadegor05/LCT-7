@@ -41,6 +41,7 @@ class EquipmentType(Base):
     code: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     synonyms: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    is_coarse: Mapped[bool] = mapped_column(default=False, nullable=False)
 
 
 class MethodologyRule(Base):

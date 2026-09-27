@@ -143,6 +143,17 @@ export const handlers = [
     api('/sites/:siteId/photos/:photoId/detect'),
     ({ params }) => handle(() => db.redetect(params.siteId, params.photoId)),
   ),
+  http.post<SiteParams>(api('/sites/:siteId/photos/detect'), ({ params, request }) => {
+    const url = new URL(request.url)
+    const statusParam = url.searchParams.get('status')
+    const defaultStatuses: ('pending' | 'failed')[] = ['pending', 'failed']
+    const statuses: ('pending' | 'failed')[] = statusParam
+      ? statusParam
+          .split(',')
+          .filter((s): s is 'pending' | 'failed' => s === 'pending' || s === 'failed')
+      : defaultStatuses
+    return handle(() => db.detectBacklog(params.siteId, statuses))
+  }),
   http.get<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/annotated'),
     ({ params }) => annotated(params.siteId, params.photoId),

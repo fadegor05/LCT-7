@@ -50,6 +50,7 @@ async def db_setup(container):
                 code=item["code"],
                 title=item["title"],
                 synonyms=item["synonyms"],
+                is_coarse=item.get("is_coarse", False),
             )
             session.add(equipment)
         await session.commit()
@@ -174,7 +175,7 @@ class TestMethodologyServiceEquipmentTypes:
 
             types = await service.list_equipment_types()
 
-        assert len(types) == 20
+        assert len(types) == 25
         assert types[0].code == "backhoe_loader"
         assert all(hasattr(t, "id") for t in types)
         assert all(hasattr(t, "code") for t in types)
@@ -989,3 +990,90 @@ class TestMethodologyServiceListRulesStructure:
         )
         assert len(result.scalars().all()) == 3
         assert len(recalculator.calls) == 0
+
+
+class TestMethodologyServiceCoarseEquipment:
+    """Тесты для отклонения грубых классов оборудования."""
+
+    @pytest.mark.asyncio
+    async def test_create_set_rejects_coarse_equipment(
+        self, methodology_service, site_and_schedule
+    ):
+        """Создание набора отклоняет грубые классы оборудования."""
+        session, service, recalculator = methodology_service
+        site_id = site_and_schedule["site_id"]
+
+        # Материализируем правило для первого этапа
+        rules = await service.list_rules(site_id)
+        rule_id = rules[0].rule.id
+
+        # Получить ID coarse equipment (excavator_unknown)
+        all_equipment = await service.list_equipment_types()
+        coarse_equipment = next(eq for eq in all_equipment if eq.code == "excavator_unknown")
+
+        # Попытаться создать набор с coarse equipment
+        set_data = SetWrite(
+            requirements=[
+                RequirementIn(
+                    equipment_type_id=coarse_equipment.id,
+                    min_count=1,
+                    obligation=Obligation.NORMATIVE,
+                    gesn_code="test-code",
+                )
+            ]
+        )
+
+        with pytest.raises(AppError) as exc_info:
+            await service.create_set(site_id, rule_id, set_data)
+
+        assert exc_info.value.status_code == 422
+        assert "excavator_unknown" in exc_info.value.message
+
+    @pytest.mark.asyncio
+    async def test_replace_set_rejects_coarse_equipment(
+        self, methodology_service, site_and_schedule
+    ):
+        """Замена набора отклоняет грубые классы оборудования."""
+        session, service, recalculator = methodology_service
+        site_id = site_and_schedule["site_id"]
+
+        # Материализируем правило и создаём набор
+        rules = await service.list_rules(site_id)
+        rule_id = rules[0].rule.id
+
+        # Создаём набор с обычным оборудованием
+        normal_equipment = await service.list_equipment_types()
+        drilling_rig = next(eq for eq in normal_equipment if eq.code == "drilling_rig")
+
+        set_data = SetWrite(
+            requirements=[
+                RequirementIn(
+                    equipment_type_id=drilling_rig.id,
+                    min_count=1,
+                    obligation=Obligation.NORMATIVE,
+                    gesn_code="test-code",
+                )
+            ]
+        )
+
+        created_set = await service.create_set(site_id, rule_id, set_data)
+
+        # Попытаться заменить требования на coarse equipment
+        coarse_equipment = next(eq for eq in normal_equipment if eq.code == "excavator_unknown")
+
+        replace_data = SetWrite(
+            requirements=[
+                RequirementIn(
+                    equipment_type_id=coarse_equipment.id,
+                    min_count=1,
+                    obligation=Obligation.NORMATIVE,
+                    gesn_code="test-code",
+                )
+            ]
+        )
+
+        with pytest.raises(AppError) as exc_info:
+            await service.replace_set(site_id, created_set.equipment_set.id, replace_data)
+
+        assert exc_info.value.status_code == 422
+        assert "excavator_unknown" in exc_info.value.message

@@ -45,6 +45,12 @@ class DetectorSettings(BaseModel):
 
     url: str | None = None
     timeout_s: float = 30.0
+    connect_timeout_s: float = 2.0
+    max_concurrency: int = 2
+    retry_503: int = 3
+    retry_other: int = 1
+    retry_backoff_s: tuple[float, ...] = (2.0, 5.0, 10.0)
+    retry_budget_s: float = 20.0
 
 
 class ObservationSettings(BaseModel):

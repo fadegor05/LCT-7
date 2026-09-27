@@ -105,7 +105,7 @@ export function NewSitePage() {
         ) : (
           <FileDrop
             title="Перетащите файл графика"
-            hint="CSV или XLSX до 5 МБ: этапы работ и плановые даты. Техника в файле не нужна."
+            hint="CSV или XLSX до 5 МБ: колонки «Название» (или «Наименование»/«Этап»), «Начало», «Окончание». Техника в файле не нужна."
             accept={ACCEPT}
             disabled={upload.isPending || createSite.isPending}
             onFiles={(files) => void onFiles(files)}

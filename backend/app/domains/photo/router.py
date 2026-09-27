@@ -9,8 +9,15 @@ from fastapi.responses import Response
 
 from app.core.settings import Settings
 from app.domains.photo.date_resolver import InvalidImageError
+from app.domains.photo.models import ProcessingStatus
 from app.domains.photo.render import render_annotated
-from app.domains.photo.schemas import DateUpdate, PhotoDetail, PhotoRead, UploadReport
+from app.domains.photo.schemas import (
+    DateUpdate,
+    DetectBacklogReport,
+    PhotoDetail,
+    PhotoRead,
+    UploadReport,
+)
 from app.domains.photo.service import PhotoService, UploadInput
 from app.plugins.exceptions import AppError
 
@@ -65,6 +72,45 @@ async def upload_photos(
     # Загружаем пакет
     report = await service.upload_batch(site_id, upload_inputs)
     return report
+
+
+@router.post("/detect")
+@inject
+async def detect_backlog(
+    site_id: uuid.UUID,
+    service: FromDishka[PhotoService],
+    status: str = "pending,failed",
+) -> DetectBacklogReport:
+    """Запустить детекцию для необработанных фотографий.
+
+    Args:
+        site_id: ID стройки
+        status: Comma-separated статусы (pending, failed), по умолчанию оба
+        service: Сервис фотографий
+
+    Returns:
+        DetectBacklogReport с результатами
+
+    Raises:
+        404: Сайт не найден или не принадлежит пользователю
+        409: Детектор не настроен
+        422: Некорректное значение статуса
+    """
+    # Парсим статусы
+    status_values = set()
+    for s in status.split(","):
+        s = s.strip().lower()
+        if s == "pending":
+            status_values.add(ProcessingStatus.PENDING)
+        elif s == "failed":
+            status_values.add(ProcessingStatus.FAILED)
+        else:
+            raise AppError(f"Неизвестный статус: {s}", status_code=422)
+
+    if not status_values:
+        raise AppError("Нужно указать хотя бы один статус", status_code=422)
+
+    return await service.detect_backlog(site_id, status_values)
 
 
 @router.get("")

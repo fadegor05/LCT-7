@@ -22,16 +22,18 @@ class TestEquipmentTypeRead:
     """Тесты для EquipmentTypeRead."""
 
     def test_equipment_type_read_basic(self):
-        """EquipmentTypeRead содержит id, code, title, synonyms."""
+        """EquipmentTypeRead содержит id, code, title, synonyms, is_coarse."""
         eq = EquipmentTypeRead(
             id=uuid.uuid4(),
             code="excavator_crawler",
             title="Гусеничный экскаватор",
             synonyms=["экскаватор", "гусеница"],
+            is_coarse=False,
         )
         assert eq.code == "excavator_crawler"
         assert eq.title == "Гусеничный экскаватор"
         assert eq.synonyms == ["экскаватор", "гусеница"]
+        assert eq.is_coarse is False
 
 
 class TestRequirementIn:
@@ -237,6 +239,7 @@ class TestRequirementRead:
             code="excavator_crawler",
             title="Гусеничный экскаватор",
             synonyms=[],
+            is_coarse=False,
         )
         req = RequirementRead(
             id=uuid.uuid4(),
@@ -261,6 +264,7 @@ class TestSetRead:
             code="excavator_crawler",
             title="Гусеничный экскаватор",
             synonyms=[],
+            is_coarse=False,
         )
         req = RequirementRead(
             id=uuid.uuid4(),

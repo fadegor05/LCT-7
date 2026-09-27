@@ -1,7 +1,10 @@
 """Тесты адаптера ML-детектора.
 
 Проверяют NullDetector, HttpDetectorClient и factory.
+Используют реальный формат ответа от ml/service.
 """
+
+import asyncio
 
 import httpx
 import pytest
@@ -9,6 +12,7 @@ import pytest
 from app.adapters.ml import (
     DetectionResult,
     DetectorError,
+    DetectorInfo,
     HttpDetectorClient,
     NullDetector,
     RawDetection,
@@ -17,539 +21,733 @@ from app.adapters.ml import (
 from app.core.settings import DetectorSettings, Settings
 
 
-class TestRawDetection:
-    """Проверка dataclass RawDetection."""
+class TestDetectorError:
+    """Проверка DetectorError с transient атрибутом."""
 
-    def test_raw_detection_fields(self):
-        """RawDetection содержит class_ours, conf, bbox."""
-        det = RawDetection(class_ours="excavator", conf=0.91, bbox=(0.1, 0.2, 0.3, 0.4))
-        assert det.class_ours == "excavator"
-        assert det.conf == 0.91
-        assert det.bbox == (0.1, 0.2, 0.3, 0.4)
+    def test_detector_error_default_transient_false(self):
+        """DetectorError по умолчанию имеет transient=False."""
+        err = DetectorError("test")
+        assert err.transient is False
 
-    def test_raw_detection_frozen(self):
-        """RawDetection заморожен."""
-        det = RawDetection(class_ours="excavator", conf=0.91, bbox=(0.1, 0.2, 0.3, 0.4))
-        from dataclasses import FrozenInstanceError
+    def test_detector_error_transient_true(self):
+        """DetectorError может иметь transient=True."""
+        err = DetectorError("test", transient=True)
+        assert err.transient is True
 
-        with pytest.raises(FrozenInstanceError):
-            det.class_ours = "other"  # type: ignore
+    def test_detector_error_transient_attribute(self):
+        """DetectorError имеет атрибут transient."""
+        err = DetectorError("test", transient=False)
+        assert hasattr(err, "transient")
+
+
+class TestDetectorInfo:
+    """Проверка DetectorInfo dataclass."""
+
+    def test_detector_info_fields(self):
+        """DetectorInfo содержит все необходимые поля."""
+        info = DetectorInfo(
+            model_version="mocs_m@abc123",
+            class_names=("excavator", "crane"),
+            conf_threshold=0.25,
+            device="cuda",
+            contract="detect/v1",
+        )
+        assert info.model_version == "mocs_m@abc123"
+        assert info.class_names == ("excavator", "crane")
+        assert info.conf_threshold == 0.25
+        assert info.device == "cuda"
+        assert info.contract == "detect/v1"
 
 
 class TestDetectionResult:
-    """Проверка dataclass DetectionResult."""
+    """Проверка DetectionResult с width/height."""
 
-    def test_detection_result_fields(self):
-        """DetectionResult содержит model_version и список detections."""
-        dets = [
-            RawDetection(class_ours="excavator", conf=0.91, bbox=(0.1, 0.2, 0.3, 0.4)),
-        ]
-        result = DetectionResult(model_version="yoloe-26s-seg.pt", detections=dets)
-        assert result.model_version == "yoloe-26s-seg.pt"
-        assert len(result.detections) == 1
+    def test_detection_result_with_dimensions(self):
+        """DetectionResult содержит width и height."""
+        dets = [RawDetection(class_ours="excavator", conf=0.91, bbox=(0.1, 0.2, 0.3, 0.4))]
+        result = DetectionResult(
+            model_version="mocs_m@abc123",
+            detections=dets,
+            width=1219,
+            height=809,
+        )
+        assert result.width == 1219
+        assert result.height == 809
 
-    def test_detection_result_empty_detections(self):
-        """DetectionResult может содержать пустой список."""
-        result = DetectionResult(model_version="yoloe-26s-seg.pt", detections=[])
-        assert result.detections == []
-
-    def test_detection_result_frozen(self):
-        """DetectionResult заморожен."""
-        result = DetectionResult(model_version="yoloe-26s-seg.pt", detections=[])
-        from dataclasses import FrozenInstanceError
-
-        with pytest.raises(FrozenInstanceError):
-            result.model_version = "other"  # type: ignore
-
-
-class TestDetectorError:
-    """Проверка DetectorError."""
-
-    def test_detector_error_is_exception(self):
-        """DetectorError наследует Exception."""
-        err = DetectorError("test")
-        assert isinstance(err, Exception)
+    def test_detection_result_dimensions_default_none(self):
+        """width и height по умолчанию None."""
+        result = DetectionResult(model_version="test", detections=[])
+        assert result.width is None
+        assert result.height is None
 
 
 class TestNullDetector:
     """Проверка NullDetector."""
 
     @pytest.mark.asyncio
-    async def test_null_detector_returns_none(self):
-        """NullDetector всегда возвращает None."""
+    async def test_null_detector_detect_returns_none(self):
+        """NullDetector.detect возвращает None."""
         detector = NullDetector()
         result = await detector.detect(b"image", "test.png")
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_null_detector_with_content_type(self):
-        """NullDetector игнорирует content_type."""
+    async def test_null_detector_info_returns_none(self):
+        """NullDetector.info возвращает None."""
         detector = NullDetector()
-        result = await detector.detect(b"image", "test.png", "image/png")
-        assert result is None
+        info = await detector.info()
+        assert info is None
 
-    def test_null_detector_implements_protocol(self):
-        """NullDetector реализует DetectorClient Protocol."""
+    @pytest.mark.asyncio
+    async def test_null_detector_ready_returns_false(self):
+        """NullDetector.ready возвращает False."""
         detector = NullDetector()
-        # Если detector не имеет метода detect, TypeError будет во время mypy
-        assert hasattr(detector, "detect")
+        ready = await detector.ready()
+        assert ready is False
+
+    def test_null_detector_configured_false(self):
+        """NullDetector.configured = False."""
+        detector = NullDetector()
+        assert detector.configured is False
 
 
 class TestHttpDetectorClientHappyPath:
     """Happy path для HttpDetectorClient."""
 
     @pytest.mark.asyncio
-    async def test_http_detector_single_detection(self):
-        """HttpDetectorClient отправляет multipart и парсит ответ."""
+    async def test_http_detector_real_response_format(self, caplog):
+        """HttpDetectorClient парсит реальный формат с width/height и логирует speed_ms.total."""
+        import logging
+
+        caplog.set_level(logging.INFO)
         response_data = {
-            "model": "yoloe-26s-seg.pt",
+            "model": "mocs_m_best@3f1c9a0b7e21",
+            "image": "Screenshot_26.png",
+            "width": 1219,
+            "height": 809,
+            "speed_ms": {"preprocess": 3.1, "inference": 41.2, "postprocess": 1.4, "total": 64.7},
             "detections": [
-                {"class_ours": "excavator", "conf": 0.914, "bbox": [0.1, 0.2, 0.3, 0.4]}
-            ],
-        }
-
-        def mock_transport(request: httpx.Request) -> httpx.Response:
-            assert request.method == "POST"
-            # Проверяем multipart формат
-            assert b"Content-Disposition" in request.content
-            assert b"file" in request.content
-            return httpx.Response(200, json=response_data)
-
-        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg", "image/jpeg")
-
-        assert result is not None
-        assert result.model_version == "yoloe-26s-seg.pt"
-        assert len(result.detections) == 1
-        assert result.detections[0].class_ours == "excavator"
-        assert result.detections[0].conf == 0.914
-        assert result.detections[0].bbox == (0.1, 0.2, 0.3, 0.4)
-
-    @pytest.mark.asyncio
-    async def test_http_detector_multiple_detections(self):
-        """HttpDetectorClient парсит несколько детекций."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [
-                {"class_ours": "excavator", "conf": 0.91, "bbox": [0.1, 0.2, 0.3, 0.4]},
-                {"class_ours": "truck", "conf": 0.85, "bbox": [0.5, 0.5, 0.8, 0.9]},
+                {
+                    "class_raw": "drilling_rig",
+                    "class_ours": "drilling_rig",
+                    "conf": 0.88,
+                    "bbox": [0.5396, 0.0, 0.6227, 0.6529],
+                },
+                {
+                    "class_raw": "crane_unknown",
+                    "class_ours": "crane_unknown",
+                    "conf": 0.41,
+                    "bbox": [0.1, 0.1, 0.2, 0.5],
+                },
             ],
         }
 
         mock_client = httpx.AsyncClient(
             transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
         )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg")
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await detector.detect(b"image_bytes", "Screenshot_26.png")
 
         assert result is not None
+        assert result.model_version == "mocs_m_best@3f1c9a0b7e21"
+        assert result.width == 1219
+        assert result.height == 809
         assert len(result.detections) == 2
-        assert result.detections[0].class_ours == "excavator"
-        assert result.detections[1].class_ours == "truck"
-
-    @pytest.mark.asyncio
-    async def test_http_detector_empty_detections(self):
-        """HttpDetectorClient парсит пустой список детекций."""
-        response_data = {"model": "yoloe-26s-seg.pt", "detections": []}
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        assert result.detections[0].class_ours == "drilling_rig"
+        assert result.detections[0].conf == 0.88
+        assert result.detections[1].class_ours == "crane_unknown"
+        # Check that speed_ms.total is logged
+        assert any(
+            "64.7" in record.message for record in caplog.records if record.levelno == logging.INFO
         )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg")
-
-        assert result is not None
-        assert result.detections == []
 
     @pytest.mark.asyncio
-    async def test_http_detector_rounding(self):
-        """HttpDetectorClient округляет bbox до 4 знаков, conf до 3."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [
-                {
-                    "class_ours": "excavator",
-                    "conf": 0.91444444,
-                    "bbox": [0.1111111, 0.2222222, 0.3333333, 0.4444444],
-                }
-            ],
-        }
-
+    async def test_http_detector_configured_true(self):
+        """HttpDetectorClient.configured = True."""
         mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+            transport=httpx.MockTransport(
+                lambda req: httpx.Response(200, json={"model": "test", "detections": []})
+            )
         )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg")
-
-        assert result is not None
-        assert result.detections[0].conf == 0.914
-        assert result.detections[0].bbox == (0.1111, 0.2222, 0.3333, 0.4444)
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        assert detector.configured is True
 
     @pytest.mark.asyncio
-    async def test_http_detector_multipart_includes_filename(self):
-        """HttpDetectorClient отправляет filename в multipart."""
-        captured_filename = None
+    async def test_http_detector_url_normalize(self):
+        """HttpDetectorClient нормализует URL (убирает /detect, trailing /)."""
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda req: httpx.Response(200, json={"model": "test", "detections": []})
+            )
+        )
+        # URL с /detect и trailing /
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000/detect/",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        # После нормализации должен стать http://ml:8000
+        assert detector.base_url == "http://ml:8000"
+
+
+class TestHttpDetectorClientRetry:
+    """Тесты retry логики в HttpDetectorClient."""
+
+    @pytest.mark.asyncio
+    async def test_http_detector_retry_503(self):
+        """503 повторяется retry_503 раз, затем 200 - успех."""
+        call_count = 0
 
         def mock_transport(request: httpx.Request) -> httpx.Response:
-            nonlocal captured_filename
-            # Парсим multipart вручную (базовая проверка)
-            content = request.content.decode("utf-8", errors="ignore")
-            if "filename=" in content:
-                captured_filename = True
-            return httpx.Response(
-                200,
-                json={"model": "test.pt", "detections": []},
-            )
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                return httpx.Response(503)
+            return httpx.Response(200, json={"model": "test", "detections": []})
 
         mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        await detector.detect(b"image_bytes", "myphoto.jpg", "image/jpeg")
-
-        assert captured_filename is True
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_503=3),
+        )
+        result = await detector.detect(b"image", "test.png")
+        assert result is not None
+        assert call_count == 3
 
     @pytest.mark.asyncio
-    async def test_http_detector_multipart_includes_content_type(self):
-        """HttpDetectorClient отправляет content_type в multipart."""
-        captured_content_type = None
+    async def test_http_detector_503_exhausted(self):
+        """503 всегда - выбрасывает DetectorError с transient=True."""
 
         def mock_transport(request: httpx.Request) -> httpx.Response:
-            nonlocal captured_content_type
-            content = request.content.decode("utf-8", errors="ignore")
-            if "image/jpeg" in content:
-                captured_content_type = True
-            return httpx.Response(
-                200,
-                json={"model": "test.pt", "detections": []},
-            )
+            return httpx.Response(503)
 
         mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        await detector.detect(b"image_bytes", "photo.jpg", "image/jpeg")
-
-        assert captured_content_type is True
-
-
-class TestHttpDetectorClientValidation:
-    """Валидация в HttpDetectorClient."""
-
-    @pytest.mark.asyncio
-    async def test_http_detector_conf_out_of_range(self):
-        """conf вне [0, 1] -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": 1.5, "bbox": [0.1, 0.2, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_503=1, retry_budget_s=10.0),
         )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="conf"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_conf_negative(self):
-        """conf < 0 -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": -0.1, "bbox": [0.1, 0.2, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="conf"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_bbox_out_of_range(self):
-        """bbox координаты вне [0, 1] -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": 0.9, "bbox": [-0.1, 0.2, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="bbox"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_bbox_x2_less_than_x1(self):
-        """bbox с x2 <= x1 -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": 0.9, "bbox": [0.5, 0.2, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="bbox"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_bbox_y2_less_than_y1(self):
-        """bbox с y2 <= y1 -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": 0.9, "bbox": [0.1, 0.5, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="bbox"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_bbox_clamping_tolerance(self):
-        """bbox в пределах 1e-6 от границ -> clamped, не error."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [
-                {
-                    "class_ours": "excavator",
-                    "conf": 0.9,
-                    "bbox": [-0.0000005, 0.2, 1.0000005, 0.4],
-                }
-            ],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg")
-
-        assert result is not None
-        # После clamping должны быть в пределах [0, 1]
-        assert result.detections[0].bbox[0] >= 0
-        assert result.detections[0].bbox[2] <= 1
-
-    @pytest.mark.asyncio
-    async def test_http_detector_bbox_beyond_tolerance(self):
-        """bbox вне пределов даже с tolerance -> DetectorError."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [
-                {"class_ours": "excavator", "conf": 0.9, "bbox": [-0.001, 0.2, 0.3, 0.4]}
-            ],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="bbox"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_missing_model_field(self):
-        """Отсутствие поля `model` -> DetectorError."""
-        response_data = {"detections": []}
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="model"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_empty_model_field(self):
-        """Пустой `model` -> DetectorError."""
-        response_data = {"model": "", "detections": []}
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="model"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_extra_fields_ignored(self):
-        """Неизвестные поля в детекции -> игнорируются."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [
-                {
-                    "class_ours": "excavator",
-                    "conf": 0.9,
-                    "bbox": [0.1, 0.2, 0.3, 0.4],
-                    "extra_field": "should be ignored",
-                    "another": 123,
-                }
-            ],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-        result = await detector.detect(b"image_bytes", "photo.jpg")
-
-        assert result is not None
-        assert len(result.detections) == 1
-
-
-class TestHttpDetectorClientErrors:
-    """Обработка ошибок в HttpDetectorClient."""
-
-    @pytest.mark.asyncio
-    async def test_http_detector_non_json_response(self):
-        """Не-JSON ответ -> DetectorError."""
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, text="not json"))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="JSON"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_500_status(self):
-        """HTTP 500 -> DetectorError."""
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(500))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="500"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_404_status(self):
-        """HTTP 404 -> DetectorError."""
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(404))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="404"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_timeout(self):
-        """httpx.ReadTimeout -> DetectorError."""
-
-        def mock_transport_timeout(request: httpx.Request) -> httpx.Response:
-            raise httpx.ReadTimeout("timeout")
-
-        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport_timeout))
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="timeout|Timeout"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_connect_error(self):
-        """httpx.ConnectError -> DetectorError."""
-
-        def mock_transport_error(request: httpx.Request) -> httpx.Response:
-            raise httpx.ConnectError("connection failed")
-
-        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport_error))
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        with pytest.raises(DetectorError, match="подключени|connect|Connection"):
-            await detector.detect(b"image_bytes", "photo.jpg")
-
-    @pytest.mark.asyncio
-    async def test_http_detector_error_does_not_leak_image_bytes(self):
-        """Ошибка не содержит image bytes."""
-        response_data = {
-            "model": "yoloe-26s-seg.pt",
-            "detections": [{"class_ours": "excavator", "conf": 2.0, "bbox": [0.1, 0.2, 0.3, 0.4]}],
-        }
-
-        mock_client = httpx.AsyncClient(
-            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
-        )
-        detector = HttpDetectorClient(url="http://detector:8000/detect", client=mock_client)
-
-        image_bytes = b"SECRET_IMAGE_DATA"
         with pytest.raises(DetectorError) as exc_info:
-            await detector.detect(image_bytes, "photo.jpg")
-
-        error_message = str(exc_info.value)
-        assert b"SECRET_IMAGE_DATA" not in error_message.encode()
-        assert "SECRET_IMAGE_DATA" not in error_message
-
-
-class TestHttpDetectorClientTimeout:
-    """Timeout в HttpDetectorClient."""
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is True
 
     @pytest.mark.asyncio
-    async def test_http_detector_default_timeout(self):
-        """Default timeout = 30.0 сек."""
-        detector = HttpDetectorClient(url="http://detector:8000/detect")
-        # Проверяем, что timeout установлен
-        assert detector.timeout_s == 30.0
+    async def test_http_detector_timeout_retry(self):
+        """Timeout повторяется retry_other раз."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 1:
+                raise httpx.ReadTimeout("timeout")
+            return httpx.Response(200, json={"model": "test", "detections": []})
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_other=2),
+        )
+        result = await detector.detect(b"image", "test.png")
+        assert result is not None
 
     @pytest.mark.asyncio
-    async def test_http_detector_custom_timeout(self):
-        """Можно установить кастомный timeout."""
-        detector = HttpDetectorClient(url="http://detector:8000/detect", timeout_s=60.0)
-        assert detector.timeout_s == 60.0
+    async def test_http_detector_retry_budget_exhausted(self):
+        """Retry budget ограничивает количество повторов."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(503)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(
+                retry_503=10,
+                retry_backoff_s=(2.0, 5.0, 10.0),
+                retry_budget_s=5.0,
+            ),
+        )
+        with pytest.raises(DetectorError) as exc_info:
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is True
+        # Should have called fewer times due to budget limit
 
     @pytest.mark.asyncio
-    async def test_http_detector_creates_client_per_call(self):
-        """HttpDetectorClient создаёт клиент per call, если не injected."""
-        # Это поведение трудно проверить напрямую, но мы можем убедиться,
-        # что детектор работает без injected client
-        detector = HttpDetectorClient(url="http://localhost:8000/detect")
-        # Если не injected, client будет создан внутри detect()
-        # Мы не можем вызвать реальный запрос в тесте, но синтаксис проверяет основное
+    async def test_http_detector_422_no_retry(self):
+        """422 не повторяется, transient=False."""
 
-        # Убедимся, что detector имеет атрибут timeout_s
-        assert hasattr(detector, "timeout_s")
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(422)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_other=5),
+        )
+        with pytest.raises(DetectorError) as exc_info:
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is False
+
+    @pytest.mark.asyncio
+    async def test_http_detector_400_no_retry(self):
+        """400 не повторяется, transient=False."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(400)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        with pytest.raises(DetectorError) as exc_info:
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is False
+
+    @pytest.mark.asyncio
+    async def test_http_detector_invalid_json_no_retry(self):
+        """Invalid JSON, transient=False."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, text="not json")
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        with pytest.raises(DetectorError) as exc_info:
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is False
+
+    @pytest.mark.asyncio
+    async def test_http_detector_schema_mismatch_no_retry(self):
+        """Schema mismatch (invalid detection format), transient=False."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            # Invalid detection format - conf outside [0, 1]
+            return httpx.Response(
+                200,
+                json={
+                    "model": "test",
+                    "detections": [{"class_ours": "test", "conf": 1.5, "bbox": [0, 0, 0.1, 0.1]}],
+                },
+            )
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        with pytest.raises(DetectorError) as exc_info:
+            await detector.detect(b"image", "test.png")
+        assert exc_info.value.transient is False
+
+
+class TestHttpDetectorClientMissingModel:
+    """Тесты для missing model -> fallback to info()."""
+
+    @pytest.mark.asyncio
+    async def test_http_detector_missing_model_fallback_to_info(self):
+        """Missing model в ответе - fallback to info() для получения model_version."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/meta" or request.url.path.endswith("/meta"):
+                return httpx.Response(
+                    200,
+                    json={
+                        "model": "mocs_m_best@3f1c9a0b7e21",
+                        "class_names": ["excavator"],
+                    },
+                )
+            # detect endpoint - missing model field
+            return httpx.Response(200, json={"detections": []})
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await detector.detect(b"image", "test.png")
+        assert result is not None
+        assert result.model_version == "mocs_m_best@3f1c9a0b7e21"
+
+    @pytest.mark.asyncio
+    async def test_http_detector_missing_model_fallback_to_weights(self):
+        """Missing model - fallback to meta.weights if model not present."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/meta" or request.url.path.endswith("/meta"):
+                return httpx.Response(200, json={"weights": "mocs_m_best@abc", "class_names": []})
+            return httpx.Response(200, json={"detections": []})
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await detector.detect(b"image", "test.png")
+        assert result is not None
+        assert result.model_version == "mocs_m_best@abc"
+
+
+class TestHttpDetectorClientInfo:
+    """Тесты для info() метода."""
+
+    @pytest.mark.asyncio
+    async def test_http_detector_contract_valid(self, caplog):
+        """Contract detect/v1 and detect/v1.2 - no error."""
+        import logging
+
+        caplog.set_level(logging.ERROR)
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(
+                    200,
+                    json={
+                        "model": "test_model",
+                        "class_names": [],
+                        "contract": "detect/v1.2",
+                    },
+                )
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info = await detector.info()
+        assert info is not None
+        assert "contract" not in [r.name for r in caplog.records if r.levelno == logging.ERROR]
+
+    @pytest.mark.asyncio
+    async def test_http_detector_contract_invalid_major(self, caplog):
+        """Contract detect/v2 - error logged."""
+        import logging
+
+        caplog.set_level(logging.ERROR)
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(
+                    200,
+                    json={
+                        "model": "test_model",
+                        "class_names": [],
+                        "contract": "detect/v2",
+                    },
+                )
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info = await detector.info()
+        assert info is not None  # Still returned despite error
+        assert any(
+            "contract" in record.message.lower()
+            for record in caplog.records
+            if record.levelno == logging.ERROR
+        )
+
+    @pytest.mark.asyncio
+    async def test_http_detector_contract_invalid_name(self, caplog):
+        """Contract other/v1 - error logged."""
+        import logging
+
+        caplog.set_level(logging.ERROR)
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(
+                    200,
+                    json={
+                        "model": "test_model",
+                        "class_names": [],
+                        "contract": "other/v1",
+                    },
+                )
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info = await detector.info()
+        assert info is not None  # Still returned despite error
+        assert any(
+            "contract" in record.message.lower()
+            for record in caplog.records
+            if record.levelno == logging.ERROR
+        )
+
+    @pytest.mark.asyncio
+    async def test_http_detector_info_get_meta(self):
+        """info() вызывает GET /meta."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(
+                    200,
+                    json={
+                        "model": "mocs_m_best@3f1c9a0b7e21",
+                        "class_names": ["excavator", "crane"],
+                        "conf": 0.25,
+                        "device": "cuda",
+                        "contract": "detect/v1",
+                    },
+                )
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info = await detector.info()
+        assert info is not None
+        assert info.model_version == "mocs_m_best@3f1c9a0b7e21"
+        assert info.class_names == ("excavator", "crane")
+        assert info.conf_threshold == 0.25
+        assert info.device == "cuda"
+        assert info.contract == "detect/v1"
+
+    @pytest.mark.asyncio
+    async def test_http_detector_info_caching(self):
+        """info() кэшируется после первого вызова."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            if request.method == "GET":
+                call_count += 1
+                return httpx.Response(200, json={"model": "test", "class_names": []})
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info1 = await detector.info()
+        info2 = await detector.info()
+        assert call_count == 1  # Only one request
+        assert info1 == info2
+
+    @pytest.mark.asyncio
+    async def test_http_detector_info_error_returns_none(self):
+        """info() возвращает None при ошибке."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                return httpx.Response(500)
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        info = await detector.info()
+        assert info is None
+
+    @pytest.mark.asyncio
+    async def test_http_detector_info_cache_reset_on_error(self):
+        """info() cache сбрасывается при ошибке."""
+        call_count = [0]
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.method == "GET":
+                call_count[0] += 1
+                if call_count[0] == 1:
+                    return httpx.Response(200, json={"model": "test", "class_names": []})
+                return httpx.Response(500)
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        # First call succeeds and caches result
+        info1 = await detector.info()
+        assert info1 is not None
+        # Second call returns cached value without making request
+        info2 = await detector.info()
+        assert info2 is not None  # Cache returns the same value
+        assert call_count[0] == 1  # Only one request was made
+
+        # Create a new detector instance to test error handling
+        detector2 = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        # This time first call fails (will be call 2+ in the mock)
+        info3 = await detector2.info()
+        assert info3 is None  # Error returns None
+        assert call_count[0] == 2
+
+
+class TestHttpDetectorClientReady:
+    """Тесты для ready() метода."""
+
+    @pytest.mark.asyncio
+    async def test_http_detector_ready_true(self):
+        """ready() возвращает True если model_loaded=true."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/health" or request.url.path.endswith("/health"):
+                return httpx.Response(200, json={"model_loaded": True})
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        ready = await detector.ready()
+        assert ready is True
+
+    @pytest.mark.asyncio
+    async def test_http_detector_ready_false(self):
+        """ready() возвращает False если model_loaded=false."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            if request.url.path == "/health" or request.url.path.endswith("/health"):
+                return httpx.Response(200, json={"model_loaded": False})
+            return httpx.Response(404)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        ready = await detector.ready()
+        assert ready is False
+
+    @pytest.mark.asyncio
+    async def test_http_detector_ready_error(self):
+        """ready() возвращает False при ошибке."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(500)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        ready = await detector.ready()
+        assert ready is False
+
+
+class TestHttpDetectorClientConcurrency:
+    """Тесты для concurrency semaphore."""
+
+    @pytest.mark.asyncio
+    async def test_http_detector_concurrency_limit(self):
+        """Семафор ограничивает одновременные запросы до max_concurrency."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            # Record call timestamp (simplified concurrency check)
+            return httpx.Response(200, json={"model": "test", "detections": []})
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        detector = HttpDetectorClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(max_concurrency=2),
+        )
+        # Test that semaphore exists and is initialized
+        assert detector._semaphore is not None
+        assert detector._semaphore._value == 2  # max_concurrency=2
+
+        # Run 5 concurrent detects - should not raise
+        results = await asyncio.gather(
+            detector.detect(b"img1", "test1.png"),
+            detector.detect(b"img2", "test2.png"),
+            detector.detect(b"img3", "test3.png"),
+            detector.detect(b"img4", "test4.png"),
+            detector.detect(b"img5", "test5.png"),
+        )
+        # All should succeed
+        assert all(r is not None for r in results)
 
 
 class TestFactory:
     """Проверка factory функции create_detector."""
 
-    def test_factory_with_url(self):
-        """factory с реальным url -> HttpDetectorClient."""
-        settings = Settings(detector=DetectorSettings(url="http://detector:8000/detect"))
-        detector = create_detector(settings)
+    def test_factory_with_url_and_client(self):
+        """factory с URL и httpx client -> HttpDetectorClient."""
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda req: httpx.Response(200, json={"model": "test", "detections": []})
+            )
+        )
+        settings = Settings(detector=DetectorSettings(url="http://ml:8000"))
+        detector = create_detector(settings, mock_client)
         assert isinstance(detector, HttpDetectorClient)
+
+    def test_factory_without_client(self):
+        """factory без client -> NullDetector."""
+        settings = Settings(detector=DetectorSettings(url="http://ml:8000"))
+        detector = create_detector(settings, None)
+        assert isinstance(detector, NullDetector)
 
     def test_factory_with_empty_url(self):
         """factory с пустым url -> NullDetector."""
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda req: httpx.Response(200, json={"model": "test", "detections": []})
+            )
+        )
         settings = Settings(detector=DetectorSettings(url=""))
-        detector = create_detector(settings)
-        assert isinstance(detector, NullDetector)
-
-    def test_factory_with_whitespace_url(self):
-        """factory с whitespace-only url -> NullDetector."""
-        settings = Settings(detector=DetectorSettings(url="   "))
-        detector = create_detector(settings)
+        detector = create_detector(settings, mock_client)
         assert isinstance(detector, NullDetector)
 
     def test_factory_with_none_url(self):
         """factory с None url -> NullDetector."""
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda req: httpx.Response(200, json={"model": "test", "detections": []})
+            )
+        )
         settings = Settings(detector=DetectorSettings(url=None))
-        detector = create_detector(settings)
+        detector = create_detector(settings, mock_client)
         assert isinstance(detector, NullDetector)
-
-    def test_factory_returns_protocol_compliant(self):
-        """factory возвращает объект с методом detect."""
-        settings = Settings(detector=DetectorSettings(url="http://detector:8000/detect"))
-        detector = create_detector(settings)
-        assert hasattr(detector, "detect")

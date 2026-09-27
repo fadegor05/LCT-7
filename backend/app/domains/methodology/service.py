@@ -316,6 +316,9 @@ class MethodologyService:
         # Валидировать требования
         self._validate_requirements(data)
 
+        # Валидировать, что нет coarse equipment
+        await self._validate_no_coarse_equipment(data)
+
         # Получить правило с блокировкой FOR UPDATE для предотвращения race condition
         locked_rule = await self._repository.get_rule_for_update(rule_id)
         if locked_rule is None or locked_rule.site_id != site_id:
@@ -382,6 +385,9 @@ class MethodologyService:
 
         # Валидировать требования
         self._validate_requirements(data)
+
+        # Валидировать, что нет coarse equipment
+        await self._validate_no_coarse_equipment(data)
 
         # Проверить все equipment_type_id ДО удаления старых требований
         for req_in in data.requirements:
@@ -538,3 +544,21 @@ class MethodologyService:
                 "добавьте нормативное требование",
                 status_code=422,
             )
+
+    async def _validate_no_coarse_equipment(self, data: SetWrite) -> None:
+        """Валидировать, что нет coarse equipment в требованиях.
+
+        Args:
+            data: SetWrite с требованиями
+
+        Raises:
+            AppError(422) если обнаружен coarse equipment
+        """
+        for req_in in data.requirements:
+            equipment_type = await self._catalog.by_id(req_in.equipment_type_id)
+            if equipment_type and equipment_type.is_coarse:
+                raise AppError(
+                    f"Недопустимо использовать грубый класс '{equipment_type.code}' в требованиях: "
+                    f"'{equipment_type.title}'",
+                    status_code=422,
+                )

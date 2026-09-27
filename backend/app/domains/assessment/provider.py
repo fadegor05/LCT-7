@@ -3,7 +3,7 @@
 from dishka import Provider, Scope, provide
 
 from app.core.settings import Settings
-from app.domains.assessment.coordinator import RecomputeCoordinator
+from app.domains.assessment.coordinator import Clock, RecomputeCoordinator
 from app.domains.assessment.engine import EngineConfig, RuleEngine
 from app.domains.assessment.recalculator import LiveStatusRecalculator
 from app.domains.assessment.repository import (
@@ -31,6 +31,17 @@ class AssessmentProvider(Provider):
     @provide(scope=Scope.APP)
     def engine(self, config: EngineConfig) -> RuleEngine:
         return RuleEngine(config)
+
+    @provide(scope=Scope.APP)
+    def clock(self) -> Clock:
+        """Провайдер текущей даты для RecomputeCoordinator.
+
+        Возвращает callable, который получает текущую дату.
+        Используется Dishka для разрешения зависимости Clock в constructor'е.
+        """
+        from datetime import date
+
+        return date.today  # type: ignore[return-value]
 
     stage_status_repository = provide(StageStatusRepository, scope=Scope.REQUEST)
     deviation_repository = provide(DeviationRepository, scope=Scope.REQUEST)

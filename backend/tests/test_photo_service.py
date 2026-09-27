@@ -1,6 +1,7 @@
 """PhotoService тесты: upload_batch, list_photos, get_photo, set_date, get_image, redetect."""
 
 import io
+import logging
 import uuid
 from datetime import UTC, date, timedelta
 from typing import cast
@@ -1900,3 +1901,768 @@ class TestPhotoServiceStorageErrors:
 
         # Старое наблюдение должно быть удалено (так как фото больше не на эту дату)
         assert old_observation_after is None
+
+
+class TestPhotoServiceWidthHeightWarning:
+    """Тесты для warning о несовпадении размеров."""
+
+    @pytest.mark.asyncio
+    async def test_width_height_mismatch_warning(self, container, detector, caplog) -> None:
+        """Width/height несовпадение → warning в лог."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            equipment = EquipmentType(id=uuid.uuid4(), code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+            owner_id = owner.id
+
+        files = [
+            UploadInput(
+                filename="photo.jpg",
+                content=create_jpeg_image(width=100, height=100),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                width=200,
+                height=200,
+                detections=[RawDetection(class_ours="crane", conf=0.95, bbox=(0.1, 0.1, 0.9, 0.9))],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            with caplog.at_level(logging.WARNING):
+                report = await service.upload_batch(site_id, files)
+
+            assert any(
+                "отличается" in record.message and "photo.jpg" in record.message
+                for record in caplog.records
+            ), "Warning about width/height mismatch not found"
+            assert report.uploaded == 1
+
+
+class TestPhotoServiceDetectBacklog:
+    """Тесты detect_backlog."""
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_not_configured_409(self, container) -> None:
+        """Детектор не настроен (configured=False) → AppError 409."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            # Заменяем детектор на unconfigured
+            service = await request_container.get(PhotoService)
+            service._detector = ScriptedDetector([], configured=False)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            with pytest.raises(AppError) as exc_info:
+                await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+            assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_pending_to_done_with_detections(self, container) -> None:
+        """pending → done с detection rows, включая crane_unknown."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        equipment_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            # Создаём обычное и coarse оборудование
+            equipment = EquipmentType(id=equipment_id, code="crane", title="Кран")
+            session.add(equipment)
+
+            # Добавляем coarse оборудование
+            crane_unknown_id = uuid.uuid4()
+            crane_unknown = EquipmentType(
+                id=crane_unknown_id,
+                code="crane_unknown",
+                title="Кран (неопределённый)",
+                is_coarse=True,
+            )
+            session.add(crane_unknown)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем фото (будет в pending)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = None
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        photo1_id = report.items[0].photo.id
+
+        # Проверяем что фото в pending
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photo = await repo.get(photo1_id)
+            assert photo.processing_status == ProcessingStatus.PENDING.value
+
+        # Запускаем detect_backlog
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(
+                        model_version="v1@abc123",
+                        detections=[
+                            RawDetection(class_ours="crane", conf=0.95, bbox=(0.1, 0.2, 0.3, 0.4)),
+                            RawDetection(
+                                class_ours="crane_unknown", conf=0.85, bbox=(0.5, 0.6, 0.7, 0.8)
+                            ),
+                        ],
+                    )
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 1
+        assert result.done == 1
+        assert result.failed == 0
+        assert result.skipped == 0
+
+        # Проверяем DB rows
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import DetectionRepository, PhotoRepository
+
+            photo_repo = PhotoRepository(session)
+            detection_repo = DetectionRepository(session)
+
+            photo = await photo_repo.get(photo1_id)
+            assert photo.processing_status == ProcessingStatus.DONE.value
+
+            detections = await detection_repo.list_by_photo(photo1_id)
+            assert len(detections) == 2
+
+            # Проверяем коды оборудования
+            codes = {det.equipment_type_id for det in detections}
+            assert equipment_id in codes
+            assert crane_unknown_id in codes
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_permanent_error_then_success(self, container) -> None:
+        """permanent error then success → failed + done, detector called twice."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем 2 фото (оба в pending)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo2.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = None
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            await service.upload_batch(site_id, files)
+
+        # Запускаем detect_backlog с permanent error на первом фото, успех на втором
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectorError("Permanent error", transient=False),
+                    DetectionResult(model_version="v1", detections=[]),
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 2
+        assert result.done == 1
+        assert result.failed == 1
+        assert result.skipped == 0
+        assert detector_inst.index == 2  # Обе фото обработаны
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_transient_error_stops_detector_calls(self, container) -> None:
+        """Transient error stops detector calls, remaining photos skipped."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем 3 фото (все в pending)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo2.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo3.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = None
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            await service.upload_batch(site_id, files)
+
+        # Запускаем detect_backlog с transient error на втором фото
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(model_version="v1", detections=[]),
+                    DetectorError("Transient error", transient=True),
+                    # Третий фото не должен быть обработан
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 2  # done + failed
+        assert result.done == 1
+        assert result.failed == 1
+        assert result.skipped == 1  # 3 фото - 2 обработанных = 1 пропущено
+        assert detector_inst.index == 2  # Только 2 вызова (stop на transient error)
+
+        # Проверяем что статусы: done, failed, pending (неизменённое)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photos = await repo.list_by_status(
+                site_id,
+                {
+                    ProcessingStatus.DONE.value,
+                    ProcessingStatus.FAILED.value,
+                    ProcessingStatus.PENDING.value,
+                },
+            )
+
+        assert len(photos) == 3
+        statuses = [p.processing_status for p in photos]
+        assert statuses.count(ProcessingStatus.DONE.value) == 1
+        assert statuses.count(ProcessingStatus.FAILED.value) == 1
+        assert statuses.count(ProcessingStatus.PENDING.value) == 1
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_storage_error_failed(self, container, storage) -> None:
+        """StorageError reading bytes → failed, continue."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем 2 фото (оба в pending)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo2.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = None
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        photo1_id = report.items[0].photo.id
+        photo2_id = report.items[1].photo.id
+
+        # Получаем storage_key первого фото и удаляем файл
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photo1 = await repo.get(photo1_id)
+            storage_key_1 = photo1.storage_key
+
+        await storage.delete(storage_key_1)
+
+        # Запускаем detect_backlog
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(model_version="v1", detections=[]),
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 2
+        assert result.done == 1
+        assert result.failed == 1
+        assert result.skipped == 0
+        assert detector_inst.index == 1  # Вызов только на втором фото
+
+        # Проверяем статусы
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photo1 = await repo.get(photo1_id)
+            photo2 = await repo.get(photo2_id)
+
+        assert photo1.processing_status == ProcessingStatus.FAILED.value
+        assert photo2.processing_status == ProcessingStatus.DONE.value
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_recompute_calls_deduplicated_sorted(self, container) -> None:
+        """recompute calls deduplicated and sorted (one per distinct captured_on)."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        date1 = date(2025, 1, 10)
+        date2 = date(2025, 1, 20)
+
+        # Загружаем 3 фото (2 на date1, 1 на date2)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date1),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo2.jpg",
+                content=create_jpeg_with_exif_date(date1),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo3.jpg",
+                content=create_jpeg_with_exif_date(date2),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = None
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            await service.upload_batch(site_id, files)
+
+        # Mock recalculator to track calls
+        recalculator_calls = []
+
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(model_version="v1", detections=[]),
+                    DetectionResult(model_version="v1", detections=[]),
+                    DetectionResult(model_version="v1", detections=[]),
+                ]
+            )
+
+            service = await request_container.get(PhotoService)
+
+            # Mock recalculator
+            original_recompute = service._recalculator.recompute
+
+            async def tracking_recompute(site_id_arg, date_arg):
+                recalculator_calls.append(date_arg)
+                return await original_recompute(site_id_arg, date_arg)
+
+            service._recalculator.recompute = tracking_recompute
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 3
+        assert result.done == 3
+        # Проверяем что recompute был вызван 2 раза (один раз на date1, один раз на date2)
+        # и в отсортированном порядке
+        assert len(recalculator_calls) == 2
+        assert recalculator_calls == sorted(recalculator_calls)
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_stale_detections_replaced(self, container) -> None:
+        """Stale detections from old model version replaced with new model version."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        equipment_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            equipment = EquipmentType(id=equipment_id, code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем фото с детекциями от старой версии модели
+        files = [
+            UploadInput(
+                filename="photo.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="old@1",
+                detections=[
+                    RawDetection(class_ours="crane", conf=0.90, bbox=(0.1, 0.2, 0.3, 0.4)),
+                ],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        photo_id = report.items[0].photo.id
+
+        # Проверяем что есть 1 детекция от old@1
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import DetectionRepository
+
+            repo = DetectionRepository(session)
+            detections = await repo.list_by_photo(photo_id)
+            assert len(detections) == 1
+            assert detections[0].model_version == "old@1"
+            old_det_id = detections[0].id
+
+        # Меняем статус на failed вручную (имитируем сценарий)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photo = await repo.get(photo_id)
+            photo.processing_status = ProcessingStatus.FAILED.value
+            await session.commit()
+
+        # Запускаем detect_backlog с новой версией модели
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(
+                        model_version="new@2",
+                        detections=[
+                            RawDetection(
+                                class_ours="crane", conf=0.95, bbox=(0.15, 0.25, 0.35, 0.45)
+                            ),
+                        ],
+                    )
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.FAILED})
+
+        assert result.processed == 1
+        assert result.done == 1
+
+        # Проверяем что старые детекции удалены, новые добавлены
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import DetectionRepository
+
+            repo = DetectionRepository(session)
+            detections = await repo.list_by_photo(photo_id)
+            assert len(detections) == 1
+            assert detections[0].model_version == "new@2"
+            assert detections[0].id != old_det_id
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_same_model_version_keeps_rows(self, container) -> None:
+        """same model version → rows kept (keep_same_version semantics)."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        equipment_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+
+            equipment = EquipmentType(id=equipment_id, code="crane", title="Кран")
+            session.add(equipment)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем фото с детекциями
+        files = [
+            UploadInput(
+                filename="photo.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                detections=[
+                    RawDetection(class_ours="crane", conf=0.90, bbox=(0.1, 0.2, 0.3, 0.4)),
+                ],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        photo_id = report.items[0].photo.id
+
+        # Получаем ID первой детекции
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import DetectionRepository
+
+            repo = DetectionRepository(session)
+            detections = await repo.list_by_photo(photo_id)
+            original_det_id = detections[0].id
+
+        # Меняем статус на failed
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import PhotoRepository
+
+            repo = PhotoRepository(session)
+            photo = await repo.get(photo_id)
+            photo.processing_status = ProcessingStatus.FAILED.value
+            await session.commit()
+
+        # Запускаем detect_backlog с той же версией модели (но другими данными детекций)
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(
+                        model_version="v1",
+                        detections=[
+                            RawDetection(
+                                class_ours="crane", conf=0.95, bbox=(0.15, 0.25, 0.35, 0.45)
+                            ),
+                        ],
+                    )
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.FAILED})
+
+        assert result.processed == 1
+        assert result.done == 1
+
+        # Проверяем что детекции остались прежними (ID не изменился)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            from app.domains.photo.repository import DetectionRepository
+
+            repo = DetectionRepository(session)
+            detections = await repo.list_by_photo(photo_id)
+            assert len(detections) == 1
+            assert detections[0].id == original_det_id
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_only_requested_statuses_processed(self, container) -> None:
+        """only statuses passed are processed (done photos untouched)."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner.id)
+            session.add(site)
+            await session.commit()
+            owner_id = owner.id
+
+        # Загружаем фото (1 будет done, 1 будет pending)
+        files = [
+            UploadInput(
+                filename="photo1.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo2.jpg",
+                content=create_jpeg_with_exif_date(date(2025, 1, 15)),
+                content_type="image/jpeg",
+            ),
+        ]
+
+        async with container() as request_container:
+            detector_inst = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector_inst.result = DetectionResult(
+                model_version="v1",
+                detections=[],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        # Оба фото должны быть done
+        photo1_id = report.items[0].photo.id
+        photo2_id = report.items[1].photo.id
+
+        # Меняем первое фото на pending вручную
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            photo1 = await session.get(Photo, photo1_id)
+            photo1.processing_status = ProcessingStatus.PENDING.value
+            await session.commit()
+
+        # Запускаем detect_backlog только с PENDING (photo1 должен быть обработан, photo2 не должен)
+        async with container() as request_container:
+            from tests.fakes import ScriptedDetector
+
+            detector_inst = ScriptedDetector(
+                [
+                    DetectionResult(model_version="v2", detections=[]),
+                ]
+            )
+            service = await request_container.get(PhotoService)
+            service._detector = detector_inst
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+
+            result = await service.detect_backlog(site_id, {ProcessingStatus.PENDING})
+
+        assert result.processed == 1
+        assert result.done == 1
+        assert detector_inst.index == 1
+
+        # Проверяем что photo1 обновлён (done), photo2 остался unchanged (done)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            photo1 = await session.get(Photo, photo1_id)
+            photo2 = await session.get(Photo, photo2_id)
+
+        assert photo1.processing_status == ProcessingStatus.DONE.value
+        assert photo2.processing_status == ProcessingStatus.DONE.value

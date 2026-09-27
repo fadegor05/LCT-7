@@ -11,6 +11,9 @@ services:
       - ./backend:/app
     working_dir: /app
 
+  ml:
+    profiles: [ml]
+
   frontend:
     build:
       target: build

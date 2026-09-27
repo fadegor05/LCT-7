@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import StaticPool
 
+from app.adapters.ml.base import DetectorClient
 from app.core.settings import Settings, get_settings
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.methodology.recalculator import StatusRecalculator
@@ -24,6 +25,7 @@ from app.domains.user.service import UserService
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
+from tests.fakes import FakeDetector
 
 
 async def seed_stand_user(container: AsyncContainer) -> None:
@@ -47,6 +49,7 @@ async def seed_equipment_types(container: AsyncContainer) -> None:
                 code=equipment_data["code"],
                 title=equipment_data["title"],
                 synonyms=equipment_data["synonyms"],
+                is_coarse=equipment_data.get("is_coarse", False),
             )
             session.add(equipment_type)
 
@@ -109,13 +112,14 @@ async def test_get_equipment_types_returns_200_with_list(
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
-    assert len(data) == 20
+    assert len(data) == 25  # 20 обычных + 5 coarse
 
     # Проверить структуру первого элемента
     first = data[0]
     assert "id" in first
     assert "code" in first
     assert "title" in first
+    assert "is_coarse" in first
     assert "synonyms" in first
     assert isinstance(first["synonyms"], list)
 
@@ -782,6 +786,13 @@ async def test_status_recalculator_called_on_mutation() -> None:
         def provide_recalculator(self) -> StatusRecalculator:
             return recording_recalculator
 
+    class DetectorProvider(Provider):
+        scope = Scope.APP
+
+        @provide(provides=DetectorClient)
+        def detector(self):
+            return FakeDetector()
+
     # Создаём контейнер с переопределённым рекалькулятором
     test_container = make_async_container(
         TestAppProvider(),
@@ -791,6 +802,7 @@ async def test_status_recalculator_called_on_mutation() -> None:
         ScheduleProvider(),
         MethodologyProvider(),
         RecalculatorProvider(),  # Переопределяет MethodologyProvider's recalculator
+        DetectorProvider(),
         UtilityProvider(),
     )
 

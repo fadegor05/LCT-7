@@ -14,10 +14,22 @@ PROD = $(COMPOSE) \
 TUNNEL = $(COMPOSE) \
 	-f $(DOCKER_FILES)/prod/tunnel.yaml
 
+# Загрузка весов детектора из приватного репозитория HuggingFace
+# Требует переменной окружения HF_TOKEN (HuggingFace токен с доступом к Gatarez/lct7-construction-detector)
+ml-weights:
+	$(COMPOSE) run --rm --no-deps -e HF_TOKEN -v lct7_ml_weights:/weights-rw ml python tools/fetch_weights.py --out /weights-rw
+
 # Локальная разработка: локальный билд + hot-reload (bind-mount исходников)
 dev:
 	$(COMPOSE) \
 		-f $(DOCKER_FILES)/dev/core.yaml \
+		up --build -d
+
+# Локальная разработка с ML-детектором (включает профиль ml)
+dev-ml:
+	$(COMPOSE) \
+		-f $(DOCKER_FILES)/dev/core.yaml \
+		--profile ml \
 		up --build -d
 
 # Прод: тянем готовые образы по тегам из deploy/versions.env, не билдим
@@ -63,4 +75,4 @@ front-check:
 front-test:
 	cd frontend && pnpm run test:coverage
 
-.PHONY: dev up deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test
+.PHONY: ml-weights dev dev-ml up deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test

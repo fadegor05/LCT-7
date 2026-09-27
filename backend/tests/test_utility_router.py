@@ -12,9 +12,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.adapters.ml.base import DetectorClient
 from app.core.settings import Settings
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
+from tests.fakes import FakeDetector
 
 
 async def test_health_answers_without_dependencies(client: AsyncClient) -> None:
@@ -29,7 +31,10 @@ async def test_ready_reports_available_database(client: AsyncClient) -> None:
     response = await client.get("/ready")
 
     assert response.status_code == 200
-    assert response.json() == {"database": True}
+    data = response.json()
+    assert data["database"] is True
+    assert "detector" in data
+    assert data["detector"]["configured"] is True
 
 
 class BrokenDatabaseProvider(Provider):
@@ -72,11 +77,22 @@ class StaticSettingsProvider(Provider):
         return self._settings
 
 
+class MockDetectorProvider(Provider):
+    """Тестовый провайдер детектора."""
+
+    scope = Scope.APP
+
+    @provide(provides=DetectorClient)
+    def detector(self):
+        return FakeDetector()
+
+
 @pytest.fixture
 async def broken_client() -> AsyncIterator[AsyncClient]:
     container = make_async_container(
         StaticSettingsProvider(Settings()),
         BrokenDatabaseProvider(),
+        MockDetectorProvider(),
         UtilityProvider(),
     )
     app = create_app(container)
@@ -91,14 +107,18 @@ async def test_ready_reports_unavailable_database(broken_client: AsyncClient) ->
     response = await broken_client.get("/ready")
 
     assert response.status_code == 503
-    assert response.json() == {"database": False}
+    data = response.json()
+    assert data["database"] is False
+    assert "detector" in data
 
 
 async def test_version_returns_backend_tag_default(client: AsyncClient) -> None:
     response = await client.get("/version")
 
     assert response.status_code == 200
-    assert response.json() == {"version": "dev"}
+    data = response.json()
+    assert data["version"] == "dev"
+    assert "model" in data
 
 
 @pytest.fixture
@@ -111,6 +131,7 @@ async def tagged_client() -> AsyncIterator[AsyncClient]:
     container = make_async_container(
         StaticSettingsProvider(Settings(backend_tag="v1.2.3")),
         TestDatabaseProvider(),
+        MockDetectorProvider(),
         UtilityProvider(),
     )
     app = create_app(container)
@@ -124,4 +145,38 @@ async def test_version_returns_configured_backend_tag(tagged_client: AsyncClient
     response = await tagged_client.get("/version")
 
     assert response.status_code == 200
-    assert response.json() == {"version": "v1.2.3"}
+    data = response.json()
+    assert data["version"] == "v1.2.3"
+    assert "model" in data
+
+
+async def test_ready_with_configured_detector(client: AsyncClient) -> None:
+    """Ready with configured detector → detector fields populated."""
+    response = await client.get("/ready")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["database"] is True
+    assert data["detector"]["configured"] is True
+    # ready depends on FakeDetector.ready_value which defaults to False
+
+
+async def test_version_returns_model_from_info(client: AsyncClient) -> None:
+    """Version → model from detector.info()."""
+    response = await client.get("/version")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "version" in data
+    assert "model" in data
+    # model is None from FakeDetector unless explicitly set
+
+
+async def test_version_with_null_detector(broken_client: AsyncClient) -> None:
+    """Version with NullDetector → model null."""
+    response = await broken_client.get("/version")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "version" in data
+    assert data["model"] is None
