@@ -2,28 +2,11 @@ import { useState } from 'react'
 import type { Stage } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { formatWindow, parseRuDate } from '@/lib/format'
-import { plural, pluralWorks } from '@/lib/labels'
 import styles from './NewSite.module.css'
-
-const VISIBLE_WORKS = 4
-
-function matchLabel(stage: Stage): string {
-  switch (stage.match_kind) {
-    case 'exact':
-      return 'Справочник · точное'
-    case 'fuzzy':
-      return `Справочник · нечёткое · ${Math.round((stage.match_score ?? 0) * 100)}%`
-    case 'manual':
-      return 'Вручную'
-    case 'none':
-      return 'Не сопоставлен'
-  }
-}
 
 interface StagesTableProps {
   stages: readonly Stage[]
   year: number
-  onConfirmMatch: (stageId: string) => void
   onSetDates: (stageId: string, start: string, end: string) => void
   pending?: boolean
 }
@@ -85,93 +68,47 @@ function ManualDates({
   )
 }
 
-/** Таблица «Крупные этапы»: состав, окно, сопоставление со справочником, проверка по технике. */
-export function StagesTable({
-  stages,
-  year,
-  onConfirmMatch,
-  onSetDates,
-  pending,
-}: StagesTableProps) {
+/** Таблица этапов графика: порядок и плановое окно; даты, которых нет в файле, задаются вручную. */
+export function StagesTable({ stages, year, onSetDates, pending }: StagesTableProps) {
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
-        <caption className="srOnly">Крупные этапы графика</caption>
+        <caption className="srOnly">Этапы графика</caption>
         <thead>
           <tr>
-            <th scope="col">Крупный этап</th>
-            <th scope="col">Вошедшие работы</th>
+            <th scope="col">№</th>
+            <th scope="col">Этап</th>
             <th scope="col">Плановое окно</th>
-            <th scope="col">Проверка по технике</th>
           </tr>
         </thead>
         <tbody>
-          {stages.map((stage) => {
-            const hidden = stage.works.length - VISIBLE_WORKS
-            return (
-              <tr key={stage.id}>
-                <th scope="row" style={{ fontWeight: 400 }}>
+          {stages.map((stage) => (
+            <tr key={stage.id}>
+              <td className="data">{stage.position}</td>
+              <th scope="row" style={{ fontWeight: 400, fontSize: 16 }}>
+                {stage.name}
+              </th>
+              <td>
+                {stage.planned_start && stage.planned_end ? (
                   <div className={styles.cell}>
-                    <span style={{ fontSize: 16 }}>{stage.name}</span>
-                    <span className="sm muted">{matchLabel(stage)}</span>
-                    {!stage.match_confirmed && (
-                      <button
-                        type="button"
-                        className={styles.linkButton}
-                        onClick={() => onConfirmMatch(stage.id)}
-                        disabled={pending}
-                      >
-                        Подтвердить сопоставление
-                      </button>
+                    <span className="data">
+                      {formatWindow(stage.planned_start, stage.planned_end)}
+                    </span>
+                    {stage.dates_source === 'manual' && (
+                      <span className="sm muted">задано вручную</span>
                     )}
                   </div>
-                </th>
-                <td>
-                  <div className={styles.works}>
-                    <span className="lab">{pluralWorks(stage.works.length)}</span>
-                    {stage.works.slice(0, VISIBLE_WORKS).map((w) => (
-                      <span key={w.id} className="sm muted">
-                        {w.name}
-                      </span>
-                    ))}
-                    {hidden > 0 && <span className="sm muted">ещё {hidden}</span>}
-                  </div>
-                </td>
-                <td>
-                  {stage.planned_start && stage.planned_end ? (
-                    <div className={styles.cell}>
-                      <span className="data">
-                        {formatWindow(stage.planned_start, stage.planned_end)}
-                      </span>
-                      {stage.merged_windows > 1 && (
-                        <span className="sm muted">
-                          объединено из {stage.merged_windows}{' '}
-                          {plural(stage.merged_windows, ['окна', 'окон', 'окон'])}
-                        </span>
-                      )}
-                      {stage.dates_source === 'manual' && (
-                        <span className="sm muted">задано вручную</span>
-                      )}
-                    </div>
-                  ) : (
-                    <ManualDates
-                      stage={stage}
-                      year={year}
-                      pending={pending}
-                      onSave={(start, end) => onSetDates(stage.id, start, end)}
-                    />
-                  )}
-                </td>
-                <td>
-                  {stage.equipment_check ? (
-                    'Проверяется'
-                  ) : (
-                    <span className="muted">Не проверяется · нет крупной техники</span>
-                  )}
-                </td>
-              </tr>
-            )
-          })}
+                ) : (
+                  <ManualDates
+                    stage={stage}
+                    year={year}
+                    pending={pending}
+                    onSave={(start, end) => onSetDates(stage.id, start, end)}
+                  />
+                )}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

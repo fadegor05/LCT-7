@@ -60,26 +60,6 @@
   gap: var(--space-2);
 }
 
-.activityLink {
-  text-decoration: none;
-}
-
-.strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.stripHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.stripHead > div:first-child {
-  flex-grow: 1;
-}
-
 .frames {
   display: grid;
   grid-auto-flow: column;
@@ -108,13 +88,6 @@
   border-bottom: 0;
 }
 
-.clipRow {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
 .input {
   font: inherit;
   font-family: var(--font-mono);
@@ -126,8 +99,14 @@
   width: 100%;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.detectBacklog {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-4);
+}
+
+.detectBacklogHeader {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }

@@ -1,0 +1,9 @@
+[Unit]
+Description=Проверка обновлений стенда veha раз в две минуты
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target

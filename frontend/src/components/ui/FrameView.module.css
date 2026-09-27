@@ -31,42 +31,6 @@
   color: var(--ink-muted);
 }
 
-.box {
-  position: absolute;
-  border: 2px solid var(--accent);
-  border-radius: var(--radius-md);
-}
-
-.boxLabel {
-  position: absolute;
-  left: -2px;
-  bottom: 100%;
-  margin-bottom: 2px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--accent-strong);
-  color: var(--on-accent);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 500;
-  letter-spacing: 0;
-  white-space: nowrap;
-}
-
-.zone {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.zone polygon {
-  fill: rgb(11 122 99 / 18%);
-  stroke: var(--status-ontrack);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-
 .caption {
   display: flex;
   flex-wrap: wrap;

@@ -22,6 +22,56 @@ class PostgresSettings(BaseModel):
         return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.db}"
 
 
+class StorageSettings(BaseModel):
+    """Параметры файлового хранилища (локального или S3)."""
+
+    endpoint_url: str | None = None
+    bucket: str = "photos"
+    access_key: str = "minioadmin"
+    secret_key: str = "minioadmin"
+    region: str = "us-east-1"
+    local_root: str = "/data/storage"
+    max_upload_mb: float = 20
+    max_batch_files: int = 50
+
+    @property
+    def max_upload_bytes(self) -> int:
+        """Максимальный размер одного загружаемого файла в байтах."""
+        return int(self.max_upload_mb * 1024 * 1024)
+
+
+class DetectorSettings(BaseModel):
+    """Параметры ML-детектора."""
+
+    url: str | None = None
+    timeout_s: float = 30.0
+    connect_timeout_s: float = 2.0
+    max_concurrency: int = 2
+    retry_503: int = 3
+    retry_other: int = 1
+    retry_backoff_s: tuple[float, ...] = (2.0, 5.0, 10.0)
+    retry_budget_s: float = 20.0
+
+
+class ObservationSettings(BaseModel):
+    """Пороги для расчёта наблюдаемости, уверенности и активности."""
+
+    min_photos_medium: int = 2
+    min_photos_high: int = 3
+    min_score_high: float = 0.7
+    min_score_medium: float = 0.4
+    movement_threshold: float = 0.05
+
+
+class AssessmentSettings(BaseModel):
+    """Пороги для расчёта статусов этапов и отклонений."""
+
+    tolerance_days: int = 3
+    stale_data_days: int = 7
+    no_progress_window_days: int = 5
+    min_confirming_observations: int = 2
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -38,6 +88,11 @@ class Settings(BaseSettings):
     backend_tag: str = "dev"
 
     postgres: PostgresSettings = PostgresSettings()
+    s3: bool = False
+    storage: StorageSettings = StorageSettings()
+    detector: DetectorSettings = DetectorSettings()
+    observation: ObservationSettings = ObservationSettings()
+    assessment: AssessmentSettings = AssessmentSettings()
 
 
 @lru_cache

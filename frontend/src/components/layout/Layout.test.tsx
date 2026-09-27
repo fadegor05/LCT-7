@@ -12,7 +12,7 @@ describe('AppLayout', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'LCT-7' })).toHaveAttribute('href', '/sites')
+    expect(screen.getByRole('link', { name: 'Веха' })).toHaveAttribute('href', '/sites')
     expect(await screen.findByRole('heading', { level: 1, name: 'Стройки' })).toBeInTheDocument()
   })
 
@@ -43,13 +43,18 @@ describe('SiteShell', () => {
 
   it('shows site tabs with the active one', () => {
     renderWithProviders(
-      <SiteShell site={site} crumb="Камеры">
+      <SiteShell site={site} crumb="Методика">
         тело
       </SiteShell>,
-      { path: '/sites/:siteId/cameras', url: `/sites/${site.id}/cameras` },
+      { path: '/sites/:siteId/methodology', url: `/sites/${site.id}/methodology` },
     )
     const tabs = screen.getByRole('navigation', { name: 'Разделы объекта' })
-    expect(within(tabs).getByRole('link', { name: 'Камеры' })).toHaveAttribute(
+    expect(
+      within(tabs)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(['Обзор', 'Наблюдения', 'Методика'])
+    expect(within(tabs).getByRole('link', { name: 'Методика' })).toHaveAttribute(
       'aria-current',
       'page',
     )

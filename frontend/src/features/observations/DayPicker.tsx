@@ -1,18 +1,18 @@
-import type { ObservationDay } from '@/api/schemas'
+import type { Observation } from '@/api/schemas'
 import { formatShortDate } from '@/lib/format'
-import { pluralFrames } from '@/lib/labels'
+import { pluralPhotos } from '@/lib/labels'
 import styles from './Observations.module.css'
 
 interface DayPickerProps {
-  days: readonly ObservationDay[]
+  days: readonly Observation[]
   /** null — «Все дни». */
   value: string | null
   onChange: (date: string | null) => void
-  withoutTime: number
+  undated: number
 }
 
-export function DayPicker({ days, value, onChange, withoutTime }: DayPickerProps) {
-  const total = days.reduce((sum, d) => sum + d.frames_total, 0)
+export function DayPicker({ days, value, onChange, undated }: DayPickerProps) {
+  const total = days.reduce((sum, d) => sum + d.photo_count, 0)
   return (
     <div className={styles.days} role="group" aria-label="Дни наблюдений">
       <button
@@ -22,24 +22,24 @@ export function DayPicker({ days, value, onChange, withoutTime }: DayPickerProps
         onClick={() => onChange(null)}
       >
         <span className="lab">Все дни</span>
-        <span className="sm muted">{pluralFrames(total)}</span>
+        <span className="sm muted">{pluralPhotos(total)}</span>
       </button>
       {days.map((d) => (
         <button
-          key={d.obs_date}
+          key={d.observed_on}
           type="button"
           className={styles.day}
-          aria-pressed={value === d.obs_date}
-          onClick={() => onChange(d.obs_date)}
+          aria-pressed={value === d.observed_on}
+          onClick={() => onChange(d.observed_on)}
         >
-          <span className="lab data">{formatShortDate(d.obs_date)}</span>
-          <span className="sm muted">{pluralFrames(d.frames_total)}</span>
+          <span className="lab data">{formatShortDate(d.observed_on)}</span>
+          <span className="sm muted">{pluralPhotos(d.photo_count)}</span>
         </button>
       ))}
-      {withoutTime > 0 && (
-        <a href="#no-time" className={`${styles.day} ${styles.dayWarn}`}>
+      {undated > 0 && (
+        <a href="#no-date" className={`${styles.day} ${styles.dayWarn}`}>
           <span className="lab">Без даты</span>
-          <span className="sm muted">{pluralFrames(withoutTime)} · ниже</span>
+          <span className="sm muted">{pluralPhotos(undated)} · ниже</span>
         </a>
       )}
     </div>

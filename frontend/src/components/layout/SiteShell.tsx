@@ -7,7 +7,7 @@ import styles from './SiteShell.module.css'
 
 interface SiteShellProps {
   site: Site
-  /** Последняя крошка («Камеры», «Каток не найден»); без неё текущая — сама стройка. */
+  /** Последняя крошка («Методика», «Нет нужной техники»); без неё текущая — сама стройка. */
   crumb?: string
   title?: ReactNode
   subtitle?: ReactNode
@@ -18,11 +18,10 @@ interface SiteShellProps {
 const TABS = [
   { to: '', label: 'Обзор', end: true },
   { to: 'observations', label: 'Наблюдения' },
-  { to: 'cameras', label: 'Камеры' },
   { to: 'methodology', label: 'Методика' },
 ]
 
-/** Каркас экранов объекта: крошки, заголовок и вкладки «Обзор · Наблюдения · Камеры · Методика». */
+/** Каркас экранов объекта: крошки, заголовок и вкладки «Обзор · Наблюдения · Методика». */
 export function SiteShell({ site, crumb, title, subtitle, actions, children }: SiteShellProps) {
   const base = `/sites/${site.id}`
   const crumbs: Crumb[] = [{ label: 'Стройки', to: '/sites' }]

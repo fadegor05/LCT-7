@@ -1,31 +1,44 @@
-# ШАБЛОН деплоя. Хостинга пока нет, поэтому:
-#   * автотриггеров нет — только ручной запуск (workflow_dispatch);
-#   * job `build-push` рабочий: собирает и кладёт образы в GHCR;
-#   * job `deploy` — каркас: включается переменной DEPLOY_ENABLED и заполняется
-#     SSH/командами, когда поднимем хост. Пошагово — в deploy/README.md.
-name: CD (шаблон)
+# Сборка образов для стенда в Yandex Cloud (ВМ veha-stand).
+#
+# Образы собираются здесь, а не на ВМ: из сети Yandex Cloud недоступны Docker Hub,
+# download.pytorch.org и registry.npmjs.org, так что ml и frontend на ВМ не собрать.
+#
+# Доставки отсюда на ВМ нет: входящие соединения с зарубежных адресов (а раннеры
+# GitHub — за рубежом) до ВМ не доходят, а api.github.com недоступен с ВМ, так что
+# и self-hosted runner не работает. ВМ сама забирает обновления: последним job'ом
+# публикуется образ-«посылка» deploy с makefile и deploy/, по его появлению
+# таймер на ВМ выкатывает коммит (deploy/autodeploy/, deploy/README.md).
+#
+# Реестр — Yandex Container Registry, а не GHCR: с ВМ GitHub доступен с перебоями
+# (ghcr.io отвечал на 7 запросов из 20), а cr.yandex стабилен и изнутри облака, и
+# из-за рубежа, откуда пушат раннеры. На чтение реестр открыт всем (роль
+# container-registry.images.puller у system:allUsers), ВМ тянет без токена.
+# Настройка: переменная YC_REGISTRY_ID и секрет YC_SA_JSON_KEY — deploy/README.md.
+name: CD
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       push_images:
-        description: Публиковать образы в GHCR
+        description: Публиковать образы в реестр (без этого стенд не обновится)
         type: boolean
         default: true
       tag:
         description: 'Доп. тег для образов (кроме sha и latest), например v0.1.0'
         type: string
         default: ''
-  # Включить, когда деплой заработает: релиз по тегу v*.
-  # push:
-  #   tags: ['v*']
 
 concurrency:
   group: cd-${{ github.ref }}
   cancel-in-progress: false
 
 env:
-  REGISTRY: ghcr.io
+  # Пока реестр не настроен, имя-заглушка: сборка проходит, публикация выключена.
+  REGISTRY: cr.yandex/${{ vars.YC_REGISTRY_ID || 'not-configured' }}
+  # На push входов нет, поэтому публикуем всегда; при ручном запуске — по флагу.
+  PUSH_IMAGES: ${{ (github.event_name == 'push' || inputs.push_images) && vars.YC_REGISTRY_ID != '' }}
 
 jobs:
   build-push:
@@ -33,31 +46,31 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
-        service: [backend, frontend]
+        service: [backend, frontend, ml]
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Логин в GHCR
-        if: inputs.push_images
+      # Сервисный аккаунт с ролью container-registry.images.pusher, авторизованный
+      # ключ в JSON целиком лежит в секрете.
+      - name: Логин в Yandex Container Registry
+        if: env.PUSH_IMAGES == 'true'
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.YC_SA_JSON_KEY }}
 
-      # Имя образа приводится к нижнему регистру самим action:
-      # refaxD/LCT-7 -> ghcr.io/refaxd/lct-7/<service>
+      # cr.yandex/<id реестра>/<service>
       - name: Теги и метки
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          images: ${{ env.REGISTRY }}/${{ matrix.service }}
           tags: |
             type=sha,format=short
             type=raw,value=latest,enable={{is_default_branch}}
@@ -68,79 +81,51 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./${{ matrix.service }}
-          push: ${{ inputs.push_images }}
+          push: ${{ env.PUSH_IMAGES == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
-  deploy:
-    name: деплой на xxprod.ru
+  # Посылка публикуется последней: когда ВМ её видит, образы сервисов с тем же
+  # тегом sha-<коммит> уже лежат в реестре.
+  bundle:
+    name: посылка для стенда
     needs: build-push
+    if: (github.event_name == 'push' || inputs.push_images) && vars.YC_REGISTRY_ID != ''
     runs-on: ubuntu-latest
-    # Пока переменной DEPLOY_ENABLED нет (или она не 'true') — job пропускается,
-    # и никто не видит «зелёный деплой», которого не было.
-    # Включение: Settings -> Secrets and variables -> Actions -> Variables.
-    if: vars.DEPLOY_ENABLED == 'true'
-    # environment даёт ручное подтверждение и отдельный набор секретов.
-    environment:
-      name: prod
-      url: https://xxprod.ru
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Что нужно заполнить
-        run: |
-          echo "Каркас деплоя. Раскомментируйте один из вариантов ниже."
-          echo "Образы уже в GHCR, тег: sha-$(git rev-parse --short HEAD)"
-          exit 1
+      - uses: docker/setup-buildx-action@v3
 
-      # --------------------------------------------------------------------
-      # ВАРИАНТ A (рекомендуемый для домашнего ПК за туннелем TUNA).
-      # Self-hosted runner прямо на хосте: входящий SSH снаружи не нужен,
-      # runner сам ходит на GitHub. Тогда у job'а: runs-on: [self-hosted, xxprod]
-      # и всё делается локальными командами.
-      #
-      # - name: Обновить теги образов
-      #   run: |
-      #     sed -i "s|^BACKEND_TAG=.*|BACKEND_TAG=sha-${GITHUB_SHA::7}|"  deploy/versions.env
-      #     sed -i "s|^FRONTEND_TAG=.*|FRONTEND_TAG=sha-${GITHUB_SHA::7}|" deploy/versions.env
-      #
-      # - name: Поднять стенд
-      #   run: make deploy-tunnel
-      # --------------------------------------------------------------------
+      # Сервисный аккаунт с ролью container-registry.images.pusher, авторизованный
+      # ключ в JSON целиком лежит в секрете.
+      - name: Логин в Yandex Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: cr.yandex
+          username: json_key
+          password: ${{ secrets.YC_SA_JSON_KEY }}
 
-      # --------------------------------------------------------------------
-      # ВАРИАНТ B: деплой по SSH с обычного ubuntu-latest раннера.
-      # Нужен доступный извне SSH (проброс порта / отдельный туннель).
-      # Секреты окружения prod:
-      #   DEPLOY_HOST      — хост или IP
-      #   DEPLOY_PORT      — порт SSH (22 по умолчанию)
-      #   DEPLOY_USER      — пользователь
-      #   DEPLOY_SSH_KEY   — приватный ключ (ed25519), без пароля
-      #   GHCR_PULL_TOKEN  — PAT с read:packages, если пакеты приватные
-      #
-      # - name: Деплой по SSH
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     port: ${{ secrets.DEPLOY_PORT }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
-      #     script_stop: true
-      #     script: |
-      #       cd /opt/lct-7
-      #       git fetch --all && git checkout --force ${{ github.sha }}
-      #       echo "${{ secrets.GHCR_PULL_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      #       sed -i "s|^BACKEND_TAG=.*|BACKEND_TAG=sha-${GITHUB_SHA::7}|"  deploy/versions.env
-      #       sed -i "s|^FRONTEND_TAG=.*|FRONTEND_TAG=sha-${GITHUB_SHA::7}|" deploy/versions.env
-      #       make deploy-tunnel
-      # --------------------------------------------------------------------
+      # Метка org.opencontainers.image.revision (полный sha коммита) — по ней ВМ
+      # понимает, что посылка новая, и берёт теги образов.
+      - name: Теги и метки
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/deploy
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
 
-      # - name: Смоук после деплоя
-      #   run: |
-      #     for i in $(seq 1 30); do
-      #       curl -fsS https://xxprod.ru/api/health && exit 0
-      #       sleep 5
-      #     done
-      #     echo "прод не отвечает на /api/health" && exit 1
+      - name: Сборка и публикация
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/autodeploy/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

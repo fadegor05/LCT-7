@@ -86,15 +86,3 @@
   flex-direction: column;
   gap: var(--space-2);
 }
-
-.big {
-  font-size: 28px;
-  line-height: 36px;
-  font-family: var(--font-mono);
-}
-
-.decisionButtons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}

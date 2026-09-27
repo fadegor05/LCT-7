@@ -1,49 +1,75 @@
 import { useState } from 'react'
-import type { EquipmentClass, RuleKind } from '@/api/schemas'
+import type { EquipmentType, Obligation } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { SelectField } from '@/components/ui/SelectField'
-import { ruleKindLabels } from '@/lib/labels'
+import { TextField } from '@/components/ui/TextField'
+import { obligationLabels } from '@/lib/labels'
 import styles from './Methodology.module.css'
 
-const kinds = (Object.keys(ruleKindLabels) as RuleKind[]).map((value) => ({
+const obligations = (Object.keys(obligationLabels) as Obligation[]).map((value) => ({
   value,
-  label: ruleKindLabels[value],
+  label: obligationLabels[value],
 }))
 
+/** Номер расценки ГЭСН: 06-01-001-16. Всё остальное считается текстом источника. */
+const GESN = /^\d{2}-\d{2}-\d{3}-\d{2}$/
+
+export interface RequirementSource {
+  gesn_code: string | null
+  source_note: string | null
+}
+
+function toSource(value: string): RequirementSource {
+  const text = value.trim()
+  return GESN.test(text)
+    ? { gesn_code: text, source_note: null }
+    : { gesn_code: null, source_note: text || null }
+}
+
 interface AddRuleFormProps {
-  classes: readonly EquipmentClass[]
-  onAdd: (equipmentClass: EquipmentClass, kind: RuleKind) => void
+  types: readonly EquipmentType[]
+  onAdd: (type: EquipmentType, obligation: Obligation, source: RequirementSource) => void
   onCancel: () => void
 }
 
-export function AddRuleForm({ classes, onAdd, onCancel }: AddRuleFormProps) {
-  const [code, setCode] = useState(classes[0]?.code ?? '')
-  const [kind, setKind] = useState<RuleKind>('normative')
-  const selected = classes.find((c) => c.code === code)
+/** Добавление машины в комплект: тип техники, обязательность и основание (ГЭСН или источник). */
+export function AddRuleForm({ types, onAdd, onCancel }: AddRuleFormProps) {
+  const [typeId, setTypeId] = useState(types[0]?.id ?? '')
+  const [obligation, setObligation] = useState<Obligation>('normative')
+  const [source, setSource] = useState('')
+  const [error, setError] = useState<string>()
+  const selected = types.find((t) => t.id === typeId)
 
-  if (classes.length === 0) {
-    return <p className="sm muted">Все классы техники уже в комплекте.</p>
+  if (types.length === 0) {
+    return <p className="sm muted">Вся техника справочника уже в комплекте.</p>
+  }
+  const add = () => {
+    if (!selected) return
+    if (!source.trim()) return setError('Укажите номер ГЭСН или источник')
+    onAdd(selected, obligation, toSource(source))
   }
   return (
     <div className={styles.addRow}>
       <SelectField
         label="Машина"
-        value={code}
-        onChange={(event) => setCode(event.target.value)}
-        options={classes.map((c) => ({ value: c.code, label: c.name_ru }))}
+        value={typeId}
+        onChange={(event) => setTypeId(event.target.value)}
+        options={types.map((t) => ({ value: t.id, label: t.title }))}
       />
       <SelectField
-        label="Вид правила"
-        value={kind}
-        onChange={(event) => setKind(event.target.value as RuleKind)}
-        options={kinds}
+        label="Обязательность"
+        value={obligation}
+        onChange={(event) => setObligation(event.target.value as Obligation)}
+        options={obligations}
       />
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={!selected}
-        onClick={() => selected && onAdd(selected, kind)}
-      >
+      <TextField
+        label="ГЭСН или источник"
+        placeholder="06-01-001-16 или «по смыслу работы»"
+        value={source}
+        error={error}
+        onChange={(event) => setSource(event.target.value)}
+      />
+      <Button variant="secondary" size="sm" onClick={add}>
         Добавить
       </Button>
       <Button variant="ghost" size="sm" onClick={onCancel}>

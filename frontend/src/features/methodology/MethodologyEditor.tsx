@@ -1,32 +1,46 @@
 import { useState } from 'react'
-import { useEquipmentClasses, useMethodology, useUpdateStageKit } from '@/api/methodology'
-import type { StageKit } from '@/api/schemas'
-import { Callout } from '@/components/ui/Callout'
+import { useEquipmentTypes, useMethodology } from '@/api/methodology'
+import { useSchedule } from '@/api/schedule'
+import type { Rule } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
 import { QueryState } from '@/components/ui/QueryState'
+import { plural } from '@/lib/labels'
 import { StageKitEditor } from './StageKitEditor'
 import styles from './Methodology.module.css'
 
-function stageSubtitle(kit: StageKit): string {
-  if (!kit.equipment_check) return 'Не проверяется по технике'
-  const markers = kit.rules.filter((r) => r.is_marker).map((r) => r.name.toLowerCase())
-  return markers.length ? `Комплект 1 · маркер: ${markers.join(', ')}` : 'Комплект 1 · маркеров нет'
+/** Маркеры — нормативная техника всех комплектов: только она даёт даты этапа (§8 п. 8). */
+function ruleSubtitle(rule: Rule): string {
+  if (!rule.is_verifiable) return 'Не проверяется по технике'
+  const markers = [
+    ...new Set(
+      rule.sets.flatMap((s) =>
+        s.requirements
+          .filter((r) => r.obligation === 'normative')
+          .map((r) => r.equipment_type.title.toLowerCase()),
+      ),
+    ),
+  ]
+  const sets = `${rule.sets.length} ${plural(rule.sets.length, ['комплект', 'комплекта', 'комплектов'])}`
+  return markers.length ? `${sets} · маркер: ${markers.join(', ')}` : `${sets} · маркеров нет`
 }
 
 /** Методика «этап → техника»: общий редактор для шага 2 создания и вкладки объекта. */
 export function MethodologyEditor({ siteId }: { siteId: string }) {
   const methodology = useMethodology(siteId)
-  const classes = useEquipmentClasses()
-  const save = useUpdateStageKit(siteId)
+  const types = useEquipmentTypes()
+  const schedule = useSchedule(siteId)
   const [selected, setSelected] = useState<string | null>(null)
+
+  // Выбор по умолчанию фиксируется при первой загрузке: иначе после «Не проверяется»
+  // редактор перепрыгнул бы на следующий проверяемый этап.
+  const rules = methodology.data
+  const fallback = rules?.find((r) => r.is_verifiable) ?? rules?.[0]
+  if (selected === null && fallback) setSelected(fallback.id)
 
   return (
     <QueryState query={methodology}>
-      {(kits) => {
-        const current =
-          kits.find((k) => k.stage_id === selected) ??
-          kits.find((k) => k.equipment_check) ??
-          kits[0]
+      {(rules) => {
+        const current = rules.find((r) => r.id === selected) ?? rules[0]
         if (!current) return <p className="muted">В графике нет этапов.</p>
         return (
           <div className={styles.layout}>
@@ -34,16 +48,16 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
               <Card>
                 <h3>Этапы графика</h3>
                 <div className={styles.stageList}>
-                  {kits.map((kit) => (
+                  {rules.map((rule) => (
                     <button
-                      key={kit.stage_id}
+                      key={rule.id}
                       type="button"
                       className={styles.stageBtn}
-                      aria-pressed={kit.stage_id === current.stage_id}
-                      onClick={() => setSelected(kit.stage_id)}
+                      aria-pressed={rule.id === current.id}
+                      onClick={() => setSelected(rule.id)}
                     >
-                      <span>{kit.stage_name}</span>
-                      <span className="sm muted">{stageSubtitle(kit)}</span>
+                      <span>{rule.stage_name ?? 'Этап'}</span>
+                      <span className="sm muted">{ruleSubtitle(rule)}</span>
                     </button>
                   ))}
                 </div>
@@ -51,22 +65,17 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
             </div>
             <div className={styles.main}>
               <StageKitEditor
-                key={`${current.stage_id}-${JSON.stringify(current.rules)}-${current.equipment_check}`}
-                kit={current}
-                classes={classes.data ?? []}
-                saving={save.isPending}
-                onSave={(data) => save.mutate({ stageId: current.stage_id, data })}
+                key={`${current.id}-${current.updated_at}`}
+                siteId={siteId}
+                rule={current}
+                stage={schedule.data?.stages.find((s) => s.id === current.stage_id)}
+                types={types.data ?? []}
               />
-              {save.error && (
-                <Callout tone="behind" title="Не сохранилось">
-                  {save.error.message}
-                </Callout>
-              )}
               <p className="sm muted">
-                Комплект — стартовый набор для этого крупного этапа, его можно править; техника
-                задаётся на этап, не на мелкие работы. Минимум для подтверждения этапа — одна
-                машина. «Обычно» — справочное число: устойчивая нехватка даёт лишь мягкий сигнал,
-                отставание в днях по количеству не считается.
+                Комплект — набор техники, которым подтверждается этап; комплектов может быть
+                несколько (альтернативные способы работ). Нормативная техника — маркер: только она
+                даёт даты этапа. Логическая обязательна по смыслу работы, но одна этап не
+                подтверждает. Вспомогательная может присутствовать, её отсутствие — не отклонение.
               </p>
             </div>
           </div>

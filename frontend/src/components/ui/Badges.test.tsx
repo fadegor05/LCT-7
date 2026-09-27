@@ -20,12 +20,12 @@ describe('Pill', () => {
 })
 
 describe('StatusBadge', () => {
-  it.each<[StageStatusValue, string]>([
+  it.each<[StageStatusValue | null, string]>([
     ['ahead', 'Опережение'],
     ['on_track', 'В графике'],
     ['behind', 'Отставание'],
     ['not_started', 'Не начата'],
-    ['not_due', 'Не начата'],
+    [null, 'Не начата'],
     ['not_observed', 'Не наблюдалось'],
     ['not_checked', 'Не проверяется по технике'],
   ])('%s → %s', (status, label) => {
@@ -50,10 +50,10 @@ describe('ConfidenceMeter', () => {
 
 describe('DateSourceBadge', () => {
   it.each([
-    ['exif', 'Метаданные', 'Дата получена вместе со снимком'],
-    ['stream', 'Поток', 'Дата получена вместе со снимком'],
+    ['metadata', 'Метаданные', 'Дата получена вместе со снимком'],
+    ['channel', 'Канал', 'Дата получена вместе со снимком'],
     ['stamp', 'Штамп', 'Дата выведена сервисом'],
-    ['video', 'Видео · старт + смещение', 'Дата выведена сервисом'],
+    ['neighbours', 'По соседним снимкам', 'Дата выведена сервисом'],
     ['manual', 'Вручную', 'Дата введена инженером'],
   ] as const)('%s', (source, label, title) => {
     render(<DateSourceBadge source={source} />)

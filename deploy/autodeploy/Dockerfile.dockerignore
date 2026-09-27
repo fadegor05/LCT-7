@@ -1,0 +1,4 @@
+*
+!makefile
+!deploy
+deploy/config/traefik/certs/*

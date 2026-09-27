@@ -15,7 +15,7 @@ import argparse, os
 from pathlib import Path
 
 ML = Path(__file__).resolve().parents[1]
-REPO = "Gatarez/lct7-construction-detector"
+REPO = "lct-7/lct7-construction-detector"
 
 
 def token() -> str:

@@ -1,48 +1,36 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { useCameras } from '@/api/cameras'
-import { useFrames, useObservation, useObservationDays } from '@/api/frames'
-import type { Frame } from '@/api/schemas'
+import { useObservation, useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { SiteShell } from '@/components/layout/SiteShell'
 import { Button } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
 import { AddFramesDialog } from '@/features/observations/AddFramesDialog'
-import { CameraStrip } from '@/features/observations/CameraStrip'
 import { DayPicker } from '@/features/observations/DayPicker'
+import { DetectBacklogSection } from '@/features/observations/DetectBacklogSection'
 import { EquipmentList } from '@/features/observations/EquipmentList'
 import { NeedsReviewSection } from '@/features/observations/NeedsReviewSection'
-import { useEquipmentName } from '@/features/observations/useEquipmentName'
+import { PhotoStrip } from '@/features/observations/PhotoStrip'
 import { formatShortDate } from '@/lib/format'
 import { useRequiredParam } from '@/lib/useParam'
 
-const column = { display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' } as const
+const column = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
 
-function groupByCamera(frames: readonly Frame[]): Map<string, Frame[]> {
-  const groups = new Map<string, Frame[]>()
-  for (const f of frames) {
-    const key = f.camera_id ?? 'none'
-    groups.set(key, [...(groups.get(key) ?? []), f])
-  }
-  return groups
-}
-
-/** Экран 6 · Наблюдения (UC-7, UC-3, UC-8): что система увидела, по дням и камерам. */
+/** Экран 6 · Наблюдения (UC-7, UC-3, UC-8): что система увидела на снимках, по дням. */
 export function ObservationsPage() {
   const siteId = useRequiredParam('siteId')
   const [params, setParams] = useSearchParams()
   const [adding, setAdding] = useState(false)
   const site = useSite(siteId)
-  const days = useObservationDays(siteId)
-  const cameras = useCameras(siteId)
-  const name = useEquipmentName()
+  const days = useObservations(siteId)
+  const photos = usePhotos(siteId)
+  const undated = useUndatedPhotos(siteId)
 
-  const lastDay = days.data?.at(-1)?.obs_date ?? null
+  const lastDay = days.data?.at(-1)?.observed_on ?? null
   const param = params.get('date')
   const date = param === 'all' ? null : (param ?? lastDay)
   const observation = useObservation(siteId, date)
-  const frames = useFrames(siteId, date)
 
   const selectDay = (value: string | null) => setParams({ date: value ?? 'all' }, { replace: true })
 
@@ -52,10 +40,10 @@ export function ObservationsPage() {
         <SiteShell
           site={data}
           crumb="Наблюдения"
-          subtitle="Что система увидела на кадрах: по дням и по камерам. Здесь же загружаются кадры."
+          subtitle="Что система увидела на снимках: по дням. Здесь же загружаются снимки."
           actions={
             <Button icon="plus" onClick={() => setAdding(true)}>
-              Добавить кадры
+              Добавить снимки
             </Button>
           }
         >
@@ -65,48 +53,32 @@ export function ObservationsPage() {
                 days={list}
                 value={date}
                 onChange={selectDay}
-                withoutTime={data.summary?.frames_without_time ?? 0}
+                undated={undated.data?.length ?? 0}
               />
             )}
           </QueryState>
 
-          {date && observation.data && (
-            <EquipmentList
-              siteId={siteId}
-              stageName={observation.data.expected_stage_name}
-              items={observation.data.equipment}
-            />
-          )}
+          {date && observation.data && <EquipmentList observation={observation.data} />}
 
           <section style={column}>
             <SectionHeader
-              title={date ? `Кадры за ${formatShortDate(date)} по камерам` : 'Все кадры по камерам'}
-              description={
-                date
-                  ? 'Слева направо по времени съёмки. Рамки: найденная техника. Каждая лента прокручивается отдельно.'
-                  : 'Слева направо по времени съёмки, справа самые новые. Источник и способ определения времени показаны у каждого кадра.'
-              }
+              title={date ? `Снимки за ${formatShortDate(date)}` : 'Все снимки с датой'}
+              description="Рамки: найденная техника. Источник даты показан у каждого снимка."
             />
-            <QueryState query={frames}>
-              {(list) => {
-                const groups = groupByCamera(list)
-                if (groups.size === 0) return <p className="muted">Кадров за этот период нет.</p>
-                return [...groups.entries()].map(([cameraId, items]) => (
-                  <CameraStrip
-                    key={cameraId}
-                    name={
-                      cameras.data?.find((c) => c.id === cameraId)?.name ??
-                      items[0]?.camera_name ??
-                      'Без камеры'
-                    }
-                    frames={items}
-                    withDate={!date}
-                    classLabel={name}
-                  />
-                ))
-              }}
+            <QueryState query={photos}>
+              {(list) => (
+                <PhotoStrip
+                  siteId={siteId}
+                  withDate={!date}
+                  photos={list
+                    .filter((p) => p.captured_on && (!date || p.captured_on === date))
+                    .sort((a, b) => a.captured_on!.localeCompare(b.captured_on!))}
+                />
+              )}
             </QueryState>
           </section>
+
+          <DetectBacklogSection siteId={siteId} />
 
           <NeedsReviewSection siteId={siteId} />
 

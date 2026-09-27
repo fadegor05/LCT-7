@@ -56,7 +56,7 @@ Full convention: docs/architecture.md §6.
 
 ## Frontend structure
 
-- `src/api/` — `client.ts` (`request()` validates every response with a Zod schema), `schemas.ts` (contracts + enums from DataModel §5.7), one file per domain with API functions and TanStack Query hooks; cache keys in `keys.ts` (`['site', id, …]`, any input edit invalidates the whole site).
+- `src/api/` — `client.ts` (`request()` validates every response with a Zod schema), `schemas.ts` (Zod copy of the backend Pydantic schemas and enums), one file per domain with API functions and TanStack Query hooks; cache keys in `keys.ts` (`['site', id, …]`, any input edit invalidates the whole site).
 - `src/components/ui/` — LCT-7 design system (tokens in `src/styles/tokens.css`); `components/layout/` — app shell, `SiteShell` with site tabs.
 - `src/features/<domain>/` — composite components per screen; `src/pages/` — one page per mockup screen, routes in `src/app/routes.tsx`.
 - `src/mocks/` — MSW handlers over an in-memory db (`db.ts`); toggled by `VITE_USE_MOCKS`. Same handlers run in tests (`src/test/setup.ts`).

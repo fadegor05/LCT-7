@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router'
-import { useScheduleImport, useStages, useUpdateStage, useUploadSchedule } from '@/api/schedule'
+import { useSchedule, useUpdateStageDates, useUploadSchedule } from '@/api/schedule'
 import { siteCreateSchema, type Site, type SiteCreate } from '@/api/schemas'
 import { useCreateSite, useSite, useUpdateSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
@@ -16,38 +16,30 @@ import { ObjectForm } from '@/features/new-site/ObjectForm'
 import { StagesTable } from '@/features/new-site/StagesTable'
 import { CREATE_STEPS } from '@/features/new-site/steps'
 import styles from '@/features/new-site/NewSite.module.css'
-import { formatFileSize } from '@/lib/format'
+import { formatDateTime } from '@/lib/format'
 
 const ACCEPT =
-  '.csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  '.csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-const defaults: SiteCreate = { name: '', address: '', object_type: 'housing', work_days: 'mon_fri' }
+const defaults: SiteCreate = { name: '', address: '' }
 
 function toForm(site: Site | undefined): SiteCreate | undefined {
-  return (
-    site && {
-      name: site.name,
-      address: site.address ?? '',
-      object_type: site.object_type,
-      work_days: site.work_days,
-    }
-  )
+  return site && { name: site.name, address: site.address ?? '' }
 }
 
 /**
- * Экран 2 · Новая стройка, шаг 1 (UC-1). Черновик стройки создаётся при первой загрузке
- * графика — тогда URL меняется на /sites/:id/setup, и шаг можно открыть заново.
+ * Экран 2 · Новая стройка, шаг 1 (UC-1). Стройка создаётся при первой загрузке графика —
+ * тогда URL меняется на /sites/:id/setup, и шаг можно открыть заново.
  */
 export function NewSitePage() {
   const { siteId } = useParams()
   const navigate = useNavigate()
   const site = useSite(siteId ?? '')
-  const scheduleImport = useScheduleImport(siteId)
-  const stages = useStages(siteId)
+  const schedule = useSchedule(siteId)
   const createSite = useCreateSite()
   const updateSite = useUpdateSite(siteId ?? '')
   const upload = useUploadSchedule()
-  const updateStage = useUpdateStage(siteId ?? '')
+  const updateStage = useUpdateStageDates(siteId ?? '')
 
   const form = useForm<SiteCreate>({
     resolver: zodResolver(siteCreateSchema),
@@ -59,8 +51,8 @@ export function NewSitePage() {
     form.handleSubmit(async (values) => {
       try {
         const target = siteId ?? (await createSite.mutateAsync(values)).id
-        await upload.mutateAsync({ siteId: target, file: files[0]! })
         if (!siteId) void navigate(`/sites/${target}/setup`, { replace: true })
+        await upload.mutateAsync({ siteId: target, file: files[0]! })
       } catch {
         // Ошибка уже в состоянии мутации и показана в Callout ниже.
       }
@@ -71,8 +63,8 @@ export function NewSitePage() {
     void navigate(`/sites/${siteId}/setup/methodology`)
   })
 
-  const current = scheduleImport.data
-  const canProceed = Boolean(siteId && current && current.window_overlaps === 0)
+  const current = schedule.data
+  const canProceed = Boolean(siteId && current)
   const error = createSite.error ?? upload.error ?? updateSite.error ?? updateStage.error
 
   return (
@@ -81,7 +73,7 @@ export function NewSitePage() {
       <h1>Новая стройка</h1>
       <Stepper steps={CREATE_STEPS} current={0} />
 
-      <ObjectForm register={form.register} control={form.control} errors={form.formState.errors} />
+      <ObjectForm register={form.register} errors={form.formState.errors} />
 
       <Card>
         <h3>График работ</h3>
@@ -89,7 +81,7 @@ export function NewSitePage() {
           <>
             <div className={styles.fileRow}>
               <span className="data">
-                {current.file_name} · {formatFileSize(current.file_size)}
+                {current.source_filename} · загружен {formatDateTime(current.imported_at)}
               </span>
               <label className="sm">
                 <input
@@ -113,7 +105,7 @@ export function NewSitePage() {
         ) : (
           <FileDrop
             title="Перетащите файл графика"
-            hint="CSV или Excel: этапы работ и плановые даты. Техника в файле не нужна."
+            hint="CSV или XLSX до 5 МБ: колонки «Название» (или «Наименование»/«Этап»), «Начало», «Окончание». Техника в файле не нужна."
             accept={ACCEPT}
             disabled={upload.isPending || createSite.isPending}
             onFiles={(files) => void onFiles(files)}
@@ -126,28 +118,21 @@ export function NewSitePage() {
         )}
       </Card>
 
-      {current && stages.data && (
+      {current && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <SectionHeader
             level={3}
-            title="Крупные этапы"
-            description="Мелкие работы из файла сгруппированы в крупные последовательные этапы. Проверьте состав, даты и сопоставление со справочником."
+            title="Этапы"
+            description="Этапы и плановые даты из файла. Технику задаёт методика на следующем шаге. Повторная загрузка файла заменит график целиком, включая даты, заданные вручную."
           />
           <StagesTable
-            stages={stages.data}
-            year={Number(current.uploaded_at.slice(0, 4))}
+            stages={current.stages}
+            year={Number(current.imported_at.slice(0, 4))}
             pending={updateStage.isPending}
-            onConfirmMatch={(stageId) =>
-              updateStage.mutate({ stageId, data: { match_confirmed: true } })
-            }
             onSetDates={(stageId, start, end) =>
               updateStage.mutate({ stageId, data: { planned_start: start, planned_end: end } })
             }
           />
-          <p className="sm muted">
-            Этапы идут строго друг за другом. Работу можно перенести в другой этап или объединить
-            два соседних. Технику задаёт методика на крупный этап.
-          </p>
         </section>
       )}
 

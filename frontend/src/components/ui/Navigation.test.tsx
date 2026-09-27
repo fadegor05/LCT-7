@@ -6,12 +6,12 @@ import { Stepper } from './Stepper'
 describe('Breadcrumbs', () => {
   it('links all but the current crumb', () => {
     renderWithProviders(
-      <Breadcrumbs items={[{ label: 'Стройки', to: '/sites' }, { label: 'Камеры' }]} />,
+      <Breadcrumbs items={[{ label: 'Стройки', to: '/sites' }, { label: 'Методика' }]} />,
     )
     const nav = screen.getByRole('navigation', { name: 'Хлебные крошки' })
     expect(nav).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Стройки' })).toHaveAttribute('href', '/sites')
-    expect(screen.getByText('Камеры')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByText('Методика')).toHaveAttribute('aria-current', 'page')
   })
 })
 

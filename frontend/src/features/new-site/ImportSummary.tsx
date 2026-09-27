@@ -1,16 +1,16 @@
-import type { ScheduleImport } from '@/api/schemas'
+import type { ScheduleReport } from '@/api/schemas'
 import { Callout } from '@/components/ui/Callout'
 import { describeIssues } from './describeIssues'
 import styles from './NewSite.module.css'
 
-export function ImportSummary({ data }: { data: ScheduleImport }) {
+export function ImportSummary({ data }: { data: ScheduleReport }) {
   const stats = [
-    [data.works_total, 'работ в файле'],
-    [data.stages_total, 'крупных этапов'],
-    [data.window_overlaps, 'пересечений окон'],
-    [data.checked_stages, 'проверяются по технике'],
+    [data.rows_total, 'строк в файле'],
+    [data.rows_parsed, 'этапов разобрано'],
+    [data.stages_with_dates, 'с плановыми датами'],
+    [data.stages_without_dates, 'без дат'],
   ] as const
-  const lines = describeIssues(data.issues)
+  const lines = describeIssues(data)
   return (
     <>
       <dl className={styles.stats}>
@@ -22,12 +22,8 @@ export function ImportSummary({ data }: { data: ScheduleImport }) {
         ))}
       </dl>
       {lines.length > 0 && (
-        <Callout
-          tone={data.window_overlaps > 0 ? 'behind' : 'caution'}
-          title="Что нужно поправить до создания"
-        >
-          {lines.join(' ')} Если окна этапов пересекутся, дальше пройти нельзя, пока их не
-          объединят.
+        <Callout tone="caution" title="Что проверить в графике">
+          {lines.join(' ')}
         </Callout>
       )}
     </>

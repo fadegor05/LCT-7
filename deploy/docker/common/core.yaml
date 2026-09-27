@@ -16,6 +16,23 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ml:
+        condition: service_started
+        required: false
+    volumes:
+      - storage_data:/data/storage
+    restart: always
+
+  ml:
+    image: ${REGISTRY}/ml:${ML_TAG:-latest}
+    build: ./ml
+    environment:
+      WEIGHTS: /weights/mocs_m_best.pt
+      MAX_UPLOAD_BYTES: 20971520
+    volumes:
+      - ml_weights:/weights:ro
+    networks:
+      - web
     restart: always
 
   frontend:

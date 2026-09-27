@@ -169,7 +169,142 @@ CRUD под `/sites`. Доступ ограничен: эндпоинты GET, P
 в сервис) и фильтруют свои запросы по site_id; проверка существования и владения —
 единственная точка контроля доступа.
 
-### 6.6. Как добавить домен
+### 6.6. Домен графика выполнения работ
+
+Домен `schedule` держит таблицы `schedules`, `schedule_stages` и `schedule_import_issues`.
+График привязан к сайту (site_id) уникально и хранит метаинформацию об импорте,
+этапы с плановыми датами начала и окончания и список ошибок при разборе файла.
+
+**Модели:** `Schedule` (основной график с source_filename и imported_at), `ScheduleStage`
+(этап с name, position, плановые даты и dates_source: "file" или "manual"),
+`ScheduleImportIssue` (ошибка разбора с row_number, raw_row, reason).
+
+**Эндпоинты:**
+- `POST /sites/{site_id}/schedule/import` (status 201) — импортировать график из CSV/XLSX;
+  при переимпорте старый график удаляется полностью, новый занимает его место.
+- `GET /sites/{site_id}/schedule` — получить ScheduleReport (отчёт об импорте с этапами
+  и ошибками); возвращает 404, если график не загружен.
+- `PATCH /sites/{site_id}/schedule/stages/{stage_id}` — обновить даты этапа; устанавливает
+  dates_source='manual', проверяет end >= start.
+
+**DI:** Parser в `Scope.APP` (stateless); Repository, Service в `Scope.REQUEST`.
+Сервис принимает `SiteAccessGuard` и проверяет право доступа перед операциями.
+
+**Границы:** нет статусов, нет привязки к оборудованию, stage_id — только FK для методики
+и оценки. Переимпорт заменяет весь график, включая ручные даты. График удаляется при
+удалении сайта (CASCADE FK на sites).
+
+### 6.7. Домен фотографий и детекций
+
+Домен `photo` принимает кадры со строительной площадки, определяет дату съёмки, вызывает детектор
+техники и хранит рамки. Единственная точка стыка с `ml/`. Не сводит кадры в наблюдение и не
+определяет активность техники.
+
+**Модели** (миграция `0006`):
+- `photos`: `site_id` (CASCADE), `storage_key`, `original_name`, `width`, `height`, `captured_on`
+  и `date_source` (оба NULL, пока дата не определена), `processing_status`, `uploaded_at`.
+- `detections`: `photo_id` (CASCADE), `equipment_type_id` (справочник методики, без каскада),
+  `bbox` (JSON `[x1, y1, x2, y2]` в долях кадра 0–1), `score`, `model_version`.
+- `DateSource`: `channel` (зарезервирован, камер в MVP нет), `metadata`, `stamp`, `neighbours`,
+  `manual`. `ProcessingStatus`: `pending`, `done`, `failed`.
+
+**Эндпоинты** (`/sites/{site_id}/photos`, доступ через `SiteAccessGuard`):
+- `POST` (201, multipart `files`) — пачка снимков. Ответ `UploadReport`: по каждому файлу либо
+  снимок, либо ошибка; ошибка одного файла не прерывает остальные. Пачка длиннее
+  `max_batch_files` отклоняется целиком (413) до чтения файлов.
+- `GET` (`?undated=true` — только снимки без даты) и `GET /{photo_id}` (снимок с детекциями,
+  обогащёнными кодом и названием техники из справочника).
+- `PATCH /{photo_id}/date` — ручная дата (`date_source=manual`), дата в будущем — 422.
+- `GET /{photo_id}/image` — оригинал; `GET /{photo_id}/annotated` — PNG с рамками и подписями
+  `код техники + score`. Оба ответа с `X-Content-Type-Options: nosniff`.
+- `POST /{photo_id}/detect` — переобработка. Детектор не настроен — 409, недоступен — 502.
+  Та же `model_version` оставляет детекции как есть, другая заменяет все детекции кадра.
+
+**Цепочка даты** (`DateResolver`, чистая функция от байтов файла): канал → EXIF → штамп в кадре.
+Штамп читает подключаемый OCR (`StampOcr`), в MVP реализация пустая, и шаг пропускается.
+«По соседям» делает `PhotoService` на уровне пачки: снимок без даты берёт дату ближайшего по
+порядку снимка пачки, у которого дата пришла из файла (при равенстве — более раннего), цепочек
+через соседей нет. Иначе дата остаётся пустой, снимок не теряется и попадает в `?undated=true`.
+
+**Детектор.** Контракт — `ml/docs/CONTRACTS.md` §1 (рамки в долях, `class_ours`, `conf`).
+`HttpDetectorClient` отправляет файл на `DETECTOR__URL` и ждёт `{"model": ..., "detections": [...]}`;
+без URL работает `NullDetector`. Кадр без находок сохраняется со статусом `done`. Отключённый
+детектор оставляет `pending`, ошибка детектора — `failed`; на загрузку снимка это не влияет.
+Неизвестный класс техники пропускается с записью в лог.
+
+**Хранилище.** `FileStorage` — абстракция с двумя реализациями: `S3=true` — S3/MinIO
+(`STORAGE__ENDPOINT_URL`, `STORAGE__BUCKET`, `STORAGE__ACCESS_KEY`, `STORAGE__SECRET_KEY`,
+`STORAGE__REGION`), `S3=false` — локальный том (`STORAGE__LOCAL_ROOT`, в compose это том
+`storage_data`). Ключ объекта `sites/{site_id}/photos/{photo_id}{ext}`: расширение берётся из
+распознанного формата (JPEG, PNG, WEBP), а не из имени файла клиента. Лимиты:
+`STORAGE__MAX_UPLOAD_MB` на файл и `STORAGE__MAX_BATCH_FILES` на пачку.
+
+**DI.** `Scope.APP` — `FileStorage`, `DetectorClient`, `DateResolver`, `StampOcr`;
+`Scope.REQUEST` — `PhotoRepository`, `DetectionRepository`, `PhotoService`.
+
+**Известные ограничения:**
+- Удаление стройки каскадно удаляет строки `photos` и `detections`, но не объекты в хранилище:
+  оригиналы остаются осиротевшими, их нужно чистить отдельно.
+- Обработка синхронная: детектор вызывается в запросе загрузки (очередь задач в MVP нет).
+- Ограничение размера всего запроса должно стоять на прокси (Traefik): Starlette разбирает
+  multipart до роутера, лимиты домена защищают обработку, но не приём тела запроса.
+- Аннотированное изображение рисуется на лету, без кэша.
+
+### 6.8. Домен наблюдений
+
+Домен `observation` сводит `photos`+`detections` одной стройки за одну дату в одну запись
+«картина дня». Единственная точка стыка с `photo`; сам не знает ни о графике, ни о методике,
+не выставляет статусов этапов и не создаёт отклонений (LCT-10).
+
+**Модели** (миграция `0007`):
+- `observations`: `site_id` (CASCADE), `observed_on`, `photo_count`, `observability`
+  (высокая/средняя/низкая), `observability_notes`, `recomputed_at`; UNIQUE(`site_id`,
+  `observed_on`).
+- `observed_equipment`: `observation_id` (CASCADE), `equipment_type_id` (справочник методики,
+  без каскада), `count_min` («не менее», максимум по кадрам, не сумма), `activity`
+  (работает/неизвестно — «простаивает» на фото не выводится, нет данных о рабочей зоне),
+  `confidence`.
+
+**Эндпоинты** (`/sites/{site_id}/observations`, доступ через `SiteAccessGuard`):
+- `GET` — список наблюдений по датам.
+- `GET /{observed_on}` — наблюдение с техникой, обогащённой кодом и названием из
+  `EquipmentCatalog`; 404, если наблюдения нет.
+
+**Пересчёт.** Идёт не по расписанию, а по хуку из `photo`: `PhotoService.upload_batch`,
+`set_date` и `redetect` вызывают `ObservationRecalculator.recompute(site_id, дата)` после
+своих изменений (по всем затронутым датам, в детерминированном порядке). Хук — Protocol,
+объявленный в `photo/recalculator.py` (`ObservationRecalculator` + заглушка
+`NoopObservationRecalculator`), а не прямая зависимость: `photo` не импортирует `observation`.
+Настоящая реализация (`LiveObservationRecalculator`) регистрируется в `ObservationProvider` и
+перекрывает заглушку из `PhotoProvider` за счёт порядка регистрации в
+`create_container()` — `ObservationProvider()` идёт строго после `PhotoProvider()`. Тот же
+приём уже применён в `methodology` (`StatusRecalculator`, ждёт реализацию от `assessment`,
+LCT-11). Ошибка пересчёта логируется и откатывает транзакцию, но никогда не валит запрос
+к `photo`.
+
+Пересчёт идемпотентен: `recompute` ищет существующую запись по `(site_id, observed_on)`
+прежде чем создавать новую, а при отсутствии кадров на дату — удаляет её, а не оставляет
+`photo_count=0`.
+
+**Правила вывода** (`docs/architecture.md` §8, см. `policies.py`):
+- `AggregationPolicy` — количество техники за дату — максимум одноимённых детекций на одном
+  кадре, не сумма по кадрам; уверенность — минимум из score детекции (на кадре, давшем
+  максимум) и надёжности источника даты (штамп/соседи понижают до «средней»).
+- `ObservabilityPolicy` — наблюдаемость по числу **обработанных** («done») кадров за дату
+  (`Settings.observation.min_photos_medium/high`); необработанные кадры не завышают
+  наблюдаемость, но входят в общий `photo_count`. Без камер/зон учитывает только количество
+  и качество кадров — ракурсы и закрытые зоны не считаются, это MVP-упрощение.
+- `ActivityPolicy` — активность по сдвигу среднего центра bbox между текущей и ближайшей
+  предыдущей датой наблюдения того же типа техники. Известное ограничение: без привязки
+  кадров к камере эвристика не отличает реальное движение техники от смены ракурса съёмки
+  между датами — при появлении домена камер/зон это нужно будет заменить на нормальный расчёт
+  по §7.6.
+
+**DI.** `Scope.APP` — `AggregationPolicy`, `ObservabilityPolicy`, `ActivityPolicy` (чистые
+функции, конфиг из `Settings.observation`); `Scope.REQUEST` — `ObservationRepository`,
+`ObservedEquipmentRepository`, `ObservationService`.
+
+### 6.9. Как добавить домен
 
 1. Создать `app/domains/<домен>/` по образцу `user/` — только нужные из шести файлов.
 2. Зарегистрировать роутер в `app/plugins/routing.py`.
