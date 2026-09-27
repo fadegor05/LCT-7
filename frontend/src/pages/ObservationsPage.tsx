@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
 import { AddFramesDialog } from '@/features/observations/AddFramesDialog'
 import { DayPicker } from '@/features/observations/DayPicker'
+import { DetectBacklogSection } from '@/features/observations/DetectBacklogSection'
 import { EquipmentList } from '@/features/observations/EquipmentList'
 import { NeedsReviewSection } from '@/features/observations/NeedsReviewSection'
 import { PhotoStrip } from '@/features/observations/PhotoStrip'
@@ -76,6 +77,8 @@ export function ObservationsPage() {
               )}
             </QueryState>
           </section>
+
+          <DetectBacklogSection siteId={siteId} />
 
           <NeedsReviewSection siteId={siteId} />
 

@@ -26,6 +26,14 @@ curl -X POST -F "file=@frame.png" http://localhost:8000/detect
 
 Без докера: `python -m service.detector <кадр>` покажет детекции в консоли.
 
+## Тесты сервиса
+
+```bash
+cd ml && python -m pytest tests -q
+```
+
+Требует только лёгких зависимостей (fastapi, httpx, pillow, pytest, numpy).
+
 ## Что где лежит
 
 ```

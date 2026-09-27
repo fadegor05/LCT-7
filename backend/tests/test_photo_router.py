@@ -11,7 +11,11 @@ from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
-from app.adapters.ml.base import DetectionResult, DetectorError, RawDetection
+from app.adapters.ml.base import (
+    DetectionResult,
+    DetectorError,
+    RawDetection,
+)
 from app.core.settings import Settings
 from app.domains.methodology.models import EquipmentType
 from app.domains.user.service import UserService
@@ -739,3 +743,52 @@ class TestPhotoRouterGuards:
         assert len(after) == 2
         assert {d["model_version"] for d in after} == {"v2"}
         assert not {d["id"] for d in after} & {d["id"] for d in before}
+
+
+class TestPhotoRouterDetectBacklog:
+    """Тесты для POST /sites/{id}/photos/detect."""
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_endpoint_exists(
+        self, client: AsyncClient, container: AsyncContainer
+    ) -> None:
+        """POST /detect endpoint returns 200 with backlog report."""
+        await seed_stand_user(container)
+        site_resp = await client.post("/sites", json={"name": "Test"})
+        site_id = site_resp.json()["id"]
+        response = await client.post(f"/sites/{site_id}/photos/detect")
+        assert response.status_code == 200
+        data = response.json()
+        assert "processed" in data
+        assert "done" in data
+        assert "failed" in data
+        assert "skipped" in data
+
+    @pytest.mark.asyncio
+    async def test_detect_backlog_invalid_status_422(
+        self, client: AsyncClient, container: AsyncContainer
+    ) -> None:
+        """POST /detect?status=bogus → 422."""
+        await seed_stand_user(container)
+        site_resp = await client.post("/sites", json={"name": "Test"})
+        site_id = site_resp.json()["id"]
+        response = await client.post(f"/sites/{site_id}/photos/detect?status=bogus")
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_redetect_endpoint_still_works(
+        self, client: AsyncClient, container: AsyncContainer
+    ) -> None:
+        """POST /sites/{id}/photos/{photo_id}/detect still works (not shadowed)."""
+        await seed_stand_user(container)
+        site_resp = await client.post("/sites", json={"name": "Test"})
+        site_id = site_resp.json()["id"]
+        jpeg_data = create_jpeg_image()
+        upload = await client.post(
+            f"/sites/{site_id}/photos",
+            files=[("files", ("a.jpg", jpeg_data, "image/jpeg"))],
+        )
+        photo_id = upload.json()["items"][0]["photo"]["id"]
+        response = await client.post(f"/sites/{site_id}/photos/{photo_id}/detect")
+        assert response.status_code == 200
+        assert "detections" in response.json()

@@ -19,6 +19,7 @@ JSON в файл. Бэкенду нужно другое — модель заг
 
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import time
@@ -31,6 +32,7 @@ DEFAULT_WEIGHTS = ML / "weights" / "mocs_m_best.pt"
 DEFAULT_IMGSZ = 960          # размер обучения; на другом качество падает
 DEFAULT_CONF = 0.25          # рабочий порог, см. E12: подбор по классам не переносится
 DEFAULT_IOU = 0.7
+CONTRACT = "detect/v1"       # версия контракта для /meta
 
 
 @dataclass
@@ -43,12 +45,21 @@ class Detector:
     iou: float = DEFAULT_IOU
     device: str | None = None       # None — выбрать автоматически
     _model: Any = field(default=None, init=False, repr=False)
+    weights_sha256: str = field(default="", init=False, repr=False)
 
     def __post_init__(self) -> None:
         if not Path(self.weights).exists():
             raise FileNotFoundError(
                 f"нет файла весов {self.weights}. Веса не хранятся в git "
                 f"(великоваты): см. docs/MODEL_CARD.md, раздел «Где взять веса»")
+
+        # Вычисляем SHA256 весов, читая по кускам
+        sha256_hash = hashlib.sha256()
+        with open(self.weights, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha256_hash.update(chunk)
+        self.weights_sha256 = sha256_hash.hexdigest()
+
         if self.device is None:
             try:
                 import torch
@@ -63,6 +74,17 @@ class Detector:
             from ultralytics import YOLO
             self._model = YOLO(str(self.weights))
         return self._model
+
+    @property
+    def model_id(self) -> str:
+        """Идентификатор модели в формате stem@sha12."""
+        return f"{Path(self.weights).stem}@{self.weights_sha256[:12]}"
+
+    @property
+    def class_names(self) -> list[str]:
+        """Названия классов упорядоченные по id."""
+        names_dict = self.model.names
+        return [names_dict[i] for i in sorted(names_dict)]
 
     def warmup(self) -> None:
         """Прогрев: первый прогон вчетверо дольше из-за выделения памяти."""
@@ -86,7 +108,10 @@ class Detector:
                                           result.boxes.conf.tolist(),
                                           result.boxes.xyxyn.tolist())
         ]
+        # Сортируем детекции по уверенности в убывающем порядке
+        detections.sort(key=lambda d: d["conf"], reverse=True)
         return {
+            "model": self.model_id,
             "image": name,
             "width": int(width),
             "height": int(height),
@@ -98,8 +123,10 @@ class Detector:
         return self._predict(str(path), Path(path).name)
 
     def predict_bytes(self, data: bytes, name: str = "upload") -> dict:
-        from PIL import Image
-        img = Image.open(io.BytesIO(data)).convert("RGB")
+        from PIL import Image, ImageOps
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGB")
         return self._predict(img, name)
 
     def meta(self) -> dict:
@@ -113,6 +140,10 @@ class Detector:
             "device": self.device,
             "classes": len(self.model.names),
             "model_card": str(card) if card.exists() else None,
+            "weights_sha256": self.weights_sha256,
+            "model": self.model_id,
+            "contract": CONTRACT,
+            "class_names": self.class_names,
         }
 
 

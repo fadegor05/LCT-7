@@ -35,6 +35,7 @@ async def catalog_sessionmaker():
                 code=seed_item["code"],
                 title=seed_item["title"],
                 synonyms=seed_item.get("synonyms", []),
+                is_coarse=seed_item.get("is_coarse", False),
             )
             session.add(eq_type)
         await session.commit()
@@ -47,12 +48,12 @@ async def catalog_sessionmaker():
 class TestEquipmentCatalog:
     """Тесты для EquipmentCatalog."""
 
-    async def test_all_returns_20_items_sorted_by_code(self, catalog_sessionmaker):
-        """all() возвращает 20 элементов, отсортированных по коду."""
+    async def test_all_returns_25_items_sorted_by_code(self, catalog_sessionmaker):
+        """all() возвращает 25 элементов (20 обычных + 5 coarse), отсортированных по коду."""
         catalog = EquipmentCatalog(catalog_sessionmaker)
 
         items = await catalog.all()
-        assert len(items) == 20
+        assert len(items) == 25
         assert all(isinstance(item, EquipmentTypeInfo) for item in items)
 
         # Проверяем сортировку по коду
@@ -64,7 +65,7 @@ class TestEquipmentCatalog:
         catalog = EquipmentCatalog(catalog_sessionmaker)
 
         first_call = await catalog.all()
-        assert len(first_call) == 20
+        assert len(first_call) == 25
 
         # Добавляем новый элемент в БД напрямую
         async with catalog_sessionmaker() as session:
@@ -77,16 +78,16 @@ class TestEquipmentCatalog:
             session.add(new_eq_type)
             await session.commit()
 
-        # Второй вызов all() возвращает закешированный результат (20 элементов)
+        # Второй вызов all() возвращает закешированный результат (25 элементов)
         second_call = await catalog.all()
-        assert len(second_call) == 20
+        assert len(second_call) == 25
 
     async def test_all_after_invalidate_reloads(self, catalog_sessionmaker):
         """После invalidate() вызов all() перезагружает данные из БД."""
         catalog = EquipmentCatalog(catalog_sessionmaker)
 
         first_call = await catalog.all()
-        assert len(first_call) == 20
+        assert len(first_call) == 25
 
         # Добавляем новый элемент в БД
         async with catalog_sessionmaker() as session:
@@ -102,9 +103,9 @@ class TestEquipmentCatalog:
         # Инвалидируем кеш
         catalog.invalidate()
 
-        # Теперь all() загружает свежие данные (21 элемент)
+        # Теперь all() загружает свежие данные (26 элементов)
         second_call = await catalog.all()
-        assert len(second_call) == 21
+        assert len(second_call) == 26
 
     async def test_by_id_returns_equipment(self, catalog_sessionmaker):
         """by_id(id) возвращает EquipmentTypeRead или None."""

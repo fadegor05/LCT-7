@@ -5,6 +5,7 @@
 - RawDetection: Одна детекция
 - DetectionResult: Результат обработки кадра
 - DetectorError: Исключение при ошибке детектора
+- DetectorInfo: Информация о детекторе
 - NullDetector: Детектор-заглушка
 - HttpDetectorClient: HTTP-клиент к ML-сервису
 - create_detector: Factory для создания подходящего детектора
@@ -14,6 +15,7 @@ from app.adapters.ml.base import (
     DetectionResult,
     DetectorClient,
     DetectorError,
+    DetectorInfo,
     RawDetection,
 )
 from app.adapters.ml.factory import create_detector
@@ -25,6 +27,7 @@ __all__ = [
     "RawDetection",
     "DetectionResult",
     "DetectorError",
+    "DetectorInfo",
     "NullDetector",
     "HttpDetectorClient",
     "create_detector",

@@ -47,6 +47,23 @@ class PhotoRepository(BaseRepository[Photo]):
         )
         return result.scalar_one_or_none()
 
+    async def list_by_status(self, site_id: uuid.UUID, statuses: set[str]) -> Sequence[Photo]:
+        """Получить фотографии по site_id и статусам обработки.
+
+        Args:
+            site_id: ID стройки.
+            statuses: Набор статусов (напр. {"pending", "failed"}).
+
+        Returns:
+            Список фотографий, упорядочен по uploaded_at (возр.), потом по id.
+        """
+        query = select(self.model).where(
+            (self.model.site_id == site_id) & (self.model.processing_status.in_(statuses))
+        )
+        query = query.order_by(self.model.uploaded_at, self.model.id)
+        result = await self._session.execute(query)
+        return result.scalars().all()
+
 
 class DetectionRepository(BaseRepository[Detection]):
     """Репозиторий детекций оборудования на фотографиях."""

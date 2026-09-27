@@ -20,16 +20,16 @@ from app.domains.user.models import User
 
 
 @pytest.mark.asyncio
-async def test_equipment_seed_has_20_items() -> None:
-    """EQUIPMENT_SEED содержит ровно 20 элементов."""
-    assert len(EQUIPMENT_SEED) == 20
+async def test_equipment_seed_has_25_items() -> None:
+    """EQUIPMENT_SEED содержит ровно 25 элементов (20 обычных + 5 coarse)."""
+    assert len(EQUIPMENT_SEED) == 25
 
 
 @pytest.mark.asyncio
 async def test_equipment_seed_codes_are_unique() -> None:
     """Все коды в EQUIPMENT_SEED уникальны."""
     codes = [item["code"] for item in EQUIPMENT_SEED]
-    assert len(codes) == len(set(codes)) == 20
+    assert len(codes) == len(set(codes)) == 25
 
 
 @pytest.mark.asyncio

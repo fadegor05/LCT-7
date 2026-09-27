@@ -32,6 +32,7 @@ def _requirement_view_to_read(view: RequirementView) -> RequirementRead:
             code=view.equipment_type.code,
             title=view.equipment_type.title,
             synonyms=list(view.equipment_type.synonyms),
+            is_coarse=view.equipment_type.is_coarse,
         ),
         min_count=view.requirement.min_count,
         obligation=Obligation(view.requirement.obligation),
@@ -89,6 +90,7 @@ async def list_equipment_types(
             code=info.code,
             title=info.title,
             synonyms=list(info.synonyms),
+            is_coarse=info.is_coarse,
         )
         for info in equipment_infos
     ]

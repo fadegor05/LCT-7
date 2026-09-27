@@ -63,6 +63,7 @@ class ReportRequest(BaseModel):
 
 
 class FrameResult(BaseModel):
+    model: str
     image: str
     width: int
     height: int
@@ -135,6 +136,8 @@ async def detect(file: UploadFile = File(description="снимок площад�
         raise HTTPException(413, f"файл больше {MAX_BYTES // 1048576} МБ")
     try:
         result = detector().predict_bytes(data, name=file.filename or "upload")
+    except HTTPException:                      # пробросить HTTPException как есть
+        raise
     except Exception as exc:                   # битый файл, неизвестный формат
         raise HTTPException(422, f"не удалось обработать кадр: {exc}") from exc
     return FrameResult(**result)

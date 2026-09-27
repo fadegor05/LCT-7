@@ -182,6 +182,170 @@ class TestScheduleParserHeaders:
         with pytest.raises(ScheduleFormatError, match="Не найдена колонка"):
             parser.parse("schedule.csv", content)
 
+    def test_substring_header_match_long_official_name(self):
+        """Совпадение по подстроке: длинная официальная формулировка колонки."""
+        content = (
+            "Наименование этапа выполнения контракта и (или) комплекса работ;"
+            "Начало;Окончание\n"
+            "Работа 1;01.01.2025;02.01.2025\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2025, 1, 1)
+        assert result.rows[0].end == date(2025, 1, 2)
+
+    def test_two_row_header_xlsx(self):
+        """Шапка на 2 строки: имя в строке 1, начало/окончание — в строке 2
+        (повторяет структуру реального шаблона графика СМР: объединённая
+        ячейка "Сроки исполнения этапа" в строке 1, а фактические
+        подзаголовки "Начало"/"Окончание" — в строке 2)."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "№"
+        ws["B1"] = "Наименование этапа выполнения контракта и (или) комплекса работ"
+        ws["C1"] = "Сроки исполнения этапа"
+        ws["C2"] = "Начало выполнения работ"
+        ws["D2"] = "Окончание выполнения работ"
+        ws["A3"] = "1."
+        ws["B3"] = "Работы подготовительного периода"
+        ws["C3"] = date(2026, 4, 10)
+        ws["D3"] = date(2026, 5, 22)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работы подготовительного периода"
+        assert result.rows[0].start == date(2026, 4, 10)
+        assert result.rows[0].end == date(2026, 5, 22)
+
+    def test_no_name_column_error_lists_recognized_headers(self):
+        """Ошибка при отсутствии колонки с названием перечисляет
+        распознаваемые названия, сохраняя префикс "Не найдена колонка"."""
+        content = "Начало;Окончание\n01.01.2025;02.01.2025\n".encode()
+        parser = ScheduleParser()
+
+        with pytest.raises(ScheduleFormatError, match="Не найдена колонка") as exc_info:
+            parser.parse("schedule.csv", content)
+
+        assert "название" in str(exc_info.value).lower()
+
+    def test_two_row_header_with_preamble_xlsx(self):
+        """Двухстрочная шапка после преамбулы (реквизиты, название объекта) —
+        преамбула не должна давать ложное неполное совпадение раньше
+        настоящей шапки."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "Приложение № 2 к контракту"
+        ws["A3"] = "№"
+        ws["B3"] = "Наименование этапа выполнения контракта и (или) комплекса работ"
+        ws["C3"] = "Сроки исполнения этапа"
+        ws["C4"] = "Начало выполнения работ"
+        ws["D4"] = "Окончание выполнения работ"
+        ws["A5"] = "1."
+        ws["B5"] = "Работы подготовительного периода"
+        ws["C5"] = date(2026, 4, 10)
+        ws["D5"] = date(2026, 5, 22)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работы подготовительного периода"
+        assert result.rows[0].start == date(2026, 4, 10)
+        assert result.rows[0].end == date(2026, 5, 22)
+
+    def test_number_column_labeled_etap_not_mistaken_for_name(self):
+        """Колонка "Номер этапа" — это порядковый номер, а не название
+        работы. Короткий синоним "этап" не должен её перехватывать раньше
+        настоящей колонки с названием."""
+        content = (
+            "Номер этапа;Наименование работ;Начало;Окончание\n1;Работа 1;01.01.2025;02.01.2025\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2025, 1, 1)
+        assert result.rows[0].end == date(2025, 1, 2)
+
+    def test_data_row_not_swallowed_as_second_header_row(self):
+        """Если шапка неполная (нет start/end) и следующая строка — это уже
+        данные с реальными датами, она не должна быть принята за вторую
+        строку шапки, даже если случайно содержит слово-синоним в
+        свободном тексте примечания."""
+        content = (
+            "Наименование;С;По;Примечание\n"
+            "Работа 1;01.01.2025;02.01.2025;Конец квартала\n"
+            "Работа 2;03.01.2025;04.01.2025;\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        # "С"/"По" не входят в START_HEADERS/END_HEADERS, поэтому даты не
+        # распознаются — это ожидаемо и не предмет этого теста. Важно, что
+        # обе строки данных сохранены, а не потеряна первая.
+        assert result.rows_total == 2
+        assert [r.name for r in result.rows] == ["Работа 1", "Работа 2"]
+
+    def test_gantt_style_header_with_date_columns_still_works(self):
+        """Шапка Gantt/таймлайн-шаблона: имя+начало+окончание в одной строке,
+        а дальше в ней же — колонки-даты (по неделям/месяцам). Такая строка
+        полна сама по себе и не должна отбрасываться только из-за того, что
+        содержит настоящие даты."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "Наименование работ"
+        ws["B1"] = "Начало"
+        ws["C1"] = "Окончание"
+        ws["D1"] = date(2026, 4, 6)
+        ws["E1"] = date(2026, 4, 13)
+        ws["A2"] = "Работа 1"
+        ws["B2"] = date(2026, 4, 1)
+        ws["C2"] = date(2026, 4, 20)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2026, 4, 1)
+        assert result.rows[0].end == date(2026, 4, 20)
+
+    def test_date_labeled_column_not_mistaken_for_name(self):
+        """ "Дата начала этапа"/"Дата окончания этапа" не должны перехватывать
+        колонку названия только из-за слова "этап" внутри — start/end
+        проверяются раньше слабого синонима имени в каждой ячейке."""
+        content = (
+            "Дата начала этапа;Этап;Дата окончания этапа\n01.03.2026;Котлован;30.04.2026\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Котлован"
+        assert result.rows[0].start == date(2026, 3, 1)
+        assert result.rows[0].end == date(2026, 4, 30)
+
 
 class TestScheduleParserDateFormats:
     """Тесты для различных форматов дат."""
@@ -277,6 +441,18 @@ class TestScheduleParserRows:
         assert len(result.issues) == 1
         assert result.issues[0].reason == "Пустое название"
         assert result.issues[0].row_number == 2
+
+    def test_name_looking_like_date_produces_issue(self):
+        """Если в колонке названия оказалось значение, похожее на дату
+        (шапка распозналась неверно, колонки перепутаны) — это issue,
+        а не тихо принятая мусорная строка."""
+        content = "Название;Начало;Окончание\n01.03.2026;;\n".encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 0
+        assert len(result.issues) == 1
+        assert "дат" in result.issues[0].reason.lower()
 
     def test_blank_rows_skipped(self):
         """Пустые строки пропускаются и не считаются в rows_total."""

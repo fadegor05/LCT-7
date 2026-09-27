@@ -73,3 +73,12 @@ class DateUpdate(BaseModel):
         if v > today:
             raise ValueError("captured_on cannot be in the future")
         return v
+
+
+class DetectBacklogReport(BaseModel):
+    """Отчёт о детекции заблокированных фотографий."""
+
+    processed: int
+    done: int
+    failed: int
+    skipped: int

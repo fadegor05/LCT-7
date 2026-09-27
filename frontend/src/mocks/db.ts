@@ -431,6 +431,29 @@ export function redetect(siteId: string, photoId: string): StoredPhoto {
   return photo
 }
 
+/** Распознаёт необработанные снимки. Меток с processing_status в statuses. */
+export function detectBacklog(
+  siteId: string,
+  statuses: ('pending' | 'failed')[],
+): { processed: number; done: number; failed: number; skipped: number } {
+  getSite(siteId)
+  const photos = state.photos.filter(
+    (p) => p.site_id === siteId && statuses.includes(p.processing_status as 'pending' | 'failed'),
+  )
+  const touched = new Set<string>()
+  const report = { processed: 0, done: 0, failed: 0, skipped: 0 }
+
+  photos.forEach((photo) => {
+    photo.processing_status = 'done'
+    report.processed++
+    report.done++
+    if (photo.captured_on) touched.add(photo.captured_on)
+  })
+
+  touched.forEach((date) => recompute(siteId, date))
+  return report
+}
+
 // ---------- Оценка ----------
 
 export function listStageStatuses(siteId: string): StageStatus[] {

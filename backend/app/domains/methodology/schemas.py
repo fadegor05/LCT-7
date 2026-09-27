@@ -17,6 +17,7 @@ class EquipmentTypeRead(BaseModel):
     code: str
     title: str
     synonyms: list[str]
+    is_coarse: bool
 
 
 class RequirementIn(BaseModel):

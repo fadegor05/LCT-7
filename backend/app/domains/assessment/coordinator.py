@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import date
-from typing import cast
+from typing import Protocol, cast
 
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +33,16 @@ from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
 
 
+class Clock(Protocol):
+    """Протокол для callable, возвращающего текущую дату.
+
+    Используется для инъекции дефолтного значения в RecomputeCoordinator,
+    чтобы Dishka корректно разрешал зависимость.
+    """
+
+    def __call__(self) -> date: ...
+
+
 class RecomputeCoordinator:
     """Оркестратор полного переучёта статусов этапов и отклонений для объекта (site).
 
@@ -54,6 +64,7 @@ class RecomputeCoordinator:
         photo_repo: PhotoRepository,
         detection_repo: DetectionRepository,
         session: AsyncSession,
+        today: Clock = date.today,
     ) -> None:
         """Инициализировать RecomputeCoordinator.
 
@@ -70,6 +81,7 @@ class RecomputeCoordinator:
             photo_repo: PhotoRepository.
             detection_repo: DetectionRepository.
             session: AsyncSession для персистирования.
+            today: Clock — callable для получения текущей даты (default: date.today).
         """
         self._engine = engine
         self._stage_status_repo = stage_status_repo
@@ -83,6 +95,7 @@ class RecomputeCoordinator:
         self._photo_repo = photo_repo
         self._detection_repo = detection_repo
         self._session = session
+        self._today = today
 
     async def recompute_site(self, site_id: uuid.UUID) -> None:
         """Полный идемпотентный переучёт статусов и отклонений для объекта.
@@ -210,7 +223,7 @@ class RecomputeCoordinator:
 
             # Шаг 5: Запустить engine
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, date.today()
+                stages, rules_by_stage, observations, self._today()
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)
