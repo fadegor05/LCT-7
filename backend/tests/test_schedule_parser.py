@@ -302,6 +302,35 @@ class TestScheduleParserHeaders:
         assert result.rows_total == 2
         assert [r.name for r in result.rows] == ["Работа 1", "Работа 2"]
 
+    def test_gantt_style_header_with_date_columns_still_works(self):
+        """Шапка Gantt/таймлайн-шаблона: имя+начало+окончание в одной строке,
+        а дальше в ней же — колонки-даты (по неделям/месяцам). Такая строка
+        полна сама по себе и не должна отбрасываться только из-за того, что
+        содержит настоящие даты."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "Наименование работ"
+        ws["B1"] = "Начало"
+        ws["C1"] = "Окончание"
+        ws["D1"] = date(2026, 4, 6)
+        ws["E1"] = date(2026, 4, 13)
+        ws["A2"] = "Работа 1"
+        ws["B2"] = date(2026, 4, 1)
+        ws["C2"] = date(2026, 4, 20)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2026, 4, 1)
+        assert result.rows[0].end == date(2026, 4, 20)
+
 
 class TestScheduleParserDateFormats:
     """Тесты для различных форматов дат."""
