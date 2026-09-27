@@ -191,6 +191,43 @@ class TestPhotoServiceUpload:
             assert len(undated_list) == 2
 
     @pytest.mark.asyncio
+    async def test_upload_batch_date_from_filename(self, container) -> None:
+        """Без EXIF и штампа дата берётся из имени файла (bug-reports/005)."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner.id))
+            await session.commit()
+            owner_id = owner.id
+
+        files = [
+            UploadInput(
+                filename="202609270200371790463637087.jpg",
+                content=create_jpeg_image(),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo.jpg", content=create_jpeg_image(), content_type="image/jpeg"
+            ),
+        ]
+
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        named, plain = report.items
+        assert named.photo.captured_on == date(2026, 9, 27)
+        assert named.photo.date_source == "filename"
+        # Соседний снимок получает дату уже из NEIGHBOURS, а не остаётся без даты.
+        assert plain.photo.captured_on == date(2026, 9, 27)
+        assert plain.photo.date_source == "neighbours"
+
+    @pytest.mark.asyncio
     async def test_upload_batch_per_file_errors_dont_abort(self, container) -> None:
         """Ошибки в файлах не прерывают батч: corrupt, unsupported, empty, oversized."""
         await seed_user(container)

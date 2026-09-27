@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.defaults import DefaultRuleSet
+from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.recalculator import NoopStatusRecalculator, StatusRecalculator
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.methodology.service import MethodologyService
@@ -28,4 +29,5 @@ class MethodologyProvider(Provider):
 
     # REQUEST-scoped: репозиторий и сервис
     repository = provide(MethodologyRepository, scope=Scope.REQUEST)
+    materializer = provide(RuleMaterializer, scope=Scope.REQUEST)
     service = provide(MethodologyService, scope=Scope.REQUEST)

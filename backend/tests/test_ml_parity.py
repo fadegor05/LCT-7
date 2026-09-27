@@ -31,6 +31,7 @@ from app.domains.assessment.repository import (
     StatusBasisRepository,
 )
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.models import EquipmentType
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.methodology.seed import EQUIPMENT_SEED
@@ -348,6 +349,7 @@ async def run_recalculation(
             photo_repo=photo_repo,
             detection_repo=detection_repo,
             equipment_catalog=equipment_catalog,
+            materializer=await request_container.get(RuleMaterializer),
             session=session,
             today=get_reference_date,
         )

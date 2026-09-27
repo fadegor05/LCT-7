@@ -13,6 +13,7 @@ export const dateSourceLabels: Record<DateSource, string> = {
   channel: 'Канал',
   metadata: 'Метаданные',
   stamp: 'Штамп',
+  filename: 'Из имени файла',
   neighbours: 'По соседним снимкам',
   manual: 'Вручную',
 }

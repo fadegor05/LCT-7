@@ -20,6 +20,7 @@ from app.domains.photo.date_resolver import (
     InvalidImageError,
     NullStampOcr,
     ResolvedDate,
+    parse_filename_date,
     parse_stamp_date,
     read_image_info,
 )
@@ -731,3 +732,88 @@ class TestDateResolverAsync:
         result = await resolver.resolve(content, channel_date=channel_date)
         assert result.captured_on == channel_date
         assert result.source == DateSource.CHANNEL
+
+
+# ============================================================================
+# parse_filename_date: дата из имени файла (bug-reports/005)
+# ============================================================================
+
+TODAY = date(2026, 9, 27)
+
+
+class TestParseFilenameDate:
+    """Дата из имени файла, когда EXIF вырезан мессенджером."""
+
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            # Префикс YYYYMMDDhhmmss (МСК) + Unix-время в мс: обе части сходятся.
+            ("202609270200371790463637087.jpg", date(2026, 9, 27)),
+            ("202609270200411790463641704.jpg", date(2026, 9, 27)),
+            # Тот же префикс с обрезанным хвостом (как в bug-reports/001).
+            ("20260927020037179046363708.jpg", date(2026, 9, 27)),
+            ("IMG_20260915_143012.jpg", date(2026, 9, 15)),
+            ("PXL_20260901_101500123.jpg", date(2026, 9, 1)),
+            ("2026-08-24 10.15.00.jpg", date(2026, 8, 24)),
+            ("photo_2026_07_03.png", date(2026, 7, 3)),
+            ("sites/abc/IMG_20260915_143012.jpg", date(2026, 9, 15)),
+            # Только Unix-время в мс: 1790463637087 = 26.09 23:00 UTC = 27.09 02:00 МСК.
+            ("1790463637087.jpg", date(2026, 9, 27)),
+        ],
+    )
+    def test_reads_common_patterns(self, name: str, expected: date) -> None:
+        assert parse_filename_date(name, today=TODAY) == expected
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "photo.jpg",
+            "IMG_4567.jpg",
+            "",
+            None,
+            # Невозможная календарная дата.
+            "IMG_20261399_101010.jpg",
+            # Раньше 2015 года — шум, а не момент съёмки.
+            "IMG_20100101_101010.jpg",
+            # Будущее.
+            "IMG_20990101_101010.jpg",
+        ],
+    )
+    def test_no_plausible_date(self, name: str | None) -> None:
+        assert parse_filename_date(name, today=TODAY) is None
+
+    def test_conflicting_candidates_are_rejected(self) -> None:
+        """Префикс и Unix-время расходятся больше чем на сутки — дату не ставим."""
+        # Префикс 2026-09-20, хвост 1790463637087 = 2026-09-27.
+        assert parse_filename_date("202609200200371790463637087.jpg", today=TODAY) is None
+
+
+class TestDateResolverFilename:
+    """Имя файла — последний источник в цепочке DateResolver."""
+
+    @staticmethod
+    def _plain_png() -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (10, 10), color="white").save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_filename_used_when_no_exif_and_no_stamp(self) -> None:
+        result = await DateResolver().resolve(self._plain_png(), filename="IMG_20260915_143012.jpg")
+        assert result == ResolvedDate(captured_on=date(2026, 9, 15), source=DateSource.FILENAME)
+
+    @pytest.mark.asyncio
+    async def test_stamp_wins_over_filename(self) -> None:
+        class FakeOcr:
+            async def read_date(self, content: bytes) -> date | None:
+                return date(2026, 3, 25)
+
+        result = await DateResolver(ocr=FakeOcr()).resolve(
+            self._plain_png(), filename="IMG_20260915_143012.jpg"
+        )
+        assert result == ResolvedDate(captured_on=date(2026, 3, 25), source=DateSource.STAMP)
+
+    @pytest.mark.asyncio
+    async def test_filename_without_date_leaves_photo_undated(self) -> None:
+        result = await DateResolver().resolve(self._plain_png(), filename="photo.jpg")
+        assert result == ResolvedDate(captured_on=None, source=None)

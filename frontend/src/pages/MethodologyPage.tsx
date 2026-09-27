@@ -1,7 +1,7 @@
 import { useSite } from '@/api/sites'
+import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
 import { SectionHeader } from '@/components/layout/PageHeader'
-import { QueryState } from '@/components/ui/QueryState'
 import { MethodologyEditor } from '@/features/methodology/MethodologyEditor'
 import { siteSubtitle } from '@/features/overview/siteSubtitle'
 import { useRequiredParam } from '@/lib/useParam'
@@ -11,7 +11,7 @@ export function MethodologyPage() {
   const siteId = useRequiredParam('siteId')
   const site = useSite(siteId)
   return (
-    <QueryState query={site}>
+    <SiteQueryState query={site}>
       {(data) => (
         <SiteShell site={data} crumb="Методика" subtitle={siteSubtitle(data)}>
           <SectionHeader
@@ -21,6 +21,6 @@ export function MethodologyPage() {
           <MethodologyEditor siteId={siteId} />
         </SiteShell>
       )}
-    </QueryState>
+    </SiteQueryState>
   )
 }

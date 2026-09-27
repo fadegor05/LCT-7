@@ -3,9 +3,6 @@
 import uuid
 from datetime import UTC, date, datetime
 
-import pytest
-from pydantic import ValidationError
-
 from app.domains.photo.models import Detection, Photo, ProcessingStatus
 from app.domains.photo.schemas import (
     DateUpdate,
@@ -247,14 +244,9 @@ class TestDateUpdate:
         schema = DateUpdate(captured_on=past_date)
         assert schema.captured_on == past_date
 
-    def test_date_update_with_future_date_raises_validation_error(self) -> None:
-        """DateUpdate с датой в будущем выбрасывает ValidationError."""
+    def test_date_update_accepts_future_date(self) -> None:
+        """Будущую дату отклоняет сервис с русским текстом, а не схема (bug-reports/003)."""
         from datetime import timedelta
 
         tomorrow = date.today() + timedelta(days=1)
-
-        with pytest.raises(ValidationError) as exc_info:
-            DateUpdate(captured_on=tomorrow)
-
-        # Проверяем, что ошибка содержит сообщение о будущей дате
-        assert "cannot be in the future" in str(exc_info.value).lower()
+        assert DateUpdate(captured_on=tomorrow).captured_on == tomorrow

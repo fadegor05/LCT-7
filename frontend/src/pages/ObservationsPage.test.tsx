@@ -39,10 +39,16 @@ describe('ObservationsPage', () => {
     await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
     expect(within(list).getByRole('alert')).toHaveTextContent('Формат: дд.мм.гггг')
 
+    // Длинное имя обрезается многоточием — полное остаётся в title (bug-reports/001).
+    expect(within(list).getByText('IMG_0013.jpg')).toHaveAttribute('title', 'IMG_0013.jpg')
+
     const input = within(list).getByLabelText('Дата съёмки IMG_0013.jpg')
-    await user.type(input, '01.01.2030')
+    // Дату из будущего форма отсекает сама, не дожидаясь 422 (bug-reports/003).
+    await user.type(input, '01.01.2999')
     await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
-    expect(await within(list).findByText('Дата съёмки не может быть в будущем')).toBeInTheDocument()
+    expect(within(list).getByRole('alert')).toHaveTextContent(
+      'Дата не может быть позже сегодняшней',
+    )
 
     await user.clear(input)
     await user.type(input, '18.09.2026')

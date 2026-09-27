@@ -97,6 +97,16 @@ class TestAggregationPolicy:
 
         assert result[equipment_id].confidence == Confidence.MEDIUM
 
+    def test_aggregation_filename_source_caps_confidence_at_medium(self):
+        """date_sources содержит "filename" -> confidence не выше MEDIUM (bug-reports/005)."""
+        equipment_id = uuid.uuid4()
+
+        frames = [[FrameEquipment(equipment_id, score=0.95)]]
+        policy = AggregationPolicy(min_score_high=0.7, min_score_medium=0.4)
+        result = policy.aggregate(frames, ["filename"])
+
+        assert result[equipment_id].confidence == Confidence.MEDIUM
+
     def test_aggregation_high_score_high_source_gives_high_confidence(self):
         """High score + good source -> Confidence.HIGH."""
         equipment_id = uuid.uuid4()

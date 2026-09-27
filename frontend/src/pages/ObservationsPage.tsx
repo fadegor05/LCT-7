@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { useObservation, useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
+import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
 import { Button } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
@@ -35,7 +36,7 @@ export function ObservationsPage() {
   const selectDay = (value: string | null) => setParams({ date: value ?? 'all' }, { replace: true })
 
   return (
-    <QueryState query={site}>
+    <SiteQueryState query={site}>
       {(data) => (
         <SiteShell
           site={data}
@@ -85,6 +86,6 @@ export function ObservationsPage() {
           {adding && <AddFramesDialog siteId={siteId} onClose={() => setAdding(false)} />}
         </SiteShell>
       )}
-    </QueryState>
+    </SiteQueryState>
   )
 }

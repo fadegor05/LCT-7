@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 
 
 class DetectionRead(BaseModel):
@@ -59,20 +59,13 @@ class UploadReport(BaseModel):
 
 
 class DateUpdate(BaseModel):
-    """Обновление даты съёмки фотографии."""
+    """Обновление даты съёмки фотографии.
+
+    Дату из будущего отклоняет PhotoService.set_date: там русский текст для
+    интерфейса. Проверка в схеме отдавала бы пользователю сообщение pydantic.
+    """
 
     captured_on: date
-
-    @field_validator("captured_on")
-    @classmethod
-    def reject_future_date(cls, v: date) -> date:
-        """Отклонить дату в будущем."""
-        from datetime import date as date_cls
-
-        today = date_cls.today()
-        if v > today:
-            raise ValueError("captured_on cannot be in the future")
-        return v
 
 
 class DetectBacklogReport(BaseModel):

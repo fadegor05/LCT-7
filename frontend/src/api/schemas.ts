@@ -27,7 +27,14 @@ export const datesSourceSchema = z.enum(['file', 'manual'])
 /** methodology.models.Obligation */
 export const obligationSchema = z.enum(['normative', 'logical', 'auxiliary'])
 /** photo.models.DateSource */
-export const dateSourceSchema = z.enum(['channel', 'metadata', 'stamp', 'neighbours', 'manual'])
+export const dateSourceSchema = z.enum([
+  'channel',
+  'metadata',
+  'stamp',
+  'filename',
+  'neighbours',
+  'manual',
+])
 /** photo.models.ProcessingStatus */
 export const processingStatusSchema = z.enum(['pending', 'done', 'failed'])
 /** observation.models.Activity */

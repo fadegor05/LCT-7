@@ -821,6 +821,10 @@ async def test_status_recalculator_called_on_mutation() -> None:
             site_id, _ = await create_site_with_schedule(client, test_container)
             site_id = uuid.UUID(site_id) if isinstance(site_id, str) else site_id
 
+            # Импорт графика сам пересчитывает статусы (bug-reports/002)
+            assert recording_recalculator.calls == [site_id]
+            recording_recalculator.calls.clear()
+
             # GET /sites/{site_id}/methodology не должен вызывать рекалькулятор
             get_resp = await client.get(f"/sites/{site_id}/methodology")
             assert get_resp.status_code == 200

@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { Pill } from '@/components/ui/Pill'
 import { QueryState } from '@/components/ui/QueryState'
-import { parseRuDate } from '@/lib/format'
+import { parseRuDate, todayIso } from '@/lib/format'
 import { pluralPhotos, processingStatusLabels } from '@/lib/labels'
 import styles from './Observations.module.css'
 
 const FORMAT_ERROR = 'Формат: дд.мм.гггг'
+const FUTURE_ERROR = 'Дата не может быть позже сегодняшней'
 
 function PhotoDateRow({ photo, siteId }: { photo: Photo; siteId: string }) {
   const [value, setValue] = useState('')
@@ -19,16 +20,24 @@ function PhotoDateRow({ photo, siteId }: { photo: Photo; siteId: string }) {
   const submit = () => {
     const parsed = /\d{4}\s*$/.test(value) ? parseRuDate(value, 0) : null
     if (!parsed) return setError(FORMAT_ERROR)
+    // Дублирует проверку сервера, чтобы не гонять заведомо отклонённый запрос.
+    if (parsed > todayIso()) return setError(FUTURE_ERROR)
     setError(null)
     setDate.mutate({ photoId: photo.id, capturedOn: parsed })
   }
   const message = error ?? setDate.error?.message
   return (
     <li className={styles.reviewRow}>
-      <span className="sm">{photo.original_name}</span>
-      <span className="sm muted">{processingStatusLabels[photo.processing_status]}</span>
-      <span className="sm muted">Даты нет ни в метаданных, ни у соседних снимков</span>
-      <span>
+      <span className={`sm ${styles.reviewName}`} title={photo.original_name}>
+        {photo.original_name}
+      </span>
+      <span className={`sm muted ${styles.reviewStatus}`}>
+        {processingStatusLabels[photo.processing_status]}
+      </span>
+      <span className={`sm muted ${styles.reviewHint}`}>
+        Даты нет ни в метаданных, ни в имени файла, ни у соседних снимков
+      </span>
+      <span className={styles.dateField}>
         <input
           className={styles.input}
           placeholder="дд.мм.гггг"

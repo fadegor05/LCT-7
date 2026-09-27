@@ -7,6 +7,7 @@ from datetime import date
 from typing import Protocol, cast
 
 from sqlalchemy import delete
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import AsOfMode
@@ -27,6 +28,7 @@ from app.domains.assessment.repository import (
     StatusBasisRepository,
 )
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.observation.repository import (
     ObservationRepository,
@@ -35,6 +37,7 @@ from app.domains.observation.repository import (
 from app.domains.photo.models import ProcessingStatus
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
+from app.plugins.exceptions import AppError
 
 
 class Clock(Protocol):
@@ -81,6 +84,7 @@ class RecomputeCoordinator:
         photo_repo: PhotoRepository,
         detection_repo: DetectionRepository,
         equipment_catalog: EquipmentCatalog,
+        materializer: RuleMaterializer,
         session: AsyncSession,
         today: Clock = date.today,
         as_of_config: AsOfConfig = _DEFAULT_AS_OF_CONFIG,
@@ -101,6 +105,8 @@ class RecomputeCoordinator:
             detection_repo: DetectionRepository.
             equipment_catalog: EquipmentCatalog — резолвинг названий техники для
                 отклонений (LCT-15).
+            materializer: RuleMaterializer — создаёт правила из базового набора, если
+                методику ещё не открывали (иначе все этапы вышли бы «не проверяемыми»).
             session: AsyncSession для персистирования.
             today: Clock — callable для получения текущей даты (default: date.today).
             as_of_config: AsOfConfig — режим опорной даты (default: today, как раньше).
@@ -117,6 +123,7 @@ class RecomputeCoordinator:
         self._photo_repo = photo_repo
         self._detection_repo = detection_repo
         self._equipment_catalog = equipment_catalog
+        self._materializer = materializer
         self._session = session
         self._today = today
         self._as_of_config = as_of_config
@@ -150,7 +157,8 @@ class RecomputeCoordinator:
         Алгоритм:
         1. Получить график по site_id. Если нет -> вернуть (no-op).
         2. Собрать StageInput[] из этапов графика.
-        3. Собрать RuleInput dict (rules_by_stage) из методики с требованиями.
+        3. Создать недостающие правила из базового набора и собрать RuleInput dict
+           (rules_by_stage) из методики с требованиями.
         4. Собрать ObservationInput[] из наблюдений + техники.
         5. Запустить engine.compute_site().
         6. Персистировать StageStatus (upsert + delete_missing).
@@ -171,8 +179,22 @@ class RecomputeCoordinator:
             if schedule is None:
                 return  # Ничего не считаем
 
-            # Шаг 2: Собрать StageInput[]
-            stages_orm = await self._schedule_repo.list_stages(schedule.id)
+            # Шаг 2: Собрать StageInput[] (id берём заранее: после rollback ORM-объекты протухают)
+            schedule_id = schedule.id
+            stages_orm = await self._schedule_repo.list_stages(schedule_id)
+
+            # Правила методики создаются лениво; пересчёт сразу после загрузки графика
+            # должен видеть базовый набор, а не «этап не сопоставлен с методикой».
+            try:
+                if await self._materializer.materialize(site_id, stages_orm):
+                    await self._session.commit()
+            except (IntegrityError, AppError):
+                # IntegrityError — правила параллельно создал другой запрос (list_rules),
+                # берём их. AppError — в справочнике нет техники из базового набора: считаем
+                # по тем правилам, что есть, пересчёт из-за этого не срываем.
+                await self._session.rollback()
+                stages_orm = await self._schedule_repo.list_stages(schedule_id)
+
             stages: list[StageInput] = [
                 StageInput(
                     stage_id=s.id,

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.methodology.catalog import EquipmentCatalog, EquipmentTypeInfo
 from app.domains.methodology.defaults import DefaultRuleSet
+from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.models import (
     EquipmentRequirement,
     EquipmentSet,
@@ -71,6 +72,7 @@ class MethodologyService:
         self._catalog = catalog
         self._defaults = defaults
         self._recalculator = recalculator
+        self._materializer = RuleMaterializer(repository, catalog, defaults)
 
     async def list_equipment_types(self) -> list[EquipmentTypeInfo]:
         """Получить все типы оборудования из каталога."""
@@ -110,72 +112,7 @@ class MethodologyService:
         max_retries = 2
         for attempt in range(max_retries):
             try:
-                # Получаем существующие правила для сайта
-                existing_rules = await self._repository.list_rules_by_site(site_id)
-                existing_stage_ids = {rule.stage_id for rule in existing_rules}
-
-                # Проверяем, есть ли новые этапы, требующие материализации
-                need_commit = False
-
-                for stage in stages:
-                    if stage.id not in existing_stage_ids:
-                        # Найти совпадение со строкой по умолчанию
-                        default_rule = self._defaults.match_stage(stage.name)
-
-                        if default_rule is not None:
-                            # Создать правило с наборами и требованиями
-                            rule = MethodologyRule(
-                                site_id=site_id,
-                                stage_id=stage.id,
-                                stage_key=default_rule.stage_key,
-                                is_verifiable=True,
-                            )
-                            await self._repository.add(rule)
-
-                            # Добавить наборы и требования
-                            for set_idx, default_set in enumerate(default_rule.sets, start=1):
-                                equipment_set = await self._repository.add_set(rule.id, set_idx)
-
-                                # Разрешить коды оборудования в ID
-                                requirements = []
-                                for default_req in default_set:
-                                    # Найти оборудование по коду
-                                    equipment_type = await self._catalog.by_code(
-                                        default_req.equipment_code
-                                    )
-                                    if equipment_type is None:
-                                        msg = (
-                                            f"Справочник техники не содержит "
-                                            f"{default_req.equipment_code}"
-                                        )
-                                        raise AppError(msg, status_code=500)
-
-                                    req = EquipmentRequirement(
-                                        set_id=equipment_set.id,
-                                        equipment_type_id=equipment_type.id,
-                                        min_count=default_req.min_count,
-                                        obligation=default_req.obligation,
-                                        gesn_code=default_req.gesn_code,
-                                        source_note=default_req.source_note,
-                                    )
-                                    requirements.append(req)
-
-                                await self._repository.add_requirements(
-                                    equipment_set.id, requirements
-                                )
-
-                            need_commit = True
-                        else:
-                            # Создать правило без наборов (не проверяется)
-                            reason = "Нет правила в базовом наборе — задайте комплект"
-                            rule = MethodologyRule(
-                                site_id=site_id,
-                                stage_id=stage.id,
-                                is_verifiable=False,
-                                unverifiable_reason=reason,
-                            )
-                            await self._repository.add(rule)
-                            need_commit = True
+                need_commit = await self._materializer.materialize(site_id, stages)
 
                 # Коммитим, если создали что-то новое
                 if need_commit:
