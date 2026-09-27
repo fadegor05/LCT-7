@@ -26,6 +26,7 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.observation.repository import (
     ObservationRepository,
@@ -79,6 +80,7 @@ class RecomputeCoordinator:
         observed_equipment_repo: ObservedEquipmentRepository,
         photo_repo: PhotoRepository,
         detection_repo: DetectionRepository,
+        equipment_catalog: EquipmentCatalog,
         session: AsyncSession,
         today: Clock = date.today,
         as_of_config: AsOfConfig = _DEFAULT_AS_OF_CONFIG,
@@ -97,6 +99,8 @@ class RecomputeCoordinator:
             observed_equipment_repo: ObservedEquipmentRepository.
             photo_repo: PhotoRepository.
             detection_repo: DetectionRepository.
+            equipment_catalog: EquipmentCatalog — резолвинг названий техники для
+                отклонений (LCT-15).
             session: AsyncSession для персистирования.
             today: Clock — callable для получения текущей даты (default: date.today).
             as_of_config: AsOfConfig — режим опорной даты (default: today, как раньше).
@@ -112,6 +116,7 @@ class RecomputeCoordinator:
         self._observed_equipment_repo = observed_equipment_repo
         self._photo_repo = photo_repo
         self._detection_repo = detection_repo
+        self._equipment_catalog = equipment_catalog
         self._session = session
         self._today = today
         self._as_of_config = as_of_config
@@ -265,8 +270,9 @@ class RecomputeCoordinator:
 
             # Шаг 5: Запустить engine
             reference_date = self._resolve_as_of(observations)
+            equipment_names = {item.id: item.title for item in await self._equipment_catalog.all()}
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, reference_date
+                stages, rules_by_stage, observations, reference_date, equipment_names
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)

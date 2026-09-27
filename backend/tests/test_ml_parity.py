@@ -30,6 +30,7 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import EquipmentType
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.methodology.seed import EQUIPMENT_SEED
@@ -64,14 +65,14 @@ ML_STATUS_TO_BACKEND: dict[str, StageStatusValue] = {
 # когда техника попала в кадр, даже если до этого снимков не было.
 # Правило: список только сокращается. Добавить запись — значит признать регрессию.
 KNOWN_DIVERGENCES: dict[tuple[str, str], tuple[str, str | None]] = {
-    # Исправлено (PR #21, фикс общего SQLite StaticPool-хазарда в conftest.py):
-    # было ("on_track", "not_checked") — это не настоящая расходимость с ML, а
-    # артефакт повреждённого бейзлайна теста. Из-за общего соединения (StaticPool)
-    # холодная загрузка EquipmentCatalog в отдельной сессии откатывала
-    # незакоммиченный flush правила для этапа p02/12.3.1 ("Устройство котлована"),
-    # и этап терялся без правила -> not_checked. После перехода на пофайловый
-    # SQLite с обычным пулом (PR #21) каждая сессия — своё соединение, правило не
-    # теряется, и реальный статус бэкенда — behind.
+    # Исправлено (PR #21 + LCT-15, независимо друг от друга): было
+    # ("on_track", "not_checked") — не настоящая расходимость с ML, а артефакт
+    # повреждённого бейзлайна теста. Общее SQLite-соединение теста (StaticPool)
+    # означало, что холодная загрузка EquipmentCatalog в отдельной сессии могла
+    # откатить незакоммиченный flush правила для этапа p02/12.3.1 ("Устройство
+    # котлована") — этап терялся без правила и получал not_checked. PR #21 fixed
+    # это в корне (conftest.py, пофайловый SQLite с обычным пулом вместо общего
+    # StaticPool-соединения); реальный статус бэкенда — behind.
     ("p02", "12.3.1"): ("on_track", "behind"),
     ("p02", "12.3.2"): ("on_track", "behind"),
     ("p03", "12.3.4"): ("ahead", None),
@@ -326,6 +327,7 @@ async def run_recalculation(
         observed_equipment_repo = await request_container.get(ObservedEquipmentRepository)
         photo_repo = await request_container.get(PhotoRepository)
         detection_repo = await request_container.get(DetectionRepository)
+        equipment_catalog = await request_container.get(EquipmentCatalog)
         engine = await request_container.get(RuleEngine)
 
         # Создаём coordinator с инъектированным reference_date
@@ -345,6 +347,7 @@ async def run_recalculation(
             observed_equipment_repo=observed_equipment_repo,
             photo_repo=photo_repo,
             detection_repo=detection_repo,
+            equipment_catalog=equipment_catalog,
             session=session,
             today=get_reference_date,
         )
@@ -371,6 +374,14 @@ class TestMLParity:
             stand_user = User(id=STAND_USER_ID, full_name=STAND_USER_DEFAULT_NAME)
             session.add(stand_user)
             code_to_id = await seed_equipment(session)
+
+        async with container() as request_container:
+            equipment_catalog = await request_container.get(EquipmentCatalog)
+            await equipment_catalog.all()  # прогрев кэша до сборки методики по сайтам —
+            # иначе первая холодная загрузка каталога открывает свою сессию на общем
+            # SQLite-соединении теста (StaticPool) и её закрытие откатывает чужую
+            # незакоммиченную транзакцию (см. расследование: MethodologyService.list_rules
+            # для p02 теряло flush'нутое правило для этапа "Устройство котлована").
 
         # Отслеживаем статистику
         total_pairs = 0

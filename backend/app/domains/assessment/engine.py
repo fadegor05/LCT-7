@@ -1,7 +1,7 @@
 """Двигатель расчёта статусов этапов и отклонений от плана."""
 
 import uuid
-from collections.abc import Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 
@@ -127,6 +127,7 @@ class RuleEngine:
         rules_by_stage: dict[uuid.UUID, RuleInput],
         observations: Sequence[ObservationInput],
         today: date,
+        equipment_names: Mapping[uuid.UUID, str] | None = None,
     ) -> SiteComputation:
         """Рассчитать статусы и отклонения для объекта.
 
@@ -135,10 +136,15 @@ class RuleEngine:
             rules_by_stage: Правила методологии по stage_id.
             observations: Наблюдения в хронологическом порядке.
             today: Текущая дата.
+            equipment_names: Названия типов техники по id (LCT-15) — для
+                читаемого текста в отклонениях вместо сырых UUID. Движок не
+                знает о БД/каталоге — словарь строит вызывающий код
+                (RecomputeCoordinator, через EquipmentCatalog).
 
         Returns:
             SiteComputation с статусами и отклонениями.
         """
+        names = equipment_names or {}
         statuses: list[StageStatusResult] = []
         deviations: list[DeviationResult] = []
 
@@ -167,7 +173,7 @@ class RuleEngine:
             if stage_status is not None and stage_status.status != StageStatusValue.NOT_CHECKED:
                 deviations.extend(
                     self._check_stage_deviations(
-                        stage, rule, sorted_observations, today, stage_status.basis_dates
+                        stage, rule, sorted_observations, today, stage_status.basis_dates, names
                     )
                 )
 
@@ -445,6 +451,7 @@ class RuleEngine:
         observations: Sequence[ObservationInput],
         today: date,
         status_basis_dates: tuple[date, ...],
+        equipment_names: Mapping[uuid.UUID, str],
     ) -> list[DeviationResult]:
         """Проверить отклонения по одному верифицируемому этапу."""
         deviations: list[DeviationResult] = []
@@ -467,10 +474,23 @@ class RuleEngine:
             self._check_missing_equipment(stage, latest_obs, latest_obs_on, markers, rule)
         )
 
+        # 2b. missing_logical_equipment (LCT-15) — мягкое предупреждение по
+        # "логической" технике методики: ожидаемой на этапе, но не
+        # обязательной для подтверждения его начала (в отличие от
+        # нормативных маркеров выше).
+        deviations.extend(
+            self._check_missing_logical_equipment(
+                stage, latest_obs, latest_obs_on, rule, equipment_names
+            )
+        )
+
         # 3. stage_mismatch
         if latest_obs.equipment and not any(
             eq.equipment_type_id in all_required for eq in latest_obs.equipment
         ):
+            mismatch_names = self._format_equipment_names(
+                [eq.equipment_type_id for eq in latest_obs.equipment], equipment_names
+            )
             deviations.append(
                 DeviationResult(
                     stage_id=stage.stage_id,
@@ -481,10 +501,7 @@ class RuleEngine:
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
                     expected="Техника, предусмотренная методикой этапа",
-                    observed=(
-                        f"Техника ID: "
-                        f"{', '.join(str(eq.equipment_type_id) for eq in latest_obs.equipment)}"
-                    ),
+                    observed=f"Техника: {mismatch_names}",
                     limits_text=(
                         "Не доказывает завершённость этапа или смену техники — "
                         "техника могла быть вне зоны обзора камер."
@@ -503,6 +520,9 @@ class RuleEngine:
         # 4. idle
         idle_eq = [eq for eq in latest_obs.equipment if eq.activity == "idle"]
         if idle_eq:
+            idle_names = self._format_equipment_names(
+                [eq.equipment_type_id for eq in idle_eq], equipment_names
+            )
             deviations.append(
                 DeviationResult(
                     stage_id=stage.stage_id,
@@ -515,10 +535,7 @@ class RuleEngine:
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
                     expected="Активная работа техники на этапе",
-                    observed=(
-                        f"Техника в состоянии простоя: "
-                        f"{', '.join(str(eq.equipment_type_id) for eq in idle_eq)}"
-                    ),
+                    observed=f"Техника в состоянии простоя: {idle_names}",
                     limits_text=(
                         "Гипотеза — не доказывает остановку работ, "
                         "техника могла быть в перерыве или ожидании."
@@ -532,6 +549,9 @@ class RuleEngine:
         extra_eq = [eq for eq in latest_obs.equipment if eq.equipment_type_id not in all_required]
         markers_active_now = latest_obs_on in status_basis_dates
         if extra_eq and markers_active_now:
+            extra_names = self._format_equipment_names(
+                [eq.equipment_type_id for eq in extra_eq], equipment_names
+            )
             deviations.append(
                 DeviationResult(
                     stage_id=stage.stage_id,
@@ -544,10 +564,7 @@ class RuleEngine:
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
                     expected="Только техника, предусмотренная методикой",
-                    observed=(
-                        f"Дополнительная техника: "
-                        f"{', '.join(str(eq.equipment_type_id) for eq in extra_eq)}"
-                    ),
+                    observed=f"Дополнительная техника: {extra_names}",
                     limits_text=(
                         "Гипотеза — не доказывает незапланированные работы, "
                         "техника могла быть на соседнем объекте или проезжать мимо."
@@ -560,6 +577,9 @@ class RuleEngine:
         # 6. out_of_zone
         out_zone_eq = [eq for eq in latest_obs.equipment if eq.in_zone is False]
         if out_zone_eq:
+            out_zone_names = self._format_equipment_names(
+                [eq.equipment_type_id for eq in out_zone_eq], equipment_names
+            )
             deviations.append(
                 DeviationResult(
                     stage_id=stage.stage_id,
@@ -572,10 +592,7 @@ class RuleEngine:
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
                     expected="Работа техники в пределах рабочей зоны",
-                    observed=(
-                        f"Техника вне рабочей зоны: "
-                        f"{', '.join(str(eq.equipment_type_id) for eq in out_zone_eq)}"
-                    ),
+                    observed=f"Техника вне рабочей зоны: {out_zone_names}",
                     limits_text=(
                         "Гипотеза — не доказывает нарушение, "
                         "зона могла быть некорректно задана или техника выезжала временно."
@@ -626,6 +643,73 @@ class RuleEngine:
                 ]
 
         return []
+
+    def _check_missing_logical_equipment(
+        self,
+        stage: StageInput,
+        latest_obs: ObservationInput,
+        latest_obs_on: date,
+        rule: RuleInput,
+        equipment_names: Mapping[uuid.UUID, str],
+    ) -> list[DeviationResult]:
+        """Проверить отклонение missing_logical_equipment (LCT-15).
+
+        В отличие от missing_equipment (нормативные маркеры, CRITICAL,
+        подтверждает/опровергает сам факт активности этапа) — это мягкое
+        предупреждение по "логической" технике методики: ожидаемой на
+        этапе, но не обязательной для подтверждения его начала.
+        """
+        if latest_obs.observability != "high":
+            return []
+
+        logical_ids = {r.equipment_type_id for r in rule.requirements if r.obligation == "logical"}
+        if not logical_ids:
+            return []
+
+        # В отличие от _check_missing_equipment (булев факт «маркер есть/нет»),
+        # здесь нужно перечислить КАКИЕ именно logical-типы отсутствуют —
+        # поэтому разница множеств, а не any().
+        present_ids = {eq.equipment_type_id for eq in latest_obs.equipment if eq.count_min >= 1}
+        missing_ids = logical_ids - present_ids
+        if not missing_ids:
+            return []
+
+        return [
+            DeviationResult(
+                stage_id=stage.stage_id,
+                type=DeviationType.MISSING_LOGICAL_EQUIPMENT,
+                is_hypothesis=True,
+                severity=Severity.ATTENTION,
+                confidence=Confidence.MEDIUM,
+                period_start=latest_obs_on,
+                period_end=latest_obs_on,
+                expected=(
+                    f"Техника из логического набора этапа: "
+                    f"{self._format_equipment_names(logical_ids, equipment_names)}"
+                ),
+                observed=(
+                    f"Не обнаружена: {self._format_equipment_names(missing_ids, equipment_names)}"
+                ),
+                limits_text=(
+                    "Гипотеза — логическая техника не обязательна для подтверждения "
+                    "этапа, могла быть вне зоны обзора камер или не понадобиться на "
+                    "этой стадии."
+                ),
+                rule_id=rule.rule_id,
+                evidence_dates=(latest_obs_on,),
+            )
+        ]
+
+    def _format_equipment_names(
+        self, equipment_type_ids: Iterable[uuid.UUID], equipment_names: Mapping[uuid.UUID, str]
+    ) -> str:
+        """Отобразить типы техники по именам (LCT-15), а не по UUID.
+
+        Каталог передаётся снаружи — движок не знает о БД. Отсутствующее в
+        словаре имя — fallback на сам UUID (деградация, не падение).
+        """
+        names = sorted(equipment_names.get(eid, str(eid)) for eid in equipment_type_ids)
+        return ", ".join(names)
 
     def _check_no_progress(
         self,
