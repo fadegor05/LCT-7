@@ -19,7 +19,8 @@
 ## Быстрый запуск
 
 ```bash
-python tools/fetch_weights.py                 # веса (нужен HF_TOKEN в ml/.env)
+cp .env.dist .env                             # затем вписать HF_REPO и HF_TOKEN
+python tools/fetch_weights.py                 # веса из приватного репозитория
 docker build -t lct7-ml . && docker run -d -p 8000:8000 \
     -v "$PWD/weights:/weights:ro" lct7-ml     # сервис детекции
 curl -X POST -F "file=@frame.png" http://localhost:8000/detect

@@ -43,7 +43,7 @@ docker run -d --name lct7-ml -p 8000:8000 \
 ```
 
 Веса в образ не входят: 42 МБ и лицензия AGPL. Берутся командой
-`python tools/fetch_weights.py` (нужен `HF_TOKEN`).
+`python tools/fetch_weights.py`. Нужны `HF_REPO` и `HF_TOKEN` — скопируйте `ml/.env.dist` в `ml/.env` и заполните; токен у каждого свой.
 
 Переменные окружения:
 
