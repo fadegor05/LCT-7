@@ -238,6 +238,70 @@ class TestScheduleParserHeaders:
 
         assert "название" in str(exc_info.value).lower()
 
+    def test_two_row_header_with_preamble_xlsx(self):
+        """Двухстрочная шапка после преамбулы (реквизиты, название объекта) —
+        преамбула не должна давать ложное неполное совпадение раньше
+        настоящей шапки."""
+        wb = Workbook()
+        ws = wb.active
+        ws["A1"] = "Приложение № 2 к контракту"
+        ws["A3"] = "№"
+        ws["B3"] = "Наименование этапа выполнения контракта и (или) комплекса работ"
+        ws["C3"] = "Сроки исполнения этапа"
+        ws["C4"] = "Начало выполнения работ"
+        ws["D4"] = "Окончание выполнения работ"
+        ws["A5"] = "1."
+        ws["B5"] = "Работы подготовительного периода"
+        ws["C5"] = date(2026, 4, 10)
+        ws["D5"] = date(2026, 5, 22)
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        content = buffer.getvalue()
+
+        parser = ScheduleParser()
+        result = parser.parse("schedule.xlsx", content)
+
+        assert result.rows_total == 1
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работы подготовительного периода"
+        assert result.rows[0].start == date(2026, 4, 10)
+        assert result.rows[0].end == date(2026, 5, 22)
+
+    def test_number_column_labeled_etap_not_mistaken_for_name(self):
+        """Колонка "Номер этапа" — это порядковый номер, а не название
+        работы. Короткий синоним "этап" не должен её перехватывать раньше
+        настоящей колонки с названием."""
+        content = (
+            "Номер этапа;Наименование работ;Начало;Окончание\n1;Работа 1;01.01.2025;02.01.2025\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        assert len(result.rows) == 1
+        assert result.rows[0].name == "Работа 1"
+        assert result.rows[0].start == date(2025, 1, 1)
+        assert result.rows[0].end == date(2025, 1, 2)
+
+    def test_data_row_not_swallowed_as_second_header_row(self):
+        """Если шапка неполная (нет start/end) и следующая строка — это уже
+        данные с реальными датами, она не должна быть принята за вторую
+        строку шапки, даже если случайно содержит слово-синоним в
+        свободном тексте примечания."""
+        content = (
+            "Наименование;С;По;Примечание\n"
+            "Работа 1;01.01.2025;02.01.2025;Конец квартала\n"
+            "Работа 2;03.01.2025;04.01.2025;\n"
+        ).encode()
+        parser = ScheduleParser()
+        result = parser.parse("schedule.csv", content)
+
+        # "С"/"По" не входят в START_HEADERS/END_HEADERS, поэтому даты не
+        # распознаются — это ожидаемо и не предмет этого теста. Важно, что
+        # обе строки данных сохранены, а не потеряна первая.
+        assert result.rows_total == 2
+        assert [r.name for r in result.rows] == ["Работа 1", "Работа 2"]
+
 
 class TestScheduleParserDateFormats:
     """Тесты для различных форматов дат."""
