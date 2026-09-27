@@ -69,6 +69,11 @@ async def create_coordinator(
         detection_repo = DetectionRepository(session)
 
         engine = RuleEngine(engine_config)
+        # as_of_config is Optional here only as a test-helper convenience;
+        # RecomputeCoordinator's own param is a concrete AsOfConfig (its own
+        # default), so we only forward the kwarg when the caller passed one —
+        # никогда не передаём буквальный None.
+        kwargs = {} if as_of_config is None else {"as_of_config": as_of_config}
         coordinator = RecomputeCoordinator(
             engine=engine,
             stage_status_repo=stage_status_repo,
@@ -82,7 +87,7 @@ async def create_coordinator(
             photo_repo=photo_repo,
             detection_repo=detection_repo,
             session=session,
-            as_of_config=as_of_config,
+            **kwargs,
         )
         return coordinator
 
@@ -873,9 +878,8 @@ class TestRecomputeCoordinatorAsOfMode:
         # 2023-е наблюдения — это данные из прошлого на годы, stale_data
         # ДОЛЖЕН сработать. Подтверждает, что датасет реально "старый"
         # относительно реального "сегодня" и что as-of дата тут значима.
-        async with container() as request_container:
-            coordinator = await create_coordinator(container, engine_config)
-            await coordinator.recompute_site(site_id)
+        coordinator = await create_coordinator(container, engine_config)
+        await coordinator.recompute_site(site_id)
 
         async with container() as request_container:
             dev_repo = DeviationRepository(await request_container.get(AsyncSession))
@@ -889,9 +893,8 @@ class TestRecomputeCoordinatorAsOfMode:
         # должна стать дата ПОСЛЕДНЕГО наблюдения площадки (later_obs_date),
         # а не реальное date.today() -> stale_data больше не должен сработать.
         as_of_config = AsOfConfig(mode=AsOfMode.LAST_OBSERVATION, fixed_date=None)
-        async with container() as request_container:
-            coordinator = await create_coordinator(container, engine_config, as_of_config)
-            await coordinator.recompute_site(site_id)
+        coordinator = await create_coordinator(container, engine_config, as_of_config)
+        await coordinator.recompute_site(site_id)
 
         async with container() as request_container:
             dev_repo = DeviationRepository(await request_container.get(AsyncSession))

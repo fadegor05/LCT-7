@@ -54,6 +54,11 @@ class AsOfConfig:
     fixed_date: date | None
 
 
+# Модульный singleton для дефолта конструктора (см. today = date.today выше) —
+# избегает B008 (вызов в аргументах по умолчанию); AsOfConfig frozen, безопасно делить.
+_DEFAULT_AS_OF_CONFIG = AsOfConfig(mode=AsOfMode.TODAY, fixed_date=None)
+
+
 class RecomputeCoordinator:
     """Оркестратор полного переучёта статусов этапов и отклонений для объекта (site).
 
@@ -76,7 +81,7 @@ class RecomputeCoordinator:
         detection_repo: DetectionRepository,
         session: AsyncSession,
         today: Clock = date.today,
-        as_of_config: AsOfConfig | None = None,
+        as_of_config: AsOfConfig = _DEFAULT_AS_OF_CONFIG,
     ) -> None:
         """Инициализировать RecomputeCoordinator.
 
@@ -109,7 +114,7 @@ class RecomputeCoordinator:
         self._detection_repo = detection_repo
         self._session = session
         self._today = today
-        self._as_of_config = as_of_config or AsOfConfig(mode=AsOfMode.TODAY, fixed_date=None)
+        self._as_of_config = as_of_config
 
     def _resolve_as_of(self, observations: Sequence[ObservationInput]) -> date:
         """Определить опорную дату расчёта для площадки (LCT-14).

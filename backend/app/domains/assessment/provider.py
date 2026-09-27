@@ -44,16 +44,8 @@ class AssessmentProvider(Provider):
         return date.today  # type: ignore[return-value]
 
     @provide(scope=Scope.APP)
-    def as_of_config(self, settings: Settings) -> AsOfConfig | None:
-        """Режим опорной даты расчёта (LCT-14) — из настроек.
-
-        Тип возврата — AsOfConfig | None, а не просто AsOfConfig: Dishka
-        разрешает зависимости конструктора по точной аннотации типа, а
-        RecomputeCoordinator.__init__ принимает as_of_config именно как
-        AsOfConfig | None (см. Step 2) — без этого auto-wiring падает с
-        GraphMissingFactoryError. Сам провайдер всегда возвращает
-        конкретный AsOfConfig, никогда None.
-        """
+    def as_of_config(self, settings: Settings) -> AsOfConfig:
+        """Режим опорной даты расчёта (LCT-14) — из настроек."""
         return AsOfConfig(
             mode=settings.assessment.as_of_mode,
             fixed_date=settings.assessment.as_of_override,
