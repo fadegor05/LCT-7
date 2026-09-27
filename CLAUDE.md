@@ -8,11 +8,18 @@ LCT-7 is a hackathon monorepo for an automated construction-site violation detec
 (ДГП Москвы case). Three independent parts:
 
 - `backend/` — FastAPI + Dishka (DI) + Granian (ASGI) + SQLAlchemy async + PostgreSQL, Alembic migrations.
-- `frontend/` — React 19 + Vite 6 + TypeScript, single-page, served by nginx in prod.
+- `frontend/` — React 19 + Vite 6 + TypeScript, React Router, TanStack Query, Zod, CSS Modules; MSW mocks; served by nginx in prod.
 - `ml/` — research + CLI tools for the vision/scheduling pipeline (YOLOE zero-shot detection). Standalone; not yet wired into the backend.
 
 Orchestration is Docker Compose with layered files (`common` / `dev` / `prod`) behind Traefik.
 `makefile` at the root is the entry point. Much of the code documentation is in Russian.
+
+## Skills
+
+`.claude/skills/` contains the [obra/superpowers](https://github.com/obra/superpowers) skill set
+(imported, MIT-licensed) — brainstorming, writing/executing plans, TDD, systematic debugging,
+subagent-driven development, code review, git worktrees, etc. Claude Code should check
+`.claude/skills/using-superpowers/SKILL.md` for how and when to invoke them.
 
 ## Commands
 
@@ -28,4 +35,31 @@ make down           # stop, remove orphans
 make logs           # follow logs
 make pretty         # backend: ruff format + ruff check --fix
 make check          # backend: ruff check + ruff format --check (CI/pre-commit)
+make front-pretty   # frontend: prettier + eslint --fix + stylelint --fix
+make front-check    # frontend: tsc + eslint + stylelint + prettier --check + vitest with coverage thresholds
+make front-test     # frontend: vitest with coverage report
 ```
+
+In `frontend/`: `pnpm dev` (mocks on by default via `.env.development`), `pnpm dev:api` (real backend),
+`pnpm test`, `pnpm lint`, `pnpm check`.
+
+## Backend structure
+
+- `app/core/` — infrastructure: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py`.
+- `app/plugins/` — cross-cutting: `di.py`, `routing.py`, `exceptions.py`.
+- `app/adapters/` — external systems (ML, ГЭСН reference data).
+- `app/domains/<domain>/` — one domain = one flat directory with `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` (omit files a domain doesn't need). `core/`, `plugins/`, `adapters/` are not domains.
+- `app/models.py` — single import point for ORM models, so Alembic autogenerate sees them.
+- DI: `Scope.APP` — settings, engine, sessionmaker, external clients, stateless parsers, reference caches. `Scope.REQUEST` — session, repositories, services.
+
+Full convention: docs/architecture.md §6.
+
+## Frontend structure
+
+- `src/api/` — `client.ts` (`request()` validates every response with a Zod schema), `schemas.ts` (contracts + enums from DataModel §5.7), one file per domain with API functions and TanStack Query hooks; cache keys in `keys.ts` (`['site', id, …]`, any input edit invalidates the whole site).
+- `src/components/ui/` — LCT-7 design system (tokens in `src/styles/tokens.css`); `components/layout/` — app shell, `SiteShell` with site tabs.
+- `src/features/<domain>/` — composite components per screen; `src/pages/` — one page per mockup screen, routes in `src/app/routes.tsx`.
+- `src/mocks/` — MSW handlers over an in-memory db (`db.ts`); toggled by `VITE_USE_MOCKS`. Same handlers run in tests (`src/test/setup.ts`).
+- Tests sit next to code (`*.test.tsx`); pages are tested through `renderRoute(url)`. Every new component needs a test; coverage thresholds live in `vite.config.ts`.
+
+Full description: docs/architecture-frontend.md.

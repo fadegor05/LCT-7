@@ -1,0 +1,94 @@
+import { plural } from './labels'
+
+/**
+ * Форматирование дат. Даты наблюдений приходят как YYYY-MM-DD (в часовом поясе стройки),
+ * моменты — как ISO с зоной. Показываем в формате макета: 18.09.2026, 18.09, 14:20.
+ */
+
+const pad = (n: number) => String(n).padStart(2, '0')
+
+function parts(value: string): { y: number; m: number; d: number; hh: number; mm: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(value)
+  if (!match) return null
+  const [, y, m, d, hh = '0', mm = '0'] = match
+  return { y: +y!, m: +m!, d: +d!, hh: +hh, mm: +mm }
+}
+
+/** 2026-09-18 → 18.09.2026 */
+export function formatDate(value: string | null | undefined): string {
+  const p = value ? parts(value) : null
+  return p ? `${pad(p.d)}.${pad(p.m)}.${p.y}` : '—'
+}
+
+/** 2026-09-18 → 18.09 */
+export function formatShortDate(value: string | null | undefined): string {
+  const p = value ? parts(value) : null
+  return p ? `${pad(p.d)}.${pad(p.m)}` : '—'
+}
+
+/** 2026-09-18T14:20:00+05:00 → 14:20 (локальное время стройки, как записано в строке). */
+export function formatTime(value: string | null | undefined): string {
+  const p = value ? parts(value) : null
+  return p ? `${pad(p.hh)}:${pad(p.mm)}` : '—'
+}
+
+/** 2026-09-18T14:20 → 18.09 14:20 */
+export function formatShortDateTime(value: string | null | undefined): string {
+  return value ? `${formatShortDate(value)} ${formatTime(value)}` : '—'
+}
+
+/** 2026-09-18T14:20 → 18.09.2026 14:20 */
+export function formatDateTime(value: string | null | undefined): string {
+  return value ? `${formatDate(value)} ${formatTime(value)}` : '—'
+}
+
+/** Плановое окно этапа: 24.08 — 31.08 */
+export function formatWindow(start: string | null, end: string | null, sep = ' — '): string {
+  if (!start && !end) return '—'
+  return `${formatShortDate(start)}${sep}${formatShortDate(end)}`
+}
+
+/** Отставание: «от 4 дн.» или «4–6 дн.» */
+export function formatDelay(min: number | null, max: number | null): string | null {
+  if (min === null) return null
+  if (max === null) return `от ${min} дн.`
+  if (max === min) return `${min} дн.`
+  return `${min}–${max} дн.`
+}
+
+/** Размер файла: 24 КБ */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} Б`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} МБ`
+}
+
+/** «дд.мм» или «дд.мм.гггг» → YYYY-MM-DD. Год по умолчанию берётся из `fallbackYear`. */
+export function parseRuDate(value: string, fallbackYear: number): string | null {
+  const match = /^\s*(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s*$/.exec(value)
+  if (!match) return null
+  const [, d, m, y] = match
+  const day = +d!
+  const month = +m!
+  const year = y ? +y : fallbackYear
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null
+  return `${year}-${pad(month)}-${pad(day)}`
+}
+
+/** «дд.мм.гггг чч:мм» → YYYY-MM-DDTHH:MM:00 (время стройки, без зоны). */
+export function parseRuDateTime(value: string): string | null {
+  const match = /^\s*(\d{1,2}\.\d{1,2}\.\d{4})\s+(\d{1,2}):(\d{2})\s*$/.exec(value)
+  if (!match) return null
+  const [, datePart, hh, mm] = match
+  const date = parseRuDate(datePart!, 0)
+  if (!date || +hh! > 23 || +mm! > 59) return null
+  return `${date}T${pad(+hh!)}:${mm}:00`
+}
+
+/** Сколько дней назад: «2 дня назад», «сегодня». */
+export function daysAgo(days: number): string {
+  if (days <= 0) return 'сегодня'
+  if (days === 1) return 'вчера'
+  return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`
+}

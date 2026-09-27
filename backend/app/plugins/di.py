@@ -1,7 +1,7 @@
 """DI-контейнер Dishka (аналог plugins/Koin.kt).
 
 Инфраструктурные провайдеры (settings, engine, session) живут здесь, доменные —
-каждый в своём модуле (app/modules/<домен>/provider.py), как Module.kt в Kotlin.
+каждый в своём домене (app/domains/<домен>/provider.py), как Module.kt в Kotlin.
 """
 
 from collections.abc import AsyncIterable
@@ -15,7 +15,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.core.settings import Settings, get_settings
-from app.modules.user.provider import UserProvider
+from app.domains.site.provider import SiteProvider
+from app.domains.user.provider import UserProvider
+from app.domains.utility.provider import UtilityProvider
 
 
 class AppProvider(Provider):
@@ -50,4 +52,6 @@ def create_container() -> AsyncContainer:
         AppProvider(),
         DatabaseProvider(),
         UserProvider(),
+        SiteProvider(),
+        UtilityProvider(),
     )

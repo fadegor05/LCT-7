@@ -1,0 +1,81 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 72px;
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  flex: none;
+}
+
+.logo {
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  color: var(--ink);
+  text-decoration: none;
+  margin-right: var(--space-6);
+}
+
+.nav {
+  display: flex;
+  gap: var(--space-1);
+  flex-grow: 1;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-decoration: none;
+  color: var(--ink-muted);
+}
+
+.navLink[aria-current='page'] {
+  background: var(--surface-card);
+  color: var(--ink);
+}
+
+.mockBadge {
+  font-size: 12px;
+  line-height: 16px;
+  padding: 2px var(--space-2);
+  border: 1px dashed var(--line-control);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+}
+
+.main {
+  flex-grow: 1;
+  padding: var(--space-10) var(--space-12) var(--space-16);
+}
+
+.content {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+@media (width <= 720px) {
+  .header,
+  .main {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}

@@ -1,0 +1,110 @@
+.layout {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.aside {
+  width: 400px;
+  flex: none;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stageList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stageBtn {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.stageBtn[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--surface-card);
+}
+
+.editorHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.editorHead > div:first-child {
+  flex-grow: 1;
+}
+
+.rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) 130px 100px 44px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.machine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.qtyInput {
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  width: 56px;
+  height: 40px;
+  padding: 0 var(--space-2);
+  text-align: center;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+}
+
+.addRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.footer > p {
+  flex-grow: 1;
+}
