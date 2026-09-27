@@ -145,24 +145,22 @@ def _parse(text: str) -> dt.date | None:
     return None
 
 
-def read_stamp(path: Path, ocr) -> StampResult:
-    img = np.asarray(Image.open(path).convert("RGB"))
-
+def read_stamp_array(img: np.ndarray, ocr, *, name: str = "") -> StampResult:
+    """Как read_stamp, но принимает уже декодированный RGB-массив (для сервиса)."""
     hits: list[tuple[dt.date, float, str, str]] = []
     for corner, left, right in ROIS:
         roi = _roi(img, left, right)
-        for name, variant in _variants(roi):
+        for variant_name, variant in _variants(roi):
             det, _ = ocr(variant)
             for text, conf in _join_fragments(det):
                 date = _parse(text)
                 if date:
-                    hits.append((date, conf, f"{corner}:{name}", text))
+                    hits.append((date, conf, f"{corner}:{variant_name}", text))
 
     if not hits:
-        return StampResult(path.name, None, None, None, 0, None,
+        return StampResult(name, None, None, None, 0, None,
                            "штамп не найден или не читается — нужна ручная привязка")
 
-    # Голоса считаются по разным гипотезам: одна может дать несколько строк.
     votes = Counter()
     for date, _, variant, _ in hits:
         votes[date] = len({v for d, _, v, _ in hits if d == date})
@@ -176,8 +174,25 @@ def read_stamp(path: Path, ocr) -> StampResult:
     elif votes[best_date] == 1:
         note = "подтверждено одной гипотезой — проверить вручную"
 
-    return StampResult(path.name, best_date.isoformat(), round(best[1], 3), best[2],
+    return StampResult(name, best_date.isoformat(), round(best[1], 3), best[2],
                        votes[best_date], best[3], note)
+
+
+def read_stamp(path: Path, ocr) -> StampResult:
+    """CLI: читает файл с диска, делегирует read_stamp_array."""
+    img = np.asarray(Image.open(path).convert("RGB"))
+    return read_stamp_array(img, ocr, name=path.name)
+
+
+def read_stamp_for_service(image: np.ndarray, ocr) -> dict:
+    """Импортируемая функция для сервиса (LCT-13): {date, text, roi}.
+
+    image — уже RGB ndarray, EXIF-транспонированный вызывающей стороной
+    (см. service/app.py, как predict_bytes делает это для /detect).
+    """
+    result = read_stamp_array(image, ocr)
+    roi = result.variant.split(":", 1)[0] if result.variant else None
+    return {"date": result.date, "text": result.raw, "roi": roi}
 
 
 def main() -> int:

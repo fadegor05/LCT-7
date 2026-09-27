@@ -19,7 +19,8 @@ WORKDIR /app
 # Сборка +cpu: в образе GPU нет, а обычный torch тянет ~2 ГБ CUDA-зависимостей.
 RUN pip install --no-cache-dir \
         torch==2.14.0 torchvision==0.29.0 --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir ultralytics==8.4.153 pillow==12.3.0 huggingface_hub         "fastapi>=0.115" "uvicorn[standard]>=0.30" python-multipart>=0.0.9
+    && pip install --no-cache-dir ultralytics==8.4.153 pillow==12.3.0 huggingface_hub         "fastapi>=0.115" "uvicorn[standard]>=0.30" python-multipart>=0.0.9 \
+        opencv-python-headless==5.0.0.93 numpy==2.5.2 rapidocr-onnxruntime==1.2.3
 
 COPY service/ /app/service/
 COPY tools/ /app/tools/
