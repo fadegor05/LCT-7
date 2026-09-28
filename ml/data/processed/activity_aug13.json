@@ -1,0 +1,58 @@
+{
+ "classes": [
+  {
+   "class": "backhoe_loader",
+   "pairs": 12,
+   "moved": 0,
+   "still": 12,
+   "unclear": 0,
+   "still_share": 1.0,
+   "interval": [
+    0.757,
+    1.0
+   ],
+   "basis": "12 наблюдений без смещения из 12 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.988
+  },
+  {
+   "class": "concrete_mixer",
+   "pairs": 2,
+   "moved": 0,
+   "still": 2,
+   "unclear": 0,
+   "basis": "определённых наблюдений 2 — меньше порога 10, доля не оценивается"
+  },
+  {
+   "class": "loader_unknown",
+   "pairs": 145,
+   "moved": 5,
+   "still": 119,
+   "unclear": 21,
+   "still_share": 0.96,
+   "interval": [
+    0.909,
+    0.983
+   ],
+   "basis": "119 наблюдений без смещения из 124 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.948
+  }
+ ],
+ "meta": {
+  "cameras": 1,
+  "frames": 148,
+  "pairs_used": 159,
+  "objects_linkable": 161,
+  "objects_linked": 159,
+  "linked_share": 0.988,
+  "frames_without_time": 0,
+  "frames_skipped_camera_moved": 0,
+  "pairs_skipped_gap": 0,
+  "thresholds": {
+   "moved": 0.1,
+   "still": 0.03,
+   "max_gap_minutes": 10,
+   "conf": 0.25
+  }
+ },
+ "cannot_claim": "Измеряется смещение рамки между кадрами, а не работа. Машина без смещения может работать с места (экскаватор копает, кран поворачивает стрелу), поэтому величина названа «доля наблюдений без смещения», а не «доля простоя». Метод верен только для неподвижной камеры. Связать удаётся не все машины, а несвязанные — это в первую очередь уехавшие, поэтому доля завышена: нижняя оценка в поле still_share_floor."
+}
