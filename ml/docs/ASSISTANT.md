@@ -209,7 +209,7 @@ python tools/suggest_stage_mapping.py --list-models
 `backend/app/adapters/`. Ассистент — такая же внешняя система, как ML-сервис
 детекции.
 
-**Реализовано в LCT-20:**
+**Как это устроено в продукте:**
 
 **Ручки:**
 - `POST /api/sites/{site_id}/assistant/ask` — задать вопрос по отчёту, тело:
@@ -241,17 +241,6 @@ python tools/suggest_stage_mapping.py --list-models
 | 503 | `assistant_unavailable` | ML не настроен, недоступен или вернул 503 |
 | 504 | `assistant_timeout` | ML не ответил или вернул 504 |
 | 400 | `assistant_bad_request` | ML вернул 4xx ошибку |
-
-**Реализация:**
-
-- `backend/app/adapters/ml/assistant.py` — HttpAssistantClient и NullAssistantClient,
-  обработка таймаутов, 503, 504, исключения без пробросов секретов;
-- `backend/app/domains/assistant/` — сервис с оркестрацией проверок (доступ, лимит,
-  размер, отчёт), маппинг ошибок; две ручки;
-- `backend/app/domains/assistant/provider.py` — rate limiter (10/мин из настроек),
-  AssistantService, AssistantClient;
-- тесты: `/ask` успех, ошибки ML, границы вопроса, лимит, отсутствие сохранения,
-  отсутствие секретов в логах.
 
 **Без аутентификации.** Проект не имеет реальной аутентификации; rate limit (10/мин
 по умолчанию через `ASSISTANT__RATE_LIMIT_PER_MIN`) — единственный механизм защиты.
