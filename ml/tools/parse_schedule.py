@@ -122,6 +122,48 @@ def load_mapping(path: Path) -> list:
             for r in data["rules"]]
 
 
+def classify_rows(raw: list[dict], mapping: list, site: str,
+                  keep_unmapped: bool = False) -> tuple:
+    """Строки плана → (разобранные, без этапа, битые даты, без дат, без дат но с этапом).
+
+    Вынесено из `main` отдельной функцией ради одного свойства, которое нужно
+    проверять автотестом: **баланс должен сходиться**. Каждая строка исходного
+    файла обязана попасть ровно в одну корзину. Сквозной прогон на реальном
+    файле заказчика показал, почему это не формальность: из 374 строк отчёт
+    объяснял судьбу 284, а 90 исчезали без следа — у них просто не было дат.
+
+    Самый опасный случай выделен отдельно: строка, где **наш этап распознан, а
+    дат нет**. Оператор видит знакомое название и считает этап под контролем, а
+    выводов по нему не будет вовсе.
+    """
+    out, skipped, bad_dates, no_dates, no_dates_mapped = [], [], [], [], []
+    for r in raw:
+        start, err1 = parse_date(r["start"])
+        end, err2 = parse_date(r["end"])
+        if (err1 and r["start"]) or (err2 and r["end"]):
+            bad_dates.append((r["name"][:46], err1 or err2))
+        code = name = None
+        for pattern, stage_code, stage_name in mapping:
+            if pattern.search(r["name"]):
+                code, name = stage_code, stage_name
+                break
+        if code is None:
+            skipped.append(r["name"][:60])
+            if not keep_unmapped:
+                continue
+            code, name = "", r["name"]
+        if not start or not end:
+            no_dates.append(r["name"][:60])
+            if code:
+                no_dates_mapped.append((code, r["name"][:46]))
+            continue
+        out.append({"site_id": site, "stage_code": code,
+                    "stage_name": name or r["name"],
+                    "planned_start": start.isoformat(), "planned_end": end.isoformat(),
+                    "note": "из плана: " + r["num"] + " " + r["name"][:60]})
+    return out, skipped, bad_dates, no_dates, no_dates_mapped
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -135,31 +177,21 @@ def main() -> int:
                     help="не сводить повторы одного этапа в один интервал")
     args = ap.parse_args()
 
-    raw = read_xlsx(args.plan) if args.plan.suffix.lower() == ".xlsx" else read_pdf(args.plan)
+    # Явная проверка расширения: иначе всё, что не .xlsx, уходит в читатель PDF
+    # и пользователь получает traceback из недр pymupdf вместо ответа на вопрос
+    # «почему мой файл не открылся».
+    suffix = args.plan.suffix.lower()
+    if suffix not in (".xlsx", ".pdf"):
+        raise SystemExit(f"формат «{suffix or 'без расширения'}» не поддерживается: "
+                         "нужен .xlsx (Excel) или .pdf (выгрузка MS Project)")
+    if not args.plan.exists():
+        raise SystemExit(f"файл не найден: {args.plan}")
+
+    raw = read_xlsx(args.plan) if suffix == ".xlsx" else read_pdf(args.plan)
     mapping = load_mapping(args.mapping)
 
-    out, skipped, bad_dates = [], [], []
-    for r in raw:
-        start, err1 = parse_date(r["start"])
-        end, err2 = parse_date(r["end"])
-        if (err1 and r["start"]) or (err2 and r["end"]):
-            bad_dates.append((r["name"][:46], err1 or err2))
-        code = name = None
-        for pattern, stage_code, stage_name in mapping:
-            if pattern.search(r["name"]):
-                code, name = stage_code, stage_name
-                break
-        if code is None:
-            skipped.append(r["name"][:60])
-            if not args.keep_unmapped:
-                continue
-            code, name = "", r["name"]
-        if not start or not end:
-            continue                                       # без обеих дат строка бесполезна
-        out.append({"site_id": args.site, "stage_code": code,
-                    "stage_name": name or r["name"],
-                    "planned_start": start.isoformat(), "planned_end": end.isoformat(),
-                    "note": "из плана: " + r["num"] + " " + r["name"][:60]})
+    out, skipped, bad_dates, no_dates, no_dates_mapped = classify_rows(
+        raw, mapping, args.site, args.keep_unmapped)
 
     # В реальных планах один наш этап встречается несколько раз: каркас идёт
     # отдельной строкой на каждую секцию или этаж. Цепочке нужен один интервал
@@ -180,18 +212,35 @@ def main() -> int:
         out = sorted(by_code.values(), key=lambda r: r["planned_start"])
 
     print("строк в плане: %d; распознано этапов: %d" % (len(raw), len(out)))
+    # Свести баланс обязательно: сумма объяснённых строк должна сойтись с
+    # исходной. Иначе в отчёте о разборе остаётся необъяснённая разница, и
+    # именно в ней прячутся потерянные работы.
+    explained = len(skipped) + len(no_dates)
+    print("судьба строк: без нашего этапа %d, без дат %d, разобрано %d из %d"
+          % (len(skipped), len(no_dates), len(raw) - explained, len(raw)))
     if merged:
         print("сведено повторов одного этапа: %d (секции и этажи идут отдельными строками)" % merged)
     if bad_dates:
         print("\nстрок с нечитаемыми датами: %d — пропущены, разбор не прерван" % len(bad_dates))
         for name, why in bad_dates[:5]:
             print("   %-48s%s" % (name, why))
+    if no_dates_mapped:
+        print("\nстрок с распознанным этапом, но без дат: %d — выводов по ним не будет"
+              % len(no_dates_mapped))
+        for code, name in no_dates_mapped[:5]:
+            print("   %-10s%s" % (code, name))
     if skipped:
         print("\nбез нашего этапа: %d (внутренние работы, оборудование, сдача)" % len(skipped))
         for name in skipped[:5]:
             print("   " + name)
 
-    if args.out:
+    if not out:
+        # Пустой план — не успех. Молчаливый выход с нулевым кодом означал бы,
+        # что сломанное сопоставление названий выглядит как нормальный разбор.
+        print("\nНИ ОДНОГО ЭТАПА НЕ РАСПОЗНАНО. Проверьте, тот ли это файл и "
+              "покрывает ли configs/stage_mapping.json его названия работ.")
+
+    if args.out and out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         with open(args.out, "w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=["site_id", "stage_code", "stage_name",
@@ -204,7 +253,9 @@ def main() -> int:
         for r in out[:12]:
             print("   %-10s%-40s%s .. %s" % (r["stage_code"], r["stage_name"][:38],
                                              r["planned_start"], r["planned_end"]))
-    return 0
+    # Ненулевой код возврата, когда разбирать оказалось нечего: скрипт зовут из
+    # конвейера, и там «успех с пустым файлом» хуже явной ошибки.
+    return 0 if out else 2
 
 
 if __name__ == "__main__":
