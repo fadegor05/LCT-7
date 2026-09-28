@@ -20,11 +20,13 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from app.adapters.ml.assistant import AssistantClient
 from app.adapters.ml.base import DetectorClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
+from app.domains.assistant.provider import AssistantProvider
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.observation.provider import ObservationProvider
@@ -39,7 +41,7 @@ from app.domains.user.provider import UserProvider
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
-from tests.fakes import FakeDetector
+from tests.fakes import FakeAssistantClient, FakeDetector
 
 
 class TestAppProvider(Provider):
@@ -183,6 +185,18 @@ class TestPhotoProvider(Provider):
         )
 
 
+class TestAssistantClientProvider(Provider):
+    """Тестовый DI провайдер для AssistantClient.
+
+    Предоставляет FakeAssistantClient вместо реального HTTP клиента.
+    """
+
+    @provide(scope=Scope.APP)
+    def assistant_client(self) -> AssistantClient:
+        """Создать FakeAssistantClient для тестов."""
+        return FakeAssistantClient()
+
+
 def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncContainer:
     storage_root = tmp_path / "storage"
     storage_root.mkdir(parents=True, exist_ok=True)
@@ -196,6 +210,8 @@ def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncConta
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),
+        TestAssistantClientProvider(),
+        AssistantProvider(),
         UtilityProvider(),
     )
 
@@ -239,6 +255,8 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),
+        TestAssistantClientProvider(),
+        AssistantProvider(),
         UtilityProvider(),
     )
     yield container
@@ -274,3 +292,10 @@ async def storage(container: AsyncContainer) -> LocalFileStorage:
     """Получить LocalFileStorage из контейнера для проверки файлов в тестах."""
     file_storage = await container.get(FileStorage)
     return cast(LocalFileStorage, file_storage)
+
+
+@pytest.fixture
+async def assistant_client(container: AsyncContainer) -> FakeAssistantClient:
+    """Получить FakeAssistantClient из контейнера для конфигурации в тестах."""
+    client = await container.get(AssistantClient)
+    return cast(FakeAssistantClient, client)
