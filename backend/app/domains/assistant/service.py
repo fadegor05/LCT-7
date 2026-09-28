@@ -6,6 +6,7 @@ from app.domains.assessment.service import AssessmentService
 from app.domains.assistant.report import BuiltReport, ReportInput, build_report
 from app.domains.observation.repository import ObservationRepository
 from app.domains.schedule.repository import ScheduleRepository
+from app.plugins.exceptions import AppError
 
 
 class AssistantReportService:
@@ -56,8 +57,8 @@ class AssistantReportService:
 
         # Получаем график и этапы
         schedule = await self._schedule_repo.get_by_site(site_id)
-        # schedule не должен быть None, т.к. list_stage_statuses уже проверил наличие
-        assert schedule is not None
+        if schedule is None:
+            raise AppError("График не загружен", status_code=404)
         stages = await self._schedule_repo.list_stages(schedule.id)
 
         # Получаем наблюдения

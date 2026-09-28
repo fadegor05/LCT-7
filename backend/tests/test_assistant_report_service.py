@@ -195,6 +195,56 @@ async def test_нет_графика_404() -> None:
 
 
 @pytest.mark.asyncio
+async def test_график_исчез_между_вызовами_404() -> None:
+    """Если assessment успешно вернул статусы, но schedule исчезнет перед read,
+    то service поднимает AppError('График не загружен', 404)."""
+    assessment_service = AsyncMock()
+
+    stage_id = uuid.uuid4()
+    status = StageStatusRead(
+        stage_id=stage_id,
+        stage_name="Этап 1",
+        position=1,
+        status="on_schedule",
+        delay_days=None,
+        confidence=None,
+        confidence_reason=None,
+        computed_at=None,
+    )
+
+    assessment_service.list_stage_statuses.return_value = [status]
+    assessment_service.list_deviations.return_value = []
+    assessment_service.get_summary.return_value = SiteSummaryRead(
+        verdict="no_deviations",
+        delay_days_min=None,
+        delay_days_max=None,
+        critical_count=0,
+        attention_count=0,
+    )
+
+    schedule_repo = AsyncMock()
+    schedule_repo.get_by_site.return_value = None  # График исчез между вызовами
+
+    observation_repo = AsyncMock()
+
+    site_id = uuid.uuid4()
+
+    from app.domains.assistant.service import AssistantReportService
+
+    service = AssistantReportService(
+        assessment=assessment_service,
+        schedule_repo=schedule_repo,
+        observation_repo=observation_repo,
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await service.build(site_id)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.message == "График не загружен"
+
+
+@pytest.mark.asyncio
 async def test_stage_ids_сопоставлены_с_отчётом() -> None:
     """stage_ids[3] содержит ID третьего этапа по position."""
     assessment_service = AsyncMock()
@@ -299,20 +349,36 @@ async def test_stage_ids_сопоставлены_с_отчётом() -> None:
     assert built_report.stage_ids[2] == stage2_id
 
 
-@pytest.mark.asyncio
-@pytest.mark.skip(
-    reason=(
-        "Требует инициализации стенда (создания текущего пользователя в БД), "
-        "что проверяется в интеграционных тестах других сервисов (see test_site_service). "
-        "DI регистрация проверяется через импорт провайдера в create_container()."
-    )
-)
-async def test_провайдер_регистрирует_сервис(container) -> None:
-    """AssistantReportService может быть разрешен в REQUEST scope через DI контейнер."""
+def test_контейнер_собирается_с_провайдером_ассистента() -> None:
+    """create_container() успешно собирается с AssistantProvider (граф зависимостей валиден)."""
+    from app.plugins.di import create_container
+
+    # Dishka проверяет граф при создании контейнера и выбросит исключение при ошибке
+    container = create_container()
+
+    assert container is not None
+
+
+def test_провайдер_объявляет_сервис_в_request_скоупе() -> None:
+    """AssistantProvider объявляет AssistantReportService в REQUEST scope."""
+    from dishka import Scope
+
+    from app.domains.assistant.provider import AssistantProvider
     from app.domains.assistant.service import AssistantReportService
 
-    async with container() as request_container:
-        service = await request_container.get(AssistantReportService)
+    provider = AssistantProvider()
 
-    assert service is not None
-    assert isinstance(service, AssistantReportService)
+    # Проверяем, что провайдер имеет фабрику для AssistantReportService в REQUEST scope
+    factory_found = False
+    for factory in provider.factories:
+        # В Dishka factory.provides содержит информацию о том, что эта фабрика производит
+        # и factory.scope содержит scope (Scope.REQUEST, Scope.APP и т.д.)
+        if (
+            hasattr(factory.provides, "type_hint")
+            and factory.provides.type_hint is AssistantReportService
+            and factory.scope is Scope.REQUEST
+        ):
+            factory_found = True
+            break
+
+    assert factory_found, "AssistantReportService должна быть зарегистрирована в REQUEST scope"
