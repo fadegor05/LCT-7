@@ -184,6 +184,16 @@ def models(base_url: str, api_key: str, timeout: int = 30) -> list[str]:
     return [m.get("id", "") for m in data.get("data", [])]
 
 
+class EmptyAnswer(RuntimeError):
+    """Провайдер ответил 200, но без текста.
+
+    Так ведут себя reasoning-модели: бюджет max_tokens общий на рассуждения и
+    ответ, и если он кончается до первого символа ответа, в `content` приходит
+    null при `finish_reason: "length"`. Молча вернуть None нельзя — дальше по
+    цепочке ответ обрабатывается как строка.
+    """
+
+
 def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600,
         system: str = "", max_tokens: int | None = None) -> str:
     body_dict = {
@@ -201,7 +211,12 @@ def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600
                  "Authorization": f"Bearer {api_key}"})
     with urllib.request.urlopen(request, timeout=timeout) as response:
         data = json.load(response)
-    return data["choices"][0]["message"]["content"]
+    choice = data["choices"][0]
+    answer = (choice.get("message") or {}).get("content")
+    if not answer or not answer.strip():
+        raise EmptyAnswer(
+            f"модель не вернула текст (finish_reason={choice.get('finish_reason')})")
+    return answer
 
 
 def parse_answer(text: str, names: list[str], stages: dict[str, str]) -> list[dict]:
