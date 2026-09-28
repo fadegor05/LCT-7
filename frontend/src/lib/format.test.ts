@@ -10,15 +10,22 @@ import {
   formatWindow,
   parseRuDate,
   parseRuDateTime,
+  todayIso,
 } from './format'
 
 describe('format', () => {
   it('formats dates and times as in the mockups', () => {
-    expect(formatDate('2026-09-18')).toBe('18.09.2026')
-    expect(formatShortDate('2026-09-18T14:20:00+05:00')).toBe('18.09')
+    expect(formatDate('2026-09-18')).toBe('ПТ 18.09.2026')
+    expect(formatShortDate('2026-09-18T14:20:00+05:00')).toBe('ПТ 18.09')
     expect(formatTime('2026-09-18T14:20:00+05:00')).toBe('14:20')
-    expect(formatShortDateTime('2026-09-18T14:20:00+05:00')).toBe('18.09 14:20')
-    expect(formatDateTime('2026-09-18T08:05:00')).toBe('18.09.2026 08:05')
+    expect(formatShortDateTime('2026-09-18T14:20:00+05:00')).toBe('ПТ 18.09 14:20')
+    expect(formatDateTime('2026-09-18T08:05:00')).toBe('ПТ 18.09.2026 08:05')
+  })
+
+  it('prefixes dates with the weekday', () => {
+    expect(formatShortDate('2026-09-01')).toBe('ВТ 01.09')
+    expect(formatShortDate('2026-09-07')).toBe('ПН 07.09')
+    expect(formatShortDate('2026-09-06')).toBe('ВС 06.09')
   })
 
   it('renders a dash for empty or malformed values', () => {
@@ -31,8 +38,8 @@ describe('format', () => {
   })
 
   it('formats plan windows', () => {
-    expect(formatWindow('2026-08-24', '2026-08-31')).toBe('24.08 — 31.08')
-    expect(formatWindow('2026-08-24', '2026-08-31', '–')).toBe('24.08–31.08')
+    expect(formatWindow('2026-08-24', '2026-08-31')).toBe('ПН 24.08 — ПН 31.08')
+    expect(formatWindow('2026-08-24', '2026-08-31', '–')).toBe('ПН 24.08–ПН 31.08')
     expect(formatWindow(null, null)).toBe('—')
   })
 
@@ -47,6 +54,12 @@ describe('format', () => {
     expect(formatFileSize(512)).toBe('512 Б')
     expect(formatFileSize(24 * 1024)).toBe('24 КБ')
     expect(formatFileSize(3.5 * 1024 * 1024)).toBe('3,5 МБ')
+  })
+
+  it('gives today in local time as YYYY-MM-DD', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 8, 7, 23, 30) })
+    expect(todayIso()).toBe('2026-09-07')
+    vi.useRealTimers()
   })
 
   it('parses ru dates with validation', () => {

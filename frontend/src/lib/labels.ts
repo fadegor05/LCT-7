@@ -13,6 +13,7 @@ export const dateSourceLabels: Record<DateSource, string> = {
   channel: 'Канал',
   metadata: 'Метаданные',
   stamp: 'Штамп',
+  filename: 'Из имени файла',
   neighbours: 'По соседним снимкам',
   manual: 'Вручную',
 }
@@ -37,6 +38,7 @@ export const activityLabels: Record<Activity, string> = {
 
 export const deviationTypeLabels: Record<DeviationType, string> = {
   missing_equipment: 'Нет нужной техники',
+  missing_logical_equipment: 'Нет ожидаемой техники',
   stage_mismatch: 'Несоответствие этапу',
   stale_data: 'Данные устарели',
   idle: 'Простой техники',

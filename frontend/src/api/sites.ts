@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
-import { request } from './client'
+import { ApiError, request } from './client'
 import { keys } from './keys'
 import { siteSchema, userSchema, type SiteCreate } from './schemas'
 
@@ -8,10 +8,22 @@ import { siteSchema, userSchema, type SiteCreate } from './schemas'
 const toBody = (data: Partial<SiteCreate>) =>
   data.address === undefined ? data : { ...data, address: data.address.trim() || null }
 
+/** id стройки из URL не UUID — бэкенд отвечает 422 с текстом pydantic. Для человека это та же «не найдена». */
+async function getSite(siteId: string) {
+  try {
+    return await request(`/sites/${siteId}`, { schema: siteSchema })
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 422) {
+      throw new ApiError(404, 'Стройка не найдена', error.detail)
+    }
+    throw error
+  }
+}
+
 export const sitesApi = {
   me: () => request('/users/me', { schema: userSchema }),
   list: () => request('/sites', { schema: z.array(siteSchema) }),
-  get: (siteId: string) => request(`/sites/${siteId}`, { schema: siteSchema }),
+  get: getSite,
   create: (data: SiteCreate) =>
     request('/sites', { method: 'POST', body: toBody(data), schema: siteSchema }),
   update: (siteId: string, data: Partial<SiteCreate>) =>

@@ -1,7 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import type { Observation, ScheduleReport, Stage, StageStatus } from '@/api/schemas'
 import type { DeviationItem } from '@/lib/deviations'
+import { server } from '@/mocks/server'
 import { renderWithProviders } from '@/test/render'
 import { DeviationList } from './deviations/DeviationList'
 import { describeIssues } from './new-site/describeIssues'
@@ -10,6 +12,7 @@ import { DayPicker } from './observations/DayPicker'
 import { EquipmentList } from './observations/EquipmentList'
 import { observationSentence } from './overview/observationSentence'
 import { StageStatusTable } from './overview/StageStatusTable'
+import { SummaryCards } from './overview/SummaryCards'
 import { ObservabilityBadge, VerdictBadge } from './sites/SiteBadges'
 import { verdictText } from './sites/verdict'
 
@@ -39,8 +42,8 @@ describe('DeviationList', () => {
     expect(link).toHaveAttribute('href', '/sites/s1/deviations/d1')
     expect(within(link).getByText('Простой техники (гипотеза)')).toBeInTheDocument()
     expect(within(link).getByText('Все этапы')).toBeInTheDocument()
-    expect(within(link).getByText('17.09 — 18.09')).toBeInTheDocument()
-    expect(within(link).getByText('18.09.2026')).toBeInTheDocument()
+    expect(within(link).getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
+    expect(within(link).getByText('ПТ 18.09.2026')).toBeInTheDocument()
   })
 
   it('shows the site name and period in the cross-site list', () => {
@@ -48,7 +51,7 @@ describe('DeviationList', () => {
       <DeviationList items={[{ ...deviation, stage_name: undefined }]} showSite />,
     )
     expect(screen.getByText('Стройка')).toBeInTheDocument()
-    expect(screen.getByText('17.09 — 18.09')).toBeInTheDocument()
+    expect(screen.getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
   })
 
   it('has an empty state', () => {
@@ -158,7 +161,7 @@ describe('StagesTable', () => {
       />,
     )
     const rows = screen.getAllByRole('row').slice(1)
-    expect(rows[0]).toHaveTextContent('1Котлован01.09 — 10.09')
+    expect(rows[0]).toHaveTextContent('1КотлованВТ 01.09 — ЧТ 10.09')
     expect(within(rows[1]!).getByText('задано вручную')).toBeInTheDocument()
   })
 
@@ -219,7 +222,7 @@ describe('StageStatusTable', () => {
       />,
     )
     const [, pit, slab, backfill] = screen.getAllByRole('row')
-    expect(pit).toHaveTextContent('01.09–10.09')
+    expect(pit).toHaveTextContent('ВТ 01.09–ЧТ 10.09')
     expect(pit).toHaveTextContent('Экскаватор после планового конца')
     expect(pit).toHaveTextContent('отставание 4 дн. · уверенность высокая')
     expect(within(pit!).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
@@ -324,5 +327,55 @@ describe('observations', () => {
       'Гусеничный экскаватор 2 (максимум по снимкам).',
     )
     expect(observationSentence(observation({}))).toBe('Техники на снимках не найдено.')
+  })
+})
+
+// bug-reports/002: «Недостаточно данных» называет настоящую причину.
+describe('SummaryCards insufficient data', () => {
+  const insufficient = () =>
+    http.get('/api/sites/:siteId/assessment/summary', () =>
+      HttpResponse.json({
+        verdict: 'insufficient_data',
+        delay_days_min: null,
+        delay_days_max: null,
+        critical_count: 0,
+        attention_count: 0,
+      }),
+    )
+
+  it('points to undated photos when they are the only photos', async () => {
+    server.use(
+      insufficient(),
+      http.get('/api/sites/:siteId/observations', () => HttpResponse.json([])),
+    )
+    renderWithProviders(<SummaryCards siteId="site-berezniki" />)
+    expect(await screen.findByText(/Нет наблюдений: у 2 снимков не задана/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Задать дату' })).toHaveAttribute(
+      'href',
+      '/sites/site-berezniki/observations#no-date',
+    )
+  })
+
+  it('asks for a schedule when there is none', async () => {
+    server.use(
+      insufficient(),
+      http.get('/api/sites/:siteId/schedule', () =>
+        HttpResponse.json({ detail: 'График не загружен' }, { status: 404 }),
+      ),
+    )
+    renderWithProviders(<SummaryCards siteId="site-berezniki" />)
+    expect(
+      await screen.findByText(/График не загружен: этапы не с чем сравнить/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Загрузить график' })).toHaveAttribute(
+      'href',
+      '/sites/site-berezniki/setup',
+    )
+  })
+
+  it('blames observability when observations exist', async () => {
+    server.use(insufficient())
+    renderWithProviders(<SummaryCards siteId="site-berezniki" />)
+    expect(await screen.findByText(/Наблюдений не хватает для вывода/)).toBeInTheDocument()
   })
 })

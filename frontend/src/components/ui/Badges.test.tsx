@@ -32,6 +32,16 @@ describe('StatusBadge', () => {
     render(<StatusBadge status={status} />)
     expect(screen.getByText(label)).toBeInTheDocument()
   })
+
+  // bug-reports/002: null при наступившем окне — не «не начата».
+  it.each<[string | null, string]>([
+    ['2020-01-01', 'Не оценён'],
+    [null, 'Не оценён'],
+    ['2999-01-01', 'Не начата'],
+  ])('null with planned start %s → %s', (plannedStart, label) => {
+    render(<StatusBadge status={null} plannedStart={plannedStart} />)
+    expect(screen.getByText(label)).toBeInTheDocument()
+  })
 })
 
 describe('ConfidenceMeter', () => {
@@ -53,6 +63,7 @@ describe('DateSourceBadge', () => {
     ['metadata', 'Метаданные', 'Дата получена вместе со снимком'],
     ['channel', 'Канал', 'Дата получена вместе со снимком'],
     ['stamp', 'Штамп', 'Дата выведена сервисом'],
+    ['filename', 'Из имени файла', 'Дата выведена сервисом'],
     ['neighbours', 'По соседним снимкам', 'Дата выведена сервисом'],
     ['manual', 'Вручную', 'Дата введена инженером'],
   ] as const)('%s', (source, label, title) => {

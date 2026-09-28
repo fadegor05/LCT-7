@@ -459,7 +459,19 @@ export function detectBacklog(
 export function listStageStatuses(siteId: string): StageStatus[] {
   const statuses = state.statuses.get(siteId)
   return getSchedule(siteId).stages.map((stage) => {
-    const s = statuses?.get(stage.id)
+    // Как RecomputeCoordinator после загрузки графика: окно наступило, кадров нет —
+    // «не наблюдалось», а не null (bug-reports/002).
+    const s =
+      statuses?.get(stage.id) ??
+      (stage.planned_start && stage.planned_start <= TODAY
+        ? {
+            status: 'not_observed' as const,
+            delay_days: null,
+            confidence: 'low' as const,
+            confidence_reason: 'отсутствуют наблюдения в окне этапа',
+            computed_at: now(),
+          }
+        : undefined)
     return {
       stage_id: stage.id,
       stage_name: stage.name,

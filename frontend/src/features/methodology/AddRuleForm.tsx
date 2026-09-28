@@ -49,32 +49,39 @@ export function AddRuleForm({ types, onAdd, onCancel }: AddRuleFormProps) {
     onAdd(selected, obligation, toSource(source))
   }
   return (
-    <div className={styles.addRow}>
-      <SelectField
-        label="Машина"
-        value={typeId}
-        onChange={(event) => setTypeId(event.target.value)}
-        options={types.map((t) => ({ value: t.id, label: t.title }))}
-      />
-      <SelectField
-        label="Обязательность"
-        value={obligation}
-        onChange={(event) => setObligation(event.target.value as Obligation)}
-        options={obligations}
-      />
-      <TextField
-        label="ГЭСН или источник"
-        placeholder="06-01-001-16 или «по смыслу работы»"
-        value={source}
-        error={error}
-        onChange={(event) => setSource(event.target.value)}
-      />
-      <Button variant="secondary" size="sm" onClick={add}>
-        Добавить
-      </Button>
-      <Button variant="ghost" size="sm" onClick={onCancel}>
-        Отмена
-      </Button>
+    <div className={styles.addForm}>
+      <div className={styles.addRow}>
+        <SelectField
+          className={styles.addType}
+          label="Машина"
+          value={typeId}
+          onChange={(event) => setTypeId(event.target.value)}
+          options={types.map((t) => ({ value: t.id, label: t.title }))}
+        />
+        <SelectField
+          className={styles.addObligation}
+          label="Обязательность"
+          value={obligation}
+          onChange={(event) => setObligation(event.target.value as Obligation)}
+          options={obligations}
+        />
+      </div>
+      <div className={styles.addRow}>
+        <TextField
+          className={styles.addSource}
+          label="ГЭСН или источник"
+          placeholder="06-01-001-16 или «по смыслу работы»"
+          value={source}
+          error={error}
+          onChange={(event) => setSource(event.target.value)}
+        />
+        <Button variant="secondary" size="sm" onClick={add}>
+          Добавить
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          Отмена
+        </Button>
+      </div>
     </div>
   )
 }

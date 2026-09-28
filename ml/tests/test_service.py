@@ -436,6 +436,84 @@ class TestApp:
             temp_path.unlink()
             service.app._detector = None
 
+    def test_meta_includes_stamp_flag(self):
+        """GET /meta возвращает stamp: True."""
+        client = self.create_test_client()
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pt") as f:
+            f.write(b"fake_weights")
+            temp_path = Path(f.name)
+
+        try:
+            detector = Detector(weights=temp_path)
+            detector._model = FakeModel({0: "crane"})
+
+            import service.app
+            service.app._detector = detector
+
+            response = client.get("/meta")
+            assert response.status_code == 200
+            data = response.json()
+            assert "stamp" in data
+            assert data["stamp"] is True
+        finally:
+            temp_path.unlink()
+            service.app._detector = None
+
+    def test_stamp_empty_file_returns_400(self):
+        """POST /stamp с пустым файлом возвращает 400."""
+        client = self.create_test_client()
+
+        response = client.post("/stamp", files={"file": ("empty.png", b"")})
+        assert response.status_code == 400
+
+    def test_stamp_oversized_file_returns_413(self):
+        """POST /stamp с файлом больше MAX_BYTES возвращает 413."""
+        client = self.create_test_client()
+
+        import service.app
+        original_max = service.app.MAX_BYTES
+        service.app.MAX_BYTES = 100  # Очень маленький лимит
+
+        # Файл больше лимита
+        response = client.post("/stamp", files={"file": ("big.png", b"x" * 200)})
+        assert response.status_code == 413
+
+        service.app.MAX_BYTES = original_max
+
+    def test_stamp_with_synthetic_image_returns_null_date(self):
+        """POST /stamp с синтетическим кадром (без штампа) возвращает null date.
+
+        Подставляем фейковый StampReader (без реального RapidOCR) — как и
+        Detector-тесты, не требует torch/ultralytics/rapidocr_onnxruntime.
+        """
+        client = self.create_test_client()
+
+        class FakeStampReader:
+            def read_bytes(self, data: bytes) -> dict:
+                return {"date": None, "text": None, "roi": None}
+
+        import service.app
+
+        service.app._stamp_reader = FakeStampReader()
+
+        try:
+            # Создаём простой PNG без штампа
+            img = Image.new("RGB", (640, 480), color="blue")
+            buf = io.BytesIO()
+            img.save(buf, "PNG")
+            png_bytes = buf.getvalue()
+
+            response = client.post("/stamp", files={"file": ("test.png", png_bytes)})
+            assert response.status_code == 200
+            data = response.json()
+            assert "date" in data
+            assert "text" in data
+            assert "roi" in data
+            assert data["date"] is None
+        finally:
+            service.app._stamp_reader = None
+
 
 class TestContract:
     """Тест для констант контракта."""

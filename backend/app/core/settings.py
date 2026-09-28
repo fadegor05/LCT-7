@@ -4,6 +4,8 @@
 двойное подчёркивание, как в Kotlin-бэкенде: POSTGRES__HOST, POSTGRES__PORT и т.д.
 """
 
+from datetime import date
+from enum import StrEnum
 from functools import lru_cache
 
 from pydantic import BaseModel
@@ -51,6 +53,7 @@ class DetectorSettings(BaseModel):
     retry_other: int = 1
     retry_backoff_s: tuple[float, ...] = (2.0, 5.0, 10.0)
     retry_budget_s: float = 20.0
+    stamp_enabled: bool = False  # LCT-13
 
 
 class ObservationSettings(BaseModel):
@@ -63,6 +66,21 @@ class ObservationSettings(BaseModel):
     movement_threshold: float = 0.05
 
 
+class AsOfMode(StrEnum):
+    """Режим определения опорной даты расчёта отклонений (LCT-14).
+
+    today — обычное поведение, date.today(). last_observation — дата
+    последнего наблюдения НА КОНКРЕТНОЙ площадке (как в ML-отчёте:
+    as_of = states[-1]["date"], ml/tools/match_schedule.py) — нужно для
+    демо на площадках из разных лет, где одна общая дата не годится.
+    fixed — одна дата на всё окружение (as_of_override).
+    """
+
+    TODAY = "today"
+    LAST_OBSERVATION = "last_observation"
+    FIXED = "fixed"
+
+
 class AssessmentSettings(BaseModel):
     """Пороги для расчёта статусов этапов и отклонений."""
 
@@ -70,6 +88,10 @@ class AssessmentSettings(BaseModel):
     stale_data_days: int = 7
     no_progress_window_days: int = 5
     min_confirming_observations: int = 2
+    # Режим опорной даты расчёта (LCT-14) — см. AsOfMode.
+    as_of_mode: AsOfMode = AsOfMode.TODAY
+    # Используется только при as_of_mode == "fixed".
+    as_of_override: date | None = None
 
 
 class Settings(BaseSettings):

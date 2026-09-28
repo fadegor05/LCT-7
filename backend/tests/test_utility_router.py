@@ -1,6 +1,7 @@
 """Тесты служебных эндпоинтов: /health, /ready, /version."""
 
 from collections.abc import AsyncIterable, AsyncIterator
+from pathlib import Path
 
 import pytest
 from dishka import Provider, Scope, make_async_container, provide
@@ -122,7 +123,7 @@ async def test_version_returns_backend_tag_default(client: AsyncClient) -> None:
 
 
 @pytest.fixture
-async def tagged_client() -> AsyncIterator[AsyncClient]:
+async def tagged_client(tmp_path: Path) -> AsyncIterator[AsyncClient]:
     """Контейнер с явным backend_tag, чтобы проверить, что тег не захардкожен."""
     # Импорт локальный: на уровне модуля pytest попытался бы собрать класс
     # с именем на Test* как набор тестов.
@@ -130,7 +131,7 @@ async def tagged_client() -> AsyncIterator[AsyncClient]:
 
     container = make_async_container(
         StaticSettingsProvider(Settings(backend_tag="v1.2.3")),
-        TestDatabaseProvider(),
+        TestDatabaseProvider(db_path=tmp_path / "test.db"),
         MockDetectorProvider(),
         UtilityProvider(),
     )

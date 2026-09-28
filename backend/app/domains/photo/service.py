@@ -208,7 +208,9 @@ class PhotoService:
 
         # Шаг (c): Разрешение даты
         try:
-            resolved_date = await asyncio.to_thread(self._resolver.resolve, file_input.content)
+            resolved_date = await self._resolver.resolve(
+                file_input.content, filename=file_input.filename
+            )
         except InvalidImageError:
             logger.warning("Не удалось определить дату для %s", file_input.filename)
             return UploadItem(
@@ -249,11 +251,13 @@ class PhotoService:
 
         self._session.add(photo)
 
-        # Шаг (f): Детекция
-        await self._run_detection(photo, file_input.content, file_input.filename, content_type)
-
-        # Шаг (g): Коммит (будет имплицитный flush перед commit)
+        # Шаги (f) и (g): детекция и коммит. Ошибка БД на любом из них — ошибка этого
+        # файла, а не 500 на всю пачку.
         try:
+            # Вставить снимок до детекций: relationship между ними нет, и в общем flush
+            # SQLAlchemy может записать детекции первыми — Postgres отклонит их по FK.
+            await self._session.flush()
+            await self._run_detection(photo, file_input.content, file_input.filename, content_type)
             await self._session.commit()
         except Exception:
             logger.exception("Не удалось сохранить снимок в БД")
@@ -664,6 +668,16 @@ class PhotoService:
                 failed += 1
                 await self._session.commit()
                 continue
+
+            # Попытка заполнить дату из штампа, если фото без даты (LCT-13)
+            if photo.captured_on is None:
+                try:
+                    resolved = await self._resolver.resolve(content, filename=photo.original_name)
+                except InvalidImageError:
+                    resolved = None
+                if resolved is not None and resolved.captured_on is not None:
+                    photo.captured_on = resolved.captured_on
+                    photo.date_source = resolved.source.value if resolved.source else None
 
             # Запускаем детекцию
             try:

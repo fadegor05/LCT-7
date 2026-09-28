@@ -3,6 +3,7 @@ import { useDeviations, useStageStatuses } from '@/api/deviations'
 import { useSchedule } from '@/api/schedule'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
+import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
@@ -18,8 +19,9 @@ import { useRequiredParam } from '@/lib/useParam'
 
 const section = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
 
-function deviationsDescription(items: readonly DeviationItem[]): string {
-  if (items.length === 0) return 'Отклонений не выявлено.'
+function deviationsDescription(items: readonly DeviationItem[]): string | undefined {
+  // Пустой список сам пишет «Отклонений не выявлено» — не повторяем это в подзаголовке.
+  if (items.length === 0) return undefined
   const critical = items.filter((d) => d.severity === 'critical').length
   const hypotheses = items.filter((d) => d.is_hypothesis).length
   const parts = [
@@ -63,7 +65,7 @@ export function SiteOverviewPage() {
   )
 
   return (
-    <QueryState query={site}>
+    <SiteQueryState query={site}>
       {(data) => (
         <SiteShell
           site={data}
@@ -101,6 +103,6 @@ export function SiteOverviewPage() {
           <LastObservation siteId={siteId} />
         </SiteShell>
       )}
-    </QueryState>
+    </SiteQueryState>
   )
 }

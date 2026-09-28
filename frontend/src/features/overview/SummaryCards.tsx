@@ -1,22 +1,58 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useSummary } from '@/api/deviations'
 import { useObservations, useUndatedPhotos } from '@/api/frames'
+import { useSchedule } from '@/api/schedule'
 import type { SiteSummary } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
 import { formatDate } from '@/lib/format'
-import { levelLabels } from '@/lib/labels'
+import { levelLabels, plural } from '@/lib/labels'
 import { verdictText } from '@/features/sites/verdict'
 import styles from './Overview.module.css'
 
-const EXPLANATION: Record<SiteSummary['verdict'], string> = {
+const EXPLANATION: Record<Exclude<SiteSummary['verdict'], 'insufficient_data'>, string> = {
   behind:
     'Худший интервал по этапам с отставанием. Отставание измерено по датам снимков: точность не выше частоты съёмки.',
   no_deviations: 'Этапы с данными идут по графику.',
-  insufficient_data:
-    'Нет оценённых этапов: график не загружен, снимков нет или наблюдаемость недостаточна для вывода.',
 }
 
-function VerdictCard({ summary }: { summary: SiteSummary }) {
+/** «Недостаточно данных» — называем настоящую причину, а не перечисляем все возможные. */
+function InsufficientReason({ siteId }: { siteId: string }): ReactNode {
+  const schedule = useSchedule(siteId)
+  const observations = useObservations(siteId)
+  const undated = useUndatedPhotos(siteId)
+  if (schedule.isPending || observations.isPending || undated.isPending) {
+    return 'Нет оценённых этапов.'
+  }
+  if (!schedule.data) {
+    return (
+      <>
+        График не загружен: этапы не с чем сравнить.{' '}
+        <Link to={`/sites/${siteId}/setup`}>Загрузить график</Link>
+      </>
+    )
+  }
+  if ((observations.data?.length ?? 0) > 0) {
+    return 'Наблюдений не хватает для вывода: наблюдаемость низкая или этапы не проверяются по технике.'
+  }
+  const count = undated.data?.length ?? 0
+  if (count > 0) {
+    return (
+      <>
+        Нет наблюдений: у {count} {plural(count, ['снимка', 'снимков', 'снимков'])} не задана дата.{' '}
+        <Link to={`/sites/${siteId}/observations#no-date`}>Задать дату</Link>
+      </>
+    )
+  }
+  return (
+    <>
+      Нет наблюдений: снимки ещё не загружены.{' '}
+      <Link to={`/sites/${siteId}/observations`}>К наблюдениям</Link>
+    </>
+  )
+}
+
+function VerdictCard({ siteId, summary }: { siteId: string; summary: SiteSummary }) {
   return (
     <Card aria-labelledby="verdict-title">
       <p id="verdict-title" className="lab muted">
@@ -29,7 +65,13 @@ function VerdictCard({ summary }: { summary: SiteSummary }) {
       >
         {verdictText(summary)}
       </p>
-      <p className="sm">{EXPLANATION[summary.verdict]}</p>
+      <p className="sm">
+        {summary.verdict === 'insufficient_data' ? (
+          <InsufficientReason siteId={siteId} />
+        ) : (
+          EXPLANATION[summary.verdict]
+        )}
+      </p>
     </Card>
   )
 }
@@ -78,7 +120,7 @@ export function SummaryCards({ siteId }: { siteId: string }) {
   const summary = useSummary(siteId)
   return (
     <div className={styles.top}>
-      {summary.data && <VerdictCard summary={summary.data} />}
+      {summary.data && <VerdictCard siteId={siteId} summary={summary.data} />}
       <DataStateCard siteId={siteId} />
     </div>
   )

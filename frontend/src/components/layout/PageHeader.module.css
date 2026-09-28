@@ -27,3 +27,17 @@
 .section > div:first-child {
   flex-grow: 1;
 }
+
+/* На телефоне действия уходят под заголовок, а не наезжают на него. */
+@media (width <= 720px) {
+  .head,
+  .section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .section > div:first-child {
+    align-self: stretch;
+  }
+}

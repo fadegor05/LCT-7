@@ -35,6 +35,7 @@ class DeviationType(StrEnum):
     """Тип обнаруженного отклонения от плана."""
 
     MISSING_EQUIPMENT = "missing_equipment"
+    MISSING_LOGICAL_EQUIPMENT = "missing_logical_equipment"
     STAGE_MISMATCH = "stage_mismatch"
     STALE_DATA = "stale_data"
     IDLE = "idle"

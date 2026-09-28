@@ -8,6 +8,7 @@ from typing import cast
 
 import pytest
 from PIL import Image
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.base import DetectionResult, DetectorClient, DetectorError, RawDetection
@@ -189,6 +190,134 @@ class TestPhotoServiceUpload:
 
             undated_list = await service.list_photos(site_id, undated=True)
             assert len(undated_list) == 2
+
+    @pytest.mark.asyncio
+    async def test_upload_with_detections_respects_foreign_keys(self, fk_container) -> None:
+        """Снимок вставляется раньше своих детекций (500 на стенде 28.09).
+
+        Без flush после add(photo) SQLAlchemy не знает о зависимости detections → photos
+        (relationship нет) и может вставить детекции первыми: Postgres отвечает
+        ForeignKeyViolation, загрузка падает. fk_container проверяет FK, как Postgres.
+        """
+        container = fk_container
+        await seed_user(container)
+        site_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        # Каждый родитель — отдельным коммитом: FK проверяются и здесь.
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            session.add(User(id=owner_id, full_name="Owner"))
+            await session.commit()
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner_id))
+            session.add(EquipmentType(id=uuid.uuid4(), code="crane", title="Кран"))
+            await session.commit()
+
+        async with container() as request_container:
+            detector = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector.result = DetectionResult(
+                model_version="fake-1",
+                detections=[
+                    RawDetection(class_ours="crane", conf=0.95, bbox=(0.1, 0.2, 0.3, 0.4)),
+                    RawDetection(class_ours="crane", conf=0.9, bbox=(0.5, 0.2, 0.7, 0.4)),
+                ],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(
+                site_id,
+                [
+                    UploadInput(
+                        filename="202609271743091790520189057.jpg",
+                        content=create_jpeg_image(),
+                        content_type="image/jpeg",
+                    )
+                ],
+            )
+
+        assert report.uploaded == 1
+        assert report.failed == 0
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            detail = await service.get_photo(site_id, report.items[0].photo.id)
+        assert detail.processing_status == ProcessingStatus.DONE.value
+        assert len(detail.detections) == 2
+
+    @pytest.mark.asyncio
+    async def test_upload_db_error_on_detections_is_a_file_error(self, container) -> None:
+        """Сбой БД при сохранении детекций — ошибка этого файла, а не 500 на пачку."""
+        await seed_user(container)
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner.id))
+            session.add(EquipmentType(id=uuid.uuid4(), code="crane", title="Кран"))
+            await session.commit()
+            owner_id = owner.id
+
+        async def broken_add_many(detections: object) -> None:
+            raise IntegrityError("INSERT INTO detections", {}, Exception("fk"))
+
+        async with container() as request_container:
+            detector = cast(FakeDetector, await request_container.get(DetectorClient))
+            detector.result = DetectionResult(
+                model_version="fake-1",
+                detections=[RawDetection(class_ours="crane", conf=0.95, bbox=(0.1, 0.2, 0.3, 0.4))],
+            )
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            service._detections.add_many = broken_add_many  # type: ignore[method-assign]
+            report = await service.upload_batch(
+                site_id,
+                [
+                    UploadInput(
+                        filename="a.jpg", content=create_jpeg_image(), content_type="image/jpeg"
+                    )
+                ],
+            )
+
+        assert report.uploaded == 0
+        assert report.failed == 1
+        assert report.items[0].error == "Ошибка сохранения снимка"
+
+    @pytest.mark.asyncio
+    async def test_upload_batch_date_from_filename(self, container) -> None:
+        """Без EXIF и штампа дата берётся из имени файла (bug-reports/005)."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner.id))
+            await session.commit()
+            owner_id = owner.id
+
+        files = [
+            UploadInput(
+                filename="202609270200371790463637087.jpg",
+                content=create_jpeg_image(),
+                content_type="image/jpeg",
+            ),
+            UploadInput(
+                filename="photo.jpg", content=create_jpeg_image(), content_type="image/jpeg"
+            ),
+        ]
+
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+
+        named, plain = report.items
+        assert named.photo.captured_on == date(2026, 9, 27)
+        assert named.photo.date_source == "filename"
+        # Соседний снимок получает дату уже из NEIGHBOURS, а не остаётся без даты.
+        assert plain.photo.captured_on == date(2026, 9, 27)
+        assert plain.photo.date_source == "neighbours"
 
     @pytest.mark.asyncio
     async def test_upload_batch_per_file_errors_dont_abort(self, container) -> None:

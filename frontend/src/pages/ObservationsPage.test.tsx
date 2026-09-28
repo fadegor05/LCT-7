@@ -8,7 +8,7 @@ const photos = () => screen.findAllByRole('img', { name: /Снимок / })
 describe('ObservationsPage', () => {
   it('shows the latest day by default and switches to all days', async () => {
     const { user, router } = renderRoute('/sites/site-berezniki/observations')
-    expect(await screen.findByRole('heading', { name: 'Снимки за 18.09' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Снимки за ПТ 18.09' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Техника на площадке' })).toBeInTheDocument()
     expect(screen.getByText('не менее 2')).toBeInTheDocument()
     expect(await photos()).toHaveLength(4)
@@ -18,10 +18,10 @@ describe('ObservationsPage', () => {
     expect(router.state.location.search).toBe('?date=all')
     expect(screen.queryByRole('heading', { name: 'Техника на площадке' })).not.toBeInTheDocument()
     expect(await photos()).toHaveLength(12)
-    expect(screen.getAllByText('14.09', { selector: 'figcaption span' })).toHaveLength(2)
+    expect(screen.getAllByText('ПН 14.09', { selector: 'figcaption span' })).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: /17\.09/ }))
-    expect(await screen.findByRole('heading', { name: 'Снимки за 17.09' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Снимки за ЧТ 17.09' })).toBeInTheDocument()
     expect(await photos()).toHaveLength(2)
   })
 
@@ -39,10 +39,16 @@ describe('ObservationsPage', () => {
     await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
     expect(within(list).getByRole('alert')).toHaveTextContent('Формат: дд.мм.гггг')
 
+    // Длинное имя обрезается многоточием — полное остаётся в title (bug-reports/001).
+    expect(within(list).getByText('IMG_0013.jpg')).toHaveAttribute('title', 'IMG_0013.jpg')
+
     const input = within(list).getByLabelText('Дата съёмки IMG_0013.jpg')
-    await user.type(input, '01.01.2030')
+    // Дату из будущего форма отсекает сама, не дожидаясь 422 (bug-reports/003).
+    await user.type(input, '01.01.2999')
     await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
-    expect(await within(list).findByText('Дата съёмки не может быть в будущем')).toBeInTheDocument()
+    expect(within(list).getByRole('alert')).toHaveTextContent(
+      'Дата не может быть позже сегодняшней',
+    )
 
     await user.clear(input)
     await user.type(input, '18.09.2026')

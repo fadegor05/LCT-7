@@ -4,13 +4,16 @@
 1. Дата из канала (channel) — явно указана при загрузке
 2. EXIF metadata — DateTimeOriginal, DateTime, DateTimeDigitized
 3. Штамп на кадре (OCR) — распознавание текста на фотографии
-4. Соседние фотографии — определяется сервисом позже
-5. Ручной ввод — вводит инженер
+4. Имя файла — мессенджеры вырезают EXIF, но оставляют дату в имени
+5. Соседние фотографии — определяется сервисом позже
+6. Ручной ввод — вводит инженер
 """
 
+import asyncio
+import os
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
 from typing import Protocol
 
@@ -26,29 +29,19 @@ class InvalidImageError(Exception):
 
 
 class StampOcr(Protocol):
-    """Протокол для OCR чтения текста со штампа на кадре.
+    """Протокол чтения даты со штампа на кадре (LCT-13: через ML-сервис)."""
 
-    Синхронный интерфейс; вызывающая сторона будет выполнять в потоке.
-    """
-
-    def read_text(self, image: Image.Image) -> str:
-        """Прочитать текст с изображения.
-
-        Args:
-            image: PIL Image object.
-
-        Returns:
-            Распознанный текст (может быть пустой строкой).
-        """
+    async def read_date(self, content: bytes) -> date | None:
+        """Прочитать дату со штампа. Возвращает None, если штамп не найден
+        или не прошёл проверку — это не ошибка."""
         ...
 
 
 class NullStampOcr:
-    """Заглушка OCR, всегда возвращающая пустую строку."""
+    """Заглушка: штамп никогда не читается."""
 
-    def read_text(self, image: Image.Image) -> str:
-        """Возвращает пустую строку (нет результата OCR)."""
-        return ""
+    async def read_date(self, content: bytes) -> date | None:
+        return None
 
 
 @dataclass(frozen=True)
@@ -131,6 +124,97 @@ def parse_stamp_date(text: str) -> date | None:
     return None
 
 
+# Раньше этого года снимков стройки у нас не бывает: такие «даты» в имени — шум
+# (номера, хэши), а не момент съёмки.
+_FILENAME_MIN_YEAR = 2015
+# Стройки ДГП — в Москве (UTC+3, без перехода на летнее время с 2014 года). Нужен,
+# чтобы перевести Unix-время из имени в местную дату съёмки.
+_SITE_UTC_OFFSET = timedelta(hours=3)
+# Кандидаты из одного имени, расходящиеся сильнее, — противоречие: дату не ставим.
+_FILENAME_MAX_SPREAD = timedelta(days=1)
+
+# YYYYMMDD, YYYY-MM-DD, YYYY_MM_DD, YYYY.MM.DD (разделитель один и тот же), дальше
+# необязательное время hhmmss / hh-mm-ss / hh.mm.ss через «_», «-», «T» или пробел.
+# Покрывает IMG_20260927_020037, PXL_20260927_020037123, 2026-09-27 02.00.37,
+# 20260927020037… (префикс имён от мессенджеров).
+_FILENAME_DATE_RE = re.compile(
+    r"(?<!\d)(20\d{2})([-_.]?)(\d{2})\2(\d{2})"
+    r"(?:[-_T ]?(\d{2})[-_.:]?(\d{2})[-_.:]?(\d{2}))?"
+)
+# Unix-время в миллисекундах: 13 цифр отдельным числом или хвостом после
+# 14-значного YYYYMMDDhhmmss (так называют файлы мессенджеры при пересылке).
+_UNIX_MS_LEN = 13
+_COMPACT_DATETIME_LEN = 14
+
+
+def _filename_candidates(stem: str) -> list[datetime]:
+    """Все моменты съёмки, которые удаётся прочитать из имени (время — местное)."""
+    candidates: list[datetime] = []
+    for match in _FILENAME_DATE_RE.finditer(stem):
+        year, _, month, day, hh, mm, ss = match.groups()
+        try:
+            if hh is None:
+                candidates.append(datetime(int(year), int(month), int(day)))
+            else:
+                candidates.append(
+                    datetime(int(year), int(month), int(day), int(hh), int(mm), int(ss))
+                )
+        except ValueError:
+            # 20261399…, 25:61:00 — не дата; хвост без времени пробуем отдельно.
+            try:
+                candidates.append(datetime(int(year), int(month), int(day)))
+            except ValueError:
+                continue
+
+    for run in re.findall(r"\d+", stem):
+        if len(run) == _UNIX_MS_LEN:
+            ms = run
+        elif len(run) == _COMPACT_DATETIME_LEN + _UNIX_MS_LEN:
+            ms = run[_COMPACT_DATETIME_LEN:]
+        else:
+            continue
+        try:
+            moment = datetime.fromtimestamp(int(ms) / 1000, tz=UTC) + _SITE_UTC_OFFSET
+        except (OverflowError, OSError, ValueError):
+            continue
+        candidates.append(moment.replace(tzinfo=None))
+    return candidates
+
+
+def parse_filename_date(filename: str | None, today: date | None = None) -> date | None:
+    """Дата съёмки из имени файла.
+
+    Мессенджеры и некоторые камеры при пересылке вырезают EXIF, но оставляют дату
+    в имени: ``IMG_20260927_020037.jpg``, ``PXL_20260927_…``, ``2026-09-27 …``,
+    ``202609270200371790463637087.jpg`` (префикс YYYYMMDDhhmmss + Unix-время в мс).
+
+    Санити-проверки: дата не раньше 2015 года и не позже сегодняшней. Если в имени
+    несколько кандидатов и они расходятся больше чем на сутки, дату не ставим —
+    лучше отправить снимок в «Без даты», чем угадать неверно.
+
+    Args:
+        filename: Имя файла (путь допустим, берётся basename).
+        today: Опорная дата для проверки «не в будущем» (по умолчанию — сегодня).
+
+    Returns:
+        Дата съёмки или None, если в имени нет правдоподобной даты.
+    """
+    if not filename:
+        return None
+    today = today or date.today()
+    stem = os.path.splitext(os.path.basename(filename))[0]
+    candidates = [
+        c for c in _filename_candidates(stem) if _FILENAME_MIN_YEAR <= c.year and c.date() <= today
+    ]
+    if not candidates:
+        return None
+    if max(candidates) - min(candidates) > _FILENAME_MAX_SPREAD:
+        return None
+    # Первый кандидат — дата из начала имени в местном времени; Unix-время только
+    # подтверждает её (и выручает, если кроме него в имени ничего нет).
+    return candidates[0].date()
+
+
 def read_image_info(content: bytes) -> ImageInfo:
     """Прочитать размеры изображения из байтов.
 
@@ -178,24 +262,31 @@ class DateResolver:
     1. channel_date (явно переданная дата)
     2. EXIF metadata (DateTimeOriginal, DateTime, DateTimeDigitized)
     3. Stamp OCR (распознавание текста со штампа)
+    4. Имя файла (parse_filename_date)
     """
 
     def __init__(self, ocr: StampOcr | None = None) -> None:
         """Инициализация DateResolver.
 
         Args:
-            ocr: Объект с интерфейсом StampOcr для чтения текста с изображения.
-                 Если None, используется NullStampOcr (всегда пустая строка).
+            ocr: Объект с интерфейсом StampOcr для чтения даты со штампа.
+                 Если None, используется NullStampOcr.
         """
         self.ocr = ocr if ocr is not None else NullStampOcr()
 
-    def resolve(self, content: bytes, channel_date: date | None = None) -> ResolvedDate:
+    async def resolve(
+        self,
+        content: bytes,
+        channel_date: date | None = None,
+        filename: str | None = None,
+    ) -> ResolvedDate:
         """Разрешить дату съёмки из различных источников.
 
         Проходит цепочку источников в порядке приоритета:
         1. channel_date (если передан)
         2. EXIF DateTimeOriginal / DateTime / DateTimeDigitized
-        3. Stamp OCR (читает текст и парсит дату)
+        3. Stamp OCR (читает дату и парсит)
+        4. Имя файла (если передано)
 
         Исключения при чтении изображения распространяются.
         Исключения в OCR НЕ распространяются (результат: нет даты).
@@ -203,6 +294,7 @@ class DateResolver:
         Args:
             content: Байты JPEG/PNG изображения.
             channel_date: Дата из канала (если известна).
+            filename: Исходное имя файла — последний источник перед соседними снимками.
 
         Returns:
             ResolvedDate с датой и источником.
@@ -216,10 +308,11 @@ class DateResolver:
 
         # Открываем изображение для последующих проверок (EXIF, OCR)
         try:
-            image = Image.open(BytesIO(content))
-            image.load()
+            image = await asyncio.to_thread(self._open_image, content)
         except (OSError, Image.UnidentifiedImageError) as e:
             raise InvalidImageError(f"Failed to read image: {e}") from e
+        except InvalidImageError:
+            raise
         except Exception as e:
             raise InvalidImageError(f"Invalid or corrupt image: {e}") from e
 
@@ -229,12 +322,23 @@ class DateResolver:
             return ResolvedDate(captured_on=exif_date, source=DateSource.METADATA)
 
         # 3. Stamp OCR
-        stamp_date = self._extract_stamp_date(image)
+        stamp_date = await self._extract_stamp_date(content)
         if stamp_date is not None:
             return ResolvedDate(captured_on=stamp_date, source=DateSource.STAMP)
 
-        # 4. Ничего не найдено
+        # 4. Имя файла
+        filename_date = parse_filename_date(filename)
+        if filename_date is not None:
+            return ResolvedDate(captured_on=filename_date, source=DateSource.FILENAME)
+
+        # 5. Ничего не найдено
         return ResolvedDate(captured_on=None, source=None)
+
+    @staticmethod
+    def _open_image(content: bytes) -> Image.Image:
+        image = Image.open(BytesIO(content))
+        image.load()
+        return image
 
     def _extract_exif_date(self, image: Image.Image) -> date | None:
         """Извлечь дату из EXIF-метаданных изображения.
@@ -316,24 +420,10 @@ class DateResolver:
         except (ValueError, IndexError, AttributeError):
             return None
 
-    def _extract_stamp_date(self, image: Image.Image) -> date | None:
-        """Извлечь дату из распознавания штампа через OCR.
-
-        Исключения в OCR НЕ распространяются.
-
-        Args:
-            image: PIL Image object.
-
-        Returns:
-            date если парсинг текста OCR успешен, иначе None.
-        """
+    async def _extract_stamp_date(self, content: bytes) -> date | None:
+        """Извлечь дату через OCR-адаптер. Исключения НЕ распространяются
+        (as before) — сеть/ML-сервис недоступен -> просто нет даты со штампа."""
         try:
-            text = self.ocr.read_text(image)
+            return await self.ocr.read_date(content)
         except Exception:
-            # OCR ошибка — игнорируем и возвращаем None
             return None
-
-        if not text:
-            return None
-
-        return parse_stamp_date(text)

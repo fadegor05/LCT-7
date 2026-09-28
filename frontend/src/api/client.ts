@@ -35,13 +35,32 @@ function buildUrl(path: string, query?: Query): string {
   return qs ? `${url}?${qs}` : url
 }
 
+/**
+ * Текст ошибки для интерфейса. Строковый `detail` пишет сервис бэкенда — по-русски и для
+ * пользователя. Список в `detail` (422) — ошибки валидации FastAPI/pydantic: они
+ * по-английски и для разработчика, поэтому показываем общий текст, а сырые сообщения
+ * остаются в `ApiError.detail` и в консоли.
+ */
 function errorMessage(detail: unknown, status: number): string {
   if (typeof detail === 'string') return detail
-  if (Array.isArray(detail) && detail.length > 0) {
-    const first = detail[0] as { msg?: unknown }
-    if (typeof first.msg === 'string') return first.msg
+  if (Array.isArray(detail)) {
+    console.warn('Ошибка валидации запроса', detail)
+    return 'Проверьте введённые данные'
   }
   return `Ошибка запроса (${status})`
+}
+
+/**
+ * Тело ответа как JSON. На 500 сервер и прокси отдают простой текст («Internal Server Error»):
+ * это не JSON, и текст ошибки разбора не должен попадать в интерфейс.
+ */
+function parseJson(text: string): unknown {
+  if (!text) return undefined
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -62,8 +81,7 @@ export async function request<S extends z.ZodType | undefined = undefined>(
   }
 
   const response = await fetch(buildUrl(path, query), { method, headers, body: payload, signal })
-  const text = await response.text()
-  const data: unknown = text ? JSON.parse(text) : undefined
+  const data = parseJson(await response.text())
 
   if (!response.ok) {
     const detail = (data as { detail?: unknown } | undefined)?.detail

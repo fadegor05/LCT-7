@@ -611,3 +611,44 @@ async def test_site_deletion_removes_schedule(
         # Проверяем что issues пусто
         schedule_issues = await session.execute(select(ScheduleImportIssue))
         assert len(schedule_issues.scalars().all()) == 0
+
+
+async def test_import_computes_stage_statuses_without_observations(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Импорт графика сразу пересчитывает статусы (bug-reports/002).
+
+    Наблюдений нет: этап с наступившим окном — «не наблюдалось», а не «не начат»;
+    у этапа, окно которого ещё впереди, статуса нет (null). Правила методики
+    создаются из базового набора, даже если «Методику» ещё не открывали.
+    """
+    from datetime import timedelta
+
+    from tests.test_methodology_router import seed_equipment_types
+
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+    site_id = (await client.post("/sites", json={"name": "Шмякострой"})).json()["id"]
+
+    today = date.today()
+    past_start, past_end = today - timedelta(days=90), today - timedelta(days=60)
+    future_start, future_end = today + timedelta(days=60), today + timedelta(days=90)
+    csv = make_csv_bytes(
+        "name,start,end\n"
+        f"Устройство свай,{past_start},{past_end}\n"
+        f"Разработка котлована,{future_start},{future_end}\n"
+    )
+    resp = await client.post(
+        f"/sites/{site_id}/schedule/import",
+        files={"file": ("schedule.csv", csv, "text/csv")},
+    )
+    assert resp.status_code == 201
+
+    stages = (await client.get(f"/sites/{site_id}/assessment/stages")).json()
+    by_name = {s["stage_name"]: s for s in stages}
+    assert by_name["Устройство свай"]["status"] == "not_observed"
+    assert by_name["Устройство свай"]["computed_at"] is not None
+    assert by_name["Разработка котлована"]["status"] is None
+
+    summary = (await client.get(f"/sites/{site_id}/assessment/summary")).json()
+    assert summary["verdict"] == "insufficient_data"

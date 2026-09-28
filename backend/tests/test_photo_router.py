@@ -312,6 +312,8 @@ class TestPhotoRouter:
         )
 
         assert response.status_code == 422
+        # Строка для интерфейса, а не список ошибок pydantic (bug-reports/003)
+        assert response.json()["detail"] == "Дата не может быть в будущем"
 
     @pytest.mark.asyncio
     async def test_get_photo_image_with_200(

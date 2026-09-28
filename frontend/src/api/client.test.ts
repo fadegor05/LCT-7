@@ -59,13 +59,23 @@ describe('request', () => {
     expect(error).toMatchObject({ status: 403, message: 'Нет доступа' })
   })
 
-  it('uses the first validation message for 422', async () => {
+  it('hides raw pydantic messages behind a generic text for 422', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const detail = [{ msg: 'Value error, captured_on cannot be in the future' }]
+    server.use(http.get('/api/invalid', () => HttpResponse.json({ detail }, { status: 422 })))
+    const error = await request('/invalid').catch((e: unknown) => e)
+    expect(error).toMatchObject({ status: 422, message: 'Проверьте введённые данные', detail })
+    expect(warn).toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('does not leak a JSON parse error for a plain-text 500', async () => {
     server.use(
-      http.get('/api/invalid', () =>
-        HttpResponse.json({ detail: [{ msg: 'field required' }] }, { status: 422 }),
-      ),
+      http.post('/api/upload', () => new HttpResponse('Internal Server Error', { status: 500 })),
     )
-    await expect(request('/invalid')).rejects.toThrow('field required')
+    const error = await request('/upload', { method: 'POST' }).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 500, message: 'Ошибка запроса (500)' })
   })
 
   it('falls back to a generic message', async () => {

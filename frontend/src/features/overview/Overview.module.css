@@ -90,3 +90,14 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
 }
+
+@media (width <= 720px) {
+  .top,
+  .frames {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stageName {
+    min-width: 160px;
+  }
+}

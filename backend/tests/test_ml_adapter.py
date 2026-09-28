@@ -18,6 +18,7 @@ from app.adapters.ml import (
     RawDetection,
     create_detector,
 )
+from app.adapters.ml.stamp import HttpStampReader
 from app.core.settings import DetectorSettings, Settings
 
 
@@ -751,3 +752,132 @@ class TestFactory:
         settings = Settings(detector=DetectorSettings(url=None))
         detector = create_detector(settings, mock_client)
         assert isinstance(detector, NullDetector)
+
+
+class TestHttpStampReader:
+    """Тесты HttpStampReader для чтения даты со штампа (LCT-13)."""
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_200_with_date(self):
+        """HttpStampReader.read_date с 200 и датой -> date объект."""
+        response_data = {"date": "2024-04-24", "text": "24.04.2024", "roi": "right"}
+
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        )
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is not None
+        assert result.isoformat() == "2024-04-24"
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_200_with_null_date(self):
+        """HttpStampReader.read_date с 200 но null дата -> None."""
+        response_data = {"date": None, "text": None, "roi": None}
+
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        )
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_422_no_retry(self):
+        """HttpStampReader.read_date с 422 -> None, no retry."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            return httpx.Response(422)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is None
+        assert call_count == 1  # No retry
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_503_then_200(self):
+        """HttpStampReader.read_date с 503 затем 200 -> retry и успех."""
+        call_count = 0
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return httpx.Response(503)
+            return httpx.Response(
+                200, json={"date": "2024-05-15", "text": "15.05.2024", "roi": "left"}
+            )
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_503=2),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is not None
+        assert result.isoformat() == "2024-05-15"
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_503_exhausted(self):
+        """HttpStampReader.read_date с 503 всегда -> None после retry."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(503)
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(retry_503=1, retry_budget_s=10.0),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_malformed_json(self):
+        """HttpStampReader.read_date с malformed JSON -> None."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, text="not json")
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_http_stamp_reader_invalid_date_format(self):
+        """HttpStampReader.read_date с invalid date format -> None."""
+        response_data = {"date": "not-a-date", "text": "garbage", "roi": None}
+
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        )
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read_date(b"image_bytes")
+        assert result is None

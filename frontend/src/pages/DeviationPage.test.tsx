@@ -13,7 +13,7 @@ describe('DeviationPage', () => {
       'href',
       '/sites/site-berezniki',
     )
-    expect(screen.getByText('15.09.2026 — 18.09.2026')).toBeInTheDocument()
+    expect(screen.getByText('ВТ 15.09.2026 — ПТ 18.09.2026')).toBeInTheDocument()
     expect(screen.getByText(/С 15\.09 на площадке автобетононасос/)).toBeInTheDocument()
     expect(screen.getByText(/только гусеничный экскаватор и самосвал/)).toBeInTheDocument()
     const evidence = screen.getAllByRole('img', { name: /Снимок-доказательство/ })
@@ -28,7 +28,7 @@ describe('DeviationPage', () => {
     expect(within(importance).getByText('Критично')).toBeInTheDocument()
     expect(within(importance).getByText(/Вывод верен, пока верны/)).toBeInTheDocument()
     const check = screen.getByRole('complementary', { name: 'Проверить' })
-    expect(within(check).getByRole('link', { name: 'Наблюдения за 18.09' })).toHaveAttribute(
+    expect(within(check).getByRole('link', { name: 'Наблюдения за ПТ 18.09' })).toHaveAttribute(
       'href',
       '/sites/site-berezniki/observations?date=2026-09-18',
     )

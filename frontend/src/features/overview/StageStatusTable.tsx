@@ -56,7 +56,10 @@ export function StageStatusTable({ siteId, rows, stages, deviations }: StageStat
                 </td>
                 <td>
                   <div className={styles.statusCell}>
-                    <StatusBadge status={row.status} />
+                    <StatusBadge
+                      status={row.status}
+                      plannedStart={stage ? stage.planned_start : undefined}
+                    />
                     {deviations
                       .filter((d) => d.stage_id === row.stage_id)
                       .map((d) => (
