@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import type { Stage, StageStatus } from '@/api/schemas'
 import { StatusBadge } from '@/components/ui/StatusBadge'
+import { stageAnchorId } from '@/features/assistant/linkifyAnswer'
 import type { DeviationItem } from '@/lib/deviations'
 import { formatWindow } from '@/lib/format'
 import { deviationTypeLabels, levelLabels } from '@/lib/labels'
@@ -42,7 +43,7 @@ export function StageStatusTable({ siteId, rows, stages, deviations }: StageStat
           {rows.map((row) => {
             const stage = stages.find((s) => s.id === row.stage_id)
             return (
-              <tr key={row.stage_id}>
+              <tr key={row.stage_id} id={stageAnchorId(row.stage_id)} tabIndex={-1}>
                 <th scope="row">
                   <div className={styles.stageName}>
                     <span style={{ fontSize: 16 }}>{row.stage_name}</span>

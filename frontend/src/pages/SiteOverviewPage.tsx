@@ -8,6 +8,7 @@ import { SiteShell } from '@/components/layout/SiteShell'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { QueryState } from '@/components/ui/QueryState'
+import { AssistantPanel } from '@/features/assistant/AssistantPanel'
 import { DeviationList } from '@/features/deviations/DeviationList'
 import { LastObservation } from '@/features/overview/LastObservation'
 import { StageStatusTable } from '@/features/overview/StageStatusTable'
@@ -101,6 +102,8 @@ export function SiteOverviewPage() {
           </section>
 
           <LastObservation siteId={siteId} />
+
+          <AssistantPanel siteId={siteId} />
         </SiteShell>
       )}
     </SiteQueryState>

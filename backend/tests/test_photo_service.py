@@ -854,6 +854,52 @@ class TestPhotoServiceGetImage:
             assert exc_info.value.status_code == 404
 
 
+class TestPhotoServiceGetAnnotated:
+    """Тесты get_annotated: кэш отрисовки в хранилище и ETag."""
+
+    @pytest.mark.asyncio
+    async def test_rendered_once_then_served_from_cache(self, container, storage) -> None:
+        """Второй запрос отдаётся из кэша без чтения оригинала; ETag даёт 304."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=uuid.uuid4(), full_name="Owner")
+            session.add(owner)
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner.id))
+            await session.commit()
+            owner_id = owner.id
+
+        files = [
+            UploadInput(
+                filename="photo.jpg", content=create_jpeg_image(), content_type="image/jpeg"
+            ),
+        ]
+
+        async with container() as request_container:
+            service = await request_container.get(PhotoService)
+            service._guard._current_user = type("obj", (object,), {"id": owner_id})()
+            report = await service.upload_batch(site_id, files)
+            photo_id = report.items[0].photo.id
+
+            first = await service.get_annotated(site_id, photo_id)
+            assert first.content is not None
+            assert first.content_type == "image/jpeg"
+
+            # Удаляем оригинал: второй ответ возможен только из кэша
+            photo = await service._repository.get(photo_id)
+            await storage.delete(photo.storage_key)
+
+            second = await service.get_annotated(site_id, photo_id)
+            assert second.content == first.content
+            assert second.etag == first.etag
+
+            not_modified = await service.get_annotated(site_id, photo_id, first.etag)
+            assert not_modified.content is None
+            assert not_modified.etag == first.etag
+
+
 class TestPhotoServiceSetDateExtra:
     """Дополнительные тесты set_date."""
 

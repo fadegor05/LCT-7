@@ -15,7 +15,9 @@ site_state.py и match_schedule.py, которые рассчитывают им
 from __future__ import annotations
 
 import json
+import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +35,8 @@ from service.detector import (  # noqa: F401
 )
 from service.export import to_csv, to_html, to_xlsx
 from service.pipeline import build_report, summary
+
+logger = logging.getLogger(__name__)
 
 MAX_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 20 * 1024 * 1024))
 _detector: Detector | None = None
@@ -153,6 +157,16 @@ def stamp_reader() -> StampReader:
     return _stamp_reader
 
 
+def _ask_report_module():
+    """Ленивый импорт модуля ask_report из tools/.
+
+    Используется как /meta, так и /ask для получения конфигурации провайдера.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import ask_report  # noqa: E402
+    return ask_report
+
+
 @app.get("/health", summary="Жив ли сервис")
 def health() -> dict:
     return {"status": "ok", "model_loaded": _detector is not None}
@@ -161,8 +175,11 @@ def health() -> dict:
 @app.get("/meta", summary="Чем именно отвечает сервис")
 def meta() -> dict:
     """Версия весов и пороги — чтобы в журнале бэкенда было видно, какая модель
-    дала ответ. Без этого через месяц не разобраться, откуда взялась детекция."""
-    return {**detector().meta(), "stamp": True}
+    дала ответ. Без этого через месяц не разобраться, откуда взялась детекция.
+    Также показывает, доступен ли ассистент (статус LLM_*)."""
+    ask_report = _ask_report_module()
+    cfg = ask_report.llm_config()
+    return {**detector().meta(), "stamp": True, "assistant": cfg is not None}
 
 
 @app.post("/report", summary="Статусы этапов и алерты по площадкам")
@@ -238,14 +255,11 @@ def ask_about_report(req: AskRequest) -> dict:
     Проверяются числа, а не смысл: верное число, отнесённое не к тому этапу,
     проверка не увидит. Это записано и здесь, и в ответе.
     """
-    import sys as _sys
-    _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-    import ask_report
-    from suggest_stage_mapping import from_env
+    ask_report = _ask_report_module()
+    import ask_guard  # noqa: E402
 
-    base_url, api_key, model = (from_env("LLM_BASE_URL"), from_env("LLM_API_KEY"),
-                                from_env("LLM_MODEL"))
-    if not (base_url and api_key and model):
+    cfg = ask_report.llm_config()
+    if not cfg:
         raise HTTPException(503, "языковая модель не настроена: нет LLM_BASE_URL, "
                                  "LLM_API_KEY или LLM_MODEL")
 
@@ -253,24 +267,49 @@ def ask_about_report(req: AskRequest) -> dict:
     if not data["sites"]:
         raise HTTPException(400, "в отчёте нет запрошенных площадок")
 
-    prompt = (f"Отчёт:\n{json.dumps(data, ensure_ascii=False)}\n\n"
-              f"Вопрос: {req.question}")
+    # Фильтр вопроса: проверяем на вне_темы до вызова LLM
+    question_verdict = ask_guard.question_verdict(req.question, data)
+    if question_verdict is not None:
+        logger.warning("/ask: вне темы (%s)", question_verdict)
+        raise HTTPException(
+            422,
+            detail={
+                "code": "out_of_scope",
+                "message": ask_guard.OUT_OF_SCOPE_MESSAGE,
+            },
+        )
+
+    prompt = ask_report.build_prompt(data, req.question)
     try:
-        answer = ask_report.ask(prompt, base_url, api_key, model,
-                                timeout=120, system=ask_report.SYSTEM)
+        answer = ask_report.ask(
+            prompt, cfg.base_url, cfg.api_key, cfg.model,
+            timeout=120, system=ask_report.SYSTEM, max_tokens=ask_report.ASK_MAX_TOKENS
+        )
     except Exception as exc:
-        raise HTTPException(504, f"языковая модель не ответила: {exc}") from exc
+        logger.warning("/ask: вызов LLM не удался: %s", ask_report.describe_llm_error(exc))
+        raise HTTPException(504, f"языковая модель не ответила: {ask_report.describe_llm_error(exc)}") from exc
+
+    # Фильтр ответа: проверяем на вне_темы после LLM
+    answer_verdict = ask_guard.answer_verdict(answer, data)
+    if answer_verdict is not None:
+        logger.warning("/ask: вне темы (%s)", answer_verdict)
+        raise HTTPException(
+            422,
+            detail={
+                "code": "out_of_scope",
+                "message": ask_guard.OUT_OF_SCOPE_MESSAGE,
+            },
+        )
 
     missing = ask_report.unverified(answer, ask_report.collect_numbers(data))
-    wrong_site = ask_report.misattributed(answer, ask_report.numbers_by_site(data))
+    by_site = ask_report.numbers_by_site(data)
+    wrong_site = ask_report.misattributed(answer, by_site)
     return {
         "answer": answer.strip(),
         "verified": not (missing or wrong_site),
         "numbers_not_in_report": missing,
         "numbers_of_other_site": wrong_site,
-        "limits": ("Проверяются числа, а не смысл: верное число может быть отнесено "
-                   "не к тому этапу, и проверка этого не увидит. Источник истины — "
-                   "сам отчёт, ответ лишь пересказывает его."),
+        "limits": ask_report.limits_for(answer, by_site),
     }
 
 

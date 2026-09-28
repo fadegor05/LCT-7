@@ -94,6 +94,17 @@ class AssessmentSettings(BaseModel):
     as_of_override: date | None = None
 
 
+class AssistantSettings(BaseModel):
+    """Параметры ассистента (ML-адаптер и API)."""
+
+    timeout_s: float = 130.0
+    connect_timeout_s: float = 2.0
+    rate_limit_per_min: int = 10
+    max_report_kb: int = 512
+    status_cache_s: float = 30.0
+    status_retry_s: float = 5.0
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -115,6 +126,7 @@ class Settings(BaseSettings):
     detector: DetectorSettings = DetectorSettings()
     observation: ObservationSettings = ObservationSettings()
     assessment: AssessmentSettings = AssessmentSettings()
+    assistant: AssistantSettings = AssistantSettings()
 
 
 @lru_cache

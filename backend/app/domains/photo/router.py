@@ -1,16 +1,13 @@
 """HTTP-роуты для управления фотографиями и детекциями."""
 
-import asyncio
 import uuid
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, Header, UploadFile
 from fastapi.responses import Response
 
 from app.core.settings import Settings
-from app.domains.photo.date_resolver import InvalidImageError
 from app.domains.photo.models import ProcessingStatus
-from app.domains.photo.render import render_annotated
 from app.domains.photo.schemas import (
     DateUpdate,
     DetectBacklogReport,
@@ -214,7 +211,10 @@ async def get_photo_image(
     return Response(
         content=content,
         media_type=content_type,
-        headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"},
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, max-age=86400, immutable",
+        },
     )
 
 
@@ -224,46 +224,38 @@ async def get_annotated_image(
     site_id: uuid.UUID,
     photo_id: uuid.UUID,
     service: FromDishka[PhotoService],
+    if_none_match: str | None = Header(default=None),
 ) -> Response:
     """Получить изображение с аннотациями детекций.
 
-    Загружает фотографию, получает её детекции, рисует на изображении
-    прямоугольники и метки для каждой детекции.
+    Картинка рисуется один раз и кэшируется в хранилище (см.
+    PhotoService.get_annotated). Браузер кэширует её по ETag: адрес один и тот
+    же, а рамки меняются после переобнаружения, поэтому ответ всегда
+    перепроверяется (no-cache), но при совпадении ETag уходит пустой 304.
 
     Args:
         site_id: ID стройки
         photo_id: ID фотографии
         service: Сервис фотографий
+        if_none_match: Заголовок If-None-Match
 
     Returns:
-        Response с PNG байтами аннотированного изображения
+        Response с JPEG байтами аннотированного изображения или 304
 
     Raises:
         404: Сайт не найден, не принадлежит пользователю, фотография не найдена
              или файл недоступен/повреждён
     """
-    # Получаем фотографию с детекциями
-    photo_detail = await service.get_photo(site_id, photo_id)
+    image = await service.get_annotated(site_id, photo_id, if_none_match)
+    headers = {
+        "ETag": image.etag,
+        "Cache-Control": "private, no-cache",
+        "X-Content-Type-Options": "nosniff",
+    }
+    if image.content is None:
+        return Response(status_code=304, headers=headers)
 
-    # Получаем байты изображения
-    try:
-        content, _ = await service.get_image(site_id, photo_id)
-    except AppError as e:
-        raise AppError("Файл снимка недоступен", status_code=404) from e
-
-    # Рисуем аннотации (выполняем в отдельном потоке)
-    try:
-        annotated_bytes, content_type = await asyncio.to_thread(
-            render_annotated, content, photo_detail.detections
-        )
-    except InvalidImageError as e:
-        raise AppError("Файл снимка недоступен", status_code=404) from e
-
-    return Response(
-        content=annotated_bytes,
-        media_type=content_type,
-        headers={"X-Content-Type-Options": "nosniff"},
-    )
+    return Response(content=image.content, media_type=image.content_type, headers=headers)
 
 
 @router.post("/{photo_id}/detect")

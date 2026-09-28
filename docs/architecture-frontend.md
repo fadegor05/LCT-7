@@ -33,12 +33,13 @@ api/                  контракты и доступ к API
   sites.ts, schedule.ts, methodology.ts   функции API + хуки по доменам backend
   frames.ts           снимки (photo) и наблюдения (observation)
   deviations.ts       выводы (assessment): статусы этапов, отклонения, итог
+  assistant.ts        ассистент: классификация ошибок по коду backend, useAssistantStatus, useAskAssistant
 components/ui/        дизайн-система LCT-7: Button, Segmented, TextField, SelectField, Pill,
                       StatusBadge, ConfidenceMeter, DateSourceBadge, Callout, Card, Dialog,
                       Breadcrumbs, Stepper, FrameView, FileDrop, QueryState, Icon
 components/layout/    AppLayout (шапка), PageHeader/SectionHeader, SiteShell (вкладки объекта)
-features/<домен>/     составные компоненты экранов: sites, new-site, methodology, overview,
-                      observations, deviations
+features/<домен>/     составные компоненты экранов: assistant, sites, new-site, methodology,
+                      overview, observations, deviations
 pages/                по странице на экран макета, собирают features
 lib/                  env, форматирование дат, подписи перечислений, сортировка отклонений
 mocks/                fixtures.ts (демо «Березники»), db.ts (in-memory бэкенд с правилами backend), handlers.ts
@@ -68,6 +69,11 @@ test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute 
 Экраны макета без поддержки в backend не подключены: 4 «Камеры» (в backend нет камер и зон),
 7а «Решение по гипотезе» (нет эндпоинтов решений), стримы и видео (backend принимает только фото).
 
+**Ассистент на обзоре.** На экране 5 · Обзор внизу (после «Последнего наблюдения») появляется
+панель ассистента, если LLM настроена. Панель скрыта без LLM и при печати. Ссылки в ответе
+вида «этап N» перенаправляют на якоря строк таблицы «Статусы этапов» через `#stage-<id>`.
+Ответы эфемерны и хранятся только в состоянии компонента (не в хранилище браузера).
+
 ## 4. Контракт API
 
 Базовый путь — `VITE_API_BASE_URL` (по умолчанию `/api`). Поля в snake_case, как отдаёт Pydantic.
@@ -86,11 +92,13 @@ OpenAPI backend), перечисления — StrEnum из `models.py` доме
 | `POST /sites/{id}/methodology/rules/{ruleId}/sets`, `PUT/DELETE /sites/{id}/methodology/sets/{setId}` | комплекты техники; без нормативной техники — 422 |
 | `GET /sites/{id}/photos` (`?undated=true`), `POST /sites/{id}/photos` (multipart `files`) | снимки и загрузка пачки (`UploadReport` по каждому файлу) |
 | `PATCH /sites/{id}/photos/{photoId}/date`, `POST /sites/{id}/photos/{photoId}/detect` | ручная дата снимка, повторная детекция |
-| `GET /sites/{id}/photos/{photoId}/annotated` | снимок с рамками техники (PNG рисует сервер) |
+| `GET /sites/{id}/photos/{photoId}/annotated` | снимок с рамками техники (JPEG рисует и кэширует сервер) |
 | `GET /sites/{id}/observations`, `GET /sites/{id}/observations/{date}` | наблюдения по датам и техника за дату |
 | `GET /sites/{id}/assessment/stages` (404 — графика нет) | статусы этапов; `status = null` — этап ещё не оценивался |
 | `GET /sites/{id}/assessment/deviations`, `GET /sites/{id}/assessment/deviations/{id}` | отклонения стройки, карточка с доказательствами |
 | `GET /sites/{id}/assessment/summary` | итог по объекту |
+| `GET /assistant/status` | статус ассистента (`enabled: boolean`) |
+| `POST /sites/{id}/assistant/ask` (body `{question}`, 3–500 символов после trim) | вопрос; ответ `{answer, verified, numbers_not_in_report, numbers_of_other_site, limits, site_label, stages}`. Ошибки отмечены кодом: `assistant_unavailable`, `assistant_timeout`, `rate_limited`, `out_of_scope`, `report_too_large`, `assistant_bad_request` |
 
 Чего backend не отдаёт и что фронт собирает сам: итог и последнее наблюдение в списке строек —
 отдельными запросами по каждой стройке; сквозной список отклонений — объединением списков строек;
@@ -116,6 +124,10 @@ OpenAPI backend), перечисления — StrEnum из `models.py` доме
 комплектов (422), пересчёт наблюдений по снимкам (максимум по снимкам), ручная дата не в будущем.
 Статусы этапов и отклонения демо-стройки — готовые выводы движка; у новых строек их нет.
 Чтобы подключить реальный эндпоинт, код экранов не меняется: достаточно выключить флаг.
+
+Сценарии ассистента для тестирования ошибок: в коде вызовите `setAssistantScenario()`, в браузере —
+параметр `?assistant=<имя>` (сценарии: `ok`, `unverified`, `unavailable`, `timeout`, `rate_limited`,
+`out_of_scope`, `too_large`, `no_llm`, `slow`, `unlinked`). `resetDb()` восстанавливает сценарий `ok`.
 
 ## 6. Тесты
 

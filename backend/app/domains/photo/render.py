@@ -1,5 +1,6 @@
 """Отрисовка аннотированных изображений с детекциями оборудования."""
 
+import zlib
 from collections.abc import Sequence
 from io import BytesIO
 from typing import cast
@@ -9,23 +10,39 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from app.domains.photo.date_resolver import InvalidImageError
 from app.domains.photo.schemas import DetectionRead
 
+# Версия формата отрисовки: входит в ключ кэша и ETag, поэтому при смене
+# рендера (цвета, размер, формат) старые закэшированные картинки не отдаются.
+RENDER_VERSION = "2"
 
-def render_annotated(image_bytes: bytes, detections: Sequence[DetectionRead]) -> tuple[bytes, str]:
+# Длинная сторона результата: снимок показывается в карточке, полный
+# размер камеры (4000+ px) только раздувает ответ и время кодирования.
+MAX_SIDE = 1920
+JPEG_QUALITY = 85
+
+
+def render_annotated(
+    image_bytes: bytes,
+    detections: Sequence[DetectionRead],
+    max_side: int = MAX_SIDE,
+) -> tuple[bytes, str]:
     """Отрисовать изображение с аннотациями детекций.
 
     Открывает изображение, применяет EXIF транспозицию, конвертирует в RGB,
-    рисует для каждой детекции прямоугольник по координатам bbox (как доли [0..1])
-    и метку с кодом и confidence над коробкой. Возвращает PNG байты.
+    уменьшает до max_side по длинной стороне, рисует для каждой детекции
+    прямоугольник по координатам bbox (как доли [0..1]) и метку с кодом
+    и confidence над коробкой. Возвращает JPEG байты: PNG фотографии весит
+    в разы больше и кодируется в разы дольше.
 
-    Цвет детекции детерминирован по equipment_code (hash).
+    Цвет детекции детерминирован по equipment_code (crc32).
     Толщина линии зависит от размера изображения (макс 2, мин w,h // 200).
 
     Args:
         image_bytes: Байты изображения
         detections: Список DetectionRead с bbox в формате [x1, y1, x2, y2] как доли [0..1]
+        max_side: Максимальная длина большей стороны результата в пикселях
 
     Returns:
-        Tuple (png_bytes, "image/png")
+        Tuple (jpeg_bytes, "image/jpeg")
 
     Raises:
         InvalidImageError: Если image_bytes - поврежденное или неподдерживаемое изображение
@@ -51,13 +68,15 @@ def render_annotated(image_bytes: bytes, detections: Sequence[DetectionRead]) ->
 
     img = img_obj
 
+    # Уменьшаем до рабочего размера (bbox в долях, поэтому масштаб не важен)
+    if max(img.size) > max_side:
+        img.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
+
     width, height = img.size
 
-    # Если нет детекций, просто переточиваем изображение в PNG и возвращаем
+    # Если нет детекций, просто перекодируем изображение
     if not detections:
-        output = BytesIO()
-        img.save(output, format="PNG")
-        return output.getvalue(), "image/png"
+        return _encode(img)
 
     # Рисуем детекции
     draw = ImageDraw.Draw(img)
@@ -136,10 +155,14 @@ def render_annotated(image_bytes: bytes, detections: Sequence[DetectionRead]) ->
             # Рисуем сам текст
             draw.text((label_x + 1, label_y + 1), label_text, fill="black", font=font)
 
-    # Сохраняем в PNG
+    return _encode(img)
+
+
+def _encode(img: Image.Image) -> tuple[bytes, str]:
+    """Закодировать изображение в JPEG."""
     output = BytesIO()
-    img.save(output, format="PNG")
-    return output.getvalue(), "image/png"
+    img.save(output, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    return output.getvalue(), "image/jpeg"
 
 
 def _get_color_for_equipment(equipment_code: str) -> tuple[int, int, int]:
@@ -165,7 +188,7 @@ def _get_color_for_equipment(equipment_code: str) -> tuple[int, int, int]:
         (255, 192, 203),  # Pink
     ]
 
-    # Хешируем code в индекс
-    hash_value = hash(equipment_code)
-    index = abs(hash_value) % len(palette)
+    # Хешируем code в индекс: crc32, а не hash() — hash() строк рандомизирован
+    # между процессами, и цвет в закэшированной картинке не совпадал бы с новой
+    index = zlib.crc32(equipment_code.encode()) % len(palette)
     return palette[index]

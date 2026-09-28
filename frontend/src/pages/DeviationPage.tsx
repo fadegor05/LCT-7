@@ -1,9 +1,10 @@
-import { Link } from 'react-router'
 import { useDeviation, useDeviations } from '@/api/deviations'
 import { useSchedule } from '@/api/schedule'
 import { useSite } from '@/api/sites'
 import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
+import { Button, ButtonLink } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
 import { QueryState } from '@/components/ui/QueryState'
 import { DeviationBody } from '@/features/deviations/DeviationBody'
 import { SeverityCard } from '@/features/deviations/SeverityCard'
@@ -42,11 +43,30 @@ export function DeviationPage() {
                 actions={
                   index >= 0 && (
                     <nav className={styles.nav} aria-label="Листание отклонений">
-                      <span className="sm muted">
+                      <span className={`sm muted ${styles.counter}`}>
                         {index + 1} из {ordered.length}
                       </span>
-                      {prev && <Link to={link(prev.id)}>‹ Предыдущее</Link>}
-                      {next && <Link to={link(next.id)}>Следующее ›</Link>}
+                      {/* На краях списка кнопка остаётся, но выключена: блок не прыгает */}
+                      {prev ? (
+                        <ButtonLink to={link(prev.id)} variant="ghost" size="sm" icon="chevronLeft">
+                          Предыдущее
+                        </ButtonLink>
+                      ) : (
+                        <Button variant="ghost" size="sm" icon="chevronLeft" disabled>
+                          Предыдущее
+                        </Button>
+                      )}
+                      {next ? (
+                        <ButtonLink to={link(next.id)} variant="ghost" size="sm">
+                          Следующее
+                          <Icon name="chevronRight" />
+                        </ButtonLink>
+                      ) : (
+                        <Button variant="ghost" size="sm" disabled>
+                          Следующее
+                          <Icon name="chevronRight" />
+                        </Button>
+                      )}
                     </nav>
                   )
                 }

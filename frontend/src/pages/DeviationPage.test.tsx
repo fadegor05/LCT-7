@@ -40,8 +40,9 @@ describe('DeviationPage', () => {
     const { user, router } = renderRoute('/sites/site-berezniki/deviations/dev-missing-pump')
     const nav = await screen.findByRole('navigation', { name: 'Листание отклонений' })
     expect(within(nav).getByText('1 из 3')).toBeInTheDocument()
-    expect(within(nav).queryByText('‹ Предыдущее')).not.toBeInTheDocument()
-    await user.click(within(nav).getByRole('link', { name: 'Следующее ›' }))
+    expect(within(nav).queryByRole('link', { name: 'Предыдущее' })).not.toBeInTheDocument()
+    expect(within(nav).getByRole('button', { name: 'Предыдущее' })).toBeDisabled()
+    await user.click(within(nav).getByRole('link', { name: 'Следующее' }))
     expect(router.state.location.pathname).toBe('/sites/site-berezniki/deviations/dev-idle-truck')
     expect(
       await screen.findByRole('heading', {
@@ -51,7 +52,23 @@ describe('DeviationPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Гипотеза', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByText(/Гипотеза: есть косвенный признак/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '‹ Предыдущее' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Предыдущее' })).toBeInTheDocument()
+  })
+
+  it('disables «Следующее» on the last deviation', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/deviations/dev-missing-pump')
+    const nav = await screen.findByRole('navigation', { name: 'Листание отклонений' })
+    await user.click(within(nav).getByRole('link', { name: 'Следующее' }))
+    await user.click(
+      within(await screen.findByRole('navigation', { name: 'Листание отклонений' })).getByRole(
+        'link',
+        { name: 'Следующее' },
+      ),
+    )
+    const last = await screen.findByRole('navigation', { name: 'Листание отклонений' })
+    expect(await within(last).findByText('3 из 3')).toBeInTheDocument()
+    expect(within(last).getByRole('button', { name: 'Следующее' })).toBeDisabled()
+    expect(within(last).getByRole('link', { name: 'Предыдущее' })).toBeInTheDocument()
   })
 
   it('shows a deviation without a stage, rule or evidence', async () => {
