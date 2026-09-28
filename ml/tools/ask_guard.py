@@ -11,7 +11,7 @@
 """
 
 import re
-from typing import Optional
+import unicodedata
 
 # Константы
 REFUSAL_TOKEN = "[[ВНЕ_ОТЧЁТА]]"
@@ -22,6 +22,39 @@ OUT_OF_SCOPE_MESSAGE = (
     "«что с этапом 3»."
 )
 MAX_ANSWER_CHARS = 1500
+
+
+def _normalize(text: str) -> str:
+    """Нормализация текста: NFKC, удаление управляющих символов, ё→е, схлопывание пробелов."""
+    # NFKC нормализация (fullwidth → normal)
+    normalized = unicodedata.normalize("NFKC", text)
+
+    # Удаляем все символы с категорией "C" (format, control, surrogate, private use, not assigned)
+    # Это включает U+200B (zero-width space), U+200D (zero-width joiner), U+FEFF (BOM), soft hyphen и т.д.
+    normalized = "".join(
+        c for c in normalized if not unicodedata.category(c).startswith("C")
+    )
+
+    # Заменяем ё на е и Ё на Е
+    normalized = normalized.replace("ё", "е").replace("Ё", "Е")
+
+    # Схлопываем пробелы
+    normalized = re.sub(r"\s+", " ", normalized)
+
+    return normalized.strip()
+
+
+def _has_anchor(text_lower: str, anchors: set[str]) -> bool:
+    """Проверка наличия якоря в тексте с требованием границ слов.
+
+    Якорь должен быть окружён границами слов (\\b), чтобы "p1" не матчился в "p10".
+    """
+    for anchor in anchors:
+        pattern = r"(?<!\w)" + re.escape(anchor) + r"(?!\w)"
+        if re.search(pattern, text_lower):
+            return True
+    return False
+
 
 # Регулярные выражения для фильтра вопросов
 
@@ -53,17 +86,16 @@ CODEGEN_NOUNS = re.compile(
 BARE_CODE_PATTERN = re.compile(r"^(def |class |import |from .+ import |SELECT )", re.IGNORECASE)
 
 # off_topic: поиск якорей отчёта и ключевых слов
-TOPIC_STEMS = [
+# Основные стемы с требованием границы слова
+TOPIC_STEMS_WITH_BOUNDARIES = [
     "отстав",
     "задерж",
     "опереж",
-    "срок",
     "этап",
     "площад",
     "объект",
     "стройк",
     "график",
-    "план",
     "отклонен",
     "статус",
     "техник",
@@ -87,6 +119,19 @@ TOPIC_STEMS = [
     "прогноз",
 ]
 
+# Специальные стемы с требованием целого слова (для неоднозначных)
+PLAN_PATTERN = re.compile(r"\bплан(?:а|у|ом|е|ы|ов|ам)?\b")
+KRAN_PATTERN = re.compile(r"\bкран(?:а|у|ом|е|ы|ов|ам)?\b")
+SROK_PATTERN = re.compile(r"\bсрок(?:а|у|ом|е|и|ов)?\b")
+
+# Остальные стемы — простая граница слова
+MAIN_TOPIC_PATTERN = re.compile(
+    r"\b(?:"
+    + "|".join(re.escape(stem) for stem in TOPIC_STEMS_WITH_BOUNDARIES)
+    + r")",
+    re.IGNORECASE,
+)
+
 TOPIC_REGEXES = [
     re.compile(r"\bдн(я|ей|и|ь)\b"),
     re.compile(r"\bp\d+\b"),
@@ -95,20 +140,18 @@ TOPIC_REGEXES = [
 # Регулярные выражения для фильтра ответов
 
 # code: поиск кода в ответе
-CODE_FENCE_PATTERN = re.compile(r"```")
 CODE_LINE_PATTERN = re.compile(
     r"^\s*(def |class |import |from \S+ import |for .+ in .+:|while .+:|"
     r"if .+:|return\b|function\b|const |let |var |#include|public |SELECT )",
     re.MULTILINE,
 )
-CODE_BRACKET_PATTERN = re.compile(r"[{};\n]")
 
 
 def report_anchors(data: dict) -> set[str]:
     """Все якори из отчёта: site_id, stage_ref, stage_code, stage_name в нижнем регистре.
 
     Ходит по дереву dict и list, собирая строки из ключей
-    site_id, stage_ref, stage_code, stage_name.
+    site_id, stage_ref, stage_code, stage_name. Все якори нормализуются.
     """
     anchors: set[str] = set()
 
@@ -116,13 +159,13 @@ def report_anchors(data: dict) -> set[str]:
         if isinstance(node, dict):
             # Собираем якори из известных ключей
             if "site_id" in node and isinstance(node["site_id"], str):
-                anchors.add(node["site_id"].lower())
+                anchors.add(_normalize(node["site_id"]).lower())
             if "stage_ref" in node and isinstance(node["stage_ref"], str):
-                anchors.add(node["stage_ref"].lower())
+                anchors.add(_normalize(node["stage_ref"]).lower())
             if "stage_code" in node and isinstance(node["stage_code"], str):
-                anchors.add(node["stage_code"].lower())
+                anchors.add(_normalize(node["stage_code"]).lower())
             if "stage_name" in node and isinstance(node["stage_name"], str):
-                anchors.add(node["stage_name"].lower())
+                anchors.add(_normalize(node["stage_name"]).lower())
 
             # Рекурсивно ходим по значениям
             for value in node.values():
@@ -157,7 +200,7 @@ def clean_question(question: str) -> str:
     return clean.strip()
 
 
-def question_verdict(question: str, data: dict) -> Optional[str]:
+def question_verdict(question: str, data: dict) -> str | None:
     """Определение причины отклонения вопроса или None если он разрешён.
 
     Проверяет по порядку:
@@ -165,7 +208,9 @@ def question_verdict(question: str, data: dict) -> Optional[str]:
     2. codegen — запрос на генерацию кода
     3. off_topic — вопрос не связан с отчётом
     """
-    lower_q = question.lower()
+    # Нормализуем вопрос
+    normalized = _normalize(question)
+    lower_q = normalized.lower()
 
     # 1. Проверка на injection
     for pattern in INJECTION_PATTERNS:
@@ -173,7 +218,9 @@ def question_verdict(question: str, data: dict) -> Optional[str]:
             return "injection"
 
     # 2. Проверка на codegen
-    if BARE_CODE_PATTERN.search(question):
+    # Проверяем bare code на нормализованном и lstrip'нутом тексте
+    stripped = lower_q.lstrip()
+    if BARE_CODE_PATTERN.search(stripped):
         return "codegen"
 
     if CODEGEN_VERBS.search(lower_q):
@@ -182,17 +229,28 @@ def question_verdict(question: str, data: dict) -> Optional[str]:
 
     # 3. Проверка на off_topic: есть ли якори отчёта или ключевые слова
     anchors = report_anchors(data)
-    has_anchor = any(anchor in lower_q for anchor in anchors)
-    has_topic = any(stem in lower_q for stem in TOPIC_STEMS)
+    has_anchor = _has_anchor(lower_q, anchors)
+
+    # Проверяем основные стемы с границами
+    has_main_topic = MAIN_TOPIC_PATTERN.search(lower_q)
+
+    # Проверяем специальные стемы с требованием целого слова
+    has_special_topic = (
+        PLAN_PATTERN.search(lower_q)
+        or KRAN_PATTERN.search(lower_q)
+        or SROK_PATTERN.search(lower_q)
+    )
+
+    # Проверяем числовые стемы
     has_topic_regex = any(regex.search(lower_q) for regex in TOPIC_REGEXES)
 
-    if not (has_anchor or has_topic or has_topic_regex):
+    if not (has_anchor or has_main_topic or has_special_topic or has_topic_regex):
         return "off_topic"
 
     return None
 
 
-def answer_verdict(answer: str, data: dict) -> Optional[str]:
+def answer_verdict(answer: str, data: dict) -> str | None:
     """Определение причины отклонения ответа или None если он разрешён.
 
     Проверяет по порядку:
@@ -201,24 +259,28 @@ def answer_verdict(answer: str, data: dict) -> Optional[str]:
     3. too_long — ответ длиннее MAX_ANSWER_CHARS
     4. ungrounded — ответ не привязан к отчёту
     """
-    stripped = answer.strip()
-
-    # 1. Проверка на refused: REFUSAL_TOKEN в ответе (stripped или с пробелами)
-    if REFUSAL_TOKEN in stripped:
+    # 1. Проверка на refused: REFUSAL_TOKEN в ответе (проверяем на оригинальном ответе)
+    if REFUSAL_TOKEN in answer.strip():
         return "refused"
+
+    # Нормализуем ответ
+    normalized = _normalize(answer)
+    stripped = normalized.strip()
+    lower_a = normalized.lower()
 
     # 2. Проверка на code
     # Поиск кодового блока с ``` забором
-    if CODE_FENCE_PATTERN.search(answer):
+    if "```" in answer:
         return "code"
 
-    # Поиск ≥ 2 строк, похожих на код
+    # Поиск ≥ 2 строк, похожих на код (проверяем в оригинальном ответе для multiline)
     code_lines = CODE_LINE_PATTERN.findall(answer)
     if len(code_lines) >= 2:
         return "code"
 
     # Проверка плотности скобок и точек с запятой (> 3%)
-    special_chars = sum(1 for c in answer if c in "{};\n")
+    # НЕ считаем \n в плотности
+    special_chars = sum(1 for c in answer if c in "{};" )
     if answer and len(answer) > 0:
         density = special_chars / len(answer)
         if density > 0.03:
@@ -230,9 +292,7 @@ def answer_verdict(answer: str, data: dict) -> Optional[str]:
 
     # 4. Проверка на ungrounded: нет якорей отчёта и нет NO_DATA_PHRASE
     anchors = report_anchors(data)
-    lower_a = answer.lower()
-
-    has_anchor = any(anchor in lower_a for anchor in anchors)
+    has_anchor = _has_anchor(lower_a, anchors)
     has_no_data = NO_DATA_PHRASE in lower_a
 
     if not (has_anchor or has_no_data):
