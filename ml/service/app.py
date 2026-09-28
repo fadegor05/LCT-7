@@ -25,7 +25,12 @@ from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
 from service.detector import (  # noqa: F401
-    DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_WEIGHTS, Detector, StampReader)
+    DEFAULT_CONF,
+    DEFAULT_IMGSZ,
+    DEFAULT_WEIGHTS,
+    Detector,
+    StampReader,
+)
 from service.export import to_csv, to_html, to_xlsx
 from service.pipeline import build_report, summary
 
