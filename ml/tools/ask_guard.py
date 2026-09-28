@@ -6,7 +6,7 @@
 
 Три уровня защиты:
 1. Очистка вопроса от экранирования (блок </вопрос>, управляющие символы).
-2. Фильтр вопроса: injection, codegen, off_topic.
+2. Фильтр вопроса: injection, codegen, явный off_topic (остальное решает модель).
 3. Фильтр ответа: refused, code, too_long, ungrounded.
 """
 
@@ -85,57 +85,23 @@ CODEGEN_NOUNS = re.compile(
 )
 BARE_CODE_PATTERN = re.compile(r"^(def |class |import |from .+ import |SELECT )", re.IGNORECASE)
 
-# off_topic: поиск якорей отчёта и ключевых слов
-# Основные стемы с требованием границы слова
-TOPIC_STEMS_WITH_BOUNDARIES = [
-    "отстав",
-    "задерж",
-    "опереж",
-    "этап",
-    "площад",
-    "объект",
-    "стройк",
-    "график",
-    "отклонен",
-    "статус",
-    "техник",
-    "простаи",
-    "простой",
-    "наблюдени",
-    "снимк",
-    "провер",
-    "уверенн",
-    "гипотез",
-    "критичн",
-    "вердикт",
-    "сводк",
-    "свай",
-    "котлован",
-    "кран",
-    "экскават",
-    "самосвал",
-    "бетон",
-    "ограждени",
-    "прогноз",
+# off_topic: только явные просьбы, не связанные со стройкой. Остальное решает модель:
+# на вопрос не по отчёту она отвечает REFUSAL_TOKEN, а фильтр ответа проверяет привязку
+# к отчёту. Белый список слов здесь не годится: он резал опечатки («отстование») и любую
+# переформулировку («на какой стадии проект»).
+OFF_TOPIC_PATTERNS = [
+    re.compile(r"\bпогод\w*"),
+    re.compile(r"\bперевед\w*|\bпереведи\b|\btranslate\b"),
+    re.compile(r"\bанекдот\w*|\bшутк\w*|\bпошути\w*|\bстих\w*|\bпесн\w*"),
+    re.compile(r"\bрецепт\w*"),
+    re.compile(r"\bкурс\w*\s+(доллар|евро|валют|рубл|биткоин)\w*"),
+    re.compile(r"\bреши\b|\bуравнени\w*"),
+    # Арифметика: «сколько будет 2+2», «2*3=?»
+    re.compile(r"\d\s*[+*^×]\s*\d"),
 ]
 
-# Специальные стемы с требованием целого слова (для неоднозначных)
-PLAN_PATTERN = re.compile(r"\bплан(?:а|у|ом|е|ы|ов|ам)?\b")
-KRAN_PATTERN = re.compile(r"\bкран(?:а|у|ом|е|ы|ов|ам)?\b")
-SROK_PATTERN = re.compile(r"\bсрок(?:а|у|ом|е|и|ов)?\b")
-
-# Остальные стемы — простая граница слова
-MAIN_TOPIC_PATTERN = re.compile(
-    r"\b(?:"
-    + "|".join(re.escape(stem) for stem in TOPIC_STEMS_WITH_BOUNDARIES)
-    + r")",
-    re.IGNORECASE,
-)
-
-TOPIC_REGEXES = [
-    re.compile(r"\bдн(я|ей|и|ь)\b"),
-    re.compile(r"\bp\d+\b"),
-]
+# Кириллица: вопрос целиком на другом языке — не к ассистенту по русскому отчёту
+CYRILLIC_PATTERN = re.compile(r"[а-я]")
 
 # Регулярные выражения для фильтра ответов
 
@@ -206,7 +172,8 @@ def question_verdict(question: str, data: dict) -> str | None:
     Проверяет по порядку:
     1. injection — попытка переопределить инструкции
     2. codegen — запрос на генерацию кода
-    3. off_topic — вопрос не связан с отчётом
+    3. off_topic — явная просьба не по теме (погода, перевод, арифметика, не по-русски).
+       Остальные вопросы идут в модель: она сама отказывает REFUSAL_TOKEN.
     """
     # Нормализуем вопрос
     normalized = _normalize(question)
@@ -227,24 +194,15 @@ def question_verdict(question: str, data: dict) -> str | None:
         if CODEGEN_NOUNS.search(lower_q):
             return "codegen"
 
-    # 3. Проверка на off_topic: есть ли якори отчёта или ключевые слова
-    anchors = report_anchors(data)
-    has_anchor = _has_anchor(lower_q, anchors)
+    # 3. Проверка на off_topic: только явные просьбы не по теме. Якорь отчёта («p1»,
+    # «этап 3», код этапа) снимает подозрение: такой вопрос точно про отчёт.
+    if _has_anchor(lower_q, report_anchors(data)):
+        return None
 
-    # Проверяем основные стемы с границами
-    has_main_topic = MAIN_TOPIC_PATTERN.search(lower_q)
+    if not CYRILLIC_PATTERN.search(lower_q):
+        return "off_topic"
 
-    # Проверяем специальные стемы с требованием целого слова
-    has_special_topic = (
-        PLAN_PATTERN.search(lower_q)
-        or KRAN_PATTERN.search(lower_q)
-        or SROK_PATTERN.search(lower_q)
-    )
-
-    # Проверяем числовые стемы
-    has_topic_regex = any(regex.search(lower_q) for regex in TOPIC_REGEXES)
-
-    if not (has_anchor or has_main_topic or has_special_topic or has_topic_regex):
+    if any(pattern.search(lower_q) for pattern in OFF_TOPIC_PATTERNS):
         return "off_topic"
 
     return None

@@ -255,35 +255,55 @@ class TestАнкорныеГраницы:
         assert ask_guard._has_anchor("этап 3 отстаёт", {"этап 3"}) is True
 
 
-class TestСтемыСТочнымиГраницами:
-    """Проверка что стемы отчёта требуют границ слов."""
-
-    @pytest.mark.parametrize(
-        "question,expected",
-        [
-            ("расскажи про планеты солнечной системы", "off_topic"),
-            ("объясни как работает экран смартфона", "off_topic"),
-            ("какой курс доллара", "off_topic"),
-        ],
-    )
-    def test_loose_stems_не_матчатся_внутри_слов(self, question, expected, DATA):
-        """Стемы вроде 'план', 'кран', 'срок' не должны матчиться в словах 'планета', 'экран'."""
-        verdict = ask_guard.question_verdict(question, DATA)
-        assert verdict == expected, f"Ожидается {expected}, получено {verdict}"
+class TestМягкийФильтрТемы:
+    """Фильтр вопроса до модели режет только явное «не по теме»; остальное решает модель."""
 
     @pytest.mark.parametrize(
         "question",
         [
-            "что по плану",
-            "какой срок у этапа 3",
-            "сколько кранов на площадке",
-            "какая техника простаивает",
+            # Со скриншота пользователя: опечатка и своя формулировка
+            "на какой стадии проект",
+            "где отстование и насколько",
+            "что по срокам",
+            "как продвигается строительство",
+            "всё ли идёт по плану",
+            "что сделано за неделю",
+            "этапы 2-4 что с ними",
         ],
     )
-    def test_стемы_матчатся_целыми_словами(self, question, DATA):
-        """Стемы должны матчиться когда используются как целое слово."""
+    def test_опечатки_и_переформулировки_доходят_до_модели(self, question, DATA):
+        """Вопрос без слов из списка или с опечаткой не отклоняется до модели."""
         verdict = ask_guard.question_verdict(question, DATA)
-        assert verdict is None, f"Вопрос '{question}' должен быть разрешён, но отклонён: {verdict}"
+        assert verdict is None, f"Вопрос '{question}' должен дойти до модели, но отклонён: {verdict}"
+
+    @pytest.mark.parametrize(
+        "question",
+        [
+            "расскажи про планеты солнечной системы",
+            "объясни как работает экран смартфона",
+        ],
+    )
+    def test_неочевидное_не_по_теме_решает_модель(self, question, DATA):
+        """Такой вопрос уходит в модель: она отвечает REFUSAL_TOKEN, его ловит answer_verdict."""
+        assert ask_guard.question_verdict(question, DATA) is None
+        assert ask_guard.answer_verdict(ask_guard.REFUSAL_TOKEN, DATA) == "refused"
+
+    @pytest.mark.parametrize(
+        "question",
+        [
+            "какой курс доллара",
+            "сколько будет 2+2",
+            "переведи на английский: привет",
+            "what is the delay",
+        ],
+    )
+    def test_явное_не_по_теме_режется_до_модели(self, question, DATA):
+        """Явные просьбы не по теме и вопросы не по-русски не стоят вызова модели."""
+        assert ask_guard.question_verdict(question, DATA) == "off_topic"
+
+    def test_якорь_отчёта_пропускает_вопрос_не_по_русски(self, DATA):
+        """Вопрос с якорем отчёта (p1) пропускается, даже если он не по-русски."""
+        assert ask_guard.question_verdict("what about p1", DATA) is None
 
 
 class TestUnicodeОбфускация:

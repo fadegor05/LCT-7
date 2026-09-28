@@ -63,6 +63,24 @@ def referenced_stages(answer: str, stage_ids: dict[int, uuid.UUID]) -> list[Stag
     return result
 
 
+def humanize_answer(answer: str, site_name: str) -> str:
+    """Заменить служебную метку площадки в ответе на название объекта.
+
+    Метка `SITE_LABEL` нужна только проверке чисел на стороне ML (`misattributed()` ищет
+    метки вида pNN), и та к этому моменту уже отработала. Пользователю метка ничего не
+    говорит: он видит объект по названию. Граница слова — чтобы не задеть «p10».
+
+    Args:
+        answer: Текст ответа ассистента
+        site_name: Название объекта
+
+    Returns:
+        Ответ, где каждое упоминание метки заменено на «название»
+    """
+    pattern = r"(?<![\w])" + re.escape(SITE_LABEL) + r"(?![\w])"
+    return re.sub(pattern, lambda _: f"«{site_name}»", answer, flags=re.IGNORECASE)
+
+
 class AssistantService:
     """Оркестрация вопроса с проверками доступа, лимита, размера и маппингом ошибок."""
 
@@ -183,8 +201,9 @@ class AssistantService:
                 duration_ms,
             )
 
+            # Метка площадки — после проверки чисел на стороне ML, только в тексте для человека
             return AssistantAnswerRead(
-                answer=answer_data.answer,
+                answer=humanize_answer(answer_data.answer, site.name),
                 verified=answer_data.verified,
                 numbers_not_in_report=answer_data.numbers_not_in_report,
                 numbers_of_other_site=answer_data.numbers_of_other_site,

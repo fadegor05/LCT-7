@@ -581,7 +581,7 @@ export function assistantDelayMs(scenario: AssistantScenario): number {
 }
 
 export function assistantAsk(siteId: string): AssistantAnswer {
-  getSite(siteId) // Проверяем, что стройка существует (404)
+  const site = getSite(siteId) // Проверяем, что стройка существует (404)
 
   if (!assistantEnabled()) {
     throw new MockError(503, 'Ассистент недоступен', 'assistant_unavailable')
@@ -625,7 +625,8 @@ export function assistantAsk(siteId: string): AssistantAnswer {
         ? []
         : [{ ref: `этап ${stageNo}`, stage_id: behindStatus.stage_id }]
   } else {
-    answer = 'По площадке p1 отставаний не найдено.'
+    // Как на бэкенде: служебная метка площадки заменена на название объекта
+    answer = `По площадке «${site.name}» отставаний не найдено.`
     stages = []
   }
 
