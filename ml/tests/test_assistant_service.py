@@ -230,7 +230,7 @@ class TestAskEndpoint:
 
         client = TestClient(app)
         response = client.post("/ask", json={
-            "question": "что-то",
+            "question": "какая задержка у p03",  # Вопрос по отчёту
             "report": {
                 "sites": [{"site_id": "p03", "stages": []}],
                 "meta": {}
@@ -269,7 +269,7 @@ class TestAskEndpoint:
 
         client = TestClient(app)
         response = client.post("/ask", json={
-            "question": "что-то",
+            "question": "какой этап отстаёт",  # Вопрос по отчёту
             "report": ОТЧЁТ,
         })
         assert response.status_code == 200

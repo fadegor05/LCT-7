@@ -256,6 +256,7 @@ def ask_about_report(req: AskRequest) -> dict:
     проверка не увидит. Это записано и здесь, и в ответе.
     """
     ask_report = _ask_report_module()
+    import ask_guard  # noqa: E402
 
     cfg = ask_report.llm_config()
     if not cfg:
@@ -266,14 +267,39 @@ def ask_about_report(req: AskRequest) -> dict:
     if not data["sites"]:
         raise HTTPException(400, "в отчёте нет запрошенных площадок")
 
-    prompt = (f"Отчёт:\n{json.dumps(data, ensure_ascii=False)}\n\n"
-              f"Вопрос: {req.question}")
+    # Фильтр вопроса: проверяем на вне_темы до вызова LLM
+    question_verdict = ask_guard.question_verdict(req.question, data)
+    if question_verdict is not None:
+        logger.warning("/ask: вне темы (%s)", question_verdict)
+        raise HTTPException(
+            422,
+            detail={
+                "code": "out_of_scope",
+                "message": ask_guard.OUT_OF_SCOPE_MESSAGE,
+            },
+        )
+
+    prompt = ask_report.build_prompt(data, req.question)
     try:
-        answer = ask_report.ask(prompt, cfg.base_url, cfg.api_key, cfg.model,
-                                timeout=120, system=ask_report.SYSTEM)
+        answer = ask_report.ask(
+            prompt, cfg.base_url, cfg.api_key, cfg.model,
+            timeout=120, system=ask_report.SYSTEM, max_tokens=ask_report.ASK_MAX_TOKENS
+        )
     except Exception as exc:
         logger.warning("/ask: вызов LLM не удался: %s", ask_report.describe_llm_error(exc))
         raise HTTPException(504, f"языковая модель не ответила: {ask_report.describe_llm_error(exc)}") from exc
+
+    # Фильтр ответа: проверяем на вне_темы после LLM
+    answer_verdict = ask_guard.answer_verdict(answer, data)
+    if answer_verdict is not None:
+        logger.warning("/ask: вне темы (%s)", answer_verdict)
+        raise HTTPException(
+            422,
+            detail={
+                "code": "out_of_scope",
+                "message": ask_guard.OUT_OF_SCOPE_MESSAGE,
+            },
+        )
 
     missing = ask_report.unverified(answer, ask_report.collect_numbers(data))
     by_site = ask_report.numbers_by_site(data)
