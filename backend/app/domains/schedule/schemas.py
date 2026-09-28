@@ -57,6 +57,7 @@ class ScheduleReport(BaseModel):
     rows_parsed: int
     stages_with_dates: int
     stages_without_dates: int
+    parse_method: str
     stages: list[StageRead]
     issues: list[IssueRead]
 

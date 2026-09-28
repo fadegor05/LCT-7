@@ -64,6 +64,7 @@ async def test_schedule_columns(engine: AsyncEngine) -> None:
             "imported_at",
             "rows_total",
             "rows_parsed",
+            "parse_method",
         }
 
 

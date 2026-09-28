@@ -2,6 +2,7 @@
 
 from app.adapters.ml.assistant import AssistantAnswer, AssistantError
 from app.adapters.ml.base import DetectionResult, DetectorInfo
+from app.adapters.ml.schedule_llm import GridRow, LlmScheduleResult
 
 
 class FakeDetector:
@@ -191,3 +192,22 @@ class FakeAssistantClient:
             Предконфигурированное значение (по умолчанию True)
         """
         return self.enabled
+
+
+class FakeScheduleLlmClient:
+    """Fake LLM-разбор плана: отдаёт заданный результат или бросает заданную ошибку."""
+
+    def __init__(
+        self,
+        result: LlmScheduleResult | None = None,
+        error: AssistantError | None = None,
+    ):
+        self.result = result or LlmScheduleResult(rows=[], issues=[])
+        self.error = error
+        self.calls: list[list[GridRow]] = []
+
+    async def parse(self, rows) -> LlmScheduleResult:
+        self.calls.append(list(rows))
+        if self.error is not None:
+            raise self.error
+        return self.result

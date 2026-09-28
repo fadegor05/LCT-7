@@ -105,6 +105,7 @@ const report = (patch: Partial<ScheduleReport>): ScheduleReport => ({
   imported_at: '2026-09-01T00:00:00Z',
   rows_total: 0,
   rows_parsed: 0,
+  parse_method: 'builtin',
   stages_with_dates: 0,
   stages_without_dates: 0,
   stages: [],

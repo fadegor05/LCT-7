@@ -10,6 +10,7 @@ import type {
   EquipmentSet,
   Level,
   Observation,
+  ParseMode,
   Photo,
   Rule,
   RuleUpdate,
@@ -118,7 +119,11 @@ export function updateSite(siteId: string, data: { name?: string; address?: stri
 
 // ---------- График ----------
 
-function buildSchedule(siteId: string, filename: string): ScheduleReport {
+function buildSchedule(
+  siteId: string,
+  filename: string,
+  parseMethod: ScheduleReport['parse_method'] = 'builtin',
+): ScheduleReport {
   const scheduleId = nextId('schedule')
   const stages: Stage[] = STAGE_TEMPLATE.map((seed, i) => ({
     id: `${siteId}-stage-${i + 1}`,
@@ -137,6 +142,7 @@ function buildSchedule(siteId: string, filename: string): ScheduleReport {
     imported_at: now(),
     rows_total: stages.length + issues.length,
     rows_parsed: stages.length,
+    parse_method: parseMethod,
     stages_with_dates: withDates,
     stages_without_dates: stages.length - withDates,
     stages,
@@ -151,14 +157,19 @@ export function getSchedule(siteId: string): ScheduleReport {
   return schedule
 }
 
-export function importSchedule(siteId: string, filename: string): ScheduleReport {
+export function importSchedule(
+  siteId: string,
+  filename: string,
+  mode: ParseMode = 'auto',
+): ScheduleReport {
   getSite(siteId)
   // В тестах имя файла теряется (jsdom → Node FormData): проверяем только явное расширение.
   if (/\.\w+$/.test(filename) && !/\.(csv|xlsx)$/i.test(filename)) {
     throw new MockError(422, 'Неподдерживаемый формат файла: нужен CSV или XLSX')
   }
   // Переимпорт заменяет график целиком: правила и выводы по старым этапам уходят вместе с ним.
-  const schedule = buildSchedule(siteId, filename)
+  // В моках «авто» всегда справляется встроенным разбором; LLM — только по явному выбору.
+  const schedule = buildSchedule(siteId, filename, mode === 'llm' ? 'llm' : 'builtin')
   state.schedules.set(siteId, schedule)
   state.rules.delete(siteId)
   state.statuses.delete(siteId)

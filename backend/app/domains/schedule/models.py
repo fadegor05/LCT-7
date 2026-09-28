@@ -17,6 +17,21 @@ class DatesSource(StrEnum):
     MANUAL = "manual"
 
 
+class ParseMode(StrEnum):
+    """Режим разбора файла графика, выбранный пользователем."""
+
+    AUTO = "auto"  # встроенный парсер, при неудаче — LLM
+    LLM = "llm"
+    BUILTIN = "builtin"
+
+
+class ParseMethod(StrEnum):
+    """Чем график разобран на самом деле (в режиме auto это выясняется по ходу)."""
+
+    BUILTIN = "builtin"
+    LLM = "llm"
+
+
 class Schedule(Base):
     """График выполнения работ (таблица schedules).
 
@@ -36,6 +51,12 @@ class Schedule(Base):
     )
     rows_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rows_parsed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    parse_method: Mapped[str] = mapped_column(
+        String(16),
+        default=ParseMethod.BUILTIN.value,
+        server_default=ParseMethod.BUILTIN.value,
+        nullable=False,
+    )
 
 
 class ScheduleStage(Base):

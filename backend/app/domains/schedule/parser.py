@@ -61,6 +61,9 @@ class ScheduleParser:
     # название работы). См. docstring _find_header.
     WEAK_NAME_SYNONYMS = {"этап"}
 
+    # Ширина таблицы, отдаваемой LLM: Gantt-выгрузки бывают на сотни колонок-недель
+    MAX_GRID_COLUMNS = 40
+
     def parse(self, filename: str, content: bytes) -> ParseResult:
         """Распарсить расписание из файла.
 
@@ -85,6 +88,61 @@ class ScheduleParser:
 
     def _parse_xlsx(self, content: bytes) -> ParseResult:
         """Распарсить XLSX файл."""
+        return self._parse_rows(self._read_xlsx_rows(content))
+
+    def _parse_csv(self, content: bytes) -> ParseResult:
+        """Распарсить CSV файл."""
+        return self._parse_rows(self._read_csv_rows(content))
+
+    def read_grid(self, filename: str, content: bytes) -> list[tuple[int, list[str]]]:
+        """Прочитать таблицу «как есть» для LLM-разбора: (номер строки, ячейки текстом).
+
+        Не ищет шапку и не разбирает даты — это работа парсера или модели.
+        Даты Excel выводятся как ДД.ММ.ГГГГ, лишние пустые колонки справа
+        отрезаются, ширина ограничена MAX_GRID_COLUMNS.
+
+        Raises:
+            ScheduleFormatError: если формат не поддерживается или файл пуст
+        """
+        ext = Path(filename).suffix.lower()
+        if ext == ".xlsx":
+            rows = self._read_xlsx_rows(content)
+        elif ext == ".csv":
+            rows = self._read_csv_rows(content)
+        else:
+            raise ScheduleFormatError(f"Неподдерживаемый формат: {ext}")
+
+        grid: list[tuple[int, list[str]]] = []
+        for row_number, row in rows:
+            cells = [self._cell_text(cell) for cell in row]
+            while cells and not cells[-1]:
+                cells.pop()
+            grid.append((row_number, cells[: self.MAX_GRID_COLUMNS]))
+        return grid
+
+    @staticmethod
+    def _cell_text(cell: object) -> str:
+        if cell is None:
+            return ""
+        if isinstance(cell, (datetime, date)):
+            return cell.strftime("%d.%m.%Y")
+        if isinstance(cell, float) and cell.is_integer():
+            return str(int(cell))
+        return str(cell).strip()
+
+    def _parse_rows(self, all_rows: list[tuple[int, Sequence[object]]]) -> ParseResult:
+        """Найти шапку среди непустых строк и распарсить данные под ней."""
+        located = self._locate_header(all_rows)
+        if located is None:
+            raise ScheduleFormatError(
+                "Не найдена колонка с названием работы. Распознаваемые названия: "
+                + ", ".join(sorted(self.NAME_HEADERS))
+            )
+        header, header_row_idx = located
+        return self._parse_data_rows(all_rows[header_row_idx + 1 :], header)
+
+    def _read_xlsx_rows(self, content: bytes) -> list[tuple[int, Sequence[object]]]:
+        """Непустые строки активного листа XLSX: (номер строки, значения ячеек)."""
         try:
             buffer = BytesIO(content)
             wb = load_workbook(buffer, read_only=True, data_only=True)
@@ -94,8 +152,7 @@ class ScheduleParser:
         except (zipfile.BadZipFile, InvalidFileException, KeyError, OSError, ValueError) as e:
             raise ScheduleFormatError("Не удалось прочитать XLSX-файл") from e
 
-        # Собрать все строки и их значения
-        all_rows = []
+        all_rows: list[tuple[int, Sequence[object]]] = []
         for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
             if row is None:
                 continue
@@ -105,22 +162,10 @@ class ScheduleParser:
 
         if not all_rows:
             raise ScheduleFormatError("Файл пуст")
+        return all_rows
 
-        located = self._locate_header(all_rows)
-        if located is None:
-            raise ScheduleFormatError(
-                "Не найдена колонка с названием работы. Распознаваемые названия: "
-                + ", ".join(sorted(self.NAME_HEADERS))
-            )
-        header, header_row_idx = located
-
-        # Распарсить строки данных (все строки после заголовка)
-        data_rows = all_rows[header_row_idx + 1 :]
-
-        return self._parse_data_rows(data_rows, header)
-
-    def _parse_csv(self, content: bytes) -> ParseResult:
-        """Распарсить CSV файл."""
+    def _read_csv_rows(self, content: bytes) -> list[tuple[int, Sequence[object]]]:
+        """Непустые строки CSV: (номер строки, ячейки)."""
         # Попробовать различные кодировки
         text = None
         for encoding in ["utf-8-sig", "utf-8", "cp1251"]:
@@ -133,38 +178,22 @@ class ScheduleParser:
         if text is None:
             raise ScheduleFormatError("Не удалось декодировать CSV файл")
 
-        # Разделить на строки
         lines = text.strip().split("\n")
         if not lines or not any(line.strip() for line in lines):
             raise ScheduleFormatError("Файл пуст")
 
         # Определить разделитель через csv.Sniffer
         delimiter = self._detect_delimiter(text)
-
-        # Распарсить CSV
         reader = csv.reader(StringIO(text), delimiter=delimiter)
 
-        # Собрать все строки
-        all_rows = []
+        all_rows: list[tuple[int, Sequence[object]]] = []
         for row_num, row in enumerate(reader, start=1):
             if row and any(cell.strip() for cell in row):
                 all_rows.append((row_num, row))
 
         if not all_rows:
             raise ScheduleFormatError("Файл пуст")
-
-        located = self._locate_header(all_rows)
-        if located is None:
-            raise ScheduleFormatError(
-                "Не найдена колонка с названием работы. Распознаваемые названия: "
-                + ", ".join(sorted(self.NAME_HEADERS))
-            )
-        header, header_row_idx = located
-
-        # Распарсить строки данных
-        data_rows = all_rows[header_row_idx + 1 :]
-
-        return self._parse_data_rows(data_rows, header)
+        return all_rows
 
     def _detect_delimiter(self, text: str) -> str:
         """Определить разделитель CSV файла."""
