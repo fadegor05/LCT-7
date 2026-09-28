@@ -385,3 +385,141 @@ def test_ключи_совместимы_с_ml_compact() -> None:
         "confidence_reason",
     }
     assert set(stage_obj.keys()) == expected_stage_keys
+
+
+def test_статус_none_в_объекте_даёт_not_started(stage1: ScheduleStage) -> None:
+    """Если статус объект имеет status=None, отчёт выдаёт 'not_started' и as_of=None."""
+    status_with_none = StageStatusRead(
+        stage_id=stage1.id,
+        stage_name="Устройство свай",
+        position=1,
+        status=None,
+        delay_days=None,
+        confidence=None,
+        confidence_reason=None,
+        computed_at=None,
+    )
+    summary = SiteSummaryRead(
+        verdict="insufficient_data",
+        delay_days_min=None,
+        delay_days_max=None,
+        critical_count=0,
+        attention_count=0,
+    )
+
+    data = ReportInput(
+        stages=[stage1],
+        statuses=[status_with_none],
+        deviations=[],
+        summary=summary,
+        observations=[],
+    )
+
+    result = build_report(data)
+    site = result.report["sites"][0]
+
+    assert site["stages"][0]["status"] == "not_started"
+    assert site["stages"][0]["delay_days"] is None
+    assert site["stages"][0]["confidence"] is None
+    assert site["as_of"] is None
+
+
+def test_clean_text_убирает_unicode_разделители() -> None:
+    """clean_text удаляет Unicode-разделители (NEL, LSP, ZWJ и бidi-ovverrides)."""
+    # Конструируем текст с различными Unicode-разделителями и управляющими символами
+    # \u0085 = NEL (Next Line)
+    # ​ = Zero-width space
+    # ‍ = Zero-width joiner
+    # ‮ = Right-to-left override
+    # ­ = Soft hyphen
+    #   = Line separator
+    #   = Paragraph separator
+    input_text = "а б в\u0085г​д‮е­ж и й"
+
+    result = clean_text(input_text)
+
+    # Проверяем, что все управляющие символы удалены
+    assert "\u0085" not in result
+    assert "​" not in result
+    assert "‍" not in result
+    assert "‮" not in result
+    assert "­" not in result
+    assert " " not in result
+    assert " " not in result
+
+    # Проверяем, что буквы остались в правильном порядке
+    assert "а" in result
+    assert "б" in result
+    assert "в" in result
+    assert "г" in result
+    assert "д" in result
+    assert "е" in result
+    assert "ж" in result
+    assert "и" in result
+    assert "й" in result
+
+    # Проверяем, что это одна строка (нет многострочности)
+    assert "\n" not in result
+
+
+def test_больше_MAX_ALERTS(stage1: ScheduleStage) -> None:
+    """Если более MAX_ALERTS отклонений, отчёт усекает и ставит флаг alerts_truncated."""
+    from app.domains.assistant.report import MAX_ALERTS
+
+    # Создаём 130 отклонений (больше MAX_ALERTS)
+    deviations = []
+    for i in range(130):
+        dev = DeviationRead(
+            id=uuid.uuid4(),
+            stage_id=stage1.id,
+            type="delay",
+            is_hypothesis=False,
+            severity="critical" if i < 10 else "warning",
+            confidence="high",
+            period_start=date(2026, 1, 1),
+            period_end=date(2026, 1, 10),
+            expected="10 дней",
+            observed="20 дней",
+            limits_text="Макс 15 дней",
+            rule_id=uuid.uuid4(),
+            created_at=datetime.now(UTC),
+        )
+        deviations.append(dev)
+
+    summary = SiteSummaryRead(
+        verdict="behind",
+        delay_days_min=14,
+        delay_days_max=14,
+        critical_count=10,
+        attention_count=120,
+    )
+
+    data = ReportInput(
+        stages=[stage1],
+        statuses=[],
+        deviations=deviations,
+        summary=summary,
+        observations=[],
+    )
+
+    result = build_report(data)
+    report = result.report
+
+    assert len(result.report["sites"][0]["alerts"]) == MAX_ALERTS
+    assert report["meta"]["alerts_truncated"] is True
+
+    # Тест с малым количеством отклонений
+    small_deviations = deviations[:5]
+    data2 = ReportInput(
+        stages=[stage1],
+        statuses=[],
+        deviations=small_deviations,
+        summary=summary,
+        observations=[],
+    )
+
+    result2 = build_report(data2)
+    report2 = result2.report
+
+    assert len(result2.report["sites"][0]["alerts"]) == 5
+    assert report2["meta"]["alerts_truncated"] is False

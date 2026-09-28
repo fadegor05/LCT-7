@@ -1,6 +1,12 @@
-"""Чистая функция построения отчёта для ассистента из данных assessment."""
+"""Чистая функция построения отчёта для ассистента из данных assessment.
+
+Отчёт содержит информацию об этапах (с номерами и статусами) и отклонениях,
+подготовленную для ML /ask endpoint. Входные данные из assessment-домена,
+выходные данные очищены от UUID/ПИД и усечены по размеру.
+"""
 
 import re
+import unicodedata
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -12,10 +18,14 @@ from app.domains.schedule.models import ScheduleStage
 SITE_LABEL: str = "p1"
 MAX_STAGES: int = 300
 MAX_TEXT: int = 300
+MAX_ALERTS: int = 100
 
 
 def clean_text(value: str | None, limit: int = MAX_TEXT) -> str | None:
-    """Очистить текст: удалить переносы, табы, управляющие символы и обрезать по лимиту.
+    """Очистить текст: удалить управляющие символы, разделители и обрезать по лимиту.
+
+    Удаляет все Unicode-символы категорий C* (управляющие) и Zl/Zp (разделители),
+    затем сворачивает пробелы и обрезает по лимиту с многоточием.
 
     Args:
         value: Исходный текст или None.
@@ -27,14 +37,15 @@ def clean_text(value: str | None, limit: int = MAX_TEXT) -> str | None:
     if value is None:
         return None
 
-    # Удаляем управляющие символы (кроме пробела)
-    cleaned = re.sub(r"[\x00-\x1f\x7f]", " ", value)
+    # Удаляем символы категорий Cc, Cf, Cs, Co, Cn (управляющие)
+    # и Zl, Zp (разделители строк и параграфов)
+    cleaned = "".join(
+        " " if unicodedata.category(c) in ("Cc", "Cf", "Cs", "Co", "Cn", "Zl", "Zp") else c
+        for c in value
+    )
 
-    # Заменяем табы на пробелы
-    cleaned = cleaned.replace("\t", " ")
-
-    # Сворачиваем множественные пробелы в один
-    cleaned = re.sub(r" +", " ", cleaned)
+    # Сворачиваем множественные пробелы и табы в один пробел
+    cleaned = re.sub(r"\s+", " ", cleaned)
 
     # Обрезаем по началу и концу
     cleaned = cleaned.strip()
@@ -95,22 +106,30 @@ def build_report(data: ReportInput) -> BuiltReport:
     for stage_no, stage in enumerate(truncated_stages, start=1):
         status = statuses_by_stage_id.get(stage.id)
 
+        # Определяем статус: если объекта нет или его .status=None, то "not_started"
+        stage_status = "not_started"
+        if status is not None and status.status is not None:
+            stage_status = status.status
+
         stage_report = {
             "stage_ref": f"этап {stage_no}",
             "stage_no": stage_no,
             "stage_name": clean_text(stage.name),
             "planned_start": stage.planned_start.isoformat() if stage.planned_start else None,
             "planned_end": stage.planned_end.isoformat() if stage.planned_end else None,
-            "status": status.status if status else "not_started",
+            "status": stage_status,
             "delay_days": status.delay_days if status else None,
             "confidence": status.confidence if status else None,
             "confidence_reason": clean_text(status.confidence_reason) if status else None,
         }
         stages_list.append(stage_report)
 
-    # Строим отчёты по отклонениям (alerts)
+    # Строим отчёты по отклонениям (alerts) с усечением по MAX_ALERTS
     alerts_list = []
-    for deviation in data.deviations:
+    alerts_truncated = len(data.deviations) > MAX_ALERTS
+    truncated_deviations = data.deviations[:MAX_ALERTS]
+
+    for deviation in truncated_deviations:
         # Определяем stage_ref если этап есть в списке
         stage_ref = None
         if deviation.stage_id is not None and deviation.stage_id in stage_id_to_no:
@@ -169,6 +188,7 @@ def build_report(data: ReportInput) -> BuiltReport:
             "stages": len(truncated_stages),
             "stages_truncated": stages_truncated,
             "source": "assessment",
+            "alerts_truncated": alerts_truncated,
         },
         "sites": [site_report],
     }
