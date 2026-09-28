@@ -29,7 +29,6 @@ from app.adapters.ml.assistant import (
     AssistantUnavailable,
     HttpAssistantClient,
     NullAssistantClient,
-    create_assistant,
 )
 from app.adapters.ml.base import (
     DetectionResult,
@@ -38,7 +37,7 @@ from app.adapters.ml.base import (
     DetectorInfo,
     RawDetection,
 )
-from app.adapters.ml.factory import create_detector
+from app.adapters.ml.factory import create_assistant, create_detector
 from app.adapters.ml.http import HttpDetectorClient
 from app.adapters.ml.null import NullDetector
 

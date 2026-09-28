@@ -16,8 +16,8 @@ from app.adapters.ml.assistant import (
     AssistantUnavailable,
     HttpAssistantClient,
     NullAssistantClient,
-    create_assistant,
 )
+from app.adapters.ml.factory import create_assistant
 from app.core.settings import AssistantSettings, Settings
 
 
@@ -563,3 +563,75 @@ class TestCreateAssistant:
 
         assistant = create_assistant(settings, mock_client)
         assert isinstance(assistant, NullAssistantClient)
+
+
+class TestHttpAssistantClientTimeoutShort:
+    """Тесты для короткого таймаута на /meta."""
+
+    @pytest.mark.asyncio
+    async def test_available_использует_короткий_таймаут(self):
+        """available() использует таймаут 5.0 для /meta, ask() - settings.timeout_s."""
+        timeouts = {}
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            # Check the timeout in request extensions
+            timeout_dict = request.extensions.get("timeout", {})
+            read_timeout = timeout_dict.get("read")
+
+            if "meta" in str(request.url):
+                timeouts["meta"] = read_timeout
+                return httpx.Response(200, json={"assistant": True})
+            else:
+                timeouts["ask"] = read_timeout
+                return httpx.Response(
+                    200,
+                    json={
+                        "answer": "test",
+                        "verified": True,
+                        "numbers_not_in_report": [],
+                        "numbers_of_other_site": [],
+                        "limits": "",
+                    },
+                )
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        assistant = HttpAssistantClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=AssistantSettings(timeout_s=130.0),
+        )
+
+        # Call available() - should use short timeout
+        await assistant.available()
+
+        # Call ask() - should use full timeout
+        await assistant.ask("Q", {}, "p1")
+
+        # Verify timeouts
+        assert timeouts["meta"] is not None
+        assert timeouts["meta"] <= 5.1  # /meta should use ~5s
+        assert timeouts["ask"] is not None
+        assert timeouts["ask"] >= 100  # /ask should use ~130s
+
+
+class TestHttpAssistantClientPoolTimeout:
+    """Тесты для PoolTimeout маппирования."""
+
+    @pytest.mark.asyncio
+    async def test_pool_timeout_маппится_503(self):
+        """httpx.PoolTimeout -> AssistantUnavailable (503)."""
+
+        def mock_transport(request: httpx.Request) -> httpx.Response:
+            raise httpx.PoolTimeout("pool exhausted")
+
+        mock_client = httpx.AsyncClient(transport=httpx.MockTransport(mock_transport))
+        assistant = HttpAssistantClient(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=AssistantSettings(),
+        )
+
+        with pytest.raises(AssistantUnavailable) as exc_info:
+            await assistant.ask("Q", {}, "p1")
+
+        assert exc_info.value.status_code == 503

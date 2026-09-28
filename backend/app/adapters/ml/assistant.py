@@ -17,6 +17,9 @@ from app.core.settings import AssistantSettings
 
 logger = logging.getLogger(__name__)
 
+# Таймаут для GET /meta — проверка доступности не должна зависать на 130s
+META_TIMEOUT_S: float = 5.0
+
 
 @dataclass(frozen=True)
 class AssistantAnswer:
@@ -263,6 +266,8 @@ class HttpAssistantClient:
             raise AssistantTimeout() from e
         except httpx.ConnectTimeout as e:
             raise AssistantUnavailable() from e
+        except httpx.PoolTimeout as e:
+            raise AssistantUnavailable() from e
         except httpx.TimeoutException as e:
             # Это не ConnectTimeout и не ReadTimeout
             raise AssistantTimeout() from e
@@ -270,6 +275,21 @@ class HttpAssistantClient:
             raise AssistantUnavailable() from e
         except httpx.TransportError as e:
             raise AssistantUnavailable() from e
+
+    def _remember(self, now: float, result: bool) -> bool:
+        """Запомнить результат доступности в кэш и вернуть его.
+
+        Args:
+            now: Текущее время
+            result: Результат проверки доступности
+
+        Returns:
+            Переданный результат
+        """
+        self._available_cache = result
+        self._available_cache_time = now
+        self._available_cache_is_success = result
+        return result
 
     async def available(self) -> bool:
         """Проверить доступность ассистента.
@@ -297,35 +317,21 @@ class HttpAssistantClient:
         # Кэш устарел или пуст, делаем запрос
         try:
             url = f"{self.base_url}/meta"
-            timeout = httpx.Timeout(
-                self.settings.timeout_s, connect=self.settings.connect_timeout_s
-            )
+            timeout = httpx.Timeout(META_TIMEOUT_S, connect=self.settings.connect_timeout_s)
             response = await self.client.get(url, timeout=timeout)
 
             if response.status_code != 200:
-                self._available_cache = False
-                self._available_cache_time = now
-                self._available_cache_is_success = False
-                return False
+                return self._remember(now, False)
 
             try:
                 data = response.json()
                 result = data.get("assistant") is True
-                self._available_cache = result
-                self._available_cache_time = now
-                self._available_cache_is_success = result
-                return result
+                return self._remember(now, result)
             except Exception:
-                self._available_cache = False
-                self._available_cache_time = now
-                self._available_cache_is_success = False
-                return False
+                return self._remember(now, False)
 
         except Exception:
-            self._available_cache = False
-            self._available_cache_time = now
-            self._available_cache_is_success = False
-            return False
+            return self._remember(now, False)
 
 
 class NullAssistantClient:
@@ -341,31 +347,3 @@ class NullAssistantClient:
     async def available(self) -> bool:
         """Всегда возвращает False (не настроен)."""
         return False
-
-
-def create_assistant(settings: object, client: httpx.AsyncClient | None) -> AssistantClient:
-    """Создать ассистента на основе конфига.
-
-    Если settings.detector.url заполнен и не пустой после strip,
-    и client не None — создать HttpAssistantClient. Иначе — NullAssistantClient.
-
-    Args:
-        settings: Settings, содержащий detector.url
-        client: httpx.AsyncClient для отправки запросов (или None)
-
-    Returns:
-        Экземпляр HttpAssistantClient или NullAssistantClient
-    """
-    if (
-        hasattr(settings, "detector")
-        and hasattr(settings.detector, "url")
-        and settings.detector.url
-        and settings.detector.url.strip()
-        and client is not None
-    ):
-        return HttpAssistantClient(
-            base_url=settings.detector.url,
-            client=client,
-            settings=settings.assistant,
-        )
-    return NullAssistantClient()
