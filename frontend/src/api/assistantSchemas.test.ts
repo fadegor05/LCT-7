@@ -65,9 +65,7 @@ describe('assistantAnswerSchema', () => {
   })
 
   it('rejects answer without stages', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { stages, ...withoutStages } = validAnswer
-    const result = assistantAnswerSchema.safeParse(withoutStages)
+    const result = assistantAnswerSchema.safeParse({ ...validAnswer, stages: undefined })
     expect(result.success).toBe(false)
   })
 
@@ -88,9 +86,7 @@ describe('assistantAnswerSchema', () => {
   })
 
   it('rejects answer without limits', () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { limits, ...withoutLimits } = validAnswer
-    const result = assistantAnswerSchema.safeParse(withoutLimits)
+    const result = assistantAnswerSchema.safeParse({ ...validAnswer, limits: undefined })
     expect(result.success).toBe(false)
   })
 })

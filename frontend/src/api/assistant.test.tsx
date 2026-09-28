@@ -1,40 +1,135 @@
 /**
- * Тесты API ассистента: классификация ошибок, хуки useAssistantStatus и useAskAssistant,
- * локальная валидация, отмена, двойное отправка, эфемерность ответов.
+ * Тесты API ассистента: классификация ошибок, useAssistantStatus, useAskAssistant
+ * (валидация до сети, двойная отправка, отмена, эфемерность ответа) поверх MSW-моков.
  */
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import type { ReactNode } from 'react'
+import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { server } from '@/mocks/server'
+import { describe, expect, it, vi } from 'vitest'
 import * as db from '@/mocks/db'
 import { BEREZNIKI } from '@/mocks/fixtures'
+import { server } from '@/mocks/server'
+import { createTestQueryClient } from '@/test/render'
 import { ApiError } from './client'
-import { classifyAssistantError, useAskAssistant, useAssistantStatus } from './assistant'
+import {
+  assistantApi,
+  classifyAssistantError,
+  useAskAssistant,
+  useAssistantStatus,
+} from './assistant'
+import type { AssistantAnswer } from './schemas'
 
-function createTestQueryClient() {
-  return new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } },
-  })
+const OTHER_SITE = 'site-other'
+const ASK_URL = '/api/sites/:siteId/assistant/ask'
+const STATUS_URL = '/api/assistant/status'
+
+const answerBody: AssistantAnswer = {
+  answer: 'Этап 1 «Подготовка» отстаёт на 3 дня.',
+  verified: true,
+  numbers_not_in_report: [],
+  numbers_of_other_site: [],
+  limits: 'Проверяются числа, а не смысл.',
+  site_label: 'p1',
+  stages: [],
 }
 
-function wrapper(client: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+function wrapperFor(client: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  }
+}
+
+function mountAsk(siteId = BEREZNIKI) {
+  const client = createTestQueryClient()
+  const utils = renderHook(({ id }) => useAskAssistant(id), {
+    wrapper: wrapperFor(client),
+    initialProps: { id: siteId },
+  })
+  return { ...utils, client }
+}
+
+type AskHook = { current: ReturnType<typeof useAskAssistant> }
+
+/**
+ * Состояние мутации TanStack доходит до React отложенно (пакетная рассылка через таймер),
+ * уже после `act`: даём ему дойти, прежде чем читать `result.current`.
+ */
+const settle = () =>
+  act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  })
+
+/** Задать вопрос и дождаться, пока состояние хука обновится. */
+async function submit(result: AskHook, question: string) {
+  let answer: AssistantAnswer | undefined
+  await act(async () => {
+    answer = await result.current.ask(question)
+  })
+  await settle()
+  return answer
+}
+
+/** Ждёт отказа запроса и возвращает ApiError; если запрос прошёл — тест падает. */
+async function rejection(promise: Promise<unknown>): Promise<ApiError> {
+  let value: unknown
+  try {
+    value = await promise
+  } catch (error) {
+    if (error instanceof ApiError) return error
+    throw error
+  }
+  throw new Error(`Ожидался отказ запроса, получен ответ: ${JSON.stringify(value)}`)
+}
+
+/** Обработчик, отвечающий по команде теста: считает вызовы и видит аборт запроса. */
+function gatedAsk() {
+  const state = { calls: 0, aborted: false, release: () => {} }
+  const gate = new Promise<void>((resolve) => {
+    state.release = resolve
+  })
+  server.use(
+    http.post(ASK_URL, async ({ request }) => {
+      state.calls += 1
+      request.signal.addEventListener('abort', () => {
+        state.aborted = true
+      })
+      await gate
+      return HttpResponse.json(answerBody)
+    }),
   )
+  return state
+}
+
+/** Обработчик, считающий вызовы и запоминающий тело запроса. */
+function countingAsk() {
+  const state = { calls: 0, bodies: [] as unknown[] }
+  server.use(
+    http.post(ASK_URL, async ({ request }) => {
+      state.calls += 1
+      state.bodies.push(await request.json())
+      return HttpResponse.json(answerBody)
+    }),
+  )
+  return state
 }
 
 describe('classifyAssistantError', () => {
-  it('AbortError с name === "AbortError" → cancelled', () => {
-    const error = new DOMException('user cancelled', 'AbortError')
-    const result = classifyAssistantError(error)
-    expect(result).toEqual({ kind: 'cancelled', message: '', retryable: false })
+  it('AbortError → cancelled, без текста', () => {
+    expect(classifyAssistantError(new DOMException('стоп', 'AbortError'))).toEqual({
+      kind: 'cancelled',
+      message: '',
+      retryable: false,
+    })
   })
 
-  it('отклоненный fetch (TypeError) → unavailable', () => {
-    const error = new TypeError('Failed to fetch')
-    const result = classifyAssistantError(error)
-    expect(result).toEqual({
+  it('AbortError из другого окружения (не DOMException) → cancelled', () => {
+    const error = Object.assign(new Error('aborted'), { name: 'AbortError' })
+    expect(classifyAssistantError(error).kind).toBe('cancelled')
+  })
+
+  it('отказ fetch (TypeError) → unavailable', () => {
+    expect(classifyAssistantError(new TypeError('Failed to fetch'))).toEqual({
       kind: 'unavailable',
       message: 'Нет связи с сервером',
       retryable: false,
@@ -44,589 +139,383 @@ describe('classifyAssistantError', () => {
   it.each([
     [404, undefined, 'not_found', 'Стройка не найдена'],
     [422, undefined, 'invalid_question', 'Вопрос должен быть от 3 до 500 символов'],
-    [429, 'rate_limited', 'rate_limited', 'Слишком много вопросов'],
+    [429, 'rate_limited', 'rate_limited', 'Слишком много вопросов. Повторите через 30 с.'],
     [503, 'assistant_unavailable', 'unavailable', 'Ассистент недоступен'],
-    [504, 'assistant_timeout', 'timeout', 'Модель не ответила'],
-    [413, 'report_too_large', 'too_large', 'Отчёт слишком велик'],
-    [422, 'out_of_scope', 'out_of_scope', 'отвечает только на вопросы'],
-    [400, 'assistant_bad_request', 'bad_request', 'Плохой запрос'],
+    [504, 'assistant_timeout', 'timeout', 'Модель не ответила. Повторите вопрос позже.'],
+    [413, 'report_too_large', 'too_large', 'Отчёт слишком велик для ассистента'],
+    [422, 'out_of_scope', 'out_of_scope', 'Только по отчёту'],
+    [400, 'assistant_bad_request', 'bad_request', 'Ассистент не принял запрос'],
     [500, undefined, 'unknown', 'Не удалось получить ответ'],
-  ])('ApiError status %i code %s → kind %s', (status, code, expectedKind, messageSnippet) => {
-    const error = new ApiError(status, messageSnippet, [], code)
-    const result = classifyAssistantError(error)
-    expect(result.kind).toBe(expectedKind)
-    if (messageSnippet) expect(result.message).toContain(messageSnippet)
+    [400, 'something_new', 'unknown', 'Не удалось получить ответ'],
+  ])('ApiError %i / код %s → %s', (status, code, kind, message) => {
+    const result = classifyAssistantError(new ApiError(status, message, undefined, code))
+    expect(result.kind).toBe(kind)
+    // Текст: у кодов сервера — серверный, у валидации и неизвестного — фиксированный клиентский.
+    expect(result.message).toBe(message)
   })
 
-  it('timeout → retryable: true, остальные → false', () => {
-    const timeout = classifyAssistantError(new ApiError(504, 'x', [], 'assistant_timeout'))
-    expect(timeout.retryable).toBe(true)
-
-    const unavailable = classifyAssistantError(new ApiError(503, 'x', [], 'assistant_unavailable'))
-    expect(unavailable.retryable).toBe(false)
-
-    const rateLimited = classifyAssistantError(new ApiError(429, 'x', [], 'rate_limited'))
-    expect(rateLimited.retryable).toBe(false)
+  it('повторить можно только после таймаута модели', () => {
+    const failures = [
+      new ApiError(504, 'x', undefined, 'assistant_timeout'),
+      new ApiError(503, 'x', undefined, 'assistant_unavailable'),
+      new ApiError(429, 'x', undefined, 'rate_limited'),
+      new ApiError(422, 'x', undefined, 'out_of_scope'),
+      new ApiError(413, 'x', undefined, 'report_too_large'),
+      new ApiError(400, 'x', undefined, 'assistant_bad_request'),
+      new ApiError(404, 'x'),
+      new ApiError(422, 'x', []),
+      new TypeError('Failed to fetch'),
+      new Error('x'),
+    ].map((error) => classifyAssistantError(error))
+    expect(failures.filter((f) => f.retryable).map((f) => f.kind)).toEqual(['timeout'])
   })
 
-  it('unknown code в ApiError → unknown', () => {
-    const error = new ApiError(400, 'test', [], 'unknown_code_xyz')
-    const result = classifyAssistantError(error)
-    expect(result.kind).toBe('unknown')
-  })
-
-  it('обычная ошибка (не ApiError) → unknown', () => {
-    const error = new Error('Some error')
-    const result = classifyAssistantError(error)
-    expect(result.kind).toBe('unknown')
-    expect(result.message).toBe('Не удалось получить ответ')
+  it('произвольная ошибка → unknown', () => {
+    expect(classifyAssistantError(new Error('boom'))).toEqual({
+      kind: 'unknown',
+      message: 'Не удалось получить ответ',
+      retryable: false,
+    })
   })
 })
 
 describe('useAssistantStatus', () => {
-  let client: QueryClient
+  const mountStatus = () =>
+    renderHook(() => useAssistantStatus(), { wrapper: wrapperFor(createTestQueryClient()) })
 
-  beforeEach(() => {
-    client = createTestQueryClient()
-    db.resetDb()
+  it('пока запрос идёт, ассистент выключен, а isPending — true', async () => {
+    const { result } = mountStatus()
+    expect(result.current).toEqual({ enabled: false, isPending: true })
+    await waitFor(() => expect(result.current.isPending).toBe(false))
   })
 
-  it('по умолчанию ассистент включён', async () => {
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(true)
+  it('по умолчанию включён', async () => {
+    const { result } = mountStatus()
+    await waitFor(() => expect(result.current.enabled).toBe(true))
   })
 
-  it('сценарий no_llm → enabled: false', async () => {
-    db.setAssistantScenario('no_llm')
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
+  it.each(['no_llm', 'unavailable'] as const)('сценарий %s → выключен', async (scenario) => {
+    db.setAssistantScenario(scenario)
+    const { result } = mountStatus()
+    await waitFor(() => expect(result.current.isPending).toBe(false))
     expect(result.current.enabled).toBe(false)
   })
 
-  it('сценарий unavailable → enabled: false', async () => {
-    db.setAssistantScenario('unavailable')
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(false)
-  })
-
-  it('500 ошибка → enabled: false, одна попытка, нет ошибок в консоли', async () => {
-    server.use(http.get('*/assistant/status', () => new HttpResponse(null, { status: 500 })))
-
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(false)
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
-
-    consoleErrorSpy.mockRestore()
-  })
-
-  it('404 ошибка → enabled: false', async () => {
+  it.each([
+    ['500', () => new HttpResponse('Internal Server Error', { status: 500 })],
+    ['503', () => HttpResponse.json({ detail: 'Ассистент недоступен' }, { status: 503 })],
+    ['404', () => HttpResponse.json({ detail: 'нет' }, { status: 404 })],
+    ['не JSON', () => new HttpResponse('<html>', { status: 200 })],
+    ['нарушение контракта', () => HttpResponse.json({ enabled: 'yes' })],
+    ['обрыв сети', () => HttpResponse.error()],
+  ])('%s → выключен, один запрос, без ошибок в консоли', async (_name, respond) => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let calls = 0
     server.use(
-      http.get('*/assistant/status', () =>
-        HttpResponse.json({ detail: 'Not found' }, { status: 404 }),
-      ),
+      http.get(STATUS_URL, () => {
+        calls += 1
+        return respond()
+      }),
     )
-
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
+    const { result } = mountStatus()
+    await waitFor(() => expect(result.current.isPending).toBe(false))
     expect(result.current.enabled).toBe(false)
-  })
-
-  it('невалидный JSON → enabled: false', async () => {
-    server.use(http.get('*/assistant/status', () => new HttpResponse('<html>')))
-
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(false)
-  })
-
-  it('контракт не совпал (enabled: "yes") → enabled: false', async () => {
-    server.use(
-      http.get('*/assistant/status', () => HttpResponse.json({ enabled: 'yes' }, { status: 200 })),
-    )
-
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(false)
-  })
-
-  it('HttpResponse.error() → enabled: false', async () => {
-    server.use(http.get('*/assistant/status', () => HttpResponse.error()))
-
-    const { result } = renderHook(() => useAssistantStatus(), { wrapper: wrapper(client) })
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.enabled).toBe(false)
+    expect(calls).toBe(1)
+    expect(consoleError).not.toHaveBeenCalled()
   })
 })
 
 describe('useAskAssistant', () => {
-  let client: QueryClient
+  it('успех: ответ по контракту, вопрос отправлен как есть', async () => {
+    const asked = countingAsk()
+    const { result } = mountAsk()
 
-  beforeEach(() => {
-    client = createTestQueryClient()
-    db.resetDb()
+    const answer = await submit(result, 'где отставание и на сколько')
+
+    expect(answer).toEqual(answerBody)
+    expect(result.current.answer).toEqual(answerBody)
+    expect(result.current.failure).toBeUndefined()
+    expect(result.current.isPending).toBe(false)
+    expect(asked.bodies).toEqual([{ question: 'где отставание и на сколько' }])
   })
 
-  it('успешный ask: question "где отставание и на сколько"', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
+  it('пробелы по краям обрезаются перед отправкой', async () => {
+    const asked = countingAsk()
+    const { result } = mountAsk()
+    await submit(result, '  hello world  ')
+    expect(asked.bodies).toEqual([{ question: 'hello world' }])
+  })
 
-    const answer = await result.current.ask('где отставание и на сколько')
+  it.each([
+    ['слишком короткий после trim', '  ab  '],
+    ['501 символ', 'а'.repeat(501)],
+    ['пустой', '   '],
+  ])('%s: в сеть не уходит, причина — invalid_question', async (_name, question) => {
+    const asked = countingAsk()
+    const { result } = mountAsk()
 
-    expect(answer).toBeDefined()
-    expect(answer?.answer).toContain('Этап')
+    const answer = await submit(result, question)
 
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
+    expect(answer).toBeUndefined()
+    expect(result.current.failure).toEqual({
+      kind: 'invalid_question',
+      message: 'Вопрос должен быть от 3 до 500 символов',
+      retryable: false,
     })
+    expect(asked.calls).toBe(0)
+  })
 
-    expect(result.current.answer).toBeDefined()
+  it.each([
+    ['3 символа', 'abc'],
+    ['500 символов', 'а'.repeat(500)],
+  ])('%s: уходит в сеть один раз и принимается', async (_name, question) => {
+    const asked = countingAsk()
+    const { result } = mountAsk()
+    const answer = await submit(result, question)
+    expect(asked.calls).toBe(1)
+    expect(answer).toEqual(answerBody)
     expect(result.current.failure).toBeUndefined()
   })
 
-  it('валидация: question "  ab  " → invalid_question, counter 0', async () => {
-    let requestCount = 0
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, () => {
-        requestCount++
-        return HttpResponse.json({ answer: 'test' }, { status: 200 })
-      }),
-    )
+  it.each([
+    ['rate_limited', 'rate_limited', 'Слишком много вопросов. Повторите через 30 с.', false],
+    ['timeout', 'timeout', 'Модель не ответила. Повторите вопрос позже.', true],
+    ['out_of_scope', 'out_of_scope', 'Ассистент отвечает только на вопросы по отчёту', false],
+    ['too_large', 'too_large', 'Отчёт слишком велик для ассистента', false],
+    ['unavailable', 'unavailable', 'Ассистент недоступен', false],
+  ] as const)('сценарий %s → %s', async (scenario, kind, text, retryable) => {
+    db.setAssistantScenario(scenario)
+    const { result } = mountAsk()
 
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('  ab  ')
-
-    await waitFor(() => {
-      expect(result.current.failure?.kind).toBe('invalid_question')
-    })
+    const answer = await submit(result, 'что с этапами')
 
     expect(answer).toBeUndefined()
-    expect(requestCount).toBe(0)
-  })
-
-  it('валидация: 3 символа проходит', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('abc')
-
-    expect(answer).toBeDefined()
-  })
-
-  it('валидация: 500 символов проходит', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('a'.repeat(500))
-
-    expect(answer).toBeDefined()
-  })
-
-  it('валидация: 501 символ не проходит', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('a'.repeat(501))
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('invalid_question')
-  })
-
-  it('вопрос отправляется триммированным', async () => {
-    let capturedBody: unknown
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async ({ request }) => {
-        capturedBody = await request.json()
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    await result.current.ask('  hello world  ')
-
-    expect(capturedBody).toEqual({ question: 'hello world' })
-  })
-
-  it('scenario rate_limited → failure с kind и message', async () => {
-    db.setAssistantScenario('rate_limited')
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('rate_limited')
-    expect(result.current.failure?.message).toContain('Слишком много вопросов')
-  })
-
-  it('scenario timeout → failure с kind timeout, retryable: true', async () => {
-    db.setAssistantScenario('timeout')
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('timeout')
-    expect(result.current.failure?.retryable).toBe(true)
-  })
-
-  it('scenario out_of_scope → failure', async () => {
-    db.setAssistantScenario('out_of_scope')
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('out_of_scope')
-  })
-
-  it('scenario too_large → failure', async () => {
-    db.setAssistantScenario('too_large')
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('too_large')
-  })
-
-  it('scenario unavailable → failure unavailable', async () => {
-    db.setAssistantScenario('unavailable')
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('unavailable')
-  })
-
-  it('unknown site → not_found', async () => {
-    const { result } = renderHook(() => useAskAssistant('unknown-site'), {
-      wrapper: wrapper(client),
-    })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('not_found')
-  })
-
-  it('HttpResponse.error() → unavailable', async () => {
-    server.use(http.post(`*/sites/${BEREZNIKI}/assistant/ask`, () => HttpResponse.error()))
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('что с этапами')
-
-    expect(answer).toBeUndefined()
-    expect(result.current.failure?.kind).toBe('unavailable')
-  })
-
-  it('double submit: вторая ask() во время pending возвращает undefined, одна сетевая запрос', async () => {
-    let requestCount = 0
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async () => {
-        requestCount++
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const promise1 = result.current.ask('first')
-    const result2 = result.current.ask('second')
-
-    expect(result2).toBeUndefined()
-    const answer1 = await promise1
-    expect(answer1).toBeDefined()
-    expect(requestCount).toBe(1)
-  })
-
-  it('cancel: отменяет запрос, failure.kind === cancelled, нет второго запроса', async () => {
-    let requestCount = 0
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async () => {
-        requestCount++
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const promise = result.current.ask('question')
-    expect(result.current.isPending).toBe(true)
-
-    result.current.cancel()
-
-    await waitFor(() => {
-      expect(result.current.isPending).toBe(false)
-    })
-
-    expect(result.current.failure?.kind).toBe('cancelled')
-    expect(requestCount).toBe(1)
-
-    // Следующий ask() работает
-    const answer = await result.current.ask('another')
-    expect(answer).toBeDefined()
-  })
-
-  it('reset: очищает answer', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    await result.current.ask('где отставание')
-
-    await waitFor(() => {
-      expect(result.current.answer).toBeDefined()
-    })
-
-    result.current.reset()
-
     expect(result.current.answer).toBeUndefined()
-    expect(result.current.failure).toBeUndefined()
+    expect(result.current.failure?.kind).toBe(kind)
+    expect(result.current.failure?.message).toContain(text)
+    expect(result.current.failure?.retryable).toBe(retryable)
   })
 
-  it('localStorage и sessionStorage пусты', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    await result.current.ask('где отставание')
-
-    expect(localStorage.length).toBe(0)
-    expect(sessionStorage.length).toBe(0)
-  })
-
-  it('изменение siteId очищает answer и абортирует in-flight запрос', async () => {
-    let requestCount = 0
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async () => {
-        requestCount++
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
-
-    const { result, rerender } = renderHook(({ siteId }) => useAskAssistant(siteId), {
-      wrapper: wrapper(client),
-      initialProps: { siteId: BEREZNIKI },
-    })
-
-    const promise = result.current.ask('question')
-
-    rerender({ siteId: 'other-site' })
-
-    await waitFor(() => {
-      expect(result.current.answer).toBeUndefined()
+  it('неизвестная стройка → not_found', async () => {
+    const { result } = mountAsk('unknown-site')
+    await submit(result, 'что с этапами')
+    expect(result.current.failure).toMatchObject({
+      kind: 'not_found',
+      message: 'Стройка не найдена',
     })
   })
 
-  it('invalidation of ["site", siteId] очищает answer', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    await result.current.ask('где отставание')
-
-    await waitFor(() => {
-      expect(result.current.answer).toBeDefined()
-    })
-
-    client.invalidateQueries({ queryKey: ['site', BEREZNIKI] })
-
-    await waitFor(() => {
-      expect(result.current.answer).toBeUndefined()
+  it('обрыв сети → unavailable', async () => {
+    server.use(http.post(ASK_URL, () => HttpResponse.error()))
+    const { result } = mountAsk()
+    await submit(result, 'что с этапами')
+    expect(result.current.failure).toMatchObject({
+      kind: 'unavailable',
+      message: 'Нет связи с сервером',
     })
   })
 
-  it('invalidation of ["site", other-site-id] не очищает answer', async () => {
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
+  it('расхождение контракта: без stages → unknown, а ApiError говорит о контракте', async () => {
+    // `undefined` в JSON исчезает: сервер «забыл» поле stages.
+    const broken = { ...answerBody, stages: undefined }
+    server.use(http.post(ASK_URL, () => HttpResponse.json(broken)))
 
-    await result.current.ask('где отставание')
+    const error = await rejection(assistantApi.ask(BEREZNIKI, 'что с этапами'))
+    expect(error.message).toContain('не совпал с контрактом')
 
-    await waitFor(() => {
-      expect(result.current.answer).toBeDefined()
-    })
-
-    client.invalidateQueries({ queryKey: ['site', 'other-id'] })
-
-    expect(result.current.answer).toBeDefined()
-  })
-
-  it('invalidation во время pending абортирует и late response не появляется', async () => {
-    let requestCount = 0
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async () => {
-        requestCount++
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const askPromise = result.current.ask('question')
-
-    // Invalidate while pending
-    client.invalidateQueries({ queryKey: ['site', BEREZNIKI] })
-
-    // Wait for the ask to complete and handler to resolve
-    await askPromise
-    await new Promise((resolve) => setTimeout(resolve, 50))
-
-    // Answer should still be undefined because invalidation aborted/rejected it
+    const { result } = mountAsk()
+    await submit(result, 'что с этапами')
     expect(result.current.answer).toBeUndefined()
-    expect(requestCount).toBe(1)
-  })
-
-  it('contract drift: answer без stages → failure unknown с "не совпал с контрактом"', async () => {
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, () =>
-        HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            // stages поле отсутствует!
-          },
-          { status: 200 },
-        ),
-      ),
-    )
-
-    const { result } = renderHook(() => useAskAssistant(BEREZNIKI), { wrapper: wrapper(client) })
-
-    const answer = await result.current.ask('где отставание')
-
-    await waitFor(() => {
-      expect(result.current.failure).toBeDefined()
-    })
-
-    expect(answer).toBeUndefined()
     expect(result.current.failure?.kind).toBe('unknown')
-    expect(result.current.failure?.message).toContain('не совпал с контрактом')
   })
 
-  it('unmount while pending: нет React warning', async () => {
-    server.use(
-      http.post(`*/sites/${BEREZNIKI}/assistant/ask`, async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        return HttpResponse.json(
-          {
-            answer: 'test',
-            verified: true,
-            numbers_not_in_report: [],
-            numbers_of_other_site: [],
-            limits: 'test',
-            site_label: 'p1',
-            stages: [],
-          },
-          { status: 200 },
-        )
-      }),
-    )
+  it('повторная отправка во время ожидания: один запрос, вторая ask() даёт undefined', async () => {
+    const pending = gatedAsk()
+    const { result } = mountAsk()
 
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-
-    const { result, unmount } = renderHook(() => useAskAssistant(BEREZNIKI), {
-      wrapper: wrapper(client),
+    let first!: Promise<AssistantAnswer | undefined>
+    let second!: Promise<AssistantAnswer | undefined>
+    act(() => {
+      first = result.current.ask('первый вопрос')
+      second = result.current.ask('второй вопрос')
     })
 
-    result.current.ask('question')
+    await expect(second).resolves.toBeUndefined()
+    await waitFor(() => expect(pending.calls).toBe(1))
+    await waitFor(() => expect(result.current.isPending).toBe(true))
+
+    await act(async () => {
+      pending.release()
+      await first
+    })
+    await settle()
+    expect(result.current.answer).toEqual(answerBody)
+    expect(pending.calls).toBe(1)
+  })
+
+  it('после завершения можно спрашивать снова', async () => {
+    const asked = countingAsk()
+    const { result } = mountAsk()
+    await submit(result, 'первый вопрос')
+    await submit(result, 'второй вопрос')
+    expect(asked.calls).toBe(2)
+  })
+
+  it('cancel: запрос прерван, pending снят, failure.kind = cancelled, второго запроса нет', async () => {
+    const pending = gatedAsk()
+    const { result } = mountAsk()
+
+    let asked!: Promise<AssistantAnswer | undefined>
+    act(() => {
+      asked = result.current.ask('долгий вопрос')
+    })
+    await waitFor(() => expect(pending.calls).toBe(1))
+    await waitFor(() => expect(result.current.isPending).toBe(true))
+
+    act(() => result.current.cancel())
+    await act(async () => {
+      await expect(asked).resolves.toBeUndefined()
+    })
+    await settle()
+
+    expect(pending.aborted).toBe(true)
+    expect(result.current.isPending).toBe(false)
+    expect(result.current.failure?.kind).toBe('cancelled')
+    expect(result.current.failure?.message).toBe('')
+    expect(pending.calls).toBe(1)
+
+    // После отмены хук готов к новому вопросу.
+    const next = countingAsk()
+    await submit(result, 'новый вопрос')
+    expect(next.calls).toBe(1)
+    expect(result.current.answer).toEqual(answerBody)
+    expect(result.current.failure).toBeUndefined()
+  })
+
+  describe('эфемерность ответа', () => {
+    it('ничего не пишется в localStorage и sessionStorage', async () => {
+      countingAsk()
+      const { result } = mountAsk()
+      await submit(result, 'где отставание')
+      expect(result.current.answer).toBeDefined()
+      expect(localStorage.length).toBe(0)
+      expect(sessionStorage.length).toBe(0)
+    })
+
+    it('reset() убирает ответ и отказ', async () => {
+      countingAsk()
+      const { result } = mountAsk()
+      await submit(result, 'где отставание')
+      expect(result.current.answer).toBeDefined()
+
+      act(() => result.current.reset())
+      await settle()
+      expect(result.current.answer).toBeUndefined()
+      expect(result.current.failure).toBeUndefined()
+    })
+
+    it('смена siteId убирает ответ', async () => {
+      countingAsk()
+      const { result, rerender } = mountAsk()
+      await submit(result, 'где отставание')
+      expect(result.current.answer).toBeDefined()
+
+      rerender({ id: OTHER_SITE })
+      await waitFor(() => expect(result.current.answer).toBeUndefined())
+    })
+
+    it('смена siteId во время ожидания: запрос прерван, поздний ответ не появляется', async () => {
+      const pending = gatedAsk()
+      const { result, rerender } = mountAsk()
+
+      let asked!: Promise<AssistantAnswer | undefined>
+      act(() => {
+        asked = result.current.ask('долгий вопрос')
+      })
+      await waitFor(() => expect(pending.calls).toBe(1))
+
+      rerender({ id: OTHER_SITE })
+      await waitFor(() => expect(result.current.isPending).toBe(false))
+      expect(pending.aborted).toBe(true)
+
+      await act(async () => {
+        pending.release()
+        await asked
+      })
+      await settle()
+      expect(result.current.answer).toBeUndefined()
+      expect(result.current.failure).toBeUndefined()
+    })
+
+    it("инвалидация ['site', id, …] убирает ответ, чужой стройки — нет", async () => {
+      countingAsk()
+      const { result, client } = mountAsk()
+      client.setQueryData(['site', BEREZNIKI, 'schedule'], {})
+      client.setQueryData(['site', OTHER_SITE, 'schedule'], {})
+      await submit(result, 'где отставание')
+      expect(result.current.answer).toBeDefined()
+
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['site', OTHER_SITE] })
+      })
+      await settle()
+      expect(result.current.answer).toBeDefined()
+
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['site', BEREZNIKI] })
+      })
+      await waitFor(() => expect(result.current.answer).toBeUndefined())
+    })
+
+    it('инвалидация во время ожидания прерывает запрос, поздний ответ не появляется', async () => {
+      const pending = gatedAsk()
+      const { result, client } = mountAsk()
+      client.setQueryData(['site', BEREZNIKI, 'schedule'], {})
+
+      let asked!: Promise<AssistantAnswer | undefined>
+      act(() => {
+        asked = result.current.ask('долгий вопрос')
+      })
+      await waitFor(() => expect(pending.calls).toBe(1))
+
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ['site', BEREZNIKI] })
+      })
+      await waitFor(() => expect(pending.aborted).toBe(true))
+      await waitFor(() => expect(result.current.isPending).toBe(false))
+
+      await act(async () => {
+        pending.release()
+        await asked
+      })
+      await settle()
+      expect(result.current.answer).toBeUndefined()
+    })
+  })
+
+  it('размонтирование во время ожидания: запрос прерван, предупреждений React нет', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const pending = gatedAsk()
+    const { result, unmount } = mountAsk()
+
+    let asked!: Promise<AssistantAnswer | undefined>
+    act(() => {
+      asked = result.current.ask('долгий вопрос')
+    })
+    await waitFor(() => expect(pending.calls).toBe(1))
+
     unmount()
+    await waitFor(() => expect(pending.aborted).toBe(true))
 
-    await new Promise((resolve) => setTimeout(resolve, 600))
+    pending.release()
+    await expect(asked).resolves.toBeUndefined()
+    expect(consoleError).not.toHaveBeenCalled()
+  })
 
-    expect(consoleErrorSpy).not.toHaveBeenCalled()
-
-    consoleErrorSpy.mockRestore()
+  it('сценарий slow в тестах отвечает без задержки', async () => {
+    db.setAssistantScenario('slow')
+    const { result } = mountAsk()
+    await submit(result, 'что с этапами')
+    expect(result.current.answer).toBeDefined()
   })
 })

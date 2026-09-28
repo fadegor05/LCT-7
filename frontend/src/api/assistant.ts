@@ -6,7 +6,7 @@
  */
 import { useCallback, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { request, ApiError } from './client'
+import { ApiError, request } from './client'
 import { keys } from './keys'
 import {
   assistantAnswerSchema,
@@ -15,7 +15,7 @@ import {
   type AssistantAnswer,
 } from './schemas'
 
-/** Виды отказов классификация ошибок по коду backend. */
+/** Виды отказов ассистента: интерфейс рисует их по `kind`, статусы и коды не разбирает. */
 export type AssistantFailureKind =
   | 'unavailable'
   | 'timeout'
@@ -30,130 +30,72 @@ export type AssistantFailureKind =
 
 export interface AssistantFailure {
   kind: AssistantFailureKind
+  /** Текст для пользователя: по-русски; у `cancelled` пустой. */
   message: string
+  /** Есть ли смысл предложить «Повторить» (только таймаут модели). */
   retryable: boolean
 }
 
-/**
- * Классифицирует ошибку ассистента по типу и коду, включая типы сетевых ошибок.
- * Порядок проверок:
- * 1. AbortError (имя 'AbortError') → cancelled
- * 2. ApiError → по коду и статусу
- * 3. TypeError (rejected fetch) → unavailable
- * 4. Прочее → unknown
- */
-export function classifyAssistantError(error: unknown): AssistantFailure {
-  // Отмена абортом (отмена пользователя или смена siteId)
-  if (
-    error instanceof DOMException
-      ? error.name === 'AbortError'
-      : error instanceof Error && error.name === 'AbortError'
-  ) {
-    return {
-      kind: 'cancelled',
-      message: '',
-      retryable: false,
-    }
-  }
+const QUESTION_HINT = 'Вопрос должен быть от 3 до 500 символов'
+const UNKNOWN_MESSAGE = 'Не удалось получить ответ'
 
-  if (error instanceof ApiError) {
-    // По коду из тела ответа
-    if (error.code) {
-      switch (error.code) {
-        case 'assistant_unavailable':
-          return {
-            kind: 'unavailable',
-            message: error.message,
-            retryable: false,
-          }
-        case 'assistant_timeout':
-          return {
-            kind: 'timeout',
-            message: error.message,
-            retryable: true,
-          }
-        case 'rate_limited':
-          return {
-            kind: 'rate_limited',
-            message: error.message,
-            retryable: false,
-          }
-        case 'out_of_scope':
-          return {
-            kind: 'out_of_scope',
-            message: error.message,
-            retryable: false,
-          }
-        case 'report_too_large':
-          return {
-            kind: 'too_large',
-            message: error.message,
-            retryable: false,
-          }
-        case 'assistant_bad_request':
-          return {
-            kind: 'bad_request',
-            message: error.message,
-            retryable: false,
-          }
-        default:
-          return {
-            kind: 'unknown',
-            message: 'Не удалось получить ответ',
-            retryable: false,
-          }
-      }
-    }
+const failure = (
+  kind: AssistantFailureKind,
+  message: string,
+  retryable = false,
+): AssistantFailure => ({ kind, message, retryable })
 
-    // Без кода — по статусу
-    switch (error.status) {
-      case 404:
-        return {
-          kind: 'not_found',
-          message: error.message,
-          retryable: false,
-        }
-      case 422:
-        // 422 без code и с array detail = валидация вопроса
-        return {
-          kind: 'invalid_question',
-          message: 'Вопрос должен быть от 3 до 500 символов',
-          retryable: false,
-        }
-      default:
-        return {
-          kind: 'unknown',
-          message: 'Не удалось получить ответ',
-          retryable: false,
-        }
-    }
-  }
-
-  // Rejected fetch (TypeError)
-  if (error instanceof TypeError) {
-    return {
-      kind: 'unavailable',
-      message: 'Нет связи с сервером',
-      retryable: false,
-    }
-  }
-
-  // Неизвестная ошибка
-  return {
-    kind: 'unknown',
-    message: 'Не удалось получить ответ',
-    retryable: false,
-  }
+/** Отмена запроса: имя `AbortError` у DOMException и у ошибок из других окружений (Node, jsdom). */
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+  )
 }
 
-const base = '/assistant'
+/**
+ * Разбирает ошибку ассистента в вид для интерфейса.
+ * Порядок: отмена → ApiError (по `code`, затем по статусу) → отказ fetch → прочее.
+ * Текст для пользователя — русский `detail` сервера; общие тексты — для валидации, сети и неизвестного.
+ */
+export function classifyAssistantError(error: unknown): AssistantFailure {
+  if (isAbortError(error)) return failure('cancelled', '')
+
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case 'assistant_unavailable':
+        return failure('unavailable', error.message)
+      case 'assistant_timeout':
+        return failure('timeout', error.message, true)
+      case 'rate_limited':
+        return failure('rate_limited', error.message)
+      case 'out_of_scope':
+        return failure('out_of_scope', error.message)
+      case 'report_too_large':
+        return failure('too_large', error.message)
+      case 'assistant_bad_request':
+        return failure('bad_request', error.message)
+      case undefined:
+        // Без кода: 404 — нет стройки или графика, 422 — валидация вопроса (список в `detail`).
+        if (error.status === 404) return failure('not_found', error.message)
+        if (error.status === 422) return failure('invalid_question', QUESTION_HINT)
+        return failure('unknown', UNKNOWN_MESSAGE)
+      default:
+        return failure('unknown', UNKNOWN_MESSAGE)
+    }
+  }
+
+  // fetch отклонён: нет сети, сервер не отвечает.
+  if (error instanceof TypeError) return failure('unavailable', 'Нет связи с сервером')
+
+  return failure('unknown', UNKNOWN_MESSAGE)
+}
 
 export const assistantApi = {
-  /** GET /assistant/status — проверить, включён ли ассистент. */
+  /** Включён ли ассистент: ML доступен и LLM настроена. Платный вызов не тратит. */
   status: (signal?: AbortSignal) =>
-    request(`${base}/status`, { schema: assistantStatusSchema, signal }),
+    request('/assistant/status', { schema: assistantStatusSchema, signal }),
 
-  /** POST /sites/:siteId/assistant/ask — отправить вопрос. */
+  /** Вопрос по отчёту стройки. Каждый вызов — платный запрос к модели. */
   ask: (siteId: string, question: string, signal?: AbortSignal) =>
     request(`/sites/${siteId}/assistant/ask`, {
       method: 'POST',
@@ -163,163 +105,109 @@ export const assistantApi = {
     }),
 }
 
-/** Статус ассистента: включён ли он, загружается ли запрос. Никогда не выбрасывает исключение. */
+/**
+ * Доступность ассистента для интерфейса. Любая ошибка (сеть, 5xx, битый контракт) — `enabled: false`:
+ * ассистента просто нет, а не «сломанная кнопка». Без повторов: статус не должен долбить сервер.
+ */
 export function useAssistantStatus() {
   const { data, isPending } = useQuery({
     queryKey: keys.assistantStatus,
-    queryFn: () => assistantApi.status(),
+    queryFn: ({ signal }) => assistantApi.status(signal),
     retry: false,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   })
+  return { enabled: data?.enabled === true, isPending }
+}
 
-  return {
-    enabled: data?.enabled === true,
-    isPending,
-  }
+/** Ключ запроса относится к стройке `siteId`: `['site', siteId, …]`. */
+function belongsToSite(queryKey: readonly unknown[], siteId: string): boolean {
+  return queryKey[0] === 'site' && queryKey[1] === siteId
 }
 
 /**
- * Хук для взаимодействия с ассистентом: отправка вопросов, отмена, сброс.
+ * Вопрос ассистенту по стройке.
  *
- * - `ask(question)` — валидирует локально, отправляет вопрос, возвращает ответ или undefined;
- *   никогда не выбрасывает исключение. Локальная валидация (3-500 символов) не отправляет запрос.
- * - `cancel()` — отменяет in-flight запрос через AbortController.
- * - `reset()` — очищает ответ и ошибку.
- * - Ответ очищается при смене `siteId` или инвалидации кэша запросов [`site`, siteId].
- * - Unmount автоматически отменяет in-flight запрос (no React warnings).
+ * - `ask(question)` — проверяет вопрос локально (3–500 символов, trim), отправляет, возвращает
+ *   ответ; при отказе или повторном нажатии во время ожидания возвращает `undefined` и не
+ *   бросает исключений. Причина отказа — в `failure`.
+ * - `cancel()` — отменяет ожидание; `failure.kind === 'cancelled'`, показывать его не нужно.
+ * - `reset()` — убирает ответ и отказ.
+ * - Ответ живёт только в состоянии хука и сбрасывается (запрос отменяется) при смене `siteId`,
+ *   при инвалидации любого запроса `['site', siteId, …]` и при размонтировании.
  */
 export function useAskAssistant(siteId: string) {
   const queryClient = useQueryClient()
-  const inFlightRef = useRef(false)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const currentSiteIdRef = useRef(siteId)
-  const isMountedRef = useRef(true)
+  const inFlight = useRef(false)
+  const controller = useRef<AbortController | null>(null)
 
-  const {
-    mutateAsync,
-    data: answer,
-    error: rawError,
-    reset: mutationReset,
-    isPending,
-  } = useMutation({
+  const mutation = useMutation({
     mutationKey: keys.assistant(siteId),
-    mutationFn: async (question: string) => {
-      // Локальная валидация перед запросом
+    retry: false,
+    mutationFn: async (question: string): Promise<AssistantAnswer> => {
       const parsed = assistantQuestionSchema.safeParse(question)
-      if (!parsed.success) {
-        // Для ошибки валидации создаём Error с классификацией в свойстве
-        const validationError = new Error('validation_error')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- Храним результат классификации на ошибке
-        ;(validationError as any).__failure = classifyAssistantError(validationError)
-        throw validationError
-      }
+      // Проверка до сети: слишком короткий или длинный вопрос на сервер не уходит.
+      if (!parsed.success) throw new ApiError(422, QUESTION_HINT)
 
-      // Отправляем триммированный вопрос
-      const trimmedQuestion = question.trim()
-      const controller = new AbortController()
-      abortControllerRef.current = controller
-
-      try {
-        const result = await assistantApi.ask(siteId, trimmedQuestion, controller.signal)
-        return result
-      } catch (err) {
-        // Классифицируем и добавляем в Error
-        const error = err instanceof Error ? err : new Error(String(err))
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access -- Храним результат классификации на ошибке
-        ;(error as any).__failure = classifyAssistantError(err)
-        throw error
-      }
+      const current = new AbortController()
+      controller.current = current
+      return assistantApi.ask(siteId, parsed.data, current.signal)
     },
   })
+  const { mutateAsync, reset: resetMutation } = mutation
 
-  // Вычисляем failure из error
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Получаем классификацию, сохранённую при броске
-  const failure: AssistantFailure | undefined = rawError
-    ? (rawError as any).__failure || classifyAssistantError(rawError) // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    : undefined
+  const cancel = useCallback(() => controller.current?.abort(), [])
 
-  // Отмена in-flight запроса
-  const cancel = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
+  // Отмена и сброс: запрос прерывается, а результат уже отвязанной мутации в состояние не попадает.
+  // Эффекты ниже вызывают её через ref: их зависимости — только `siteId`, и перерисовка
+  // (например, из-за смены состояния мутации) не должна обрывать идущий запрос.
+  const discardRef = useRef(() => {})
+  useEffect(() => {
+    discardRef.current = () => {
+      controller.current?.abort()
+      resetMutation()
     }
-  }, [])
+  }, [resetMutation])
 
-  // Сброс состояния
-  const reset = useCallback(() => {
-    mutationReset()
-  }, [mutationReset])
-
-  // Отправка вопроса: проверяем in-flight, валидируем, отправляем
   const ask = useCallback(
     async (question: string): Promise<AssistantAnswer | undefined> => {
-      // Если уже идёт запрос, игнорируем
-      if (inFlightRef.current) {
-        return undefined
-      }
-
-      inFlightRef.current = true
-      currentSiteIdRef.current = siteId
-
+      if (inFlight.current) return undefined
+      inFlight.current = true
       try {
-        const result = await mutateAsync(question)
-        if (!isMountedRef.current) {
-          inFlightRef.current = false
-          return undefined
-        }
-        inFlightRef.current = false
-        return result
+        return await mutateAsync(question)
       } catch {
-        // Ошибка уже установлена в mutation.error, просто возвращаем undefined
-        if (!isMountedRef.current) {
-          inFlightRef.current = false
-          return undefined
-        }
-        inFlightRef.current = false
-        return undefined
+        return undefined // причина в mutation.error → failure
+      } finally {
+        inFlight.current = false
       }
     },
-    [mutateAsync, siteId],
+    [mutateAsync],
   )
 
-  // Наблюдаем за изменением siteId и инвалидацией кэша
-  useEffect(() => {
-    // Если siteId изменился, отменяем запрос и очищаем состояние
-    if (currentSiteIdRef.current !== siteId) {
-      cancel()
-      mutationReset()
-      currentSiteIdRef.current = siteId
-    }
+  // Смена стройки и размонтирование: чужой ответ показывать нельзя.
+  useEffect(() => () => discardRef.current(), [siteId])
 
-    // Подписываемся на инвалидацию кэша для этой стройки
-    const unsubscribe = queryClient.getQueryCache().subscribe(() => {
-      // Отменяем in-flight запрос при любой инвалидации под ['site', siteId]
-      cancel()
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [siteId, cancel, mutationReset, queryClient])
-
-  // На unmount отменяем запрос (без state update)
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }, [])
+  // Правка входных данных стройки (любой запрос ['site', siteId, …] инвалидирован) — ответ устарел.
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (
+          event.type === 'updated' &&
+          event.action.type === 'invalidate' &&
+          belongsToSite((event.query as { queryKey: readonly unknown[] }).queryKey, siteId)
+        ) {
+          discardRef.current()
+        }
+      }),
+    [queryClient, siteId],
+  )
 
   return {
     ask,
     cancel,
-    reset,
-    isPending,
-    answer,
-    failure,
+    reset: resetMutation,
+    isPending: mutation.isPending,
+    answer: mutation.data,
+    failure: mutation.error ? classifyAssistantError(mutation.error) : undefined,
   }
 }
