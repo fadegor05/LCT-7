@@ -8,7 +8,8 @@
 #   1. тянет образ-«посылку» deploy:latest и читает из метки коммит, из которого
 #      она собрана (CD публикует её последней, когда образы сервисов уже в реестре);
 #   2. если коммит новый — раскладывает makefile и deploy/ в /opt/veha, ставит
-#      теги sha-<коммит> и делает make deploy-tunnel;
+#      теги sha-<коммит> и делает make $DEPLOY_TARGET (из .env ВМ, по умолчанию
+#      deploy-tunnel; для домена с TLS — DEPLOY_TARGET=deploy);
 #   3. проверяет /api/health и запоминает коммит, чтобы не деплоить его повторно.
 #
 # Журнал: journalctl -u veha-autodeploy. Установка — deploy/README.md.
@@ -43,14 +44,30 @@ CID=$(docker create "$BUNDLE" true)
 docker cp "$CID:/bundle/." "$TMP/"
 docker rm "$CID" >/dev/null
 
-# cp без удаления: .env и acme.json на ВМ не трогаются.
+# Цель make берётся из .env ВМ: при переходе на домен с TLS там ставят
+# DEPLOY_TARGET=deploy, иначе каждый автодеплой возвращал бы стенд в режим
+# туннеля (HTTP на :80, без Host и сертификатов).
+DEPLOY_TARGET=$(sed -n "s/^DEPLOY_TARGET=//p" "$DIR/.env" | tr -d "\"' ")
+DEPLOY_TARGET=${DEPLOY_TARGET:-deploy-tunnel}
+case "$DEPLOY_TARGET" in
+  deploy|deploy-tunnel) ;;
+  *) echo "DEPLOY_TARGET=$DEPLOY_TARGET: ожидается deploy или deploy-tunnel" >&2; exit 1 ;;
+esac
+
+# cp без удаления: .env и acme.json на ВМ не трогаются. traefik.yml — конфиг
+# хоста (email ACME и т.п.): кладётся только если его ещё нет, локальные правки
+# на ВМ не перетираются.
 cp "$TMP/makefile" "$DIR/makefile"
+TRAEFIK_YML=deploy/config/traefik/traefik.yml
+if [ -f "$DIR/$TRAEFIK_YML" ]; then
+  rm -f "$TMP/$TRAEFIK_YML"
+fi
 cp -r "$TMP/deploy/." "$DIR/deploy/"
 sed -i "s|^BACKEND_TAG=.*|BACKEND_TAG=$TAG|;s|^FRONTEND_TAG=.*|FRONTEND_TAG=$TAG|;s|^ML_TAG=.*|ML_TAG=$TAG|" \
   "$DIR/deploy/versions.env"
 
 cd "$DIR"
-make deploy-tunnel
+make "$DEPLOY_TARGET"
 
 # Коммит запоминается и при красном смоуке: иначе таймер будет передеплоивать
 # сломанную версию каждые две минуты. Починка — новый коммит в main.
