@@ -80,16 +80,35 @@ describe('AssistantQuestionForm', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
-  it('does not submit on Enter during IME composition', () => {
+  it('does not submit on Enter during IME composition', async () => {
     const onSubmit = vi.fn()
+    const user = userEvent.setup()
     render(<AssistantQuestionForm pending={false} onSubmit={onSubmit} onCancel={vi.fn()} />)
     const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
     if (!(textarea instanceof HTMLTextAreaElement)) {
       throw new Error('Expected textarea element')
     }
-    textarea.value = 'тест'
-    fireEvent.keyDown(textarea, { key: 'Enter', isComposing: true })
+    await user.type(textarea, 'тест')
+
+    // Test that Enter during composition does NOT submit
+    const composingEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      isComposing: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(textarea, composingEvent)
     expect(onSubmit).not.toHaveBeenCalled()
+
+    // Positive control: plain Enter DOES submit
+    const plainEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      isComposing: false,
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(textarea, plainEvent)
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith('тест')
   })
 
   it('shows counter with trimmed length', async () => {
@@ -153,16 +172,32 @@ describe('AssistantQuestionForm', () => {
     expect(screen.getByLabelText('Вопрос по отчёту')).toHaveAttribute('readonly')
   })
 
-  it('does not submit on Enter while pending', () => {
+  it('does not submit on Enter while pending', async () => {
     const onSubmit = vi.fn()
-    render(<AssistantQuestionForm pending={true} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <AssistantQuestionForm pending={false} onSubmit={onSubmit} onCancel={vi.fn()} />,
+    )
     const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
     if (!(textarea instanceof HTMLTextAreaElement)) {
       throw new Error('Expected textarea element')
     }
-    textarea.value = 'тест'
+    await user.type(textarea, 'тест')
+
+    // Test that Enter while pending does NOT submit
+    rerender(<AssistantQuestionForm pending={true} onSubmit={onSubmit} onCancel={vi.fn()} />)
     fireEvent.keyDown(textarea, { key: 'Enter' })
     expect(onSubmit).not.toHaveBeenCalled()
+
+    // Positive control: Enter when not pending DOES submit
+    rerender(<AssistantQuestionForm pending={false} onSubmit={onSubmit} onCancel={vi.fn()} />)
+    const plainEvent = new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(textarea, plainEvent)
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith('тест')
   })
 
   it('does not show Cancel button when not pending', () => {
