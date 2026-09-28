@@ -2,7 +2,7 @@ import { plural } from './labels'
 
 /**
  * Форматирование дат. Даты наблюдений приходят как YYYY-MM-DD (в часовом поясе стройки),
- * моменты — как ISO с зоной. Показываем в формате макета: 18.09.2026, 18.09, 14:20.
+ * моменты — как ISO с зоной. Показываем в формате макета с днём недели: ПТ 18.09.2026, ПТ 18.09, 14:20.
  */
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -14,16 +14,23 @@ function parts(value: string): { y: number; m: number; d: number; hh: number; mm
   return { y: +y!, m: +m!, d: +d!, hh: +hh, mm: +mm }
 }
 
-/** 2026-09-18 → 18.09.2026 */
-export function formatDate(value: string | null | undefined): string {
-  const p = value ? parts(value) : null
-  return p ? `${pad(p.d)}.${pad(p.m)}.${p.y}` : '—'
+const WEEKDAYS = ['ВС', 'ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ'] as const
+
+/** День недели календарной даты (без часового пояса браузера). */
+function weekday(p: { y: number; m: number; d: number }): string {
+  return WEEKDAYS[new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay()]!
 }
 
-/** 2026-09-18 → 18.09 */
+/** 2026-09-18 → ПТ 18.09.2026 */
+export function formatDate(value: string | null | undefined): string {
+  const p = value ? parts(value) : null
+  return p ? `${weekday(p)} ${pad(p.d)}.${pad(p.m)}.${p.y}` : '—'
+}
+
+/** 2026-09-18 → ПТ 18.09 */
 export function formatShortDate(value: string | null | undefined): string {
   const p = value ? parts(value) : null
-  return p ? `${pad(p.d)}.${pad(p.m)}` : '—'
+  return p ? `${weekday(p)} ${pad(p.d)}.${pad(p.m)}` : '—'
 }
 
 /** 2026-09-18T14:20:00+05:00 → 14:20 (локальное время стройки, как записано в строке). */
@@ -32,17 +39,17 @@ export function formatTime(value: string | null | undefined): string {
   return p ? `${pad(p.hh)}:${pad(p.mm)}` : '—'
 }
 
-/** 2026-09-18T14:20 → 18.09 14:20 */
+/** 2026-09-18T14:20 → ПТ 18.09 14:20 */
 export function formatShortDateTime(value: string | null | undefined): string {
   return value ? `${formatShortDate(value)} ${formatTime(value)}` : '—'
 }
 
-/** 2026-09-18T14:20 → 18.09.2026 14:20 */
+/** 2026-09-18T14:20 → ПТ 18.09.2026 14:20 */
 export function formatDateTime(value: string | null | undefined): string {
   return value ? `${formatDate(value)} ${formatTime(value)}` : '—'
 }
 
-/** Плановое окно этапа: 24.08 — 31.08 */
+/** Плановое окно этапа: ПН 24.08 — ПН 31.08 */
 export function formatWindow(start: string | null, end: string | null, sep = ' — '): string {
   if (!start && !end) return '—'
   return `${formatShortDate(start)}${sep}${formatShortDate(end)}`

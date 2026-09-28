@@ -16,7 +16,7 @@ describe('MethodologyPage', () => {
       '2 комплекта · маркер: автобетононасос, автокран',
     )
     expect(stageButton(/Подготовка территории/)).toHaveTextContent('Не проверяется по технике')
-    expect(screen.getByText('01.09 — 14.09')).toBeInTheDocument()
+    expect(screen.getByText('ВТ 01.09 — ПН 14.09')).toBeInTheDocument()
     expect(within(kit(1)).getByText('Маркер')).toBeInTheDocument()
     expect(within(kit(1)).getByText('по смыслу работы: вывоз грунта')).toBeInTheDocument()
 

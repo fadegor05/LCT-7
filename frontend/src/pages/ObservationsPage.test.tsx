@@ -8,7 +8,7 @@ const photos = () => screen.findAllByRole('img', { name: /Снимок / })
 describe('ObservationsPage', () => {
   it('shows the latest day by default and switches to all days', async () => {
     const { user, router } = renderRoute('/sites/site-berezniki/observations')
-    expect(await screen.findByRole('heading', { name: 'Снимки за 18.09' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Снимки за ПТ 18.09' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Техника на площадке' })).toBeInTheDocument()
     expect(screen.getByText('не менее 2')).toBeInTheDocument()
     expect(await photos()).toHaveLength(4)
@@ -18,10 +18,10 @@ describe('ObservationsPage', () => {
     expect(router.state.location.search).toBe('?date=all')
     expect(screen.queryByRole('heading', { name: 'Техника на площадке' })).not.toBeInTheDocument()
     expect(await photos()).toHaveLength(12)
-    expect(screen.getAllByText('14.09', { selector: 'figcaption span' })).toHaveLength(2)
+    expect(screen.getAllByText('ПН 14.09', { selector: 'figcaption span' })).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: /17\.09/ }))
-    expect(await screen.findByRole('heading', { name: 'Снимки за 17.09' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Снимки за ЧТ 17.09' })).toBeInTheDocument()
     expect(await photos()).toHaveLength(2)
   })
 
