@@ -38,8 +38,8 @@ components/ui/        дизайн-система LCT-7: Button, Segmented, Text
                       StatusBadge, ConfidenceMeter, DateSourceBadge, Callout, Card, Dialog,
                       Breadcrumbs, Stepper, FrameView, FileDrop, QueryState, Icon
 components/layout/    AppLayout (шапка), PageHeader/SectionHeader, SiteShell (вкладки объекта)
-features/<домен>/     составные компоненты экранов: sites, new-site, methodology, overview,
-                      observations, deviations
+features/<домен>/     составные компоненты экранов: assistant, sites, new-site, methodology,
+                      overview, observations, deviations
 pages/                по странице на экран макета, собирают features
 lib/                  env, форматирование дат, подписи перечислений, сортировка отклонений
 mocks/                fixtures.ts (демо «Березники»), db.ts (in-memory бэкенд с правилами backend), handlers.ts
@@ -68,6 +68,11 @@ test/                 setup.ts (MSW server + reset db), render.tsx (renderRoute 
 
 Экраны макета без поддержки в backend не подключены: 4 «Камеры» (в backend нет камер и зон),
 7а «Решение по гипотезе» (нет эндпоинтов решений), стримы и видео (backend принимает только фото).
+
+**Ассистент на обзоре.** На экране 5 · Обзор внизу (после «Последнего наблюдения») появляется
+панель ассистента, если LLM настроена. Панель скрыта без LLM и при печати. Ссылки в ответе
+вида «этап N» перенаправляют на якоря строк таблицы «Статусы этапов» через `#stage-<id>`.
+Ответы эфемерны и хранятся только в состоянии компонента (не в хранилище браузера).
 
 ## 4. Контракт API
 
