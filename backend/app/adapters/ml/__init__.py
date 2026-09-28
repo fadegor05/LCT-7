@@ -1,4 +1,4 @@
-"""ML-адаптер: точка входа для работы с детектором объектов.
+"""ML-адаптер: точка входа для работы с детектором объектов и ассистентом.
 
 Основные экспорты:
 - DetectorClient: Protocol для клиента детектора
@@ -9,8 +9,28 @@
 - NullDetector: Детектор-заглушка
 - HttpDetectorClient: HTTP-клиент к ML-сервису
 - create_detector: Factory для создания подходящего детектора
+- AssistantClient: Protocol для клиента ассистента
+- AssistantAnswer: Ответ ассистента
+- AssistantError: Исключение при ошибке ассистента
+- AssistantUnavailable: Ассистент недоступен (503)
+- AssistantTimeout: Таймаут ассистента (504)
+- AssistantBadRequest: Некорректный запрос (400/422)
+- NullAssistantClient: Ассистент-заглушка
+- HttpAssistantClient: HTTP-клиент к ассистенту
+- create_assistant: Factory для создания подходящего ассистента
 """
 
+from app.adapters.ml.assistant import (
+    AssistantAnswer,
+    AssistantBadRequest,
+    AssistantClient,
+    AssistantError,
+    AssistantTimeout,
+    AssistantUnavailable,
+    HttpAssistantClient,
+    NullAssistantClient,
+    create_assistant,
+)
 from app.adapters.ml.base import (
     DetectionResult,
     DetectorClient,
@@ -31,4 +51,13 @@ __all__ = [
     "NullDetector",
     "HttpDetectorClient",
     "create_detector",
+    "AssistantClient",
+    "AssistantAnswer",
+    "AssistantError",
+    "AssistantUnavailable",
+    "AssistantTimeout",
+    "AssistantBadRequest",
+    "NullAssistantClient",
+    "HttpAssistantClient",
+    "create_assistant",
 ]

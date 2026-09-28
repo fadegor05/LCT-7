@@ -1,7 +1,12 @@
-"""Factory для создания подходящего детектора по конфигу."""
+"""Factory для создания подходящего детектора и ассистента по конфигу."""
 
 import httpx
 
+from app.adapters.ml.assistant import (
+    AssistantClient,
+    HttpAssistantClient,
+    NullAssistantClient,
+)
 from app.adapters.ml.base import DetectorClient
 from app.adapters.ml.http import HttpDetectorClient, normalize_base_url
 from app.adapters.ml.null import NullDetector
@@ -52,3 +57,28 @@ def create_stamp_reader(
             settings=settings.detector,
         )
     return NullStampOcr()
+
+
+def create_assistant(
+    settings: Settings,
+    client: httpx.AsyncClient | None,
+) -> AssistantClient:
+    """Создать ассистента на основе конфига.
+
+    Если settings.detector.url заполнен и не пустой после strip,
+    и client не None — создать HttpAssistantClient. Иначе — NullAssistantClient.
+
+    Args:
+        settings: Settings, содержащий detector.url
+        client: httpx.AsyncClient для отправки запросов (или None)
+
+    Returns:
+        Экземпляр HttpAssistantClient или NullAssistantClient
+    """
+    if settings.detector.url and settings.detector.url.strip() and client is not None:
+        return HttpAssistantClient(
+            base_url=settings.detector.url,
+            client=client,
+            settings=settings.assistant,
+        )
+    return NullAssistantClient()
