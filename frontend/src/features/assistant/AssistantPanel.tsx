@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { AssistantFailureKind } from '@/api/assistant'
 import { useAskAssistant, useAssistantStatus } from '@/api/assistant'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
@@ -11,12 +12,45 @@ interface AssistantPanelProps {
   siteId: string
 }
 
+const FAILURE_TITLES: Partial<Record<AssistantFailureKind, string>> = {
+  timeout: 'Модель не ответила',
+  rate_limited: 'Слишком часто',
+  out_of_scope: 'Вопрос не по теме отчёта',
+  too_large: 'Отчёт слишком велик',
+  not_found: 'Данных для ответа нет',
+  bad_request: 'Площадки нет в отчёте',
+  unknown: 'Не удалось получить ответ',
+}
+
+function shouldRenderFailure(
+  failure: ReturnType<typeof useAskAssistant>['failure'],
+): failure is Exclude<typeof failure, undefined | null> & {
+  kind: Exclude<AssistantFailureKind, 'cancelled' | 'invalid_question' | 'unavailable'>
+} {
+  return (
+    failure !== undefined &&
+    failure.kind !== 'cancelled' &&
+    failure.kind !== 'invalid_question' &&
+    failure.kind !== 'unavailable'
+  )
+}
+
 /**
- * Панель ассистента на экране обзора площадки: форма вопроса, статус загрузки,
- * ответ с проверкой и ссылками, обработка ошибок и повтор.
+ * Панель ассистента на экране обзора площадки: контролирует видимость по статусу.
+ * Вложенный компонент AssistantSection отвечает за форму, ответ и обработку ошибок.
  */
 export function AssistantPanel({ siteId }: AssistantPanelProps) {
   const status = useAssistantStatus()
+
+  // Показываем раздел только если ассистент включён
+  if (!status.enabled) {
+    return null
+  }
+
+  return <AssistantSection siteId={siteId} />
+}
+
+function AssistantSection({ siteId }: AssistantPanelProps) {
   const { ask, cancel, isPending, answer, failure } = useAskAssistant(siteId)
   const lastQuestionRef = useRef<string>('')
   const answerContainerRef = useRef<HTMLDivElement>(null)
@@ -27,11 +61,6 @@ export function AssistantPanel({ siteId }: AssistantPanelProps) {
       answerContainerRef.current.focus()
     }
   }, [answer])
-
-  // Если ассистент недоступен, не показываем ничего
-  if (!status.enabled) {
-    return null
-  }
 
   // Если ассистент недоступен на этапе загрузки вопроса, скрыть весь раздел
   if (failure?.kind === 'unavailable') {
@@ -56,6 +85,10 @@ export function AssistantPanel({ siteId }: AssistantPanelProps) {
   // Определяем текст ошибки для поля формы
   const fieldError = failure?.kind === 'invalid_question' ? failure.message : undefined
 
+  // Определяем, показывать ли ошибку в блоке
+  const canRenderFailure = shouldRenderFailure(failure)
+  const failureTitle = canRenderFailure ? FAILURE_TITLES[failure.kind] : undefined
+
   return (
     <section className={styles.section} aria-label="Ассистент по отчёту">
       <SectionHeader
@@ -75,51 +108,17 @@ export function AssistantPanel({ siteId }: AssistantPanelProps) {
       <div aria-live="polite">
         {answer && <AssistantAnswerView answer={answer} containerRef={answerContainerRef} />}
 
-        {failure && failure.kind !== 'cancelled' && failure.kind !== 'invalid_question' && (
-          <>
-            {failure.kind === 'timeout' && (
-              <Callout tone="caution" title="Модель не ответила">
-                {failure.message}
-                {failure.retryable && (
-                  <div style={{ marginTop: 'var(--space-3)' }}>
-                    <Button onClick={handleRetry}>Повторить</Button>
-                  </div>
-                )}
-              </Callout>
+        {canRenderFailure && failureTitle && (
+          <Callout tone="caution" title={failureTitle}>
+            {failure.message}
+            {failure.retryable && (
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <Button onClick={handleRetry}>Повторить</Button>
+              </div>
             )}
-
-            {(failure.kind === 'rate_limited' ||
-              failure.kind === 'out_of_scope' ||
-              failure.kind === 'too_large' ||
-              failure.kind === 'not_found' ||
-              failure.kind === 'bad_request' ||
-              failure.kind === 'unknown') && (
-              <Callout tone="caution" title={getFailureTitle(failure.kind)}>
-                {failure.message}
-              </Callout>
-            )}
-          </>
+          </Callout>
         )}
       </div>
     </section>
   )
-}
-
-function getFailureTitle(kind: string): string {
-  switch (kind) {
-    case 'rate_limited':
-      return 'Слишком часто'
-    case 'out_of_scope':
-      return 'Вопрос не по теме отчёта'
-    case 'too_large':
-      return 'Отчёт слишком велик'
-    case 'not_found':
-      return 'Данных для ответа нет'
-    case 'bad_request':
-      return 'Площадки нет в отчёта'
-    case 'unknown':
-      return 'Не удалось получить ответ'
-    default:
-      return 'Ошибка'
-  }
 }

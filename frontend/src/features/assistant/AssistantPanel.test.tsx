@@ -97,6 +97,20 @@ describe('AssistantPanel', () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
       expect(spy.mock.calls).toHaveLength(0)
     })
+
+    it('не вызывает ask endpoint когда статус disabled', async () => {
+      const state = countingAsk()
+      db.setAssistantScenario('no_llm')
+      renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      // Ждём, пока статус загрузится
+      await vi.waitFor(() => {
+        expect(
+          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
+        ).not.toBeInTheDocument()
+      })
+      // Никакой запрос не должен быть отправлен
+      expect(state.calls).toBe(0)
+    })
   })
 
   describe('Enabled state', () => {
@@ -147,6 +161,8 @@ describe('AssistantPanel', () => {
       // Проверяем, что контейнер ответа имеет фокус (tabIndex -1)
       const answerContainer = stageLink.closest('[tabindex="-1"]')
       expect(answerContainer).toBeInTheDocument()
+      // Проверяем, что focus() был вызван
+      expect(document.activeElement).toBe(answerContainer)
     })
 
     it('показывает alert когда ответ не прошёл проверку', async () => {
@@ -279,6 +295,9 @@ describe('AssistantPanel', () => {
 
       // Никакого текста ошибки
       expect(screen.queryByText(/Не удалось получить ответ/)).not.toBeInTheDocument()
+
+      // Проверяем, что nет блока ошибки (cancelled не должен показывать ошибку)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
   })
 
@@ -324,6 +343,41 @@ describe('AssistantPanel', () => {
 
       // Ошибка должна быть заменена на ответ (ищем ссылку на этап)
       await screen.findByRole('link')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('retry сохраняет исходный вопрос через несколько ошибок', async () => {
+      db.setAssistantScenario('timeout')
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
+      await user.click(textarea)
+      await user.paste('Мой вопрос')
+
+      const button = screen.getByRole('button', { name: 'Спросить' })
+      await user.click(button)
+
+      // Первая ошибка (таймаут)
+      await screen.findByRole('alert')
+      let retryButton = screen.getByRole('button', { name: 'Повторить' })
+      await user.click(retryButton)
+
+      // Вторая ошибка (таймаут снова)
+      await screen.findByRole('alert')
+      retryButton = screen.getByRole('button', { name: 'Повторить' })
+
+      // Меняем сценарий на успех
+      db.setAssistantScenario('ok')
+
+      // Нажимаем "Повторить" в третий раз - на этот раз успешно
+      await user.click(retryButton)
+
+      // Ждём ответа (ссылка на этап)
+      await screen.findByRole('link')
+
+      // Проверяем, что ошибка исчезла
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
@@ -379,6 +433,36 @@ describe('AssistantPanel', () => {
       const alert = await screen.findByRole('alert')
       expect(alert).toHaveTextContent('Отчёт слишком велик')
 
+      expect(screen.queryByRole('button', { name: 'Повторить' })).not.toBeInTheDocument()
+    })
+
+    it('показывает bad_request (HTTP 400) с точным заголовком и без "Повторить"', async () => {
+      server.use(
+        http.post(ASK_URL, () =>
+          HttpResponse.json(
+            { detail: 'Ассистент не принял запрос', code: 'assistant_bad_request' },
+            { status: 400 },
+          ),
+        ),
+      )
+      db.setAssistantScenario('ok')
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
+      await user.click(textarea)
+      await user.paste('Где отставание?')
+
+      await user.click(screen.getByRole('button', { name: 'Спросить' }))
+
+      const alert = await screen.findByRole('alert')
+      // Точный заголовок (не 'отчёта')
+      expect(alert).toHaveTextContent('Площадки нет в отчёте')
+      // Сообщение сервера показано
+      expect(alert).toHaveTextContent('Ассистент не принял запрос')
+
+      // Но нет кнопки "Повторить"
       expect(screen.queryByRole('button', { name: 'Повторить' })).not.toBeInTheDocument()
     })
 
@@ -455,12 +539,24 @@ describe('AssistantPanel', () => {
     })
   })
 
+  describe('Accessibility', () => {
+    it('содержит aria-live для объявления ошибок screen reader', async () => {
+      db.setAssistantScenario('ok')
+      renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      const liveRegion = document.querySelector('[aria-live="polite"]')
+      expect(liveRegion).toBeInTheDocument()
+    })
+  })
+
   describe('CSS print rule', () => {
-    it('содержит @media print { display: none }', () => {
-      // CSS module is imported in the component and should have print rule
-      // The rule is: .section { display: flex; ... } @media print { .section { display: none } }
-      // This is verified by the component not showing when printing
-      expect(true).toBe(true)
+    it('применяет класс section с media print rule', async () => {
+      db.setAssistantScenario('ok')
+      const { container } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      const section = container.querySelector('section.section')
+      expect(section).toBeInTheDocument()
     })
   })
 })
