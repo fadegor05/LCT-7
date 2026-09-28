@@ -124,6 +124,51 @@ curl -X POST http://localhost/api/sites/{id}/photos/detect?status=pending,failed
   образ@sha, если достижима).
 - `/api/version`: добавлено поле `"model"` (версия, или `null` если ML недоступен).
 
+## Ассистент по отчёту (LLM)
+
+Языковая модель помогает прочитать готовый отчёт: пользователь спрашивает на
+русском, ассистент отвечает пересказом данных с проверкой чисел.
+
+### Подключение модели
+
+Три переменные в корневом `.env`:
+
+```dotenv
+LLM_BASE_URL=https://<хост-провайдера>/v1
+LLM_API_KEY=<ключ>
+LLM_MODEL=<имя-модели>
+```
+
+Сервис обращается к `{LLM_BASE_URL}/chat/completions` — формат OpenAI,
+заголовок `Authorization: Bearer {LLM_API_KEY}`, `temperature: 0`. Подойдёт
+любой сервис или локальная модель, которая держит этот формат.
+
+Переменные передаются **только** в контейнер `ml`; в `backend` они отсутствуют
+(ключ живёт только в ML-сервисе).
+
+### Проверка доступности
+
+```bash
+docker compose exec ml python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/meta').read().decode())"
+```
+
+Поле `"assistant": true` означает, что модель доступна и ассистент готов
+отвечать. Запрос `/meta` может ответить 503 пока модель прогревается
+(до 90 секунд после старта сервиса).
+
+Без подключения переменных `POST /ask` отвечает 503 — это штатное состояние
+стенда без LLM-провайдера. Интерфейс в этом случае ассистента не показывает.
+
+Доступные модели провайдера:
+
+```bash
+# в Docker
+docker compose exec ml python tools/suggest_stage_mapping.py --list-models
+
+# при локальной разработке (из ml/ с переменными в ml/.env)
+python tools/suggest_stage_mapping.py --list-models
+```
+
 ## Стенд в Yandex Cloud (veha-stand)
 
 С 27.09.2026 стенд живёт на ВМ в Yandex Cloud: 4 vCPU (Intel Ice Lake, 100%),

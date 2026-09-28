@@ -21,6 +21,7 @@ import type {
   StageStatus,
   SiteSummary,
   UploadReport,
+  AssistantAnswer,
 } from '@/api/schemas'
 import {
   BEREZNIKI,
@@ -39,15 +40,29 @@ import {
   user,
 } from './fixtures'
 
-/** Ошибка домена с HTTP-кодом — хендлер превращает её в `{detail}`. */
+/** Ошибка домена с HTTP-кодом — хендлер превращает её в `{detail, code}`. */
 export class MockError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message)
   }
 }
+
+/** Сценарий поведения ассистента в моках. */
+export type AssistantScenario =
+  | 'ok'
+  | 'unverified'
+  | 'out_of_scope'
+  | 'rate_limited'
+  | 'unavailable'
+  | 'timeout'
+  | 'too_large'
+  | 'no_llm'
+  | 'slow'
+  | 'unlinked'
 
 type StoredPhoto = Photo & { detections: Detection[] }
 
@@ -60,6 +75,7 @@ interface State {
   statuses: Map<string, Map<string, Omit<StageStatus, 'stage_id' | 'stage_name' | 'position'>>>
   deviations: Map<string, DeviationDetail[]>
   seq: number
+  assistantScenario: AssistantScenario
 }
 
 let state: State
@@ -523,6 +539,122 @@ export function getSummary(siteId: string): SiteSummary {
   return { verdict: 'no_deviations', delay_days_min: null, delay_days_max: null, ...counts }
 }
 
+// ---------- Ассистент ----------
+
+export function setAssistantScenario(scenario: AssistantScenario): void {
+  state.assistantScenario = scenario
+}
+
+export function getAssistantScenario(): AssistantScenario {
+  return state.assistantScenario
+}
+
+export function assistantEnabled(): boolean {
+  return state.assistantScenario !== 'no_llm' && state.assistantScenario !== 'unavailable'
+}
+
+/** Парсит query string и извлекает значение сценария ассистента. Неизвестные/отсутствующие значения → 'ok'. */
+export function parseAssistantScenario(search: string): AssistantScenario {
+  const validScenarios: AssistantScenario[] = [
+    'ok',
+    'unverified',
+    'out_of_scope',
+    'rate_limited',
+    'unavailable',
+    'timeout',
+    'too_large',
+    'no_llm',
+    'slow',
+    'unlinked',
+  ]
+  const params = new URLSearchParams(search)
+  const value = params.get('assistant')
+  if (value && validScenarios.includes(value as AssistantScenario)) {
+    return value as AssistantScenario
+  }
+  return 'ok'
+}
+
+/** Задержка ответа (мс) по сценарию: `slow` — 2000, остальные — без задержки. */
+export function assistantDelayMs(scenario: AssistantScenario): number {
+  return scenario === 'slow' ? 2000 : 0
+}
+
+export function assistantAsk(siteId: string): AssistantAnswer {
+  getSite(siteId) // Проверяем, что стройка существует (404)
+
+  if (!assistantEnabled()) {
+    throw new MockError(503, 'Ассистент недоступен', 'assistant_unavailable')
+  }
+
+  const schedule = getSchedule(siteId) // Проверяем, что график есть (404)
+
+  // Проверяем сценарии ошибок
+  switch (state.assistantScenario) {
+    case 'rate_limited':
+      throw new MockError(429, 'Слишком много вопросов. Повторите через 30 с.', 'rate_limited')
+    case 'timeout':
+      throw new MockError(504, 'Модель не ответила. Повторите вопрос позже.', 'assistant_timeout')
+    case 'out_of_scope':
+      throw new MockError(
+        422,
+        'Ассистент отвечает только на вопросы по отчёту об этой площадке: этапы, отставание, отклонения, техника. Например: «где отставание и на сколько», «что с этапом 3».',
+        'out_of_scope',
+      )
+    case 'too_large':
+      throw new MockError(413, 'Отчёт слишком велик для ассистента', 'report_too_large')
+  }
+
+  // Успешный ответ: ищем первый этап с отставанием
+  const statuses = listStageStatuses(siteId)
+  const behindStatus = statuses.find((s) => s.status === 'behind')
+
+  let answer: string
+  let stages: AssistantAnswer['stages']
+
+  if (behindStatus && behindStatus.stage_id) {
+    const stage = schedule.stages.find((s) => s.id === behindStatus.stage_id)
+    // stage_no — это 1-based порядковый номер этапа, отсортированного по position
+    const sortedByPosition = [...schedule.stages].sort((a, b) => a.position - b.position)
+    const stageNo = sortedByPosition.findIndex((s) => s.id === behindStatus.stage_id) + 1
+    const stageName = stage?.name || ''
+    const delayDays = behindStatus.delay_days || 0
+    answer = `Этап ${stageNo} «${stageName}» отстаёт на ${delayDays} дней.`
+    stages =
+      state.assistantScenario === 'unlinked'
+        ? []
+        : [{ ref: `этап ${stageNo}`, stage_id: behindStatus.stage_id }]
+  } else {
+    answer = 'По площадке p1 отставаний не найдено.'
+    stages = []
+  }
+
+  const limits =
+    'Проверяются числа, а не смысл: верное число может быть отнесено не к тому этапу, и проверка этого не увидит. Источник истины — сам отчёт, ответ лишь пересказывает его.'
+
+  if (state.assistantScenario === 'unverified') {
+    return {
+      answer,
+      verified: false,
+      numbers_not_in_report: ['999'],
+      numbers_of_other_site: ['p1: 5'],
+      limits,
+      site_label: 'p1',
+      stages,
+    }
+  }
+
+  return {
+    answer,
+    verified: true,
+    numbers_not_in_report: [],
+    numbers_of_other_site: [],
+    limits,
+    site_label: 'p1',
+    stages,
+  }
+}
+
 // ---------- Начальное состояние ----------
 
 function seedBerezniki(): void {
@@ -568,6 +700,14 @@ function seedBerezniki(): void {
 }
 
 export function resetDb(): void {
+  // В режиме тестов всегда 'ok'; в браузере может быть задан через ?assistant=
+  const initialScenario =
+    import.meta.env.MODE === 'test'
+      ? 'ok'
+      : typeof window !== 'undefined'
+        ? parseAssistantScenario(window.location.search)
+        : 'ok'
+
   state = {
     sites: siteFixtures.map((s) => ({ ...s })),
     schedules: new Map(),
@@ -577,6 +717,7 @@ export function resetDb(): void {
     statuses: new Map(),
     deviations: new Map(),
     seq: 0,
+    assistantScenario: initialScenario,
   }
   seedBerezniki()
   state.schedules.set(SYNTHETIC, buildSchedule(SYNTHETIC, 'synthetic.csv'))

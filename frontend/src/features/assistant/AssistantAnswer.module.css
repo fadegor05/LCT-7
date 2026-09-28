@@ -1,0 +1,10 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

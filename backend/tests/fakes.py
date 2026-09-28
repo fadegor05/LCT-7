@@ -1,5 +1,6 @@
 """Fake implementations для тестирования."""
 
+from app.adapters.ml.assistant import AssistantAnswer, AssistantError
 from app.adapters.ml.base import DetectionResult, DetectorInfo
 
 
@@ -127,3 +128,66 @@ class ScriptedDetector:
     def configured(self) -> bool:
         """ScriptedDetector is configured (configurable via constructor)."""
         return self._configured
+
+
+class FakeAssistantClient:
+    """Fake ассистент для тестирования.
+
+    Позволяет конфигурировать результаты и отслеживать вызовы.
+    """
+
+    def __init__(
+        self,
+        answer: AssistantAnswer | None = None,
+        error: AssistantError | None = None,
+        enabled: bool = True,
+    ):
+        """Инициализировать fake ассистента.
+
+        Args:
+            answer: Результат по умолчанию (если None, вернёт default answer)
+            error: Исключение для выброса (если задано, переопределяет answer)
+            enabled: Значение available() (по умолчанию True)
+        """
+        self.answer = answer or AssistantAnswer(
+            answer="Fake answer",
+            verified=True,
+            numbers_not_in_report=[],
+            numbers_of_other_site=[],
+            limits="",
+        )
+        self.error = error
+        self.enabled = enabled
+        self.calls: list[tuple[str, dict, str | None]] = []  # (question, report, site_id)
+
+    async def ask(self, question: str, report: dict, site_id: str | None = None) -> AssistantAnswer:
+        """Задать вопрос (fake реализация).
+
+        Записывает информацию о вызове и возвращает предконфигурированный результат
+        или выбрасывает исключение.
+
+        Args:
+            question: Вопрос
+            report: Отчёт
+            site_id: ID площадки
+
+        Returns:
+            Предконфигурированный результат
+
+        Raises:
+            Предконфигурированное исключение, если оно задано
+        """
+        self.calls.append((question, report, site_id))
+
+        if self.error is not None:
+            raise self.error
+
+        return self.answer
+
+    async def available(self) -> bool:
+        """Проверить доступность (fake реализация).
+
+        Returns:
+            Предконфигурированное значение (по умолчанию True)
+        """
+        return self.enabled
