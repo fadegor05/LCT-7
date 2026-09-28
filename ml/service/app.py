@@ -262,15 +262,14 @@ def ask_about_report(req: AskRequest) -> dict:
         raise HTTPException(504, f"языковая модель не ответила: {exc}") from exc
 
     missing = ask_report.unverified(answer, ask_report.collect_numbers(data))
-    wrong_site = ask_report.misattributed(answer, ask_report.numbers_by_site(data))
+    by_site = ask_report.numbers_by_site(data)
+    wrong_site = ask_report.misattributed(answer, by_site)
     return {
         "answer": answer.strip(),
         "verified": not (missing or wrong_site),
         "numbers_not_in_report": missing,
         "numbers_of_other_site": wrong_site,
-        "limits": ("Проверяются числа, а не смысл: верное число может быть отнесено "
-                   "не к тому этапу, и проверка этого не увидит. Источник истины — "
-                   "сам отчёт, ответ лишь пересказывает его."),
+        "limits": ask_report.limits_for(answer, by_site),
     }
 
 

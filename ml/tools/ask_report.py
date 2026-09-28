@@ -51,6 +51,13 @@ SYSTEM = (
     "о которых говоришь."
 )
 
+LIMITS = ("Проверяются числа, а не смысл: верное число может быть отнесено "
+          "не к тому этапу, и проверка этого не увидит. Источник истины — "
+          "сам отчёт, ответ лишь пересказывает его.")
+
+NO_SITE_NOTE = ("Ответ не называет площадку, поэтому числа не сверены по площадкам: "
+                "они проверены только по отчёту в целом.")
+
 def normalise(text: str) -> str:
     """Склеивает разряды, разделённые пробелом: «4 500 000» → «4500000».
 
@@ -124,13 +131,65 @@ def numbers_by_site(data: dict) -> dict[str, set[str]]:
     return out
 
 
+def site_marks(answer: str, by_site: dict[str, set[str]]) -> list[re.Match[str]]:
+    """Упоминания площадок в ответе, в порядке появления.
+
+    Строит регулярное выражение из реальных id площадок, исключая:
+    - чистые числа (неотличимы от обычных чисел в тексте);
+    - "_общие" (не площадка, а категория).
+
+    Сортирует по длине убывающей (p10 перед p1) и оборачивает буквенно-цифровыми
+    границами, чтобы не ловить p03 внутри слова.
+    """
+    # Получаем реальные id площадок (исключаем _общие)
+    ids = [site_id for site_id in by_site.keys()
+           if site_id != "_общие" and not site_id.isdigit()]
+
+    if not ids:
+        return []
+
+    # Сортируем по длине убывающей, чтобы p10 проверялся перед p1
+    ids = sorted(ids, key=len, reverse=True)
+
+    # Экранируем спецсимволы и строим альтернацию
+    pattern = "|".join(re.escape(site_id) for site_id in ids)
+
+    # Оборачиваем буквенно-цифровыми границами (не ловим p1 в словах вроде "up1" или "a-p1b")
+    full_pattern = f"(?<![\\w-])(?:{pattern})(?![\\w-])"
+
+    return list(re.finditer(full_pattern, answer))
+
+
+def mentions_site(answer: str, by_site: dict[str, set[str]]) -> bool:
+    """Находится ли в ответе хотя бы одна упоминание площадки из отчёта."""
+    return bool(site_marks(answer, by_site))
+
+
+def limits_for(answer: str, by_site: dict[str, set[str]]) -> str:
+    """Текст об ограничениях проверки с дополнением при необходимости.
+
+    Если отчёт содержит несколько реальных площадок, но ответ не назвал ни одну,
+    добавляется NO_SITE_NOTE. В остальных случаях возвращается только LIMITS.
+    """
+    # Считаем реальные площадки (исключаем _общие)
+    real_sites = [site_id for site_id in by_site.keys()
+                  if site_id != "_общие"]
+
+    # Если больше одной площадки и ни одна не названа, добавляем примечание
+    if len(real_sites) > 1 and not mentions_site(answer, by_site):
+        return LIMITS + " " + NO_SITE_NOTE
+
+    return LIMITS
+
+
 def misattributed(answer: str, by_site: dict[str, set[str]]) -> list[str]:
     """Числа, названные не про ту площадку.
 
-    Ответ режется по упоминаниям площадок: всё, что сказано после «p03» и до
-    следующего упоминания, считается сказанным про p03.
+    Ответ режется по упоминаниям площадок из отчёта: всё, что сказано после
+    первой метки площадки и до следующей метки, считается сказанным про эту
+    площадку. Метки извлекаются из реальных id в by_site, не из hardcoded p\\d{2}.
     """
-    marks = list(re.finditer(r"\bp\d{2}\b", answer))
+    marks = site_marks(answer, by_site)
     if not marks:
         return []
     problems = []
@@ -204,7 +263,8 @@ def main() -> int:
 
     answer = ask(prompt, base_url, api_key, model, timeout=args.timeout, system=SYSTEM)
     bad = unverified(answer, known)
-    wrong_site = misattributed(answer, numbers_by_site(data))
+    by_site = numbers_by_site(data)
+    wrong_site = misattributed(answer, by_site)
 
     print(answer.strip())
     print("\n" + "-" * 60)
@@ -218,8 +278,7 @@ def main() -> int:
               "относится к названной площадке.")
     else:
         print("Ответ нельзя подавать как факт: сверьтесь с отчётом.")
-    print("Проверяются числа, а не смысл: верное число может быть отнесено не к "
-          "тому этапу, и этого проверка не увидит.")
+    print(limits_for(answer, by_site))
     print("Источник истины — сам отчёт; ответ выше лишь пересказывает его.")
     return 0 if not (bad or wrong_site) else 2
 
