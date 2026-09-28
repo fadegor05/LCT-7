@@ -185,13 +185,16 @@ def models(base_url: str, api_key: str, timeout: int = 30) -> list[str]:
 
 
 def ask(prompt: str, base_url: str, api_key: str, model: str, timeout: int = 600,
-        system: str = "") -> str:
-    body = json.dumps({
+        system: str = "", max_tokens: int | None = None) -> str:
+    body_dict = {
         "model": model,
         "temperature": 0,
         "messages": [{"role": "system", "content": system or SYSTEM},
                      {"role": "user", "content": prompt}],
-    }).encode("utf-8")
+    }
+    if max_tokens is not None:
+        body_dict["max_tokens"] = max_tokens
+    body = json.dumps(body_dict).encode("utf-8")
     request = urllib.request.Request(
         base_url.rstrip("/") + "/chat/completions", data=body,
         headers={"Content-Type": "application/json",

@@ -223,14 +223,14 @@ class TestAskEndpoint:
 
         # Monkeypatch ask_report.ask
         import ask_report
-        def failing_ask(*args, **kwargs):
+        def failing_ask(*args, **kwargs):  # noqa: F841
             raise RuntimeError("401 Bearer sk-SECRET host llm.secret.example")
 
         monkeypatch.setattr(ask_report, "ask", failing_ask)
 
         client = TestClient(app)
         response = client.post("/ask", json={
-            "question": "что-то",
+            "question": "какая задержка у p03",  # Вопрос по отчёту
             "report": {
                 "sites": [{"site_id": "p03", "stages": []}],
                 "meta": {}
@@ -247,7 +247,7 @@ class TestAskEndpoint:
 
         # Monkeypatch ask_report.ask
         import ask_report
-        def successful_ask(*args, **kwargs):
+        def successful_ask(*args, **kwargs):  # noqa: F841
             return "Площадка p03, этап 12.3.2 отстаёт на 14 дней."
 
         monkeypatch.setattr(ask_report, "ask", successful_ask)
@@ -269,7 +269,7 @@ class TestAskEndpoint:
 
         client = TestClient(app)
         response = client.post("/ask", json={
-            "question": "что-то",
+            "question": "какой этап отстаёт",  # Вопрос по отчёту
             "report": ОТЧЁТ,
         })
         assert response.status_code == 200
