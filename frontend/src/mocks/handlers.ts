@@ -12,6 +12,17 @@ const api = (path: string) => `${env.apiBaseUrl}${path}`
 /** Небольшая задержка в браузере, чтобы были видны состояния загрузки; в тестах — ноль. */
 const latency = () => (import.meta.env.MODE === 'test' ? Promise.resolve() : delay(250))
 
+/** Задержка (мс) по сценарию: slow = 2000 мс, иначе 0. В тестах всегда 0. */
+const assistantDelayMs = (scenario: db.AssistantScenario): number =>
+  scenario === 'slow' ? 2000 : 0
+
+/** Задержка для долгого ответа (сценарий slow). В тестах пропускается. */
+const assistantLatency = () => {
+  const scenario = db.getAssistantScenario()
+  const delayMs = import.meta.env.MODE === 'test' ? 0 : assistantDelayMs(scenario)
+  return delayMs > 0 ? delay(delayMs) : Promise.resolve()
+}
+
 /** В тестах FormData разбирает Node, и File там — не тот класс, что глобальный в jsdom. */
 const isFile = (value: unknown): value is File =>
   typeof value === 'object' && value !== null && 'name' in value && 'size' in value
@@ -186,4 +197,36 @@ export const handlers = [
   http.get<SiteParams>(api('/sites/:siteId/assessment/summary'), ({ params }) =>
     handle(() => db.getSummary(params.siteId)),
   ),
+
+  // ---------- Ассистент ----------
+  http.get(api('/assistant/status'), () => handle(() => ({ enabled: db.assistantEnabled() }))),
+  http.post<SiteParams>(api('/sites/:siteId/assistant/ask'), async ({ params, request }) => {
+    await assistantLatency()
+    const body = await json<{ question?: unknown }>(request)
+    const questionValue = body.question
+    const question = (typeof questionValue === 'string' ? questionValue : '').trim()
+
+    // Валидация вопроса (422 без code, с list detail)
+    if (question.length < 3 || question.length > 500) {
+      const msgType = question.length < 3 ? 'string_too_short' : 'string_too_long'
+      const msgText =
+        question.length < 3
+          ? 'String should have at least 3 characters'
+          : 'String should have at most 500 characters'
+      return HttpResponse.json(
+        {
+          detail: [
+            {
+              loc: ['body', 'question'],
+              msg: msgText,
+              type: msgType,
+            },
+          ],
+        },
+        { status: 422 },
+      )
+    }
+
+    return handle(() => db.assistantAsk(params.siteId))
+  }),
 ]
