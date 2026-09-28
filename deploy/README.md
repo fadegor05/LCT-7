@@ -185,8 +185,20 @@ unset HF_TOKEN
    полный sha.
 2. **Таймер на ВМ** (`veha-autodeploy.timer`, раз в две минуты) запускает
    `autodeploy.sh`: тянет `deploy:latest`, и если коммит новый — раскладывает файлы,
-   ставит теги `sha-<коммит>`, делает `make deploy-tunnel` и проверяет
+   ставит теги `sha-<коммит>`, делает `make $DEPLOY_TARGET` и проверяет
    `/api/health`.
+
+Что автодеплой трогает на ВМ, а что нет:
+
+* `.env` и `deploy/config/traefik/certs/` — **не трогает** никогда.
+* `deploy/config/traefik/traefik.yml` — кладёт только если файла ещё нет; правки
+  на ВМ (например, email для Let's Encrypt) сохраняются.
+* `makefile`, `deploy/docker/*`, `deploy/versions.env` — **перезаписывает** из
+  посылки при каждой выкладке. Правки этих файлов прямо на ВМ пропадут — их
+  вносят через `main`.
+* Режим выбирается в `.env` ВМ переменной `DEPLOY_TARGET`: `deploy-tunnel`
+  (по умолчанию, HTTP на :80, роутинг только по пути) или `deploy` (домен из
+  `DOMAIN`, HTTPS с сертификатом Let's Encrypt, `prod/core.yaml`).
 
 Настройка реестра (один раз, в консоли Yandex Cloud):
 
@@ -216,6 +228,7 @@ cat /opt/veha/.deployed-revision                  # какой коммит вы
 Установка таймера (один раз, уже сделано 27.09):
 
 ```bash
+# скрипт не обновляется посылкой сам: после его изменений в main повторить эту строку
 sudo install -m 755 -o veha -g veha deploy/autodeploy/autodeploy.sh /opt/veha/bin/autodeploy.sh
 sudo cp deploy/autodeploy/veha-autodeploy.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now veha-autodeploy.timer
