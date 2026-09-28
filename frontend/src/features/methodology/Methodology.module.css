@@ -95,11 +95,31 @@
   border-radius: var(--radius-md);
 }
 
+/* Форма машины: тип и обязательность в первой строке, источник на всю ширину — во второй,
+   чтобы длинный текст («по смыслу работы: …») был виден целиком. */
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .addRow {
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.addType {
+  flex: 2 1 16rem;
+}
+
+.addObligation {
+  flex: 1 1 12rem;
+}
+
+.addSource {
+  flex: 1 1 20rem;
 }
 
 .footer {
