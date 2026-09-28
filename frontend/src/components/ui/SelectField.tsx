@@ -14,13 +14,15 @@ export function SelectField({ label, options, id, className, ...select }: Select
       <label className={styles.label} htmlFor={selectId}>
         {label}
       </label>
-      <select id={selectId} className={styles.input} {...select}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <span className={styles.select}>
+        <select id={selectId} className={styles.input} {...select}>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </span>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useCreateSet, useDeleteSet, useReplaceSet } from '@/api/methodology'
+import { useCreateSet, useReplaceSet } from '@/api/methodology'
 import type { EquipmentSet, EquipmentType, Requirement, SetWrite } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
@@ -26,29 +26,28 @@ const toWrite = (drafts: readonly Draft[]): SetWrite => ({
 interface SetEditorProps {
   siteId: string
   ruleId: string
-  /** null — новый комплект, уходит на сервер по «Сохранить». */
+  /** null — этап без комплекта: новый комплект уходит на сервер по «Сохранить». */
   set: EquipmentSet | null
   number: number
   types: readonly EquipmentType[]
-  onDone?: () => void
 }
 
 /**
  * Комплект техники этапа. Черновик локальный, на сервер уходит целиком (PUT/POST).
  * Нормативная техника — маркер: этап подтверждают только маркеры, поэтому без неё комплект
- * не сохраняется — то же правило проверяет backend.
+ * не сохраняется — то же правило проверяет backend. Комплект у этапа один (альтернативные — P2),
+ * поэтому ни добавить второй, ни удалить комплект отсюда нельзя.
  */
-export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEditorProps) {
+export function SetEditor({ siteId, ruleId, set, number, types }: SetEditorProps) {
   const initial = useMemo(() => (set?.requirements ?? []).map(toDraft), [set])
   const [drafts, setDrafts] = useState<Draft[]>(initial)
   const [adding, setAdding] = useState(set === null)
   const create = useCreateSet(siteId)
   const replace = useReplaceSet(siteId)
-  const remove = useDeleteSet(siteId)
-  const busy = create.isPending || replace.isPending || remove.isPending
-  const error = create.error ?? replace.error ?? remove.error
+  const busy = create.isPending || replace.isPending
+  const error = create.error ?? replace.error
 
-  const dirty = set === null || JSON.stringify(drafts) !== JSON.stringify(initial)
+  const dirty = JSON.stringify(drafts) !== JSON.stringify(initial)
   const hasMarker = drafts.some((r) => r.obligation === 'normative')
   const available = types.filter((t) => !drafts.some((r) => r.equipment_type.id === t.id))
 
@@ -58,7 +57,7 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
   const save = () => {
     const data = toWrite(drafts)
     if (set) replace.mutate({ setId: set.id, data })
-    else create.mutate({ ruleId, data }, { onSuccess: onDone })
+    else create.mutate({ ruleId, data })
   }
 
   return (
@@ -114,7 +113,7 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
           Добавьте нормативную машину: логическая и вспомогательная техника не подтверждают этап.
         </Callout>
       )}
-      {adding ? (
+      {adding && (
         <AddRuleForm
           types={available}
           onCancel={() => setAdding(false)}
@@ -126,12 +125,6 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
             setAdding(false)
           }}
         />
-      ) : (
-        <div>
-          <Button variant="ghost" size="sm" icon="plus" onClick={() => setAdding(true)}>
-            Добавить машину
-          </Button>
-        </div>
       )}
       {error && (
         <Callout tone="behind" title="Не сохранилось">
@@ -139,26 +132,15 @@ export function SetEditor({ siteId, ruleId, set, number, types, onDone }: SetEdi
         </Callout>
       )}
       <div className={styles.footer}>
-        <p className="sm muted">{set && dirty ? 'Есть несохранённые изменения.' : ''}</p>
-        {set ? (
-          <>
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() => remove.mutate(set.id)}
-              aria-label={`Удалить комплект ${number}`}
-            >
-              Удалить комплект
-            </Button>
-            <Button variant="ghost" onClick={() => setDrafts(initial)} disabled={!dirty || busy}>
-              Отмена
-            </Button>
-          </>
-        ) : (
-          <Button variant="ghost" onClick={onDone} disabled={busy}>
-            Отмена
+        {!adding && (
+          <Button variant="ghost" size="sm" icon="plus" onClick={() => setAdding(true)}>
+            Добавить машину
           </Button>
         )}
+        <p className="sm muted">{dirty ? 'Есть несохранённые изменения.' : ''}</p>
+        <Button variant="ghost" onClick={() => setDrafts(initial)} disabled={!dirty || busy}>
+          Отмена
+        </Button>
         <Button onClick={save} disabled={!dirty || !hasMarker || busy}>
           Сохранить
         </Button>

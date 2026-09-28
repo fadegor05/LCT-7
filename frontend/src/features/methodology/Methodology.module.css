@@ -42,14 +42,17 @@
   background: var(--surface-card);
 }
 
+/* Переключатель проверки не сжимается: если рядом с заголовком тесно, уходит строкой ниже. */
 .editorHead {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: var(--space-4);
 }
 
 .editorHead > div:first-child {
-  flex-grow: 1;
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .rules {
@@ -92,11 +95,31 @@
   border-radius: var(--radius-md);
 }
 
+/* Форма машины: тип и обязательность в первой строке, источник на всю ширину — во второй,
+   чтобы длинный текст («по смыслу работы: …») был виден целиком. */
+.addForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .addRow {
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.addType {
+  flex: 2 1 16rem;
+}
+
+.addObligation {
+  flex: 1 1 12rem;
+}
+
+.addSource {
+  flex: 1 1 20rem;
 }
 
 .footer {
@@ -109,7 +132,9 @@
   flex-grow: 1;
 }
 
-@media (width <= 720px) {
+/* Рядом со списком этапов редактору нужно ~700px, иначе строки комплекта и переключатель
+   проверки не помещаются — на средних экранах колонки встают друг под друга. */
+@media (width <= 1180px) {
   .layout {
     flex-direction: column;
     align-items: stretch;
@@ -118,8 +143,9 @@
   .aside {
     width: 100%;
   }
+}
 
-  .editorHead,
+@media (width <= 720px) {
   .footer {
     flex-wrap: wrap;
   }
