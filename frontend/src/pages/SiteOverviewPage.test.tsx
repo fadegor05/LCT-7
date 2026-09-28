@@ -1,11 +1,16 @@
 import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
+import { describe, expect, it, vi } from 'vitest'
+import * as db from '@/mocks/db'
 import { TODAY } from '@/mocks/fixtures'
 import { server } from '@/mocks/server'
 import { renderRoute } from '@/test/render'
 
 describe('SiteOverviewPage', () => {
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => {
+    vi.useRealTimers()
+    db.setAssistantScenario('ok') // Reset assistant scenario
+  })
 
   it('shows verdict, data state, deviations, stages and last observation', async () => {
     renderRoute('/sites/site-berezniki')
@@ -94,5 +99,55 @@ describe('SiteOverviewPage', () => {
   it('shows a clear error for unknown sites', async () => {
     renderRoute('/sites/nope')
     expect(await screen.findByText('Стройка не найдена')).toBeInTheDocument()
+  })
+
+  describe('AssistantPanel integration', () => {
+    it('hides the assistant heading when no_llm', async () => {
+      db.setAssistantScenario('no_llm')
+      renderRoute('/sites/site-berezniki')
+      // Ждём загрузки основного контента
+      await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' })
+      // Проверяем, что заголовка ассистента нет
+      await vi.waitFor(() => {
+        expect(
+          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows the assistant heading after "Последнее наблюдение" in document order', async () => {
+      renderRoute('/sites/site-berezniki')
+      const assistantHeading = await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      const lastObsHeading = screen.getByRole('heading', { name: /Последнее наблюдение/ })
+
+      // Проверяем, что ассистент идёт ПОСЛЕ "Последнее наблюдение" в документе
+      const position = lastObsHeading.compareDocumentPosition(assistantHeading)
+      // DOCUMENT_POSITION_FOLLOWING = 4
+      expect(position & 4).not.toBe(0)
+    })
+
+    it('shows assistant panel with form after page loads', async () => {
+      renderRoute('/sites/site-berezniki')
+
+      // Ждём загрузки ассистента
+      const heading = await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      expect(heading).toBeInTheDocument()
+
+      // Проверяем, что форма присутствует
+      const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
+      expect(textarea).toBeInTheDocument()
+    })
+
+    it('shows assistant heading after last observation heading in document order', async () => {
+      renderRoute('/sites/site-berezniki')
+
+      const assistantHeading = await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      const lastObsHeading = screen.getByRole('heading', { name: /Последнее наблюдение/ })
+
+      // Проверяем, что ассистент идёт ПОСЛЕ "Последнее наблюдение" в документе
+      const position = lastObsHeading.compareDocumentPosition(assistantHeading)
+      // DOCUMENT_POSITION_FOLLOWING = 4
+      expect(position & 4).not.toBe(0)
+    })
   })
 })
