@@ -1,0 +1,504 @@
+{
+ "_comment": "Черновик соответствий, предложенный языковой моделью. Сам по себе НЕ применяется: перенесите проверенные строки в configs/stage_mapping.json руками. Между моделью и выводом стоит человек — это условие, при котором языковая модель вообще допущена в проект.",
+ "model": "openrouter/qwen/qwen3.6-flash",
+ "suggestions": [
+  {
+   "name": "Отселение домов в пятне застройки",
+   "stage_code": "10.3",
+   "stage_name": "Снос зданий в пятне застройки",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство подземной части",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Ограждающие конструкции (СВГ,БСС)",
+   "stage_code": "12.3.5",
+   "stage_name": "Ограждающие конструкции: «стена в грунте»",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Обвязочная балка",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Земляные работы",
+   "stage_code": "12.3.7",
+   "stage_name": "Земляные работы: обратная засыпка, планировка, уплотнение",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Планировка грунта",
+   "stage_code": "12.3.7",
+   "stage_name": "Земляные работы: обратная засыпка, планировка, уплотнение",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство стен, колонн и пилонов подземного этажа",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство несущих ж/б контсрукций подземной части здания",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство монолитных ж/б колонн",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство монолитных ж/б лестниц",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Инъектирование стен подвала",
+   "stage_code": "12.3.10",
+   "stage_name": "Гидроизоляция",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство надземной части",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство несущих ж/б контсрукций надземной части здания",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство гидрозоляции",
+   "stage_code": "12.3.10",
+   "stage_name": "Гидроизоляция",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство ж/б конструкций",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство наружных стен",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Кладка стен наружных армированных из кирпича",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Наружная облицовка поверхности стен, отливов профлистом",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монтаж наружных стеновых сэндвич-панелей \n (сэндвич-панели, ",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Бетонирование плиты и стен",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монтаж утеплителя",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Заполнение оконных проемов",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Мостовое полотно",
+   "stage_code": "12.4.14",
+   "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство плиты проезжей части",
+   "stage_code": "12.4.14",
+   "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство нижнего слоя покрытия",
+   "stage_code": "12.4.14",
+   "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство верхнего слоя покрытия",
+   "stage_code": "12.4.14",
+   "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Подпорная / противопожарная стена",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Насыпь/Призма",
+   "stage_code": "12.3.7",
+   "stage_name": "Земляные работы: обратная засыпка, планировка, уплотнение",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монолитные работы выше отметки\"0\"",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство монолитных ж/б конструкций входных групп",
+   "stage_code": "12.4.28",
+   "stage_name": "Монолитный каркас выше отметки 0",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Теплоизоляция стен экструдированным пенополистиролом толщ. 1",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Покрытие из профилированного листа",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Пароизоляция",
+   "stage_code": "12.3.10",
+   "stage_name": "Гидроизоляция",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Утепление",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Разуклонка ЦПР",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Покрытие козырьков",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Козырьки из светопрозрачных металлических конструкций",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Парапеты вентшахты",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка аэраторов",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство парапетной крышки, крышки фахверка, отделка фахве",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство эксплуатируемой дорожки",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство примыканий в парапету, воронкам",
+   "stage_code": "12.4.31",
+   "stage_name": "Кровля",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка наружных дверей",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монтаж алюминиевых витражей (шторы противопожарные, алюминие",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка оконных блоков ПВХ",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка алюминиевых подоконников",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка подоконников ГКЛВ с отделкой",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство теплоизоляции стен, в т.ч. укрытие плит утеплител",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Облицовка цоколя крупноформатными панелями из керамогранита ",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Облицовка крылец и наружных лестниц нескользящей бетонной пл",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство откосов и сливов из оцинкованной стали с полимерн",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Облицовка крылец и наружных лестниц гранитной плиткой на рас",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Металлические декоративные ламели",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Подшивка нависающих частей здания алюминиевой рейкой",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монтаж козырьков",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство инженерных систем",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Теплосеть",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Водоснабжение",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Х/Б канализация",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Ливневая канализация",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Электроснабжение",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Слаботочные сети",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство трубной канализации",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Прокладка кабеля",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Дизель-генераторная установка, в т.ч. фундамент под оборудов",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Сети водоснабжения",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Сети канализации",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Система отопления",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство колодцев",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Прокладка труб",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Индивидуальный тепловой пункт (ИТП)",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Внешняя отделка",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Монтаж наружных дверей и ворот",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Двери алюминиевые наружные",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Двери металлические наружные",
+   "stage_code": "12.4.11",
+   "stage_name": "Фасад",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка водоотводных лотков",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство подпорных стен",
+   "stage_code": "12.3.4+12.3.9",
+   "stage_name": "Фундамент и подземная часть",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Обустройство дорог: установка знаков, нанесение разметки",
+   "stage_code": "12.4.14",
+   "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство насыпи",
+   "stage_code": "12.3.7",
+   "stage_name": "Земляные работы: обратная засыпка, планировка, уплотнение",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Устройство выемки",
+   "stage_code": "12.3.1",
+   "stage_name": "Устройство котлована (разработка грунта с вывозом)",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Наружное освещение",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Установка опор",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  },
+  {
+   "name": "Архитектурно-художественная подсветка здания",
+   "stage_code": "12.5.1",
+   "stage_name": "Наружные инженерные сети",
+   "source": "llm-suggestion"
+  }
+ ]
+}

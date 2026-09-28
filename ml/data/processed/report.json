@@ -1,330 +1,1033 @@
 {
-  "meta": {
-    "state": "data\\processed\\site_state.json",
-    "rules": "configs\\rules.json",
-    "schedule": "data\\reference\\schedule_demo.csv",
-    "created": "2026-09-18T18:18:32"
-  },
-  "sites": [
+ "meta": {
+  "frames_in": 100,
+  "frames_used": 47,
+  "frames_unusable": 53,
+  "observations": 17,
+  "sites": 9,
+  "sites_without_plan": [
+   "p07"
+  ],
+  "frames_without_plan": 5,
+  "conf": 0.25,
+  "rules": "rules.json",
+  "plan_rows_in": 20,
+  "plan_rows_used": 20,
+  "plan_rows_rejected": 0
+ },
+ "sites": [
+  {
+   "site_id": "p01",
+   "as_of": "2026-07-15",
+   "observations": 1,
+   "observation_step_days": null,
+   "stages": [
     {
-      "site_id": "p03",
-      "as_of": "2023-10-13",
-      "observations": 5,
-      "stages": [
-        {
-          "stage_code": "12.3.2",
-          "stage_name": "Устройство свай",
-          "planned": {
-            "start": "2023-05-15",
-            "end": "2023-07-31"
-          },
-          "status": "behind",
-          "delay_days": 14,
-          "evidence_dates": [
-            "2023-08-14"
-          ],
-          "matched_variant": "буронабивные, ковшовое бурение",
-          "evidence_strength": "specific",
-          "observed_equipment": [
-            "drilling_rig x1",
-            "crawler_crane x1"
-          ],
-          "basis": "работы наблюдаются после плановой даты окончания",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.6",
-          "stage_name": "Ограждение котлована: шпунт",
-          "planned": {
-            "start": "2023-07-01",
-            "end": "2023-08-31"
-          },
-          "status": "behind",
-          "delay_days": 14,
-          "evidence_dates": [
-            "2023-06-19",
-            "2023-07-16",
-            "2023-08-14",
-            "2023-09-14"
-          ],
-          "matched_variant": "вибропогружение",
-          "evidence_strength": "specific",
-          "observed_equipment": [
-            "pile_driver x5"
-          ],
-          "basis": "работы наблюдаются после плановой даты окончания",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.1",
-          "stage_name": "Устройство котлована",
-          "planned": {
-            "start": "2023-08-15",
-            "end": "2023-10-31"
-          },
-          "status": "ahead",
-          "delay_days": 30,
-          "evidence_dates": [
-            "2023-07-16",
-            "2023-09-14"
-          ],
-          "matched_variant": "экскаватор с погрузкой в самосвалы",
-          "evidence_strength": "generic_full",
-          "observed_equipment": [
-            "excavator_crawler x2",
-            "dump_truck x1"
-          ],
-          "basis": "работы наблюдаются раньше планового начала",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.4",
-          "stage_name": "Устройство фундаментной плиты",
-          "planned": {
-            "start": "2023-11-01",
-            "end": "2023-12-31"
-          },
-          "status": "ahead",
-          "delay_days": 108,
-          "evidence_dates": [
-            "2023-07-16"
-          ],
-          "matched_variant": "бетонирование краном с бадьёй",
-          "evidence_strength": "generic_full",
-          "observed_equipment": [
-            "tower_crane x1",
-            "concrete_mixer x1"
-          ],
-          "basis": "работы наблюдаются раньше планового начала",
-          "confidence": "medium"
-        }
-      ],
-      "alerts": [
-        {
-          "type": "unexpected_equipment",
-          "site_id": "p03",
-          "stage_code": "12.3.1",
-          "window": {
-            "from": "2023-09-14",
-            "to": "2023-09-14"
-          },
-          "expected": "техника этапа Устройство котлована",
-          "observed": "tower_crane",
-          "confidence": "low",
-          "evidence": [
-            "Screenshot_12.png",
-            "Screenshot_13.png",
-            "Screenshot_14.png",
-            "Screenshot_15.png"
-          ],
-          "rules_fired": [
-            "12.3.1/unexpected"
-          ],
-          "explanation": "На дату 2023-09-14 по плану идёт этап «Устройство котлована», но наблюдается tower_crane.",
-          "cannot_claim": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива."
-        }
-      ]
+     "stage_code": "12.4.31",
+     "stage_name": "Кровля",
+     "planned": {
+      "start": "2026-04-01",
+      "end": "2026-06-30"
+     },
+     "status": "not_checkable",
+     "basis": "По технике не проверяется: башенный кран присутствует на площадке независимо от этапа. Система обязана отвечать «не проверяемо по технике».",
+     "delay_days_min": null,
+     "delay_days_max": null
     },
     {
-      "site_id": "p05",
-      "as_of": "2026-03-02",
-      "observations": 3,
-      "stages": [
-        {
-          "stage_code": "12.3.1",
-          "stage_name": "Устройство котлована",
-          "planned": {
-            "start": "2025-11-01",
-            "end": "2026-01-31"
-          },
-          "status": "not_started",
-          "delay_days": 121,
-          "evidence_dates": [
-            "2026-01-02",
-            "2026-02-02",
-            "2026-03-02"
-          ],
-          "basis": "плановое начало прошло, техника этапа не наблюдается",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.2",
-          "stage_name": "Устройство свай",
-          "planned": {
-            "start": "2026-01-15",
-            "end": "2026-02-28"
-          },
-          "status": "not_started",
-          "delay_days": 46,
-          "evidence_dates": [
-            "2026-02-02",
-            "2026-03-02"
-          ],
-          "basis": "плановое начало прошло, техника этапа не наблюдается",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.9",
-          "stage_name": "Монолитные работы ниже отметки 0",
-          "planned": {
-            "start": "2026-02-15",
-            "end": "2026-05-31"
-          },
-          "status": "not_started",
-          "delay_days": 15,
-          "evidence_dates": [
-            "2026-03-02"
-          ],
-          "basis": "плановое начало прошло, техника этапа не наблюдается",
-          "confidence": "medium"
-        }
-      ],
-      "alerts": [
-        {
-          "type": "stage_not_started",
-          "stage_code": "12.3.1",
-          "window": {
-            "from": "2025-11-01",
-            "to": "2026-03-02"
-          },
-          "expected": "excavator_crawler",
-          "observed": "excavator_crawler x3, pile_driver x1, crawler_crane x1",
-          "confidence": "medium",
-          "evidence": [
-            "Screenshot_20.png"
-          ],
-          "rules_fired": [
-            "12.3.1/экскаватор с погрузкой в самосвалы"
-          ],
-          "explanation": "Плановое начало этапа «Устройство котлована» — 2025-11-01. На снимках от 2026-03-02 техника этапа не наблюдается; видно: excavator_crawler x3, pile_driver x1, crawler_crane x1.",
-          "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
-          "site_id": "p05"
-        },
-        {
-          "type": "stage_not_started",
-          "stage_code": "12.3.2",
-          "window": {
-            "from": "2026-01-15",
-            "to": "2026-03-02"
-          },
-          "expected": "drilling_rig, crawler_crane, drilling_rig, concrete_pump, concrete_mixer",
-          "observed": "excavator_crawler x3, pile_driver x1, crawler_crane x1",
-          "confidence": "medium",
-          "evidence": [
-            "Screenshot_20.png"
-          ],
-          "rules_fired": [
-            "12.3.2/буронабивные, ковшовое бурение"
-          ],
-          "explanation": "Плановое начало этапа «Устройство свай» — 2026-01-15. На снимках от 2026-03-02 техника этапа не наблюдается; видно: excavator_crawler x3, pile_driver x1, crawler_crane x1.",
-          "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
-          "site_id": "p05"
-        },
-        {
-          "type": "stage_not_started",
-          "stage_code": "12.3.9",
-          "window": {
-            "from": "2026-02-15",
-            "to": "2026-03-02"
-          },
-          "expected": "concrete_pump, tower_crane",
-          "observed": "excavator_crawler x3, pile_driver x1, crawler_crane x1",
-          "confidence": "medium",
-          "evidence": [
-            "Screenshot_20.png"
-          ],
-          "rules_fired": [
-            "12.3.9/автобетононасос"
-          ],
-          "explanation": "Плановое начало этапа «Монолитные работы ниже отметки 0» — 2026-02-15. На снимках от 2026-03-02 техника этапа не наблюдается; видно: excavator_crawler x3, pile_driver x1, crawler_crane x1.",
-          "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
-          "site_id": "p05"
-        }
-      ]
-    },
-    {
-      "site_id": "p08",
-      "as_of": "2024-04-24",
-      "observations": 3,
-      "stages": [
-        {
-          "stage_code": "12.3.2",
-          "stage_name": "Устройство свай",
-          "planned": {
-            "start": "2024-01-15",
-            "end": "2024-03-31"
-          },
-          "status": "behind",
-          "delay_days": 24,
-          "evidence_dates": [
-            "2024-04-24"
-          ],
-          "matched_variant": "буронабивные, ковшовое бурение",
-          "evidence_strength": "specific",
-          "observed_equipment": [
-            "drilling_rig x1",
-            "crawler_crane x3"
-          ],
-          "basis": "работы наблюдаются после плановой даты окончания",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.3.1",
-          "stage_name": "Устройство котлована",
-          "planned": {
-            "start": "2024-04-01",
-            "end": "2024-06-30"
-          },
-          "status": "on_track",
-          "delay_days": 0,
-          "evidence_dates": [
-            "2024-04-24"
-          ],
-          "matched_variant": "экскаватор с погрузкой в самосвалы",
-          "evidence_strength": "generic_full",
-          "observed_equipment": [
-            "excavator_crawler x4",
-            "dump_truck x1"
-          ],
-          "basis": "наблюдения попадают в плановое окно",
-          "confidence": "medium"
-        },
-        {
-          "stage_code": "12.4.14",
-          "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
-          "planned": {
-            "start": "2024-05-01",
-            "end": "2024-05-31"
-          },
-          "status": "not_observed",
-          "basis": "снимков в плановом окне нет, последнее наблюдение раньше начала"
-        }
-      ],
-      "alerts": [
-        {
-          "type": "unexpected_equipment",
-          "site_id": "p08",
-          "stage_code": "12.3.1",
-          "window": {
-            "from": "2024-04-24",
-            "to": "2024-04-24"
-          },
-          "expected": "техника этапа Устройство котлована",
-          "observed": "tower_crane",
-          "confidence": "low",
-          "evidence": [
-            "Screenshot_33.png",
-            "Screenshot_34.png",
-            "Screenshot_35.png",
-            "Screenshot_36.png"
-          ],
-          "rules_fired": [
-            "12.3.1/unexpected"
-          ],
-          "explanation": "На дату 2024-04-24 по плану идёт этап «Устройство котлована», но наблюдается tower_crane.",
-          "cannot_claim": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива."
-        }
-      ]
+     "stage_code": "12.4.11",
+     "stage_name": "Фасад",
+     "planned": {
+      "start": "2026-05-01",
+      "end": "2026-08-31"
+     },
+     "status": "not_checkable",
+     "basis": "Фасадные подъёмники и люльки в классах детектора отсутствуют. Признаки сцены: леса, навесные системы.",
+     "delay_days_min": null,
+     "delay_days_max": null
     }
-  ]
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 0,
+    "basis": "задержавшихся этапов нет"
+   },
+   "alerts": []
+  },
+  {
+   "site_id": "p02",
+   "as_of": "2023-04-14",
+   "observations": 1,
+   "observation_step_days": null,
+   "stages": [
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2023-02-01",
+      "end": "2023-04-30"
+     },
+     "status": "on_track",
+     "delay_days": 0,
+     "evidence_dates": [
+      "2023-04-14"
+     ],
+     "matched_variant": "экскаватор с погрузкой в самосвалы",
+     "evidence_strength": "generic_full",
+     "observed_equipment": [
+      "excavator_crawler x3",
+      "dump_truck x5"
+     ],
+     "basis": "наблюдения попадают в плановое окно",
+     "confidence": "medium",
+     "delay_days_min": null,
+     "delay_days_max": null
+    },
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2023-03-01",
+      "end": "2023-06-30"
+     },
+     "status": "on_track",
+     "delay_days": 0,
+     "evidence_dates": [
+      "2023-04-14"
+     ],
+     "matched_variant": "буронабивные, ковшовое бурение",
+     "evidence_strength": "specific",
+     "observed_equipment": [
+      "drilling_rig x3",
+      "crawler_crane x2"
+     ],
+     "basis": "наблюдения попадают в плановое окно",
+     "confidence": "medium",
+     "delay_days_min": null,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 0,
+    "basis": "задержавшихся этапов нет"
+   },
+   "alerts": []
+  },
+  {
+   "site_id": "p03",
+   "as_of": "2023-10-13",
+   "observations": 5,
+   "observation_step_days": 29,
+   "stages": [
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2023-05-15",
+      "end": "2023-07-31"
+     },
+     "status": "behind",
+     "delay_days": 14,
+     "evidence_dates": [
+      "2023-06-19",
+      "2023-08-14"
+     ],
+     "matched_variant": "буронабивные, ковшовое бурение",
+     "evidence_strength": "specific",
+     "observed_equipment": [
+      "drilling_rig x2",
+      "crawler_crane x1"
+     ],
+     "basis": "работы наблюдаются после плановой даты окончания",
+     "confidence": "medium",
+     "delay_days_min": 14,
+     "delay_days_max": 43
+    },
+    {
+     "stage_code": "12.3.6",
+     "stage_name": "Ограждение котлована: шпунт",
+     "planned": {
+      "start": "2023-07-01",
+      "end": "2023-08-31"
+     },
+     "status": "not_started",
+     "delay_days": 104,
+     "evidence_dates": [
+      "2023-07-16",
+      "2023-08-14",
+      "2023-09-14",
+      "2023-10-13"
+     ],
+     "basis": "плановое начало прошло, техника этапа не наблюдается",
+     "confidence": "medium",
+     "delay_days_min": 104,
+     "delay_days_max": 133
+    },
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2023-08-15",
+      "end": "2023-10-31"
+     },
+     "status": "ahead",
+     "delay_days": 57,
+     "evidence_dates": [
+      "2023-06-19"
+     ],
+     "matched_variant": "экскаватор с погрузкой в самосвалы",
+     "evidence_strength": "generic_full",
+     "observed_equipment": [
+      "excavator_crawler x1",
+      "dump_truck x1"
+     ],
+     "basis": "работы наблюдаются раньше планового начала",
+     "confidence": "medium",
+     "delay_days_min": 57,
+     "delay_days_max": 86
+    },
+    {
+     "stage_code": "12.3.4",
+     "stage_name": "Устройство фундаментной плиты",
+     "planned": {
+      "start": "2023-11-01",
+      "end": "2023-12-31"
+     },
+     "status": "ahead",
+     "delay_days": 108,
+     "evidence_dates": [
+      "2023-07-16"
+     ],
+     "matched_variant": "бетонирование краном с бадьёй",
+     "evidence_strength": "generic_full",
+     "observed_equipment": [
+      "tower_crane x2",
+      "concrete_mixer x1"
+     ],
+     "basis": "работы наблюдаются раньше планового начала",
+     "confidence": "medium",
+     "delay_days_min": 108,
+     "delay_days_max": 137
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 108,
+    "planned_completion": "2023-12-31",
+    "projected_completion": "2024-04-17",
+    "stages": [
+     {
+      "stage_code": "12.3.2",
+      "stage_name": "Устройство свай",
+      "planned_end": "2023-07-31",
+      "projected_end": "2023-08-14",
+      "shift_days": 14
+     },
+     {
+      "stage_code": "12.3.6",
+      "stage_name": "Ограждение котлована: шпунт",
+      "planned_end": "2023-08-31",
+      "projected_end": "2023-12-13",
+      "shift_days": 104
+     },
+     {
+      "stage_code": "12.3.1",
+      "stage_name": "Устройство котлована",
+      "planned_end": "2023-10-31",
+      "projected_end": "2023-12-27",
+      "shift_days": 57
+     },
+     {
+      "stage_code": "12.3.4",
+      "stage_name": "Устройство фундаментной плиты",
+      "planned_end": "2023-12-31",
+      "projected_end": "2024-04-17",
+      "shift_days": 108
+     }
+    ],
+    "basis": "наибольшая наблюдаемая задержка 108 дн. переносится на последующие этапы; завершение сдвигается с 2023-12-31 на 2024-04-17",
+    "assumption": "этапы считаются последовательными, задержка не нагоняется. Это верхняя оценка сдвига",
+    "cannot_claim": "Срок не рассчитан по объёму выполненных работ: объём по снимкам не измеряется. Это перенос наблюдаемой задержки по графику, а не прогноз производительности подрядчика."
+   },
+   "alerts": [
+    {
+     "type": "stage_behind",
+     "stage_code": "12.3.2",
+     "window": {
+      "from": "2023-06-19",
+      "to": "2023-08-14"
+     },
+     "expected": "завершение к 2023-07-31",
+     "observed": "работы этапа наблюдаются 2023-08-14",
+     "confidence": "medium",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_10.png",
+      "Screenshot_11.png",
+      "Screenshot_5.png",
+      "Screenshot_6.png"
+     ],
+     "rules_fired": [
+      "12.3.2/буронабивные, ковшовое бурение"
+     ],
+     "explanation": "Этап «Устройство свай» отстаёт на 14 дн.: плановое окончание 2023-07-31, а работы наблюдаются 2023-08-14 (подтверждение: drilling_rig).",
+     "cannot_claim": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "site_id": "p03",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "rule": {
+      "name": "Устройство свай: буронабивные, ковшовое бурение",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 05-01-028-01"
+     }
+    },
+    {
+     "type": "stage_not_started",
+     "stage_code": "12.3.6",
+     "window": {
+      "from": "2023-07-01",
+      "to": "2023-10-13"
+     },
+     "expected": "pile_driver, pile_driver",
+     "observed": "excavator_unknown x1, truck_crane x1",
+     "confidence": "medium",
+     "evidence": [
+      "Screenshot_16.png"
+     ],
+     "rules_fired": [
+      "12.3.6/вибропогружение"
+     ],
+     "explanation": "Плановое начало этапа «Ограждение котлована: шпунт» — 2023-07-01. На снимках от 2023-10-13 техника этапа не наблюдается; видно: excavator_unknown x1, truck_crane x1.",
+     "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "site_id": "p03",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "rule": {
+      "name": "Ограждение котлована: шпунт: вибропогружение",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 05-01-089-01, 05-01-012-01"
+     }
+    },
+    {
+     "type": "unexpected_equipment",
+     "site_id": "p03",
+     "stage_code": "12.3.1",
+     "window": {
+      "from": "2023-09-14",
+      "to": "2023-09-14"
+     },
+     "expected": "техника этапа Устройство котлована",
+     "observed": "tower_crane",
+     "confidence": "low",
+     "evidence": [
+      "Screenshot_12.png",
+      "Screenshot_13.png",
+      "Screenshot_14.png",
+      "Screenshot_15.png"
+     ],
+     "rules_fired": [
+      "12.3.1/unexpected"
+     ],
+     "explanation": "На дату 2023-09-14 по плану идёт этап «Устройство котлована», но наблюдается tower_crane.",
+     "cannot_claim": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива.",
+     "severity": "attention",
+     "severity_reason": "Основание — предположение методики, а не норматив: нужна проверка человеком.",
+     "is_hypothesis": true,
+     "confidence_reason": "Подтверждено только универсальной техникой либо единичным наблюдением.",
+     "limits_text": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива.",
+     "rule": {
+      "name": "Устройство котлована (разработка грунта с вывозом)",
+      "rule_kind": "logical",
+      "source_ref": null
+     }
+    }
+   ]
+  },
+  {
+   "site_id": "p04",
+   "as_of": "2024-08-09",
+   "observations": 1,
+   "observation_step_days": null,
+   "stages": [
+    {
+     "stage_code": "12.4.28",
+     "stage_name": "Монолитный каркас выше отметки 0",
+     "planned": {
+      "start": "2024-06-01",
+      "end": "2024-12-31"
+     },
+     "status": "not_started",
+     "delay_days": 69,
+     "evidence_dates": [
+      "2024-08-09"
+     ],
+     "basis": "плановое начало прошло, техника этапа не наблюдается",
+     "confidence": "medium",
+     "delay_days_min": 69,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 69,
+    "planned_completion": "2024-12-31",
+    "projected_completion": "2025-03-10",
+    "stages": [
+     {
+      "stage_code": "12.4.28",
+      "stage_name": "Монолитный каркас выше отметки 0",
+      "planned_end": "2024-12-31",
+      "projected_end": "2025-03-10",
+      "shift_days": 69
+     }
+    ],
+    "basis": "наибольшая наблюдаемая задержка 69 дн. переносится на последующие этапы; завершение сдвигается с 2024-12-31 на 2025-03-10",
+    "assumption": "этапы считаются последовательными, задержка не нагоняется. Это верхняя оценка сдвига",
+    "cannot_claim": "Срок не рассчитан по объёму выполненных работ: объём по снимкам не измеряется. Это перенос наблюдаемой задержки по графику, а не прогноз производительности подрядчика."
+   },
+   "alerts": [
+    {
+     "type": "stage_not_started",
+     "stage_code": "12.4.28",
+     "window": {
+      "from": "2024-06-01",
+      "to": "2024-08-09"
+     },
+     "expected": "tower_crane",
+     "observed": "tower_crane x5, flatbed_truck x3, backhoe_loader x1",
+     "confidence": "medium",
+     "evidence": [
+      "Screenshot_17.png"
+     ],
+     "rules_fired": [
+      "12.4.28/башенный кран"
+     ],
+     "explanation": "Плановое начало этапа «Монолитный каркас выше отметки 0» — 2024-06-01. На снимках от 2024-08-09 техника этапа не наблюдается; видно: tower_crane x5, flatbed_truck x3, backhoe_loader x1.",
+     "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "site_id": "p04",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "rule": {
+      "name": "Монолитный каркас выше отметки 0: башенный кран",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 06-05-002-01, 06-08-001-01"
+     }
+    }
+   ]
+  },
+  {
+   "site_id": "p05",
+   "as_of": "2026-03-02",
+   "observations": 3,
+   "observation_step_days": 29,
+   "stages": [
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2025-11-01",
+      "end": "2026-01-31"
+     },
+     "status": "behind",
+     "delay_days": 30,
+     "evidence_dates": [
+      "2026-03-02"
+     ],
+     "matched_variant": "экскаватор с погрузкой в самосвалы",
+     "evidence_strength": "generic_full",
+     "observed_equipment": [
+      "excavator_crawler x3",
+      "dump_truck x1"
+     ],
+     "basis": "работы наблюдаются после плановой даты окончания",
+     "confidence": "medium",
+     "delay_days_min": 30,
+     "delay_days_max": 59
+    },
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2026-01-15",
+      "end": "2026-02-28"
+     },
+     "status": "behind",
+     "delay_days": 2,
+     "evidence_dates": [
+      "2026-02-02",
+      "2026-03-02"
+     ],
+     "matched_variant": "буронабивные, ковшовое бурение",
+     "evidence_strength": "specific",
+     "observed_equipment": [
+      "drilling_rig x1",
+      "crawler_crane x2"
+     ],
+     "basis": "работы наблюдаются после плановой даты окончания",
+     "confidence": "medium",
+     "delay_days_min": 2,
+     "delay_days_max": 31
+    },
+    {
+     "stage_code": "12.3.9",
+     "stage_name": "Монолитные работы ниже отметки 0",
+     "planned": {
+      "start": "2026-02-15",
+      "end": "2026-05-31"
+     },
+     "status": "not_started",
+     "delay_days": 15,
+     "evidence_dates": [
+      "2026-03-02"
+     ],
+     "basis": "плановое начало прошло, техника этапа не наблюдается",
+     "confidence": "medium",
+     "delay_days_min": 15,
+     "delay_days_max": 44
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 30,
+    "planned_completion": "2026-05-31",
+    "projected_completion": "2026-06-30",
+    "stages": [
+     {
+      "stage_code": "12.3.1",
+      "stage_name": "Устройство котлована",
+      "planned_end": "2026-01-31",
+      "projected_end": "2026-03-02",
+      "shift_days": 30
+     },
+     {
+      "stage_code": "12.3.2",
+      "stage_name": "Устройство свай",
+      "planned_end": "2026-02-28",
+      "projected_end": "2026-03-02",
+      "shift_days": 2
+     },
+     {
+      "stage_code": "12.3.9",
+      "stage_name": "Монолитные работы ниже отметки 0",
+      "planned_end": "2026-05-31",
+      "projected_end": "2026-06-30",
+      "shift_days": 30
+     }
+    ],
+    "basis": "наибольшая наблюдаемая задержка 30 дн. переносится на последующие этапы; завершение сдвигается с 2026-05-31 на 2026-06-30",
+    "assumption": "этапы считаются последовательными, задержка не нагоняется. Это верхняя оценка сдвига",
+    "cannot_claim": "Срок не рассчитан по объёму выполненных работ: объём по снимкам не измеряется. Это перенос наблюдаемой задержки по графику, а не прогноз производительности подрядчика."
+   },
+   "alerts": [
+    {
+     "type": "stage_behind",
+     "stage_code": "12.3.1",
+     "window": {
+      "from": "2026-03-02",
+      "to": "2026-03-02"
+     },
+     "expected": "завершение к 2026-01-31",
+     "observed": "работы этапа наблюдаются 2026-03-02",
+     "confidence": "low",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_20.png"
+     ],
+     "rules_fired": [
+      "12.3.1/экскаватор с погрузкой в самосвалы"
+     ],
+     "explanation": "Этап «Устройство котлована» отстаёт на 30 дн.: плановое окончание 2026-01-31, а работы наблюдаются 2026-03-02 по полному набору универсальной техники.",
+     "cannot_claim": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "site_id": "p05",
+     "severity": "attention",
+     "severity_reason": "Вывод о стройке, но уверенность низкая: подтверждение неспецифичной техникой либо малое число наблюдений.",
+     "is_hypothesis": true,
+     "confidence_reason": "Подтверждено только универсальной техникой либо единичным наблюдением.",
+     "limits_text": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "rule": {
+      "name": "Устройство котлована (разработка грунта с вывозом): экскаватор с погрузкой в самосвалы",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 01-01-013-05"
+     }
+    },
+    {
+     "type": "stage_behind",
+     "stage_code": "12.3.2",
+     "window": {
+      "from": "2026-02-02",
+      "to": "2026-03-02"
+     },
+     "expected": "завершение к 2026-02-28",
+     "observed": "работы этапа наблюдаются 2026-03-02",
+     "confidence": "medium",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_19.png",
+      "Screenshot_20.png"
+     ],
+     "rules_fired": [
+      "12.3.2/буронабивные, ковшовое бурение"
+     ],
+     "explanation": "Этап «Устройство свай» отстаёт на 2 дн.: плановое окончание 2026-02-28, а работы наблюдаются 2026-03-02 (подтверждение: drilling_rig).",
+     "cannot_claim": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "site_id": "p05",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "rule": {
+      "name": "Устройство свай: буронабивные, ковшовое бурение",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 05-01-028-01"
+     }
+    },
+    {
+     "type": "stage_not_started",
+     "stage_code": "12.3.9",
+     "window": {
+      "from": "2026-02-15",
+      "to": "2026-03-02"
+     },
+     "expected": "concrete_pump, tower_crane, concrete_pump, tower_crane",
+     "observed": "excavator_crawler x3, crawler_crane x2, drilling_rig x1, dump_truck x1, tower_crane x1",
+     "confidence": "medium",
+     "evidence": [
+      "Screenshot_20.png"
+     ],
+     "rules_fired": [
+      "12.3.9/бетонирование автобетононасосом"
+     ],
+     "explanation": "Плановое начало этапа «Монолитные работы ниже отметки 0» — 2026-02-15. На снимках от 2026-03-02 техника этапа не наблюдается; видно: excavator_crawler x3, crawler_crane x2, drilling_rig x1, dump_truck x1, tower_crane x1.",
+     "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "site_id": "p05",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "rule": {
+      "name": "Фундамент и подземная часть: бетонирование автобетононасосом",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 06-01-003-08"
+     }
+    },
+    {
+     "type": "unexpected_equipment",
+     "site_id": "p05",
+     "stage_code": "12.3.9",
+     "window": {
+      "from": "2026-03-02",
+      "to": "2026-03-02"
+     },
+     "expected": "техника этапа Монолитные работы ниже отметки 0",
+     "observed": "drilling_rig",
+     "confidence": "low",
+     "evidence": [
+      "Screenshot_20.png"
+     ],
+     "rules_fired": [
+      "12.3.9/unexpected"
+     ],
+     "explanation": "На дату 2026-03-02 по плану идёт этап «Монолитные работы ниже отметки 0», но наблюдается drilling_rig.",
+     "cannot_claim": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива.",
+     "severity": "attention",
+     "severity_reason": "Основание — предположение методики, а не норматив: нужна проверка человеком.",
+     "is_hypothesis": true,
+     "confidence_reason": "Подтверждено только универсальной техникой либо единичным наблюдением.",
+     "limits_text": "Списки несовместимой техники в нормах отсутствуют — это гипотеза методики, а не нарушение норматива.",
+     "rule": {
+      "name": "Фундамент и подземная часть",
+      "rule_kind": "logical",
+      "source_ref": null
+     }
+    }
+   ]
+  },
+  {
+   "site_id": "p08",
+   "as_of": "2024-04-24",
+   "observations": 3,
+   "observation_step_days": 31,
+   "stages": [
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2024-01-15",
+      "end": "2024-03-31"
+     },
+     "status": "behind",
+     "delay_days": 24,
+     "evidence_dates": [
+      "2024-02-21",
+      "2024-03-25",
+      "2024-04-24"
+     ],
+     "matched_variant": "буронабивные, ковшовое бурение",
+     "evidence_strength": "specific",
+     "observed_equipment": [
+      "drilling_rig x5",
+      "crawler_crane x2"
+     ],
+     "basis": "работы наблюдаются после плановой даты окончания",
+     "confidence": "medium",
+     "delay_days_min": 24,
+     "delay_days_max": 55
+    },
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2024-04-01",
+      "end": "2024-06-30"
+     },
+     "status": "on_track",
+     "delay_days": 0,
+     "evidence_dates": [
+      "2024-04-24"
+     ],
+     "matched_variant": "экскаватор с погрузкой в самосвалы",
+     "evidence_strength": "generic_full",
+     "observed_equipment": [
+      "excavator_crawler x5",
+      "dump_truck x2"
+     ],
+     "basis": "наблюдения попадают в плановое окно",
+     "confidence": "medium",
+     "delay_days_min": null,
+     "delay_days_max": null
+    },
+    {
+     "stage_code": "12.4.14",
+     "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+     "planned": {
+      "start": "2024-05-01",
+      "end": "2024-05-31"
+     },
+     "status": "not_observed",
+     "basis": "снимков в плановом окне нет, последнее наблюдение раньше начала",
+     "delay_days_min": null,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 24,
+    "planned_completion": "2024-06-30",
+    "projected_completion": "2024-07-24",
+    "stages": [
+     {
+      "stage_code": "12.3.2",
+      "stage_name": "Устройство свай",
+      "planned_end": "2024-03-31",
+      "projected_end": "2024-04-24",
+      "shift_days": 24
+     },
+     {
+      "stage_code": "12.3.1",
+      "stage_name": "Устройство котлована",
+      "planned_end": "2024-06-30",
+      "projected_end": "2024-07-24",
+      "shift_days": 24
+     },
+     {
+      "stage_code": "12.4.14",
+      "stage_name": "Дорожная одежда: асфальтобетонное покрытие",
+      "planned_end": "2024-05-31",
+      "projected_end": "2024-06-24",
+      "shift_days": 24
+     }
+    ],
+    "basis": "наибольшая наблюдаемая задержка 24 дн. переносится на последующие этапы; завершение сдвигается с 2024-06-30 на 2024-07-24",
+    "assumption": "этапы считаются последовательными, задержка не нагоняется. Это верхняя оценка сдвига",
+    "cannot_claim": "Срок не рассчитан по объёму выполненных работ: объём по снимкам не измеряется. Это перенос наблюдаемой задержки по графику, а не прогноз производительности подрядчика."
+   },
+   "alerts": [
+    {
+     "type": "stage_behind",
+     "stage_code": "12.3.2",
+     "window": {
+      "from": "2024-02-21",
+      "to": "2024-04-24"
+     },
+     "expected": "завершение к 2024-03-31",
+     "observed": "работы этапа наблюдаются 2024-04-24",
+     "confidence": "medium",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_27.png",
+      "Screenshot_28.png",
+      "Screenshot_29.png",
+      "Screenshot_30.png"
+     ],
+     "rules_fired": [
+      "12.3.2/буронабивные, ковшовое бурение"
+     ],
+     "explanation": "Этап «Устройство свай» отстаёт на 24 дн.: плановое окончание 2024-03-31, а работы наблюдаются 2024-04-24 (подтверждение: drilling_rig).",
+     "cannot_claim": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "site_id": "p08",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Отставание измерено по снимкам: работы этапа видны после плановой даты. Объём невыполненных работ и новый срок завершения по фотографиям не определяются.",
+     "rule": {
+      "name": "Устройство свай: буронабивные, ковшовое бурение",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 05-01-028-01"
+     }
+    },
+    {
+     "type": "no_progress",
+     "site_id": "p08",
+     "stage_code": "",
+     "window": {
+      "from": "2024-03-25",
+      "to": "2024-04-24"
+     },
+     "expected": "смена состава техники за период",
+     "observed": "excavator_crawler x5, drilling_rig x5, pile_driver x4, backhoe_loader x3, crawler_crane x2, dump_truck x2, concrete_mixer x1, truck_crane x1, excavator_unknown x1",
+     "confidence": "low",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_33.png",
+      "Screenshot_34.png",
+      "Screenshot_35.png",
+      "Screenshot_36.png"
+     ],
+     "rules_fired": [],
+     "explanation": "За 30 дней (с 2024-03-25 по 2024-04-24) состав техники совпадает на 89%: те же классы, что и в прошлое наблюдение.",
+     "cannot_claim": "Одинаковый состав техники не означает отсутствия работ: между съёмками могли смениться объёмы, а не машины.",
+     "severity": "attention",
+     "severity_reason": "Основание — предположение методики, а не норматив: нужна проверка человеком.",
+     "is_hypothesis": true,
+     "confidence_reason": "Подтверждено только универсальной техникой либо единичным наблюдением.",
+     "limits_text": "Одинаковый состав техники не означает отсутствия работ: между съёмками могли смениться объёмы, а не машины.",
+     "rule": null
+    },
+    {
+     "type": "stage_stalled",
+     "site_id": "p08",
+     "stage_code": "12.3.2",
+     "window": {
+      "from": "2024-02-21",
+      "to": "2024-04-24"
+     },
+     "expected": "завершение к 2024-03-31",
+     "observed": "работы этапа наблюдаются на 3 датах за 63 дн.",
+     "confidence": "medium",
+     "observability": "medium",
+     "evidence": [
+      "Screenshot_33.png",
+      "Screenshot_34.png",
+      "Screenshot_35.png",
+      "Screenshot_36.png"
+     ],
+     "rules_fired": [
+      "12.3.2/stalled"
+     ],
+     "explanation": "Этап «Устройство свай» наблюдается на 3 наблюдениях подряд и продолжается через 24 дн. после планового окончания 2024-03-31. Признаков перехода к следующему этапу нет.",
+     "cannot_claim": "Срок завершения по этим данным не предсказывается: объём выполненных работ по снимкам не измеряется, видно только продолжение этапа.",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Срок завершения по этим данным не предсказывается: объём выполненных работ по снимкам не измеряется, видно только продолжение этапа.",
+     "rule": {
+      "name": "Устройство свай",
+      "rule_kind": "logical",
+      "source_ref": null
+     }
+    }
+   ]
+  },
+  {
+   "site_id": "p09",
+   "as_of": "2024-05-27",
+   "observations": 1,
+   "observation_step_days": null,
+   "stages": [
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2024-04-01",
+      "end": "2024-06-30"
+     },
+     "status": "on_track",
+     "delay_days": 0,
+     "evidence_dates": [
+      "2024-05-27"
+     ],
+     "matched_variant": "забивные и вдавливаемые сваи",
+     "evidence_strength": "specific",
+     "observed_equipment": [
+      "pile_driver x3"
+     ],
+     "basis": "наблюдения попадают в плановое окно",
+     "confidence": "medium",
+     "delay_days_min": null,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 0,
+    "basis": "задержавшихся этапов нет"
+   },
+   "alerts": []
+  },
+  {
+   "site_id": "p10",
+   "as_of": "2024-06-25",
+   "observations": 1,
+   "observation_step_days": null,
+   "stages": [
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2024-06-01",
+      "end": "2024-08-31"
+     },
+     "status": "not_started",
+     "delay_days": 24,
+     "evidence_dates": [
+      "2024-06-25"
+     ],
+     "basis": "плановое начало прошло, техника этапа не наблюдается",
+     "confidence": "medium",
+     "delay_days_min": 24,
+     "delay_days_max": null
+    },
+    {
+     "stage_code": "12.3.2",
+     "stage_name": "Устройство свай",
+     "planned": {
+      "start": "2024-08-15",
+      "end": "2024-10-31"
+     },
+     "status": "not_observed",
+     "basis": "снимков в плановом окне нет, последнее наблюдение раньше начала",
+     "delay_days_min": null,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 24,
+    "planned_completion": "2024-10-31",
+    "projected_completion": "2024-11-24",
+    "stages": [
+     {
+      "stage_code": "12.3.1",
+      "stage_name": "Устройство котлована",
+      "planned_end": "2024-08-31",
+      "projected_end": "2024-09-24",
+      "shift_days": 24
+     }
+    ],
+    "basis": "наибольшая наблюдаемая задержка 24 дн. переносится на последующие этапы; завершение сдвигается с 2024-10-31 на 2024-11-24",
+    "assumption": "этапы считаются последовательными, задержка не нагоняется. Это верхняя оценка сдвига",
+    "cannot_claim": "Срок не рассчитан по объёму выполненных работ: объём по снимкам не измеряется. Это перенос наблюдаемой задержки по графику, а не прогноз производительности подрядчика."
+   },
+   "alerts": [
+    {
+     "type": "stage_not_started",
+     "stage_code": "12.3.1",
+     "window": {
+      "from": "2024-06-01",
+      "to": "2024-06-25"
+     },
+     "expected": "excavator_crawler",
+     "observed": "excavator_crawler x4",
+     "confidence": "medium",
+     "evidence": [
+      "Screenshot_47.png",
+      "Screenshot_48.png"
+     ],
+     "rules_fired": [
+      "12.3.1/экскаватор с погрузкой в самосвалы"
+     ],
+     "explanation": "Плановое начало этапа «Устройство котлована» — 2024-06-01. На снимках от 2024-06-25 техника этапа не наблюдается; видно: excavator_crawler x4.",
+     "cannot_claim": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "site_id": "p10",
+     "severity": "critical",
+     "severity_reason": "Вывод о ходе работ, подтверждённый наблюдениями достаточной уверенности и наблюдаемости.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено специфичной техникой либо полным комплектом по норме.",
+     "limits_text": "Снимки покрывают не всю площадку и не всё время. Отсутствие техники в кадре не доказывает, что работы не ведутся.",
+     "rule": {
+      "name": "Устройство котлована (разработка грунта с вывозом): экскаватор с погрузкой в самосвалы",
+      "rule_kind": "normative",
+      "source_ref": "ГЭСН 01-01-013-05"
+     }
+    }
+   ]
+  },
+  {
+   "site_id": "p11",
+   "as_of": null,
+   "observations": 0,
+   "observation_step_days": null,
+   "stages": [
+    {
+     "stage_code": "12.3.1",
+     "stage_name": "Устройство котлована",
+     "planned": {
+      "start": "2024-09-01",
+      "end": "2024-12-31"
+     },
+     "status": "not_observed",
+     "basis": "по этой площадке нет ни одного наблюдения",
+     "delay_days_min": null,
+     "delay_days_max": null
+    },
+    {
+     "stage_code": "12.3.10",
+     "stage_name": "Гидроизоляция",
+     "planned": {
+      "start": "2025-01-01",
+      "end": "2025-03-31"
+     },
+     "status": "not_checkable",
+     "basis": "В ГЭСН 05-01-042 из машин только бортовой автомобиль. Наблюдается по сцене: рулоны, битумные котлы, чёрные поверхности стен.",
+     "delay_days_min": null,
+     "delay_days_max": null
+    }
+   ],
+   "equipment_engagement": [],
+   "forecast": {
+    "shift_days": 0,
+    "basis": "задержавшихся этапов нет"
+   },
+   "alerts": [
+    {
+     "type": "unusable_data",
+     "site_id": "p11",
+     "confidence": "high",
+     "observability": "low",
+     "explanation": "11 кадр(ов) площадки не участвуют в анализе (дата не распознана: 11). Выводы по этой площадке построены только на кадрах с датой.",
+     "cannot_claim": "Отсутствие наблюдений на этих кадрах не означает отсутствия работ: кадры исключены из-за неполных данных, а не из-за пустой площадки.",
+     "severity": "attention",
+     "severity_reason": "Отклонение о полноте данных, а не о ходе работ: выезд на площадку оно не требует.",
+     "is_hypothesis": false,
+     "confidence_reason": "Подтверждено прямым признаком, не требующим истолкования.",
+     "limits_text": "Отсутствие наблюдений на этих кадрах не означает отсутствия работ: кадры исключены из-за неполных данных, а не из-за пустой площадки.",
+     "rule": null
+    }
+   ]
+  }
+ ]
 }
