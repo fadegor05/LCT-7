@@ -3,6 +3,17 @@ import userEvent from '@testing-library/user-event'
 import { AssistantQuestionForm } from './AssistantQuestionForm'
 
 describe('AssistantQuestionForm', () => {
+  it('has valid HTML nesting (no div inside p)', async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <AssistantQuestionForm pending={false} onSubmit={vi.fn()} onCancel={vi.fn()} />,
+    )
+    const textarea = screen.getByLabelText('Вопрос по отчёту')
+    await user.type(textarea, 'тест')
+    await user.click(screen.getByRole('button', { name: 'Спросить' }))
+    expect(container.querySelector('p div')).toBeNull()
+  })
+
   it('submits with trimmed text on click', async () => {
     const onSubmit = vi.fn()
     const user = userEvent.setup()

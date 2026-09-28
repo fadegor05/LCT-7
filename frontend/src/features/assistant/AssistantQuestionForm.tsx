@@ -29,8 +29,7 @@ export function AssistantQuestionForm({
   const counterText = `${trimmedLength} / ${ASSISTANT_QUESTION_MAX}`
   const counterErrorText = `${trimmedLength} / ${ASSISTANT_QUESTION_MAX} — слишком длинный вопрос`
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const submit = () => {
     const result = assistantQuestionSchema.safeParse(fieldValue)
     if (!result.success) {
       setFieldError('Вопрос должен быть от 3 до 500 символов')
@@ -39,27 +38,25 @@ export function AssistantQuestionForm({
     onSubmit(result.data)
   }
 
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    submit()
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (pending) {
       return
     }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
-      const result = assistantQuestionSchema.safeParse(fieldValue)
-      if (!result.success) {
-        setFieldError('Вопрос должен быть от 3 до 500 символов')
-        return
-      }
-      onSubmit(result.data)
+      submit()
     }
   }
 
   const handleExampleClick = (example: string) => {
     setFieldValue(example)
     setFieldError(undefined)
-    setTimeout(() => {
-      textareaRef.current?.focus()
-    }, 0)
+    textareaRef.current?.focus()
   }
 
   const displayError = error || fieldError || (isOverLimit ? counterErrorText : undefined)
@@ -78,7 +75,7 @@ export function AssistantQuestionForm({
         }}
         onKeyDown={handleKeyDown}
         error={displayError}
-        hint={!displayError ? <div className={styles.counter}>{counterText}</div> : undefined}
+        hint={!displayError ? <span className={styles.counter}>{counterText}</span> : undefined}
         readOnly={pending}
       />
 
