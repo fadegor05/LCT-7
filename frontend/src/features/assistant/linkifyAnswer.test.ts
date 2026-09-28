@@ -43,6 +43,15 @@ describe('linkifyAnswer', () => {
         text: 'этап 99',
       })
     })
+
+    it('подэтап 3 is text, not stage (word boundary before Cyrillic)', () => {
+      const parts = linkifyAnswer('подэтап 3', stages)
+      expect(parts).toHaveLength(1)
+      expect(parts[0]).toEqual({
+        kind: 'text',
+        text: 'подэтап 3',
+      })
+    })
   })
 
   describe('multiple stages and punctuation', () => {
@@ -78,6 +87,30 @@ describe('linkifyAnswer', () => {
         text: ' отстаёт.',
       })
     })
+
+    it('compound word: Этап 3, подэтап 3 → exactly one stage part', () => {
+      const parts = linkifyAnswer('Этап 3, подэтап 3', stages)
+      expect(parts.filter((p) => p.kind === 'stage')).toHaveLength(1)
+      expect(parts[0]).toEqual({
+        kind: 'stage',
+        text: 'Этап 3',
+        stageId: 's3',
+      })
+    })
+
+    it('decimal number: этап 3.2 → stage part followed by text', () => {
+      const parts = linkifyAnswer('этап 3.2', stages)
+      expect(parts).toHaveLength(2)
+      expect(parts[0]).toEqual({
+        kind: 'stage',
+        text: 'этап 3',
+        stageId: 's3',
+      })
+      expect(parts[1]).toEqual({
+        kind: 'text',
+        text: '.2',
+      })
+    })
   })
 
   describe('edge cases', () => {
@@ -103,6 +136,9 @@ describe('linkifyAnswer', () => {
       'Где этап 3? Вот оно.',
       'ЭТАП №3 и этап 4 вместе',
       'Ничего про этапы',
+      'подэтап 3',
+      'Этап 3, подэтап 3',
+      'этап 3.2',
       '',
     ])('join preserves input: %s', (input) => {
       const parts = linkifyAnswer(input, stages)

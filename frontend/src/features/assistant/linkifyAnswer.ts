@@ -29,8 +29,8 @@ export function linkifyAnswer(answer: string, stages: readonly AssistantStageRef
   }
 
   // Регулярное выражение для поиска "этап(ов/а/ы) №? N"
-  // Использует именованную группу для захвата номера
-  const regex = /(?<!\w)этап[а-яё]*\s*№?\s*(\d{1,4})(?!\d)/gi
+  // Использует Unicode-aware границу слова (lookbehind) и захватывает номер в группе
+  const regex = /(?<![\p{L}\p{N}_])этап[а-яё]*\s*№?\s*(\d{1,4})(?!\d)/giu
   const parts: AnswerPart[] = []
   let lastIndex = 0
   let match
