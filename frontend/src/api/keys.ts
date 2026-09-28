@@ -15,4 +15,6 @@ export const keys = {
   deviation: (siteId: string, id: string) =>
     ['site', siteId, 'assessment', 'deviations', id] as const,
   summary: (siteId: string) => ['site', siteId, 'assessment', 'summary'] as const,
+  assistantStatus: ['assistant', 'status'] as const,
+  assistant: (siteId: string) => ['site', siteId, 'assistant'] as const,
 }
