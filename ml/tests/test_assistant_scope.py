@@ -87,7 +87,7 @@ class TestQuestionGate:
         assert call_count == 0
 
     def test_вопрос_по_отчёту_доходит_до_llm(self, llm_env, monkeypatch):
-        """Вопрос 'где отставание и на сколько' доходит до LLM с max_tokens=700."""
+        """Вопрос 'где отставание и на сколько' доходит до LLM с бюджетом ASK_MAX_TOKENS."""
         llm_env(base_url="https://x/v1", api_key="k", model="m")
 
         recorded_kwargs = {}
@@ -112,8 +112,8 @@ class TestQuestionGate:
             },
         )
         assert response.status_code == 200
-        # Проверяем, что max_tokens=700 был передан
-        assert recorded_kwargs.get("max_tokens") == 700
+        # Проверяем, что бюджет взят из ASK_MAX_TOKENS
+        assert recorded_kwargs.get("max_tokens") == ask_report.ASK_MAX_TOKENS
 
     def test_вопрос_с_кодогеном_отклоняется(self, llm_env, monkeypatch):
         """Вопрос с codegen триггерится → 422."""
@@ -384,87 +384,136 @@ class TestMaxTokens:
 
     def test_ask_max_tokens_только_если_задан(self, llm_env, monkeypatch):
         """suggest_stage_mapping.ask добавляет max_tokens в body только если задан."""
-        import suggest_stage_mapping
+        import io
         import urllib.request
-        import json as json_module
 
-        captured_bodies = []
+        import suggest_stage_mapping
 
-        original_urlopen = urllib.request.urlopen
+        отправленное = []
 
         def mock_urlopen(request, *args, **kwargs):
-            if hasattr(request, "data"):
-                captured_bodies.append(json_module.loads(request.data.decode("utf-8")))
-            response = MagicMock()
-            response.__enter__ = MagicMock(return_value=response)
-            response.__exit__ = MagicMock(return_value=False)
-            response.read = MagicMock(
-                return_value=json_module.dumps({
-                    "choices": [{"message": {"content": "response"}}]
-                }).encode()
+            отправленное.append(json.loads(request.data.decode("utf-8")))
+            return io.BytesIO(
+                json.dumps({"choices": [{"message": {"content": "ответ"}}]}).encode()
             )
-            import io
-            response.__iter__ = MagicMock(
-                return_value=iter([json_module.dumps({
-                    "choices": [{"message": {"content": "response"}}]
-                })])
-            )
-            # Для json.load()
-            def mock_read():
-                return json_module.dumps({
-                    "choices": [{"message": {"content": "response"}}]
-                })
-            response.read = mock_read
-            import json as builtin_json
-            builtin_json.load = MagicMock(
-                return_value={
-                    "choices": [{"message": {"content": "response"}}]
-                }
-            )
-            return response
 
         monkeypatch.setattr(urllib.request, "urlopen", mock_urlopen)
 
-        # Вызываем с max_tokens
-        captured_bodies.clear()
-        try:
-            suggest_stage_mapping.ask(
-                "test prompt",
-                "https://x/v1",
-                "key",
-                "model",
-                max_tokens=700
-            )
-        except:
-            pass  # Игнорируем ошибки парсинга
+        suggest_stage_mapping.ask(
+            "test prompt", "https://x/v1", "key", "model", max_tokens=700
+        )
+        assert отправленное[-1]["max_tokens"] == 700
 
-        # Проверяем, что max_tokens в body
-        if captured_bodies:
-            assert captured_bodies[-1].get("max_tokens") == 700
-
-        # Вызываем без max_tokens
-        captured_bodies.clear()
-        try:
-            suggest_stage_mapping.ask(
-                "test prompt",
-                "https://x/v1",
-                "key",
-                "model"
-            )
-        except:
-            pass  # Игнорируем ошибки парсинга
-
-        # Проверяем, что max_tokens НЕ в body
-        if captured_bodies:
-            assert "max_tokens" not in captured_bodies[-1]
+        suggest_stage_mapping.ask("test prompt", "https://x/v1", "key", "model")
+        assert "max_tokens" not in отправленное[-1]
 
 
 class TestASKMaxTokensConstant:
     """Тесты для константы ASK_MAX_TOKENS."""
 
-    def test_ask_max_tokens_равен_700(self, llm_env):
-        """ASK_MAX_TOKENS должен быть равен 700."""
+    def test_бюджет_вмещает_рассуждения_и_самый_длинный_ответ(self, llm_env):
+        """Бюджет общий на рассуждения и ответ, и ответ в нём не последний.
+
+        Замер на проде (qwen/qwen3.6-flash, 28.09.2026): на вопрос «скажи ок»
+        модель потратила 286 токенов рассуждений и 6 на ответ. На отчёте
+        рассуждений кратно больше, а ответ должен уместиться целиком, иначе
+        провайдер вернёт finish_reason=length и пустой content.
+        """
+        import ask_guard
         import ask_report
 
-        assert hasattr(ask_report, "ASK_MAX_TOKENS")
-        assert ask_report.ASK_MAX_TOKENS == 700
+        # Кириллица — примерно два символа на токен
+        ответ_в_токенах = ask_guard.MAX_ANSWER_CHARS // 2
+        запас_на_рассуждения = ask_report.ASK_MAX_TOKENS - ответ_в_токенах
+
+        assert запас_на_рассуждения >= 2000
+
+
+class TestEmptyAnswer:
+    """Пустой ответ провайдера не должен утекать дальше как None.
+
+    Reasoning-модели тратят часть общего бюджета max_tokens на рассуждения.
+    Когда бюджет кончается до первого символа ответа, провайдер отвечает
+    200 OK с `content: null` и `finish_reason: "length"`. Раньше это `None`
+    уезжало в ask_guard.answer_verdict и роняло /ask с AttributeError (500).
+    """
+
+    def _urlopen_возвращающий(self, payload):
+        """Подменяет urlopen ответом провайдера payload."""
+        import io
+        import json as json_module
+
+        def fake_urlopen(request, *args, **kwargs):
+            return io.BytesIO(json_module.dumps(payload).encode())
+
+        return fake_urlopen
+
+    def test_ask_пустой_content_это_ошибка(self, monkeypatch):
+        """content: null от провайдера — исключение, а не None."""
+        import urllib.request
+
+        import suggest_stage_mapping
+
+        monkeypatch.setattr(
+            urllib.request,
+            "urlopen",
+            self._urlopen_возвращающий(
+                {"choices": [{"finish_reason": "length", "message": {"content": None}}]}
+            ),
+        )
+
+        with pytest.raises(suggest_stage_mapping.EmptyAnswer) as ошибка:
+            suggest_stage_mapping.ask("вопрос", "https://x/v1", "k", "m", max_tokens=700)
+
+        assert "length" in str(ошибка.value)
+
+    def test_ask_пробельный_content_это_ошибка(self, monkeypatch):
+        """Ответ из одних пробелов тоже не ответ."""
+        import urllib.request
+
+        import suggest_stage_mapping
+
+        monkeypatch.setattr(
+            urllib.request,
+            "urlopen",
+            self._urlopen_возвращающий(
+                {"choices": [{"finish_reason": "stop", "message": {"content": "   "}}]}
+            ),
+        )
+
+        with pytest.raises(suggest_stage_mapping.EmptyAnswer):
+            suggest_stage_mapping.ask("вопрос", "https://x/v1", "k", "m", max_tokens=700)
+
+    def test_describe_llm_error_объясняет_пустой_ответ(self):
+        """Пустой ответ описывается отдельно от «ошибки запроса»."""
+        import ask_report
+        import suggest_stage_mapping
+
+        описание = ask_report.describe_llm_error(
+            suggest_stage_mapping.EmptyAnswer("модель не вернула текст (finish_reason=length)")
+        )
+
+        assert описание == "модель не вернула текст (finish_reason=length)"
+
+    def test_ask_504_а_не_500_при_пустом_ответе(self, llm_env, monkeypatch):
+        """POST /ask отвечает 504 с объяснением, а не падает с 500."""
+        llm_env(base_url="https://x/v1", api_key="k", model="m")
+
+        import ask_report
+        import suggest_stage_mapping
+
+        def пустой_ответ(*args, **kwargs):
+            raise suggest_stage_mapping.EmptyAnswer(
+                "модель не вернула текст (finish_reason=length)"
+            )
+
+        monkeypatch.setattr(ask_report, "ask", пустой_ответ)
+
+        client = TestClient(app)
+        response = client.post("/ask", json={
+            "question": "какая задержка у p1",
+            "report": REPORT_FIXTURE,
+        })
+
+        assert response.status_code == 504
+        assert "не вернула текст" in response.json()["detail"]
