@@ -5,6 +5,10 @@ import { server } from '@/mocks/server'
 
 // Тесты ходят в те же MSW-хендлеры, что и браузер в режиме моков.
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-beforeEach(() => resetDb())
+// localStorage хранит историю чата ассистента — между тестами она не должна протекать.
+beforeEach(() => {
+  resetDb()
+  localStorage.clear()
+})
 afterEach(() => server.resetHandlers())
 afterAll(() => server.close())

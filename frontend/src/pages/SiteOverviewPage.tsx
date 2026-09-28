@@ -76,6 +76,7 @@ export function SiteOverviewPage() {
               Печатная версия
             </Button>
           }
+          aside={<AssistantPanel siteId={siteId} />}
         >
           <SummaryCards siteId={siteId} />
 
@@ -102,8 +103,6 @@ export function SiteOverviewPage() {
           </section>
 
           <LastObservation siteId={siteId} />
-
-          <AssistantPanel siteId={siteId} />
         </SiteShell>
       )}
     </SiteQueryState>

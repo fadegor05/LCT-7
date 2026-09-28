@@ -1,13 +1,13 @@
 /// <reference types="node" />
 /**
  * Тесты панели ассистента: монтирование, состояния статуса, успешные ответы,
- * ошибки (отмена, таймаут, переполнение, недоступность), повтор, фокус на ответе,
- * эфемерность хранилища, печать.
+ * ошибки (отмена, таймаут, переполнение, недоступность), повтор, история чата
+ * в localStorage, печать.
  */
 import { readFileSync } from 'fs'
 import { dirname, resolve } from 'path'
 import { fileURLToPath } from 'url'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import * as db from '@/mocks/db'
@@ -16,6 +16,7 @@ import { server } from '@/mocks/server'
 import { renderWithProviders } from '@/test/render'
 import type { AssistantAnswer } from '@/api/schemas'
 import { AssistantPanel } from './AssistantPanel'
+import { chatStorageKey, loadChat } from './chatHistory'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const css = readFileSync(resolve(__dirname, './AssistantPanel.module.css'), 'utf-8')
@@ -132,7 +133,7 @@ describe('AssistantPanel', () => {
   })
 
   describe('Success flow', () => {
-    it('отправляет вопрос, показывает статус, затем ответ с ограничениями и фокусом', async () => {
+    it('отправляет вопрос, показывает статус, затем ответ с ограничениями в переписке', async () => {
       const state = gatedAsk()
       const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
 
@@ -165,11 +166,14 @@ describe('AssistantPanel', () => {
       const stageLink = screen.getByRole('link')
       expect(stageLink).toHaveAttribute('href', expect.stringMatching(/^#stage-/))
 
-      // Проверяем, что контейнер ответа имеет фокус (tabIndex -1)
-      const answerContainer = stageLink.closest('[tabindex="-1"]')
-      expect(answerContainer).toBeInTheDocument()
-      // Проверяем, что focus() был вызван
-      expect(document.activeElement).toBe(answerContainer)
+      // Вопрос и ответ — сообщения в переписке, поле ввода очищено под следующий вопрос
+      const log = screen.getByRole('log', { name: 'Переписка с ассистентом' })
+      expect(within(log).getByText('Где отставание?')).toBeInTheDocument()
+      expect(log.querySelector('[data-role="user"]')).toHaveTextContent('Где отставание?')
+      expect(log.querySelector('[data-role="assistant"]')).toContainElement(stageLink)
+      expect(textarea).toHaveValue('')
+      // Фокус остаётся в поле: чат не уводит его на ответ
+      expect(document.activeElement).not.toBe(stageLink.closest('[tabindex="-1"]'))
     })
 
     it('показывает alert когда ответ не прошёл проверку', async () => {
@@ -305,6 +309,10 @@ describe('AssistantPanel', () => {
 
       // Проверяем, что nет блока ошибки (cancelled не должен показывать ошибку)
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+      // В переписке — вопрос и тихая пометка об отмене
+      expect(await screen.findByText('Вопрос отменён')).toBeInTheDocument()
+      expect(screen.getByText('Где отставание?')).toBeInTheDocument()
     })
   })
 
@@ -459,15 +467,16 @@ describe('AssistantPanel', () => {
       // Отправляем новый вопрос (тоже таймаут)
       await user.click(screen.getByRole('button', { name: 'Спросить' }))
 
-      // Вторая ошибка (таймаут)
-      await screen.findByRole('alert')
+      // Вторая ошибка (таймаут): в переписке теперь два отказа, «Повторить» — только у последнего
+      await vi.waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+      expect(screen.getAllByRole('button', { name: 'Повторить' })).toHaveLength(1)
 
       // Повторяем - должен спросить "Вопрос 2", который был последний отправлен
       await user.click(screen.getByRole('button', { name: 'Повторить' }))
 
-      // Ждём ответа (ссылка на этап)
+      // Ждём ответа (ссылка на этап); первый отказ остаётся в истории
       await screen.findByRole('link')
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      expect(screen.getAllByRole('alert')).toHaveLength(1)
 
       // Проверяем, что сохранялся последний вопрос, не первый
       expect(bodies).toEqual([
@@ -562,7 +571,7 @@ describe('AssistantPanel', () => {
       expect(screen.queryByRole('button', { name: 'Повторить' })).not.toBeInTheDocument()
     })
 
-    it('скрывает весь раздел при недоступности на вопрос', async () => {
+    it('при недоступности на вопрос пишет отказ в переписку, чат остаётся', async () => {
       db.setAssistantScenario('ok')
       const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
 
@@ -577,12 +586,10 @@ describe('AssistantPanel', () => {
 
       await user.click(screen.getByRole('button', { name: 'Спросить' }))
 
-      // Раздел должен полностью исчезнуть
-      await vi.waitFor(() => {
-        expect(
-          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
-        ).not.toBeInTheDocument()
-      })
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('Ассистент недоступен')
+      expect(screen.getByRole('heading', { name: 'Ассистент по отчёту' })).toBeInTheDocument()
+      expect(screen.getByText('Где отставание?')).toBeInTheDocument()
     })
   })
 
@@ -609,29 +616,77 @@ describe('AssistantPanel', () => {
     })
   })
 
-  describe('Ephemeral storage', () => {
-    it('не хранит ответ в localStorage или sessionStorage', async () => {
-      const state = gatedAsk()
-      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
-
-      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
-
+  describe('История в localStorage', () => {
+    async function askOnce(user: ReturnType<typeof renderWithProviders>['user'], q: string) {
       const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
       await user.click(textarea)
-      await user.paste('Где отставание?')
-
+      await user.paste(q)
       await user.click(screen.getByRole('button', { name: 'Спросить' }))
+    }
 
-      // Ждём статус-лайна
-      await screen.findByRole('status')
-      state.release()
+    it('сохраняет вопрос и ответ в localStorage по стройке, sessionStorage не трогает', async () => {
+      countingAsk()
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
 
-      // Ждём ответа
+      await askOnce(user, 'Где отставание?')
       await screen.findByRole('link')
 
-      // Проверяем, что хранилище пусто
-      expect(localStorage.length).toBe(0)
+      await vi.waitFor(() => expect(loadChat(BEREZNIKI)).toHaveLength(2))
+      const [question, reply] = loadChat(BEREZNIKI)
+      expect(question).toMatchObject({ role: 'user', text: 'Где отставание?' })
+      expect(reply).toMatchObject({ role: 'assistant', answer: answerBody })
       expect(sessionStorage.length).toBe(0)
+    })
+
+    it('восстанавливает переписку после перемонтирования', async () => {
+      countingAsk()
+      const view = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      await askOnce(view.user, 'Где отставание?')
+      await screen.findByRole('link')
+      view.unmount()
+
+      renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      const log = await screen.findByRole('log', { name: 'Переписка с ассистентом' })
+      expect(within(log).getByText('Где отставание?')).toBeInTheDocument()
+      expect(within(log).getByRole('link')).toHaveAttribute('href', '#stage-stage-1')
+      // Переписка есть — примеры вопросов не показываются
+      expect(screen.queryByRole('button', { name: 'что с этой площадкой' })).not.toBeInTheDocument()
+    })
+
+    it('не показывает переписку другой стройки', async () => {
+      localStorage.setItem(
+        chatStorageKey('other-site'),
+        JSON.stringify([
+          { id: '1', at: '2026-01-01T10:00:00Z', role: 'user', text: 'Чужой вопрос' },
+        ]),
+      )
+      renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      expect(screen.queryByText('Чужой вопрос')).not.toBeInTheDocument()
+      expect(screen.getByText(/История переписки сохраняется в этом браузере/)).toBeInTheDocument()
+    })
+
+    it('игнорирует битые данные в localStorage', async () => {
+      localStorage.setItem(chatStorageKey(BEREZNIKI), '{не json')
+      renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      expect(screen.getByText(/История переписки сохраняется/)).toBeInTheDocument()
+    })
+
+    it('«Очистить» удаляет переписку и ключ из localStorage', async () => {
+      countingAsk()
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      expect(screen.queryByRole('button', { name: 'Очистить' })).not.toBeInTheDocument()
+
+      await askOnce(user, 'Где отставание?')
+      await screen.findByRole('link')
+
+      await user.click(screen.getByRole('button', { name: 'Очистить' }))
+      expect(screen.queryByText('Где отставание?')).not.toBeInTheDocument()
+      await vi.waitFor(() => expect(localStorage.getItem(chatStorageKey(BEREZNIKI))).toBeNull())
     })
   })
 
@@ -640,8 +695,8 @@ describe('AssistantPanel', () => {
       db.setAssistantScenario('ok')
       renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
       await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
-      const liveRegion = document.querySelector('[aria-live="polite"]')
-      expect(liveRegion).toBeInTheDocument()
+      const liveRegion = screen.getByRole('log', { name: 'Переписка с ассистентом' })
+      expect(liveRegion).toHaveAttribute('aria-live', 'polite')
     })
   })
 

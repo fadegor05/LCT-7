@@ -6,119 +6,206 @@ import { Callout } from '@/components/ui/Callout'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { AssistantAnswerView } from './AssistantAnswer'
 import { AssistantQuestionForm } from './AssistantQuestionForm'
+import { useChatHistory, type ChatMessage } from './chatHistory'
 import styles from './AssistantPanel.module.css'
 
 interface AssistantPanelProps {
   siteId: string
 }
 
-const FAILURE_TITLES: Partial<Record<AssistantFailureKind, string>> = {
+const FAILURE_TITLES: Record<AssistantFailureKind, string> = {
   timeout: 'Модель не ответила',
   rate_limited: 'Слишком часто',
   out_of_scope: 'Вопрос не по теме отчёта',
   too_large: 'Отчёт слишком велик',
   not_found: 'Данных для ответа нет',
   bad_request: 'Площадки нет в отчёте',
+  invalid_question: 'Вопрос не принят',
+  unavailable: 'Ассистент недоступен',
+  cancelled: 'Вопрос отменён',
   unknown: 'Не удалось получить ответ',
 }
 
-function shouldRenderFailure(
-  failure: ReturnType<typeof useAskAssistant>['failure'],
-): failure is Exclude<typeof failure, undefined | null> & {
-  kind: Exclude<AssistantFailureKind, 'cancelled' | 'invalid_question' | 'unavailable'>
-} {
-  return (
-    failure !== undefined &&
-    failure.kind !== 'cancelled' &&
-    failure.kind !== 'invalid_question' &&
-    failure.kind !== 'unavailable'
-  )
+const timeFormat = new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' })
+
+function formatTime(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? '' : timeFormat.format(date)
 }
 
 /**
- * Панель ассистента на экране обзора площадки: контролирует видимость по статусу.
- * Вложенный компонент AssistantSection отвечает за форму, ответ и обработку ошибок.
+ * Чат с ассистентом по отчёту: колонка справа на экране обзора площадки.
+ * Показывается, только если ассистент включён; переписка хранится в localStorage по стройке.
  */
 export function AssistantPanel({ siteId }: AssistantPanelProps) {
   const status = useAssistantStatus()
 
-  // Показываем раздел только если ассистент включён
+  // Показываем чат только если ассистент включён
   if (!status.enabled) {
     return null
   }
 
-  return <AssistantSection siteId={siteId} />
+  return <AssistantChat siteId={siteId} />
 }
 
-function AssistantSection({ siteId }: AssistantPanelProps) {
-  const { ask, cancel, isPending, answer, failure } = useAskAssistant(siteId)
-  const lastQuestionRef = useRef<string>('')
-  const answerContainerRef = useRef<HTMLDivElement>(null)
-
-  // Фокусируем контейнер ответа когда он появляется
+function AssistantChat({ siteId }: AssistantPanelProps) {
+  const { send, cancel, isPending } = useAskAssistant(siteId)
+  const { messages, append, remove, clear } = useChatHistory(siteId)
+  const logRef = useRef<HTMLDivElement>(null)
+  // Стройка, на которой открыт чат сейчас: ответ, пришедший после смены стройки, в чужую
+  // переписку не пишется.
+  const siteRef = useRef(siteId)
   useEffect(() => {
-    if (answer && answerContainerRef.current) {
-      answerContainerRef.current.focus()
-    }
-  }, [answer])
+    siteRef.current = siteId
+  }, [siteId])
 
-  // Если ассистент недоступен на этапе загрузки вопроса, скрыть весь раздел
-  if (failure?.kind === 'unavailable') {
-    return null
+  // Новое сообщение или индикатор ожидания — прокручиваем переписку вниз.
+  useEffect(() => {
+    const log = logRef.current
+    if (log) log.scrollTop = log.scrollHeight
+  }, [messages.length, isPending])
+
+  const ask = async (question: string) => {
+    const askedFor = siteId
+    const result = await send(question)
+    if (!result || siteRef.current !== askedFor) return
+    if ('answer' in result) {
+      append({ role: 'assistant', answer: result.answer })
+      return
+    }
+    const { failure } = result
+    append({
+      role: 'failure',
+      kind: failure.kind,
+      title: FAILURE_TITLES[failure.kind],
+      text: failure.message,
+      question,
+      retryable: failure.retryable,
+    })
   }
 
   const handleSubmit = (question: string) => {
-    lastQuestionRef.current = question
+    if (isPending) return
+    append({ role: 'user', text: question })
     void ask(question)
   }
 
-  const handleRetry = () => {
-    if (lastQuestionRef.current) {
-      void ask(lastQuestionRef.current)
-    }
+  const handleRetry = (message: Extract<ChatMessage, { role: 'failure' }>) => {
+    if (isPending) return
+    // Отказ заменяется новой попыткой того же вопроса — без дубля вопроса в переписке.
+    remove(message.id)
+    void ask(message.question)
   }
 
-  const handleCancel = () => {
-    cancel()
-  }
-
-  // Определяем текст ошибки для поля формы
-  const fieldError = failure?.kind === 'invalid_question' ? failure.message : undefined
-
-  // Определяем, показывать ли ошибку в блоке
-  const canRenderFailure = shouldRenderFailure(failure)
-  const failureTitle = canRenderFailure ? FAILURE_TITLES[failure.kind] : undefined
+  const last = messages.at(-1)
 
   return (
     <section className={styles.section} aria-label="Ассистент по отчёту">
       <SectionHeader
+        level={3}
         title="Ассистент по отчёту"
-        description="Ассистент пересказывает отчёт по запросу — это может помочь найти нужную информацию быстрее. Источник истины — сам отчёт, ответ лишь пересказывает его."
+        description="Пересказывает отчёт по запросу. Источник истины — сам отчёт."
+        actions={
+          messages.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={clear} disabled={isPending}>
+              Очистить
+            </Button>
+          )
+        }
       />
 
-      <AssistantQuestionForm
-        pending={isPending}
-        error={fieldError}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-      />
+      <div
+        ref={logRef}
+        className={styles.log}
+        role="log"
+        aria-live="polite"
+        aria-label="Переписка с ассистентом"
+      >
+        {messages.length === 0 && !isPending && (
+          <p className={`sm muted ${styles.empty}`}>
+            Задайте вопрос по отчёту — например, где отставание и на сколько. История переписки
+            сохраняется в этом браузере.
+          </p>
+        )}
 
-      {isPending && <p role="status">Ассистент отвечает. Это может занять до двух минут.</p>}
+        {messages.map((message) => (
+          <ChatBubble
+            key={message.id}
+            message={message}
+            canRetry={message === last && !isPending}
+            onRetry={handleRetry}
+          />
+        ))}
 
-      <div aria-live="polite">
-        {answer && <AssistantAnswerView answer={answer} containerRef={answerContainerRef} />}
-
-        {canRenderFailure && failureTitle && (
-          <Callout tone="caution" title={failureTitle}>
-            {failure.message}
-            {failure.retryable && (
-              <div style={{ marginTop: 'var(--space-3)' }}>
-                <Button onClick={handleRetry}>Повторить</Button>
-              </div>
-            )}
-          </Callout>
+        {isPending && (
+          <div className={`${styles.message} ${styles.assistant}`}>
+            <p role="status" className={`sm muted ${styles.typing}`}>
+              Ассистент отвечает. Это может занять до двух минут.
+            </p>
+          </div>
         )}
       </div>
+
+      <div className={styles.composer}>
+        <AssistantQuestionForm
+          pending={isPending}
+          onSubmit={handleSubmit}
+          onCancel={cancel}
+          showExamples={messages.length === 0}
+        />
+      </div>
     </section>
+  )
+}
+
+interface ChatBubbleProps {
+  message: ChatMessage
+  canRetry: boolean
+  onRetry(this: void, message: Extract<ChatMessage, { role: 'failure' }>): void
+}
+
+function ChatBubble({ message, canRetry, onRetry }: ChatBubbleProps) {
+  const time = formatTime(message.at)
+
+  if (message.role === 'user') {
+    return (
+      <div className={`${styles.message} ${styles.user}`} data-role="user">
+        <div className={styles.bubble}>{message.text}</div>
+        <span className={styles.meta}>Вы · {time}</span>
+      </div>
+    )
+  }
+
+  if (message.role === 'assistant') {
+    return (
+      <div className={`${styles.message} ${styles.assistant}`} data-role="assistant">
+        <div className={styles.bubble}>
+          <AssistantAnswerView answer={message.answer} />
+        </div>
+        <span className={styles.meta}>Ассистент · {time}</span>
+      </div>
+    )
+  }
+
+  if (message.kind === 'cancelled') {
+    return (
+      <p className={`sm muted ${styles.note}`} data-role="failure">
+        {message.title}
+      </p>
+    )
+  }
+
+  return (
+    <div className={`${styles.message} ${styles.assistant}`} data-role="failure">
+      <Callout tone="caution" title={message.title}>
+        {message.text}
+        {message.retryable && canRetry && (
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <Button onClick={() => onRetry(message)}>Повторить</Button>
+          </div>
+        )}
+      </Callout>
+      <span className={styles.meta}>{time}</span>
+    </div>
   )
 }

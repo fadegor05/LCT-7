@@ -9,6 +9,8 @@ interface AssistantQuestionFormProps {
   error?: string
   onSubmit(this: void, question: string): void
   onCancel(this: void): void
+  /** Подсказки-примеры под полем; в чате их прячут, когда переписка уже есть. */
+  showExamples?: boolean
 }
 
 const EXAMPLES = ['где отставание и на сколько', 'что с этой площадкой']
@@ -19,6 +21,7 @@ export function AssistantQuestionForm({
   error,
   onSubmit,
   onCancel,
+  showExamples = true,
 }: AssistantQuestionFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [fieldValue, setFieldValue] = useState('')
@@ -36,6 +39,8 @@ export function AssistantQuestionForm({
       return
     }
     onSubmit(result.data)
+    // Вопрос ушёл в переписку — поле освобождается под следующий.
+    setFieldValue('')
   }
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -79,19 +84,21 @@ export function AssistantQuestionForm({
         readOnly={pending}
       />
 
-      <div className={styles.examples}>
-        {EXAMPLES.map((example) => (
-          <Button
-            key={example}
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => handleExampleClick(example)}
-          >
-            {example}
-          </Button>
-        ))}
-      </div>
+      {showExamples && (
+        <div className={styles.examples}>
+          {EXAMPLES.map((example) => (
+            <Button
+              key={example}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleExampleClick(example)}
+            >
+              {example}
+            </Button>
+          ))}
+        </div>
+      )}
 
       <div className={styles.actions}>
         <Button type="submit" disabled={pending}>
