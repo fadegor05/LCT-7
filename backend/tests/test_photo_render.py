@@ -37,19 +37,25 @@ def get_pixel_at(
 class TestRenderAnnotated:
     """Тесты для render_annotated."""
 
-    def test_no_detections_returns_png_unchanged(self) -> None:
-        """Без детекций изображение переточивается в PNG неизменённым."""
+    def test_no_detections_returns_jpeg_unchanged(self) -> None:
+        """Без детекций изображение перекодируется в JPEG без дорисовок."""
         original = create_test_image(100, 100)
         original_img = Image.open(io.BytesIO(original)).convert("RGB")
 
         result_bytes, content_type = render_annotated(original, [])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
 
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (100, 100)
-        # Пиксели совпадают байт в байт: без детекций ничего не дорисовывается
-        assert result_img.convert("RGB").tobytes() == original_img.tobytes()
+        # JPEG с потерями: пиксели совпадают с точностью до артефактов сжатия
+        diff = max(
+            abs(a - b)
+            for a, b in zip(
+                result_img.convert("RGB").tobytes(), original_img.tobytes(), strict=True
+            )
+        )
+        assert diff <= 4
 
     def test_single_detection_rectangle_drawn(self) -> None:
         """Рисуется прямоугольник для одной детекции."""
@@ -67,7 +73,7 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (200, 200)
 
@@ -106,7 +112,7 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, detections)
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (300, 300)
 
@@ -127,7 +133,7 @@ class TestRenderAnnotated:
         # Не должно выбросить исключение
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (100, 100)
 
@@ -147,7 +153,7 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         # Проверяем что функция отработала и не выбросила исключение
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (200, 200)
@@ -168,7 +174,7 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (100, 100)
 
@@ -179,8 +185,8 @@ class TestRenderAnnotated:
         with pytest.raises(InvalidImageError):
             render_annotated(corrupt_bytes, [])
 
-    def test_output_is_valid_png(self) -> None:
-        """Выходное изображение - валидный PNG."""
+    def test_output_is_valid_jpeg(self) -> None:
+        """Выходное изображение - валидный JPEG."""
         image = create_test_image(100, 100)
 
         detection = DetectionRead(
@@ -195,10 +201,10 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, [detection])
 
-        # Проверяем что это валидный PNG
+        # Проверяем что это валидный JPEG
         img = Image.open(io.BytesIO(result_bytes))
-        assert img.format == "PNG"
-        assert content_type == "image/png"
+        assert img.format == "JPEG"
+        assert content_type == "image/jpeg"
 
     def test_output_size_matches_input(self) -> None:
         """Размер выходного изображения совпадает с входным."""
@@ -236,7 +242,7 @@ class TestRenderAnnotated:
         # Не должно выбросить исключение
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
 
     def test_large_image(self) -> None:
         """Работает с большими изображениями."""
@@ -254,7 +260,7 @@ class TestRenderAnnotated:
 
         result_bytes, content_type = render_annotated(image, [detection])
 
-        assert content_type == "image/png"
+        assert content_type == "image/jpeg"
         result_img = Image.open(io.BytesIO(result_bytes))
         assert result_img.size == (1000, 800)
 
@@ -288,3 +294,12 @@ class TestRenderAnnotated:
         # Обе коробки должны быть одного цвета (т.к. один код оборудования)
         # Проверяем это косвенно - функция завершилась без ошибок
         assert result_img.size == (200, 200)
+
+    def test_large_image_downscaled_to_max_side(self) -> None:
+        """Снимок больше max_side уменьшается с сохранением пропорций."""
+        image = create_test_image(4000, 3000)
+
+        result_bytes, _ = render_annotated(image, [], max_side=1000)
+
+        result_img = Image.open(io.BytesIO(result_bytes))
+        assert result_img.size == (1000, 750)

@@ -370,7 +370,7 @@ class TestPhotoRouter:
     async def test_get_annotated_image_with_200(
         self, client: AsyncClient, container: AsyncContainer, detector: FakeDetector
     ) -> None:
-        """GET /photos/{id}/annotated возвращает 200 с PNG."""
+        """GET /photos/{id}/annotated возвращает 200 с JPEG, ETag и 304 на повтор."""
         await seed_stand_user(container)
 
         site_resp = await client.post("/sites", json={"name": "Test Site"})
@@ -402,11 +402,34 @@ class TestPhotoRouter:
         response = await client.get(f"/sites/{site_id}/photos/{photo_id}/annotated")
 
         assert response.status_code == 200
-        assert response.headers["content-type"] == "image/png"
+        assert response.headers["content-type"] == "image/jpeg"
         assert response.headers["X-Content-Type-Options"] == "nosniff"
-        # Проверяем что это валидный PNG
+        # Проверяем что это валидный JPEG
         img = Image.open(io.BytesIO(response.content))
-        assert img.format == "PNG"
+        assert img.format == "JPEG"
+
+        # Повтор с ETag — пустой 304
+        etag = response.headers["ETag"]
+        cached = await client.get(
+            f"/sites/{site_id}/photos/{photo_id}/annotated",
+            headers={"If-None-Match": etag},
+        )
+        assert cached.status_code == 304
+        assert cached.content == b""
+        assert cached.headers["ETag"] == etag
+
+        # После переобнаружения с другими рамками ETag меняется
+        detector.result = DetectionResult(
+            model_version="v2",
+            detections=[RawDetection(bbox=[0.1, 0.1, 0.5, 0.5], class_ours="COMP_1", conf=0.9)],
+        )
+        await client.post(f"/sites/{site_id}/photos/{photo_id}/detect")
+        fresh = await client.get(
+            f"/sites/{site_id}/photos/{photo_id}/annotated",
+            headers={"If-None-Match": etag},
+        )
+        assert fresh.status_code == 200
+        assert fresh.headers["ETag"] != etag
 
     @pytest.mark.asyncio
     async def test_post_detect_with_200(

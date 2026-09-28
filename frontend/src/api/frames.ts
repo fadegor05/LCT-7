@@ -54,7 +54,7 @@ export const framesApi = {
     }),
 }
 
-/** Снимок с рамками найденной техники: PNG рисует сервер (`/annotated`). */
+/** Снимок с рамками найденной техники: JPEG рисует и кэширует сервер (`/annotated`). */
 export function annotatedImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`
 }

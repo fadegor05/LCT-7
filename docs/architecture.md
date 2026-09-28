@@ -216,7 +216,7 @@ CRUD под `/sites`. Доступ ограничен: эндпоинты GET, P
 - `GET` (`?undated=true` — только снимки без даты) и `GET /{photo_id}` (снимок с детекциями,
   обогащёнными кодом и названием техники из справочника).
 - `PATCH /{photo_id}/date` — ручная дата (`date_source=manual`), дата в будущем — 422.
-- `GET /{photo_id}/image` — оригинал; `GET /{photo_id}/annotated` — PNG с рамками и подписями
+- `GET /{photo_id}/image` — оригинал; `GET /{photo_id}/annotated` — JPEG с рамками и подписями (≤1920 px, кэшируется в хранилище, ETag/304)
   `код техники + score`. Оба ответа с `X-Content-Type-Options: nosniff`.
 - `POST /{photo_id}/detect` — переобработка. Детектор не настроен — 409, недоступен — 502.
   Та же `model_version` оставляет детекции как есть, другая заменяет все детекции кадра.
