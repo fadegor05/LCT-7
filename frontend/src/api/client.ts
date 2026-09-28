@@ -1,16 +1,18 @@
 import type { z } from 'zod'
 import { env } from '@/lib/env'
 
-/** Ошибка HTTP или контракта. `detail` — поле FastAPI HTTPException, если оно есть. */
+/** Ошибка HTTP или контракта. `detail` — поле FastAPI HTTPException, если оно есть. `code` — код ошибки из тела ответа для типизированной классификации. */
 export class ApiError extends Error {
   readonly status: number
   readonly detail: unknown
+  readonly code: string | undefined
 
-  constructor(status: number, message: string, detail?: unknown) {
+  constructor(status: number, message: string, detail?: unknown, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail
+    this.code = code
   }
 }
 
@@ -84,8 +86,10 @@ export async function request<S extends z.ZodType | undefined = undefined>(
   const data = parseJson(await response.text())
 
   if (!response.ok) {
-    const detail = (data as { detail?: unknown } | undefined)?.detail
-    throw new ApiError(response.status, errorMessage(detail, response.status), detail)
+    const detail = (data as { detail?: unknown; code?: unknown } | undefined)?.detail
+    const code = (data as { code?: unknown } | undefined)?.code
+    const codeString = typeof code === 'string' ? code : undefined
+    throw new ApiError(response.status, errorMessage(detail, response.status), detail, codeString)
   }
   if (!schema) return undefined as never
 

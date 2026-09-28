@@ -89,4 +89,39 @@ describe('request', () => {
       'не совпал с контрактом',
     )
   })
+
+  it('reads code from error body when it is a string', async () => {
+    server.use(
+      http.get('/api/fail', () =>
+        HttpResponse.json({ detail: 'Too many requests', code: 'rate_limited' }, { status: 429 }),
+      ),
+    )
+    const error = await request('/fail').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 429, code: 'rate_limited' })
+  })
+
+  it('ignores non-string code', async () => {
+    server.use(
+      http.get('/api/fail', () => HttpResponse.json({ detail: 'Error', code: 5 }, { status: 400 })),
+    )
+    const error = await request('/fail').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 400, code: undefined })
+  })
+
+  it('sets code to undefined when error body has no code field', async () => {
+    server.use(http.get('/api/fail', () => HttpResponse.json({ detail: 'Error' }, { status: 400 })))
+    const error = await request('/fail').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 400, code: undefined })
+  })
+
+  it('keeps code undefined for 422 with list detail', async () => {
+    const detail = [{ loc: ['body', 'question'], msg: 'too short', type: 'string_too_short' }]
+    server.use(http.get('/api/fail', () => HttpResponse.json({ detail }, { status: 422 })))
+    const error = await request('/fail').catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(error).toMatchObject({ status: 422, code: undefined })
+  })
 })

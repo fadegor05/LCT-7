@@ -20,7 +20,7 @@ async function json<T>(request: Request): Promise<T> {
   return (await request.json()) as T
 }
 
-/** Ответ как у FastAPI: доменная ошибка → `{detail}` с её кодом. */
+/** Ответ как у FastAPI: доменная ошибка → `{detail}` и опционально `{code}`. */
 function handle(fn: () => unknown, status = 200) {
   try {
     const body = fn()
@@ -29,7 +29,11 @@ function handle(fn: () => unknown, status = 200) {
       : HttpResponse.json(body as object, { status })
   } catch (error) {
     if (error instanceof db.MockError) {
-      return HttpResponse.json({ detail: error.message }, { status: error.status })
+      const errorBody: { detail: string; code?: string } = { detail: error.message }
+      if (error.code !== undefined) {
+        errorBody.code = error.code
+      }
+      return HttpResponse.json(errorBody, { status: error.status })
     }
     throw error
   }

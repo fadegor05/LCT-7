@@ -282,6 +282,36 @@ export const siteSummarySchema = z.object({
   attention_count: z.number(),
 })
 
+// ---------- Ассистент (assistant) ----------
+
+export const ASSISTANT_QUESTION_MIN = 3
+export const ASSISTANT_QUESTION_MAX = 500
+
+export const assistantQuestionSchema = z
+  .string()
+  .trim()
+  .min(ASSISTANT_QUESTION_MIN, 'Вопрос должен быть от 3 до 500 символов')
+  .max(ASSISTANT_QUESTION_MAX, 'Вопрос должен быть от 3 до 500 символов')
+
+export const assistantStageRefSchema = z.object({
+  ref: z.string(),
+  stage_id: z.string(),
+})
+
+export const assistantAnswerSchema = z.object({
+  answer: z.string(),
+  verified: z.boolean(),
+  numbers_not_in_report: z.array(z.string()),
+  numbers_of_other_site: z.array(z.string()),
+  limits: z.string(),
+  site_label: z.string(),
+  stages: z.array(assistantStageRefSchema),
+})
+
+export const assistantStatusSchema = z.object({
+  enabled: z.boolean(),
+})
+
 // ---------- Типы ----------
 
 export type Level = z.infer<typeof levelSchema>
@@ -320,3 +350,6 @@ export type Deviation = z.infer<typeof deviationSchema>
 export type DeviationDetail = z.infer<typeof deviationDetailSchema>
 export type SiteSummary = z.infer<typeof siteSummarySchema>
 export type DetectBacklogReport = z.infer<typeof detectBacklogReportSchema>
+export type AssistantStageRef = z.infer<typeof assistantStageRefSchema>
+export type AssistantAnswer = z.infer<typeof assistantAnswerSchema>
+export type AssistantStatus = z.infer<typeof assistantStatusSchema>

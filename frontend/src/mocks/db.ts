@@ -39,11 +39,12 @@ import {
   user,
 } from './fixtures'
 
-/** Ошибка домена с HTTP-кодом — хендлер превращает её в `{detail}`. */
+/** Ошибка домена с HTTP-кодом — хендлер превращает её в `{detail, code}`. */
 export class MockError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly code?: string,
   ) {
     super(message)
   }
