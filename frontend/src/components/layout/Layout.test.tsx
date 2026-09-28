@@ -66,6 +66,27 @@ describe('SiteShell', () => {
     expect(screen.getByRole('heading', { level: 1, name: site.name })).toBeInTheDocument()
   })
 
+  it('puts aside into a side column after the content', () => {
+    renderWithProviders(
+      <SiteShell site={site} aside={<p>боковая</p>}>
+        <p>тело</p>
+      </SiteShell>,
+    )
+    const aside = screen.getByRole('complementary')
+    expect(aside).toHaveTextContent('боковая')
+    const layout = aside.closest('[data-layout="with-aside"]')
+    expect(layout).toContainElement(screen.getByText('тело'))
+    expect(screen.getByText('тело').compareDocumentPosition(aside)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('without aside renders content without the two-column layout', () => {
+    const { container } = renderWithProviders(<SiteShell site={site}>тело</SiteShell>)
+    expect(container.querySelector('[data-layout="with-aside"]')).toBeNull()
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+  })
+
   it('without a crumb the site itself is current', () => {
     renderWithProviders(<SiteShell site={site}>тело</SiteShell>)
     const crumbs = screen.getByRole('navigation', { name: 'Хлебные крошки' })

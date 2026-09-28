@@ -88,3 +88,9 @@
     padding-right: var(--space-4);
   }
 }
+
+/* Экран с боковой колонкой (чат ассистента) шире обычного: основной колонке остаётся
+   прежняя ширина содержимого. */
+.content:has(> [data-layout='with-aside'] > aside:not(:empty)) {
+  max-width: calc(var(--content-width) + 440px);
+}
