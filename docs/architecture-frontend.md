@@ -86,7 +86,7 @@ OpenAPI backend), перечисления — StrEnum из `models.py` доме
 | `POST /sites/{id}/methodology/rules/{ruleId}/sets`, `PUT/DELETE /sites/{id}/methodology/sets/{setId}` | комплекты техники; без нормативной техники — 422 |
 | `GET /sites/{id}/photos` (`?undated=true`), `POST /sites/{id}/photos` (multipart `files`) | снимки и загрузка пачки (`UploadReport` по каждому файлу) |
 | `PATCH /sites/{id}/photos/{photoId}/date`, `POST /sites/{id}/photos/{photoId}/detect` | ручная дата снимка, повторная детекция |
-| `GET /sites/{id}/photos/{photoId}/annotated` | снимок с рамками техники (PNG рисует сервер) |
+| `GET /sites/{id}/photos/{photoId}/annotated` | снимок с рамками техники (JPEG рисует и кэширует сервер) |
 | `GET /sites/{id}/observations`, `GET /sites/{id}/observations/{date}` | наблюдения по датам и техника за дату |
 | `GET /sites/{id}/assessment/stages` (404 — графика нет) | статусы этапов; `status = null` — этап ещё не оценивался |
 | `GET /sites/{id}/assessment/deviations`, `GET /sites/{id}/assessment/deviations/{id}` | отклонения стройки, карточка с доказательствами |

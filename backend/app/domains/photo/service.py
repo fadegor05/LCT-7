@@ -1,6 +1,7 @@
 """Бизнес-логика загрузки фотографий и детекций оборудования."""
 
 import asyncio
+import hashlib
 import logging
 import os
 import uuid
@@ -25,6 +26,7 @@ from app.domains.photo.date_resolver import (
 )
 from app.domains.photo.models import DateSource, Detection, Photo, ProcessingStatus
 from app.domains.photo.recalculator import ObservationRecalculator
+from app.domains.photo.render import RENDER_VERSION, render_annotated
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.schemas import (
     DetectBacklogReport,
@@ -47,6 +49,15 @@ class UploadInput:
     filename: str
     content: bytes
     content_type: str | None
+
+
+@dataclass(frozen=True)
+class AnnotatedImage:
+    """Аннотированный снимок. content=None — у клиента актуальная версия (304)."""
+
+    etag: str
+    content: bytes | None
+    content_type: str = "image/jpeg"
 
 
 class PhotoService:
@@ -607,6 +618,81 @@ class PhotoService:
         # Определяем content-type по расширению
         content_type = self._get_content_type_from_key(photo.storage_key)
         return content, content_type
+
+    async def get_annotated(
+        self,
+        site_id: uuid.UUID,
+        photo_id: uuid.UUID,
+        if_none_match: str | None = None,
+    ) -> AnnotatedImage:
+        """Получить снимок с нарисованными рамками детекций.
+
+        Отрисовка полноразмерного фото дорогая, поэтому результат кэшируется
+        в хранилище под ключом, зависящим от детекций и версии рендера:
+        переобнаружение даёт новый ключ, и устаревшая картинка не отдаётся.
+        Тот же отпечаток служит ETag — если он совпал с If-None-Match,
+        хранилище не трогаем вовсе.
+
+        Args:
+            site_id: ID стройки
+            photo_id: ID фотографии
+            if_none_match: Значение заголовка If-None-Match от клиента
+
+        Returns:
+            AnnotatedImage (content=None, если у клиента актуальная версия)
+
+        Raises:
+            AppError(404) если сайт/фотография не найдены или файл недоступен
+        """
+        photo = await self.get_photo(site_id, photo_id)
+        storage_key = await self._storage_key(site_id, photo_id)
+
+        fingerprint = hashlib.sha256(
+            "|".join(
+                [RENDER_VERSION, storage_key]
+                + sorted(
+                    f"{d.equipment_code}:{','.join(f'{v:.6f}' for v in d.bbox)}:{d.score:.4f}"
+                    for d in photo.detections
+                )
+            ).encode()
+        ).hexdigest()[:32]
+        etag = f'"{fingerprint}"'
+
+        if if_none_match and etag in [t.strip() for t in if_none_match.split(",")]:
+            return AnnotatedImage(etag=etag, content=None)
+
+        cache_key = f"sites/{site_id}/annotated/{photo_id}/{fingerprint}.jpg"
+        try:
+            return AnnotatedImage(etag=etag, content=await self._storage.get(cache_key))
+        except StorageError:
+            pass  # промах кэша — рисуем
+
+        try:
+            original = await self._storage.get(storage_key)
+        except StorageError as e:
+            raise AppError("Файл снимка недоступен", status_code=404) from e
+
+        try:
+            content, content_type = await asyncio.to_thread(
+                render_annotated, original, photo.detections
+            )
+        except InvalidImageError as e:
+            raise AppError("Файл снимка недоступен", status_code=404) from e
+
+        try:
+            await self._storage.put(cache_key, content, content_type)
+        except StorageError:
+            # Кэш — оптимизация: ошибка записи не должна ломать ответ
+            logger.warning("Не удалось сохранить аннотированный снимок %s в кэш", cache_key)
+
+        return AnnotatedImage(etag=etag, content=content, content_type=content_type)
+
+    async def _storage_key(self, site_id: uuid.UUID, photo_id: uuid.UUID) -> str:
+        """Ключ оригинала в хранилище (доступ к стройке уже проверен вызывающим)."""
+        photo = await self._repository.get_in_site(site_id, photo_id)
+        if photo is None:
+            raise AppError("Снимок не найден", status_code=404)
+        return photo.storage_key
 
     async def detect_backlog(
         self, site_id: uuid.UUID, statuses: set[ProcessingStatus]
