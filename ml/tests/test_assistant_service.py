@@ -223,7 +223,7 @@ class TestAskEndpoint:
 
         # Monkeypatch ask_report.ask
         import ask_report
-        def failing_ask(*args, **kwargs):  # noqa: F841
+        def failing_ask(*args, **kwargs):
             raise RuntimeError("401 Bearer sk-SECRET host llm.secret.example")
 
         monkeypatch.setattr(ask_report, "ask", failing_ask)
@@ -247,7 +247,7 @@ class TestAskEndpoint:
 
         # Monkeypatch ask_report.ask
         import ask_report
-        def successful_ask(*args, **kwargs):  # noqa: F841
+        def successful_ask(*args, **kwargs):
             return "Площадка p03, этап 12.3.2 отстаёт на 14 дней."
 
         monkeypatch.setattr(ask_report, "ask", successful_ask)
