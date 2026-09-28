@@ -1,8 +1,12 @@
+/// <reference types="node" />
 /**
  * Тесты панели ассистента: монтирование, состояния статуса, успешные ответы,
  * ошибки (отмена, таймаут, переполнение, недоступность), повтор, фокус на ответе,
  * эфемерность хранилища, печать.
  */
+import { readFileSync } from 'fs'
+import { dirname, resolve } from 'path'
+import { fileURLToPath } from 'url'
 import { screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
@@ -12,6 +16,9 @@ import { server } from '@/mocks/server'
 import { renderWithProviders } from '@/test/render'
 import type { AssistantAnswer } from '@/api/schemas'
 import { AssistantPanel } from './AssistantPanel'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const css = readFileSync(resolve(__dirname, './AssistantPanel.module.css'), 'utf-8')
 
 const ASK_URL = '/api/sites/:siteId/assistant/ask'
 
@@ -322,7 +329,22 @@ describe('AssistantPanel', () => {
     })
 
     it('повторяет ТОТ ЖЕ вопрос при нажатии "Повторить"', async () => {
-      db.setAssistantScenario('timeout')
+      const bodies: unknown[] = []
+      server.use(
+        http.post(ASK_URL, async ({ request }) => {
+          bodies.push(await request.json())
+          return bodies.length < 2
+            ? HttpResponse.json(
+                {
+                  detail: 'Модель не ответила. Повторите вопрос позже.',
+                  code: 'assistant_timeout',
+                },
+                { status: 504 },
+              )
+            : HttpResponse.json(answerBody)
+        }),
+      )
+      db.setAssistantScenario('ok')
       const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
 
       await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
@@ -335,19 +357,34 @@ describe('AssistantPanel', () => {
 
       await screen.findByRole('alert')
 
-      // Меняем сценарий на успех
-      db.setAssistantScenario('ok')
-
       // Нажимаем "Повторить"
       await user.click(screen.getByRole('button', { name: 'Повторить' }))
 
       // Ошибка должна быть заменена на ответ (ищем ссылку на этап)
       await screen.findByRole('link')
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+      // Проверяем, что оба запроса содержат ТОТ ЖЕ вопрос
+      expect(bodies).toEqual([{ question: 'Исходный вопрос' }, { question: 'Исходный вопрос' }])
     })
 
     it('retry сохраняет исходный вопрос через несколько ошибок', async () => {
-      db.setAssistantScenario('timeout')
+      const bodies: unknown[] = []
+      server.use(
+        http.post(ASK_URL, async ({ request }) => {
+          bodies.push(await request.json())
+          return bodies.length < 3
+            ? HttpResponse.json(
+                {
+                  detail: 'Модель не ответила. Повторите вопрос позже.',
+                  code: 'assistant_timeout',
+                },
+                { status: 504 },
+              )
+            : HttpResponse.json(answerBody)
+        }),
+      )
+      db.setAssistantScenario('ok')
       const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
 
       await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
@@ -368,9 +405,6 @@ describe('AssistantPanel', () => {
       await screen.findByRole('alert')
       retryButton = screen.getByRole('button', { name: 'Повторить' })
 
-      // Меняем сценарий на успех
-      db.setAssistantScenario('ok')
-
       // Нажимаем "Повторить" в третий раз - на этот раз успешно
       await user.click(retryButton)
 
@@ -379,6 +413,68 @@ describe('AssistantPanel', () => {
 
       // Проверяем, что ошибка исчезла
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+      // Все три запроса содержат ТОТ ЖЕ вопрос
+      expect(bodies).toEqual([
+        { question: 'Мой вопрос' },
+        { question: 'Мой вопрос' },
+        { question: 'Мой вопрос' },
+      ])
+    })
+
+    it('после таймаута редактирование вопроса и повтор спрашивает новый вопрос', async () => {
+      const bodies: unknown[] = []
+      server.use(
+        http.post(ASK_URL, async ({ request }) => {
+          bodies.push(await request.json())
+          return bodies.length < 3
+            ? HttpResponse.json(
+                {
+                  detail: 'Модель не ответила. Повторите вопрос позже.',
+                  code: 'assistant_timeout',
+                },
+                { status: 504 },
+              )
+            : HttpResponse.json(answerBody)
+        }),
+      )
+      db.setAssistantScenario('ok')
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      const textarea = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
+      await user.click(textarea)
+      await user.paste('Вопрос 1')
+
+      await user.click(screen.getByRole('button', { name: 'Спросить' }))
+
+      // Первая ошибка (таймаут)
+      await screen.findByRole('alert')
+
+      // Редактируем вопрос
+      await user.clear(textarea)
+      await user.paste('Вопрос 2')
+
+      // Отправляем новый вопрос (тоже таймаут)
+      await user.click(screen.getByRole('button', { name: 'Спросить' }))
+
+      // Вторая ошибка (таймаут)
+      await screen.findByRole('alert')
+
+      // Повторяем - должен спросить "Вопрос 2", который был последний отправлен
+      await user.click(screen.getByRole('button', { name: 'Повторить' }))
+
+      // Ждём ответа (ссылка на этап)
+      await screen.findByRole('link')
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+      // Проверяем, что сохранялся последний вопрос, не первый
+      expect(bodies).toEqual([
+        { question: 'Вопрос 1' },
+        { question: 'Вопрос 2' },
+        { question: 'Вопрос 2' },
+      ])
     })
 
     it('показывает rate_limited без "Повторить"', async () => {
@@ -555,6 +651,10 @@ describe('AssistantPanel', () => {
       const { container } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
       await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
 
+      // Проверяем, что CSS содержит media print rule, скрывающее section
+      expect(css).toMatch(/@media print\s*\{[\s\S]*?\.section\s*\{[\s\S]*?display:\s*none/)
+
+      // Проверяем, что rendered section имеет класс section
       const section = container.querySelector('section.section')
       expect(section).toBeInTheDocument()
     })
