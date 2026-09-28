@@ -1,5 +1,6 @@
 .seg {
   display: inline-flex;
+  flex-shrink: 0;
   height: var(--control-md);
   padding: var(--space-1);
   gap: var(--space-1);
@@ -13,6 +14,7 @@
   line-height: 20px;
   font-weight: 500;
   letter-spacing: 0;
+  white-space: nowrap;
   padding: 0 var(--space-5);
   border: 0;
   border-radius: var(--radius-pill);
