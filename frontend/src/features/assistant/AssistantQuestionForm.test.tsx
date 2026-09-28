@@ -41,9 +41,10 @@ describe('AssistantQuestionForm', () => {
     render(<AssistantQuestionForm pending={false} onSubmit={onSubmit} onCancel={vi.fn()} />)
     const textarea = screen.getByLabelText('Вопрос по отчёту')
 
-    // 500 chars
+    // 500 chars - use paste to avoid test isolation issues with long strings
     const text500 = 'a'.repeat(500)
-    await user.type(textarea, text500)
+    await user.click(textarea)
+    await user.paste(text500)
     await user.click(screen.getByRole('button', { name: 'Спросить' }))
     expect(onSubmit).toHaveBeenCalledWith(text500)
 
@@ -51,7 +52,8 @@ describe('AssistantQuestionForm', () => {
     onSubmit.mockClear()
     await user.clear(textarea)
     const text501 = 'a'.repeat(501)
-    await user.type(textarea, text501)
+    await user.click(textarea)
+    await user.paste(text501)
     await user.click(screen.getByRole('button', { name: 'Спросить' }))
     expect(onSubmit).not.toHaveBeenCalled()
     expect(screen.getByText('Вопрос должен быть от 3 до 500 символов')).toBeInTheDocument()
@@ -123,7 +125,9 @@ describe('AssistantQuestionForm', () => {
     const user = userEvent.setup()
     render(<AssistantQuestionForm pending={false} onSubmit={vi.fn()} onCancel={vi.fn()} />)
     const textarea = screen.getByLabelText('Вопрос по отчёту')
-    await user.type(textarea, 'a'.repeat(501))
+    // Use paste for long string to avoid test isolation issues
+    await user.click(textarea)
+    await user.paste('a'.repeat(501))
     const counterText = screen.getByText('501 / 500 — слишком длинный вопрос')
     expect(counterText).toBeInTheDocument()
     expect(counterText.className).toContain('error')
