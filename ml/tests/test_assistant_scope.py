@@ -337,6 +337,14 @@ class TestPromptAndEscape:
         # После тега только пробел или конец строки (возможны служебные символы)
         assert not after_tag or after_tag.startswith("}")
 
+    def test_system_запрещает_имена_полей_и_markdown(self):
+        """Промпт запрещает имена полей JSON и Markdown в ответе (bug-reports/006)."""
+        import ask_report
+        assert "Не называй имена полей отчёта" in ask_report.SYSTEM
+        assert "Не используй Markdown" in ask_report.SYSTEM
+        # Проверка чисел по площадкам держится на том, что модель называет площадку
+        assert "Обязательно называй площадку" in ask_report.SYSTEM
+
     def test_build_prompt_содержит_правильные_теги(self, llm_env, monkeypatch):
         """build_prompt возвращает строку с <отчёт>…</отчёт> и <вопрос>…</вопрос>."""
         import ask_report
