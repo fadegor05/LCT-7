@@ -134,15 +134,14 @@ curl -X POST http://localhost/api/sites/{id}/photos/detect?status=pending,failed
 Три переменные в корневом `.env`:
 
 ```dotenv
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=sk-...
-LLM_MODEL=gpt-4o-mini
+LLM_BASE_URL=https://<хост-провайдера>/v1
+LLM_API_KEY=<ключ>
+LLM_MODEL=<имя-модели>
 ```
 
 Сервис обращается к `{LLM_BASE_URL}/chat/completions` — формат OpenAI,
 заголовок `Authorization: Bearer {LLM_API_KEY}`, `temperature: 0`. Подойдёт
-облачный сервис (OpenAI, Anthropic, локальный API) или локальная модель,
-которая держит этот формат.
+любой сервис или локальная модель, которая держит этот формат.
 
 Переменные передаются **только** в контейнер `ml`; в `backend` они отсутствуют
 (ключ живёт только в ML-сервисе).
@@ -150,30 +149,25 @@ LLM_MODEL=gpt-4o-mini
 ### Проверка доступности
 
 ```bash
-curl http://localhost/meta
+docker compose exec ml python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/meta').read().decode())"
 ```
 
 Поле `"assistant": true` означает, что модель доступна и ассистент готов
-отвечать.
+отвечать. Запрос `/meta` может ответить 503 пока модель прогревается
+(до 90 секунд после старта сервиса).
 
-Без подключения переменных (значения пусты или не задан `LLM_API_KEY`):
-
-```bash
-curl -X POST http://localhost/ask -H "Content-Type: application/json" \
-  -d '{"question":"...", "report":{...}, "site_id":"p03"}'
-# → 503 Service Unavailable
-```
-
-Это штатное состояние стенда без LLM-провайдера.
+Без подключения переменных `POST /ask` отвечает 503 — это штатное состояние
+стенда без LLM-провайдера. Интерфейс в этом случае ассистента не показывает.
 
 Доступные модели провайдера:
 
 ```bash
+# в Docker
+docker compose exec ml python tools/suggest_stage_mapping.py --list-models
+
+# при локальной разработке (из ml/ с переменными в ml/.env)
 python tools/suggest_stage_mapping.py --list-models
 ```
-
-Запускается внутри `ml/` с переменными в `ml/.env` (при локальной разработке)
-или в корневом `.env` (в Docker).
 
 ## Стенд в Yandex Cloud (veha-stand)
 
