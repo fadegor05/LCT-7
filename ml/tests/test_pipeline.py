@@ -22,6 +22,9 @@ from service.pipeline import build_report, summary        # noqa: E402
 from parse_schedule import classify_rows, parse_date     # noqa: E402
 import suggest_stage_mapping as suggest                  # noqa: E402
 import ask_report                                       # noqa: E402
+import pytest                                           # noqa: E402
+from service import demo_detector                       # noqa: E402
+from service.detector import DEFAULT_WEIGHTS             # noqa: E402
 
 
 def frame(name, site, day, classes):
@@ -598,3 +601,53 @@ class TestПроверкаЧиселВОтвете:
         текст = "Площадка p03, этап 12.3.2: отставание 108 дней."
         assert ask_report.unverified(текст, self.known()) == []
         assert ask_report.misattributed(текст, by) == []
+
+
+class TestДемоРежим:
+    """Запуск без приватных весов — и невозможность выдать его за живой прогон.
+
+    Веса производны от снимков организаторов и лежат в приватном репозитории
+    (D-005). Посторонний, включая жюри, не может склонировать репозиторий и
+    поднять сервис. Демо-режим это закрывает, но он обязан быть отличим.
+    """
+
+    ВЫГРУЗКА = {"meta": {}, "images": [
+        {"image": "a.png", "width": 1000, "height": 800,
+         "detections": [{"class_raw": "excavator_crawler", "class_ours": "excavator_crawler",
+                         "conf": 0.9, "bbox": [0.1, 0.2, 0.3, 0.6]}]}]}
+
+    def _detector(self):
+        return demo_detector.DemoDetector(source=self.ВЫГРУЗКА)
+
+    def test_отдаёт_готовые_детекции(self):
+        got = self._detector().predict_bytes(b"", name="a.png")
+        assert len(got["detections"]) == 1
+        assert got["matched"] is True
+
+    def test_каждая_рамка_помечена_источником(self):
+        got = self._detector().predict_bytes(b"", name="a.png")
+        assert all(d["source"] == "demo" for d in got["detections"])
+        assert got["mode"] == "demo"
+
+    def test_неизвестный_кадр_не_выдумывается(self):
+        """Пустой ответ честнее правдоподобных рамок."""
+        got = self._detector().predict_bytes(b"", name="чужой.png")
+        assert got["detections"] == []
+        assert got["matched"] is False
+
+    def test_метаданные_называют_режим(self):
+        meta = self._detector().meta()
+        assert meta["mode"] == "demo" and meta["weights"] is None
+
+    def test_настоящие_веса_важнее_демо(self):
+        """Демо не должно незаметно подменить модель, если веса на месте."""
+        real = Path(DEFAULT_WEIGHTS)
+        if not real.exists():
+            pytest.skip("нет весов для проверки приоритета")
+        built = demo_detector.build(real, "data/processed/detections_mocs_m.json")
+        assert built.__class__.__name__ == "Detector"
+
+    def test_без_весов_и_без_демо_понятная_ошибка(self):
+        with pytest.raises(FileNotFoundError) as e:
+            demo_detector.build(Path("weights/нет-такого.pt"), None)
+        assert "DEMO_DETECTIONS" in str(e.value)

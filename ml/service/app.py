@@ -24,7 +24,7 @@ from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel, Field
 
-from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, Detector
+from service.detector import DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_WEIGHTS, Detector  # noqa: F401
 from service.export import to_csv, to_html, to_xlsx
 from service.pipeline import build_report, summary
 
@@ -37,6 +37,8 @@ class Detection(BaseModel):
     class_ours: str = Field(description="класс нашей таксономии")
     conf: float
     bbox: list[float] = Field(description="доли кадра, [x1, y1, x2, y2]")
+    source: str | None = Field(
+        None, description="detected — распознано, registered — из реестра, demo — из выгрузки")
 
 
 class Observation(BaseModel):
@@ -72,6 +74,11 @@ class FrameResult(BaseModel):
     height: int
     speed_ms: dict[str, float]
     detections: list[Detection]
+    # Демо-режим обязан быть отличим от живого прогона. Поля необязательные:
+    # при работе с настоящими весами их просто нет.
+    mode: str | None = Field(None, description="«demo», если модель не запускалась")
+    matched: bool | None = Field(
+        None, description="в демо-режиме: нашёлся ли кадр в готовой выгрузке")
 
 
 @asynccontextmanager
@@ -79,8 +86,10 @@ async def lifespan(app: FastAPI):
     """Модель грузится и прогревается на старте: первый запрос не должен ждать
     секунды на выделение памяти."""
     global _detector
-    weights = os.environ.get("WEIGHTS")
-    _detector = Detector(weights=Path(weights)) if weights else Detector()
+    from service.demo_detector import build
+
+    weights = Path(os.environ.get("WEIGHTS") or DEFAULT_WEIGHTS)
+    _detector = build(weights, os.environ.get("DEMO_DETECTIONS"))
     _detector.warmup()
     yield
     _detector = None
