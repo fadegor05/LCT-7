@@ -575,6 +575,11 @@ export function parseAssistantScenario(search: string): AssistantScenario {
   return 'ok'
 }
 
+/** Задержка ответа (мс) по сценарию: `slow` — 2000, остальные — без задержки. */
+export function assistantDelayMs(scenario: AssistantScenario): number {
+  return scenario === 'slow' ? 2000 : 0
+}
+
 export function assistantAsk(siteId: string): AssistantAnswer {
   getSite(siteId) // Проверяем, что стройка существует (404)
 

@@ -1,69 +1,79 @@
 /**
- * Тесты для моков ассистента: сценарии ошибок, валидация вопроса, схемы ответа.
+ * Тесты моков ассистента: сценарии ошибок, валидация вопроса, схемы ответа, выбор сценария.
  */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return, vitest/no-conditional-expect, prefer-const */
 import { describe, it, expect, beforeEach } from 'vitest'
-import * as db from '@/mocks/db'
-import { BEREZNIKI } from '@/mocks/fixtures'
-import { request } from '@/api/client'
+import { ApiError, request } from '@/api/client'
 import {
   assistantAnswerSchema,
   assistantStatusSchema,
   scheduleReportSchema,
   siteSchema,
 } from '@/api/schemas'
-import { ApiError } from '@/api/client'
+import * as db from '@/mocks/db'
+import { BEREZNIKI } from '@/mocks/fixtures'
 
-describe('assistant mocks', () => {
+const SCENARIOS: db.AssistantScenario[] = [
+  'ok',
+  'unverified',
+  'out_of_scope',
+  'rate_limited',
+  'unavailable',
+  'timeout',
+  'too_large',
+  'no_llm',
+  'slow',
+  'unlinked',
+]
+
+/** Ждёт отказа запроса и возвращает ApiError; если запрос прошёл — тест падает. */
+async function rejection(promise: Promise<unknown>): Promise<ApiError> {
+  let result: unknown
+  try {
+    result = await promise
+  } catch (error) {
+    if (error instanceof ApiError) return error
+    throw error
+  }
+  throw new Error(`Ожидался отказ запроса, получен ответ: ${JSON.stringify(result)}`)
+}
+
+const ask = (siteId: string, question: string) =>
+  request(`/sites/${siteId}/assistant/ask`, { method: 'POST', body: { question } })
+
+describe('моки ассистента', () => {
   beforeEach(() => {
     db.resetDb()
   })
 
   describe('GET /assistant/status', () => {
-    it('returns enabled: true by default', async () => {
-      const response = await request('/assistant/status', {
-        schema: assistantStatusSchema,
-      })
-      expect(response).toEqual({ enabled: true })
+    it('по умолчанию ассистент включён', async () => {
+      const status = await request('/assistant/status', { schema: assistantStatusSchema })
+      expect(status).toEqual({ enabled: true })
     })
 
-    it('returns enabled: false for no_llm scenario', async () => {
-      db.setAssistantScenario('no_llm')
-      const response = await request('/assistant/status', {
-        schema: assistantStatusSchema,
-      })
-      expect(response).toEqual({ enabled: false })
-    })
-
-    it('returns enabled: false for unavailable scenario', async () => {
-      db.setAssistantScenario('unavailable')
-      const response = await request('/assistant/status', {
-        schema: assistantStatusSchema,
-      })
-      expect(response).toEqual({ enabled: false })
+    it.each(['no_llm', 'unavailable'] as const)('сценарий %s выключает ассистента', async (s) => {
+      db.setAssistantScenario(s)
+      const status = await request('/assistant/status', { schema: assistantStatusSchema })
+      expect(status).toEqual({ enabled: false })
     })
   })
 
   describe('POST /sites/:siteId/assistant/ask', () => {
-    it('succeeds on demo site with correct answer structure', async () => {
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+    it('на демо-стройке отдаёт ответ по контракту', async () => {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
         body: { question: 'где отставание и на сколько' },
         schema: assistantAnswerSchema,
       })
-      expect(response).toMatchObject({
-        answer: expect.any(String),
-        verified: expect.any(Boolean),
-        numbers_not_in_report: expect.any(Array),
-        numbers_of_other_site: expect.any(Array),
-        limits: expect.any(String),
-        site_label: 'p1',
-        stages: expect.any(Array),
-      })
+      expect(answer.site_label).toBe('p1')
+      expect(answer.verified).toBe(true)
+      expect(answer.numbers_not_in_report).toEqual([])
+      expect(answer.numbers_of_other_site).toEqual([])
+      expect(answer.limits).toContain('Проверяются числа')
     })
 
-    it('includes correct stage references in response', async () => {
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+    it('ссылки на этапы указывают на этапы графика', async () => {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
         body: { question: 'где отставание' },
         schema: assistantAnswerSchema,
@@ -71,233 +81,152 @@ describe('assistant mocks', () => {
       const schedule = await request(`/sites/${BEREZNIKI}/schedule`, {
         schema: scheduleReportSchema,
       })
-      // All stage_ids in the answer must exist in the schedule
       const scheduleStageIds = schedule.stages.map((s) => s.id)
-      for (const stage of response.stages) {
+      expect(answer.stages.length).toBeGreaterThan(0)
+      for (const stage of answer.stages) {
         expect(scheduleStageIds).toContain(stage.stage_id)
       }
     })
 
-    it('returns 404 for site without schedule', async () => {
-      const newSite = await request('/sites', {
+    it('номер этапа — порядок по position, ссылка совпадает с текстом ответа', async () => {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
-        body: { name: 'Test Site', address: null },
+        body: { question: 'где отставание' },
+        schema: assistantAnswerSchema,
+      })
+      const schedule = await request(`/sites/${BEREZNIKI}/schedule`, {
+        schema: scheduleReportSchema,
+      })
+      expect(answer.stages).toHaveLength(1)
+      const ref = answer.stages[0]!
+      const inAnswer = /Этап (\d+)/.exec(answer.answer)
+      expect(inAnswer).not.toBeNull()
+      const stageNo = Number(inAnswer![1])
+      const byPosition = [...schedule.stages].sort((a, b) => a.position - b.position)
+      expect(byPosition.findIndex((s) => s.id === ref.stage_id) + 1).toBe(stageNo)
+      expect(ref.ref).toBe(`этап ${stageNo}`)
+    })
+
+    it('стройка без графика — 404 без кода', async () => {
+      const site = await request('/sites', {
+        method: 'POST',
+        body: { name: 'Новая', address: null },
         schema: siteSchema,
       })
-      const error = await request(`/sites/${newSite.id}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test question' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(404)
-      expect(error.message).toBe('График не загружен')
+      const error = await rejection(ask(site.id, 'что с этапами'))
+      expect(error).toMatchObject({ status: 404, message: 'График не загружен' })
+      expect(error.code).toBeUndefined()
     })
 
-    it('returns 404 for unknown site', async () => {
-      const error = await request('/sites/unknown-site-id/assistant/ask', {
-        method: 'POST',
-        body: { question: 'test question' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(404)
-      expect(error.message).toBe('Стройка не найдена')
+    it('неизвестная стройка — 404 без кода', async () => {
+      const error = await rejection(ask('unknown-site-id', 'что с этапами'))
+      expect(error).toMatchObject({ status: 404, message: 'Стройка не найдена' })
+      expect(error.code).toBeUndefined()
     })
 
-    it('returns 429 rate_limited error', async () => {
-      db.setAssistantScenario('rate_limited')
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(429)
-      expect(error.message).toContain('Слишком много вопросов')
-      expect(error.code).toBe('rate_limited')
+    it.each([
+      ['rate_limited', 429, 'Слишком много вопросов. Повторите через 30 с.', 'rate_limited'],
+      ['timeout', 504, 'Модель не ответила. Повторите вопрос позже.', 'assistant_timeout'],
+      ['too_large', 413, 'Отчёт слишком велик для ассистента', 'report_too_large'],
+      ['unavailable', 503, 'Ассистент недоступен', 'assistant_unavailable'],
+    ] as const)('сценарий %s → %i', async (scenario, status, message, code) => {
+      db.setAssistantScenario(scenario)
+      const error = await rejection(ask(BEREZNIKI, 'что с этапами'))
+      expect(error).toMatchObject({ status, message, code })
     })
 
-    it('returns 504 timeout error', async () => {
-      db.setAssistantScenario('timeout')
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(504)
-      expect(error.message).toContain('не ответила')
-      expect(error.code).toBe('assistant_timeout')
-    })
-
-    it('returns 422 out_of_scope error', async () => {
+    it('сценарий out_of_scope → 422 с кодом и текстом ассистента', async () => {
       db.setAssistantScenario('out_of_scope')
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
+      const error = await rejection(ask(BEREZNIKI, 'что с этапами'))
       expect(error.status).toBe(422)
-      expect(error.message).toContain('отвечает только на вопросы')
       expect(error.code).toBe('out_of_scope')
+      expect(error.message).toContain('отвечает только на вопросы по отчёту')
     })
 
-    it('returns 413 too_large error', async () => {
-      db.setAssistantScenario('too_large')
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(413)
-      expect(error.message).toContain('Отчёт слишком велик')
-      expect(error.code).toBe('report_too_large')
-    })
-
-    it('returns 503 unavailable error when scenario is unavailable', async () => {
-      db.setAssistantScenario('unavailable')
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(503)
-      expect(error.code).toBe('assistant_unavailable')
-    })
-
-    it('validates question: too short (< 3 chars)', async () => {
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'ab' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
+    it.each([
+      ['слишком короткий', 'ab'],
+      ['слишком длинный', 'a'.repeat(501)],
+      ['короткий после trim', '  ab  '],
+    ])('вопрос %s → 422 со списком detail и без кода', async (_name, question) => {
+      const error = await rejection(ask(BEREZNIKI, question))
       expect(error.status).toBe(422)
       expect(Array.isArray(error.detail)).toBe(true)
       expect(error.code).toBeUndefined()
     })
 
-    it('validates question: too long (> 500 chars)', async () => {
-      const longQuestion = 'a'.repeat(501)
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+    it.each([
+      ['3 символа', 'abc'],
+      ['500 символов', 'a'.repeat(500)],
+    ])('вопрос из %s принимается', async (_name, question) => {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
-        body: { question: longQuestion },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(422)
-      expect(Array.isArray(error.detail)).toBe(true)
-      expect(error.code).toBeUndefined()
-    })
-
-    it('accepts question with exactly 3 characters', async () => {
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'abc' },
+        body: { question },
         schema: assistantAnswerSchema,
       })
-      expect(response).toBeDefined()
+      expect(answer.answer.length).toBeGreaterThan(0)
     })
 
-    it('accepts question with exactly 500 characters', async () => {
-      const longQuestion = 'a'.repeat(500)
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: longQuestion },
-        schema: assistantAnswerSchema,
-      })
-      expect(response).toBeDefined()
-    })
-
-    it('trims whitespace from question', async () => {
-      // Verify that a question with only 2 chars of content but padded to > 3 chars fails
-      const padded = '  ab  '
-      const error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: padded },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(422)
-      // After trimming "  ab  " becomes "ab" which is < 3 chars
-      expect(Array.isArray(error.detail)).toBe(true)
-    })
-
-    it('returns unverified answer with specified fields', async () => {
+    it('сценарий unverified отдаёт непроверенный ответ с числами', async () => {
       db.setAssistantScenario('unverified')
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
-        body: { question: 'test' },
+        body: { question: 'что с этапами' },
         schema: assistantAnswerSchema,
       })
-      expect(response.verified).toBe(false)
-      expect(response.numbers_not_in_report).toEqual(['999'])
-      expect(response.numbers_of_other_site).toEqual(['p1: 5'])
+      expect(answer.verified).toBe(false)
+      expect(answer.numbers_not_in_report).toEqual(['999'])
+      expect(answer.numbers_of_other_site).toEqual(['p1: 5'])
     })
 
-    it('returns empty stages for unlinked scenario', async () => {
+    it('сценарий unlinked не отдаёт ссылок на этапы', async () => {
       db.setAssistantScenario('unlinked')
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
-        body: { question: 'test' },
+        body: { question: 'что с этапами' },
         schema: assistantAnswerSchema,
       })
-      expect(response.stages).toEqual([])
+      expect(answer.stages).toEqual([])
     })
 
-    it('resetDb restores scenario to ok', async () => {
+    it('resetDb возвращает сценарий ok', async () => {
       db.setAssistantScenario('timeout')
-      let error = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
+      const error = await rejection(ask(BEREZNIKI, 'что с этапами'))
       expect(error.status).toBe(504)
 
       db.resetDb()
 
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
+      expect(db.getAssistantScenario()).toBe('ok')
+      const answer = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
         method: 'POST',
-        body: { question: 'test' },
+        body: { question: 'что с этапами' },
         schema: assistantAnswerSchema,
       })
-      expect(response).toBeDefined()
-      expect(response.answer).toBeDefined()
+      expect(answer.verified).toBe(true)
+    })
+  })
+
+  describe('выбор сценария', () => {
+    it.each(SCENARIOS)('parseAssistantScenario распознаёт %s', (scenario) => {
+      expect(db.parseAssistantScenario(`?assistant=${scenario}`)).toBe(scenario)
     })
 
-    it('handle() includes code only for coded errors', async () => {
-      // This test verifies that non-coded errors (like 404) don't have a code field
-      const error = await request('/sites/unknown/assistant/ask', {
-        method: 'POST',
-        body: { question: 'test' },
-      }).catch((e) => e)
-      expect(error).toBeInstanceOf(ApiError)
-      expect(error.status).toBe(404)
-      expect(error.code).toBeUndefined()
+    it.each([
+      ['неизвестное имя', '?assistant=nope'],
+      ['пустая строка', ''],
+      ['другой параметр', '?other=1'],
+      ['пустое значение', '?assistant='],
+    ])('parseAssistantScenario: %s → ok', (_name, search) => {
+      expect(db.parseAssistantScenario(search)).toBe('ok')
     })
 
-    it('stage_no uses 1-based position order, not array order', async () => {
-      // Verify that stage numbering respects the position field
-      const response = await request(`/sites/${BEREZNIKI}/assistant/ask`, {
-        method: 'POST',
-        body: { question: 'test' },
-        schema: assistantAnswerSchema,
-      })
-      // Get the schedule to verify positions
-      const schedule = await request(`/sites/${BEREZNIKI}/schedule`, {
-        schema: scheduleReportSchema,
-      })
-      // Check that if there is a behind stage, its stage_no equals its position
-      if (response.stages.length > 0) {
-        const stageId = response.stages[0]?.stage_id
-        if (stageId) {
-          const behindStage = schedule.stages.find((s) => s.id === stageId)
-          if (behindStage) {
-            // Extract stage number from the answer (e.g., "Этап 1" → 1)
-            const match = response.answer.match(/Этап (\d+)/)
-            if (match?.[1]) {
-              const stageNo = parseInt(match[1], 10)
-              // Verify it equals the position in a position-sorted array
-              const sortedByPosition = [...schedule.stages].sort((a, b) => a.position - b.position)
-              const expectedNo = sortedByPosition.findIndex((s) => s.id === behindStage.id)
-              expect(stageNo).toBe(expectedNo + 1)
-            }
-          }
-        }
+    it('parseAssistantScenario находит параметр среди других', () => {
+      expect(db.parseAssistantScenario('?x=1&assistant=timeout&y=2')).toBe('timeout')
+    })
+
+    it('задержку даёт только сценарий slow', () => {
+      expect(db.assistantDelayMs('slow')).toBe(2000)
+      for (const scenario of SCENARIOS.filter((s) => s !== 'slow')) {
+        expect(db.assistantDelayMs(scenario)).toBe(0)
       }
     })
   })

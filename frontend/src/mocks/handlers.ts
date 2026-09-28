@@ -12,14 +12,10 @@ const api = (path: string) => `${env.apiBaseUrl}${path}`
 /** Небольшая задержка в браузере, чтобы были видны состояния загрузки; в тестах — ноль. */
 const latency = () => (import.meta.env.MODE === 'test' ? Promise.resolve() : delay(250))
 
-/** Задержка (мс) по сценарию: slow = 2000 мс, иначе 0. В тестах всегда 0. */
-const assistantDelayMs = (scenario: db.AssistantScenario): number =>
-  scenario === 'slow' ? 2000 : 0
-
 /** Задержка для долгого ответа (сценарий slow). В тестах пропускается. */
 const assistantLatency = () => {
-  const scenario = db.getAssistantScenario()
-  const delayMs = import.meta.env.MODE === 'test' ? 0 : assistantDelayMs(scenario)
+  const delayMs =
+    import.meta.env.MODE === 'test' ? 0 : db.assistantDelayMs(db.getAssistantScenario())
   return delayMs > 0 ? delay(delayMs) : Promise.resolve()
 }
 
