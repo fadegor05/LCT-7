@@ -35,13 +35,23 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import socket
 import sys
 from pathlib import Path
+from typing import NamedTuple
+from urllib.error import HTTPError, URLError
 
 ML = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ML / "tools"))
 
 from suggest_stage_mapping import ask, from_env  # noqa: E402
+
+class LLMConfig(NamedTuple):
+    """Конфигурация провайдера языковой модели."""
+    base_url: str
+    api_key: str
+    model: str
+
 
 SYSTEM = (
     "Ты отвечаешь на вопросы по отчёту о ходе строительных работ. Отвечай "
@@ -57,6 +67,59 @@ LIMITS = ("Проверяются числа, а не смысл: верное �
 
 NO_SITE_NOTE = ("Ответ не называет площадку, поэтому числа не сверены по площадкам: "
                 "они проверены только по отчёту в целом.")
+
+
+def llm_config() -> LLMConfig | None:
+    """Конфигурация провайдера языковой модели из окружения или ml/.env.
+
+    Возвращает LLMConfig, если все три переменные (LLM_BASE_URL, LLM_API_KEY,
+    LLM_MODEL) установлены и непусты после strip(). Иначе None.
+    """
+    base_url = from_env("LLM_BASE_URL")
+    api_key = from_env("LLM_API_KEY")
+    model = from_env("LLM_MODEL")
+
+    # Проверяем, что все три значения заданы и не пусты после strip()
+    if (base_url and base_url.strip() and
+        api_key and api_key.strip() and
+        model and model.strip()):
+        return LLMConfig(
+            base_url=base_url.strip(),
+            api_key=api_key.strip(),
+            model=model.strip()
+        )
+    return None
+
+
+def describe_llm_error(exc: BaseException) -> str:
+    """Описание ошибки провайдера LLM без утечки чувствительных данных.
+
+    Переводит исключение в категорию, скрывая детали хоста, ключа и прочего.
+    """
+    # HTTPError первым, так как он — подкласс URLError
+    if isinstance(exc, HTTPError):
+        return f"HTTP {exc.code}"
+
+    # Проверяем на таймаут
+    if isinstance(exc, TimeoutError):
+        return "тайм-аут"
+
+    if isinstance(exc, URLError):
+        # Проверяем причину URLError на таймаут
+        if isinstance(exc.reason, (TimeoutError, socket.timeout)):
+            return "тайм-аут"
+        # Иначе это проблема соединения
+        return "нет соединения с провайдером"
+
+    if isinstance(exc, socket.timeout):
+        return "тайм-аут"
+
+    # Проверяем на ошибки парсинга JSON и обхода структуры
+    if isinstance(exc, (json.JSONDecodeError, KeyError, IndexError, TypeError)):
+        return "неожиданный ответ провайдера"
+
+    # Всё остальное
+    return "ошибка запроса"
 
 def normalise(text: str) -> str:
     """Склеивает разряды, разделённые пробелом: «4 500 000» → «4500000».
@@ -250,9 +313,8 @@ def main() -> int:
     prompt = (f"Отчёт:\n{json.dumps(data, ensure_ascii=False)}\n\n"
               f"Вопрос: {args.question}")
 
-    base_url, api_key, model = (from_env("LLM_BASE_URL"), from_env("LLM_API_KEY"),
-                                from_env("LLM_MODEL"))
-    if args.dry_run or not (base_url and api_key and model):
+    cfg = llm_config()
+    if args.dry_run or not cfg:
         if not args.dry_run:
             print("Языковая модель не настроена (LLM_BASE_URL, LLM_API_KEY, "
                   "LLM_MODEL в ml/.env). Показываю запрос.\n")
@@ -261,7 +323,7 @@ def main() -> int:
         print(prompt[:1200] + ("..." if len(prompt) > 1200 else ""))
         return 0
 
-    answer = ask(prompt, base_url, api_key, model, timeout=args.timeout, system=SYSTEM)
+    answer = ask(prompt, cfg.base_url, cfg.api_key, cfg.model, timeout=args.timeout, system=SYSTEM)
     bad = unverified(answer, known)
     by_site = numbers_by_site(data)
     wrong_site = misattributed(answer, by_site)
@@ -279,7 +341,6 @@ def main() -> int:
     else:
         print("Ответ нельзя подавать как факт: сверьтесь с отчётом.")
     print(limits_for(answer, by_site))
-    print("Источник истины — сам отчёт; ответ выше лишь пересказывает его.")
     return 0 if not (bad or wrong_site) else 2
 
 
