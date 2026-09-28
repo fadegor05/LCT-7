@@ -124,6 +124,57 @@ curl -X POST http://localhost/api/sites/{id}/photos/detect?status=pending,failed
   образ@sha, если достижима).
 - `/api/version`: добавлено поле `"model"` (версия, или `null` если ML недоступен).
 
+## Ассистент по отчёту (LLM)
+
+Языковая модель помогает прочитать готовый отчёт: пользователь спрашивает на
+русском, ассистент отвечает пересказом данных с проверкой чисел.
+
+### Подключение модели
+
+Три переменные в корневом `.env`:
+
+```dotenv
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+```
+
+Сервис обращается к `{LLM_BASE_URL}/chat/completions` — формат OpenAI,
+заголовок `Authorization: Bearer {LLM_API_KEY}`, `temperature: 0`. Подойдёт
+облачный сервис (OpenAI, Anthropic, локальный API) или локальная модель,
+которая держит этот формат.
+
+Переменные передаются **только** в контейнер `ml`; в `backend` они отсутствуют
+(ключ живёт только в ML-сервисе).
+
+### Проверка доступности
+
+```bash
+curl http://localhost/meta
+```
+
+Поле `"assistant": true` означает, что модель доступна и ассистент готов
+отвечать.
+
+Без подключения переменных (значения пусты или не задан `LLM_API_KEY`):
+
+```bash
+curl -X POST http://localhost/ask -H "Content-Type: application/json" \
+  -d '{"question":"...", "report":{...}, "site_id":"p03"}'
+# → 503 Service Unavailable
+```
+
+Это штатное состояние стенда без LLM-провайдера.
+
+Доступные модели провайдера:
+
+```bash
+python tools/suggest_stage_mapping.py --list-models
+```
+
+Запускается внутри `ml/` с переменными в `ml/.env` (при локальной разработке)
+или в корневом `.env` (в Docker).
+
 ## Стенд в Yandex Cloud (veha-stand)
 
 С 27.09.2026 стенд живёт на ВМ в Yandex Cloud: 4 vCPU (Intel Ice Lake, 100%),
