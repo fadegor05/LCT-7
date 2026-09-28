@@ -104,7 +104,7 @@ class AssistantSettings(BaseModel):
     status_cache_s: float = 30.0
     status_retry_s: float = 5.0
     # Разбор плана моделью идёт кусками по ~40 строк, каждый — отдельный вызов LLM
-    parse_timeout_s: float = 300.0
+    parse_timeout_s: float = 600.0
 
 
 class Settings(BaseSettings):

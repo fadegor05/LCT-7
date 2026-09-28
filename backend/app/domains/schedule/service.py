@@ -23,6 +23,7 @@ from app.domains.schedule.parser import (
     ParseResult,
     ScheduleFormatError,
     ScheduleParser,
+    clean_stage_name,
 )
 from app.domains.schedule.repository import ScheduleRepository
 from app.domains.schedule.schemas import IssueRead, ScheduleReport, StageDatesUpdate, StageRead
@@ -44,7 +45,8 @@ def _from_llm(result: LlmScheduleResult) -> ParseResult:
                 )
             )
             continue
-        rows.append(ParsedRow(name=item.name, start=item.start, end=item.end))
+        name = clean_stage_name(item.name)
+        rows.append(ParsedRow(name=name, start=item.start, end=item.end))
     issues.sort(key=lambda i: i.row_number)
     return ParseResult(rows=rows, issues=issues, rows_total=len(rows) + len(issues))
 

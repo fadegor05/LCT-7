@@ -83,9 +83,36 @@ def test_chunks_and_context(monkeypatch):
 
     monkeypatch.setattr(schedule_llm, "ask", fake_ask)
     parse_table(rows, "u", "k", "m")
-    assert len(prompts) == 3
+    assert len(prompts) == 4
     assert "КОНТЕКСТ" not in prompts[0]
     assert "КОНТЕКСТ" in prompts[1]
+
+
+def test_truncated_answer_splits_the_chunk(monkeypatch):
+    """finish_reason=length (EmptyAnswer) → кусок делится пополам и разбирается по частям."""
+    rows = [Row(i, [f"Работа {i}"]) for i in range(1, 21)]
+    sizes: list[int] = []
+
+    def fake_ask(prompt, *_a, **_k):
+        count = prompt.count("[")
+        sizes.append(count)
+        if count > 10:
+            raise schedule_llm.EmptyAnswer("finish_reason=length")
+        return "\n".join(f"{n}|Работа {n}|-|-" for n in range(1, 21) if f"[{n}]" in prompt)
+
+    monkeypatch.setattr(schedule_llm, "ask", fake_ask)
+    works, _ = parse_table(rows, "u", "k", "m")
+    assert [w.row for w in works] == list(range(1, 21))
+    assert sizes == [20, 10, 10]
+
+
+def test_truncated_answer_on_tiny_chunk_raises(monkeypatch):
+    def boom(*_a, **_k):
+        raise schedule_llm.EmptyAnswer("finish_reason=length")
+
+    monkeypatch.setattr(schedule_llm, "ask", boom)
+    with pytest.raises(schedule_llm.EmptyAnswer):
+        parse_table([Row(1, ["Работа"])], "u", "k", "m")
 
 
 def test_too_many_rows():

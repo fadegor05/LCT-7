@@ -26,20 +26,26 @@ from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from suggest_stage_mapping import ask  # noqa: E402
+from suggest_stage_mapping import EmptyAnswer, ask  # noqa: E402
 
 # Сколько строк таблицы отдаём модели за один вызов. Слабая модель на длинном
-# списке теряет строки и путает номера; 40 строк — то, где она держится.
-CHUNK_ROWS = 40
+# списке теряет строки и путает номера; 25 строк — то, где она держится и где
+# рассуждения reasoning-модели не съедают весь бюджет токенов.
+CHUNK_ROWS = 25
 # Первые строки файла (шапка, реквизиты) приклеиваются к каждому следующему куску
 # как контекст: без них на втором куске модель не знает, что за колонки.
 CONTEXT_ROWS = 6
 # Верхняя граница: больше — это не график работ, а выгрузка чего-то другого.
 MAX_ROWS = 400
 MAX_CELL_CHARS = 200
-# Рассуждения и ответ делят один бюджет (см. ask_report.ASK_MAX_TOKENS).
-MAX_TOKENS = 4000
-CALL_TIMEOUT_S = 120
+# Рассуждения и ответ делят один бюджет (см. ask_report.ASK_MAX_TOKENS). На
+# реальном плане (28.09.2026) при 4000 бюджет кончался до первого символа ответа
+# (finish_reason=length), поэтому запас большой; если и его не хватило — кусок
+# делится пополам (см. _ask_part).
+MAX_TOKENS = 12000
+CALL_TIMEOUT_S = 180
+# Ниже этого размера кусок не делим: дальше только пустая трата вызовов.
+MIN_SPLIT_ROWS = 6
 
 NO_WORKS = "НЕТ"
 
@@ -294,6 +300,25 @@ def parse_answer(text: str, part: list[Row]) -> tuple[list[Work], list[Issue]]:
 
 # ---------- прогон ----------
 
+def _ask_part(part: list[Row], context: list[Row], base_url: str, api_key: str, model: str
+              ) -> tuple[list[Work], list[Issue]]:
+    """Один кусок таблицы → работы. Если ответ обрезан бюджетом токенов — делим пополам."""
+    try:
+        answer = ask(build_prompt(part, context), base_url, api_key, model,
+                     timeout=CALL_TIMEOUT_S, system=SYSTEM, max_tokens=MAX_TOKENS)
+    except EmptyAnswer:
+        if len(part) < MIN_SPLIT_ROWS * 2:
+            raise
+        middle = len(part) // 2
+        works, issues = [], []
+        for half in (part[:middle], part[middle:]):
+            w, i = _ask_part(half, context, base_url, api_key, model)
+            works += w
+            issues += i
+        return works, issues
+    return parse_answer(answer, part)
+
+
 def parse_table(rows: list[Row], base_url: str, api_key: str, model: str) -> tuple[list[Work], list[Issue]]:
     """Разобрать всю таблицу кусками. Ошибки провайдера пробрасываются наружу."""
     rows = [r for r in rows if any(c.strip() for c in r.cells)]
@@ -303,9 +328,8 @@ def parse_table(rows: list[Row], base_url: str, api_key: str, model: str) -> tup
     works: list[Work] = []
     issues: list[Issue] = []
     for index, part in enumerate(chunks(rows)):
-        answer = ask(build_prompt(part, [] if index == 0 else context), base_url, api_key, model,
-                     timeout=CALL_TIMEOUT_S, system=SYSTEM, max_tokens=MAX_TOKENS)
-        part_works, part_issues = parse_answer(answer, part)
+        part_works, part_issues = _ask_part(
+            part, [] if index == 0 else context, base_url, api_key, model)
         works += part_works
         issues += part_issues
     works.sort(key=lambda w: w.row)
