@@ -71,7 +71,11 @@ def dedup(detections: list[dict]) -> list[dict]:
     и стандартный порог 0.7 их не трогает. В прогоне 1.3 таких 12%.
     """
     kept: list[dict] = []
-    for det in sorted(detections, key=lambda d: -d["conf"]):
+    # Распознанное идёт первым: если система сама увидела машину, в своде
+    # останется её рамка, а запись реестра схлопнется как дубль. Так регистрация
+    # не подменяет наблюдение там, где наблюдение есть.
+    for det in sorted(detections, key=lambda d: (d.get("source") == "registered",
+                                                 -d.get("conf", 0.0))):
         duplicate = False
         for prev in kept:
             if prev["class_ours"] != det["class_ours"]:
@@ -85,11 +89,27 @@ def dedup(detections: list[dict]) -> list[dict]:
     return kept
 
 
-def frame_counts(record: dict, thresholds: dict[str, float], default_conf: float) -> Counter:
-    """Классы одного кадра после фильтрации по порогу и схлопывания дублей."""
-    filtered = [d for d in record["detections"]
-                if d["conf"] >= thresholds.get(d["class_ours"], default_conf)]
-    return Counter(d["class_ours"] for d in dedup(filtered))
+def frame_counts(record: dict, thresholds: dict[str, float],
+                 default_conf: float) -> tuple[Counter, Counter]:
+    """Классы одного кадра после фильтрации по порогу и схлопывания дублей.
+
+    Возвращает две величины: сколько машин каждого класса насчитано всего и
+    сколько из них пришло из реестра неподвижной техники
+    (`tools/registered_equipment.py`). Вторая нужна, чтобы дальше по цепочке
+    можно было честно сказать, на чём держится вывод: у записи реестра нет
+    уверенности, есть ответственность оператора, и выдавать её за распознанное
+    нельзя.
+    """
+    filtered = []
+    for d in record["detections"]:
+        if d.get("source") == "registered":
+            filtered.append(d)          # утверждение оператора порогом не режется
+        elif d.get("conf", 0) >= thresholds.get(d["class_ours"], default_conf):
+            filtered.append(d)
+    kept = dedup(filtered)
+    total = Counter(d["class_ours"] for d in kept)
+    registered = Counter(d["class_ours"] for d in kept if d.get("source") == "registered")
+    return total, registered
 
 
 def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
@@ -115,13 +135,20 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
 
     states = []
     for (site_id, date), frames in sorted(groups.items()):
-        per_frame = [frame_counts(f, thresholds, default_conf) for f in frames]
+        counted = [frame_counts(f, thresholds, default_conf) for f in frames]
+        per_frame = [c for c, _ in counted]
 
         # Максимум по кадрам: см. докстринг модуля.
         equipment: Counter = Counter()
         for counts in per_frame:
             for cls, n in counts.items():
                 equipment[cls] = max(equipment[cls], n)
+
+        # Сколько из этого — записи реестра, а не наблюдения.
+        registered: Counter = Counter()
+        for _, reg in counted:
+            for cls, n in reg.items():
+                registered[cls] = max(registered[cls], n)
 
         # Вовлечённость: одно наблюдение = один work sample (part_N_activity, §6.3).
         # Вердикта «машина простаивает» по кадру не даём — копим доли по классам.
@@ -138,6 +165,7 @@ def build_states(records: list[dict], sites: dict[str, tuple[str, str]],
             "n_images": len(frames),
             "images": [f["image"] for f in frames],
             "equipment": dict(sorted(equipment.items(), key=lambda kv: -kv[1])),
+            "registered_equipment": dict(sorted(registered.items(), key=lambda kv: -kv[1])),
             "per_frame_totals": [sum(c.values()) for c in per_frame],
             "engagement": {k: dict(v) for k, v in sorted(engagement.items())},
             "observability": {

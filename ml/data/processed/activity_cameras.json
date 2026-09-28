@@ -1,0 +1,152 @@
+{
+ "classes": [
+  {
+   "class": "backhoe_loader",
+   "pairs": 129,
+   "moved": 10,
+   "still": 84,
+   "unclear": 35,
+   "still_share": 0.894,
+   "interval": [
+    0.815,
+    0.941
+   ],
+   "basis": "84 наблюдений без смещения из 94 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.715
+  },
+  {
+   "class": "concrete_mixer",
+   "pairs": 10,
+   "moved": 2,
+   "still": 7,
+   "unclear": 1,
+   "basis": "определённых наблюдений 9 — меньше порога 10, доля не оценивается"
+  },
+  {
+   "class": "drilling_unknown",
+   "pairs": 2,
+   "moved": 0,
+   "still": 2,
+   "unclear": 0,
+   "basis": "определённых наблюдений 2 — меньше порога 10, доля не оценивается"
+  },
+  {
+   "class": "dump_truck",
+   "pairs": 1,
+   "moved": 0,
+   "still": 1,
+   "unclear": 0,
+   "basis": "определённых наблюдений 1 — меньше порога 10, доля не оценивается"
+  },
+  {
+   "class": "excavator_unknown",
+   "pairs": 59,
+   "moved": 8,
+   "still": 36,
+   "unclear": 15,
+   "still_share": 0.818,
+   "interval": [
+    0.68,
+    0.905
+   ],
+   "basis": "36 наблюдений без смещения из 44 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.654
+  },
+  {
+   "class": "flatbed_truck",
+   "pairs": 36,
+   "moved": 3,
+   "still": 29,
+   "unclear": 4,
+   "still_share": 0.906,
+   "interval": [
+    0.758,
+    0.968
+   ],
+   "basis": "29 наблюдений без смещения из 32 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.725
+  },
+  {
+   "class": "loader_crane",
+   "pairs": 47,
+   "moved": 3,
+   "still": 29,
+   "unclear": 15,
+   "still_share": 0.906,
+   "interval": [
+    0.758,
+    0.968
+   ],
+   "basis": "29 наблюдений без смещения из 32 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.725
+  },
+  {
+   "class": "loader_unknown",
+   "pairs": 166,
+   "moved": 5,
+   "still": 141,
+   "unclear": 20,
+   "still_share": 0.966,
+   "interval": [
+    0.922,
+    0.985
+   ],
+   "basis": "141 наблюдений без смещения из 146 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.773
+  },
+  {
+   "class": "tower_crane",
+   "pairs": 69,
+   "moved": 9,
+   "still": 46,
+   "unclear": 14,
+   "still_share": 0.836,
+   "interval": [
+    0.717,
+    0.911
+   ],
+   "basis": "46 наблюдений без смещения из 55 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.669
+  },
+  {
+   "class": "truck_unknown",
+   "pairs": 1,
+   "moved": 0,
+   "still": 1,
+   "unclear": 0,
+   "basis": "определённых наблюдений 1 — меньше порога 10, доля не оценивается"
+  },
+  {
+   "class": "wheel_loader",
+   "pairs": 32,
+   "moved": 3,
+   "still": 16,
+   "unclear": 13,
+   "still_share": 0.842,
+   "interval": [
+    0.624,
+    0.945
+   ],
+   "basis": "16 наблюдений без смещения из 19 определённых; интервал Уилсона 95%",
+   "still_share_floor": 0.674
+  }
+ ],
+ "meta": {
+  "cameras": 6,
+  "frames": 1286,
+  "pairs_used": 552,
+  "objects_linkable": 690,
+  "objects_linked": 552,
+  "linked_share": 0.8,
+  "frames_without_time": 0,
+  "frames_skipped_camera_moved": 0,
+  "pairs_skipped_gap": 216,
+  "thresholds": {
+   "moved": 0.1,
+   "still": 0.03,
+   "max_gap_minutes": 31,
+   "conf": 0.25
+  }
+ },
+ "cannot_claim": "Измеряется смещение рамки между кадрами, а не работа. Машина без смещения может работать с места (экскаватор копает, кран поворачивает стрелу), поэтому величина названа «доля наблюдений без смещения», а не «доля простоя». Метод верен только для неподвижной камеры. Связать удаётся не все машины, а несвязанные — это в первую очередь уехавшие, поэтому доля завышена: нижняя оценка в поле still_share_floor."
+}
