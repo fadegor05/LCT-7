@@ -40,4 +40,10 @@
   .section > div:first-child {
     align-self: stretch;
   }
+
+  /* Действия занимают всю ширину и переносятся, а не уезжают за край экрана. */
+  .head > .actions {
+    align-self: stretch;
+    flex-wrap: wrap;
+  }
 }
