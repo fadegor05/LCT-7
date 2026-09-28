@@ -42,7 +42,7 @@ describe('creating a site', () => {
     await user.type(within(table).getByLabelText('Дата окончания: Благоустройство'), '20.12')
     await user.click(within(table).getByRole('button', { name: 'Задать' }))
     expect(await within(table).findByText('задано вручную')).toBeInTheDocument()
-    expect(within(table).getByText('01.12 — 20.12')).toBeInTheDocument()
+    expect(within(table).getByText('ВТ 01.12 — ВС 20.12')).toBeInTheDocument()
 
     await user.clear(screen.getByLabelText('Адрес или обозначение'))
     await user.click(screen.getByRole('button', { name: 'Далее: методика' }))

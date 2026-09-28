@@ -42,8 +42,8 @@ describe('DeviationList', () => {
     expect(link).toHaveAttribute('href', '/sites/s1/deviations/d1')
     expect(within(link).getByText('Простой техники (гипотеза)')).toBeInTheDocument()
     expect(within(link).getByText('Все этапы')).toBeInTheDocument()
-    expect(within(link).getByText('17.09 — 18.09')).toBeInTheDocument()
-    expect(within(link).getByText('18.09.2026')).toBeInTheDocument()
+    expect(within(link).getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
+    expect(within(link).getByText('ПТ 18.09.2026')).toBeInTheDocument()
   })
 
   it('shows the site name and period in the cross-site list', () => {
@@ -51,7 +51,7 @@ describe('DeviationList', () => {
       <DeviationList items={[{ ...deviation, stage_name: undefined }]} showSite />,
     )
     expect(screen.getByText('Стройка')).toBeInTheDocument()
-    expect(screen.getByText('17.09 — 18.09')).toBeInTheDocument()
+    expect(screen.getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
   })
 
   it('has an empty state', () => {
@@ -161,7 +161,7 @@ describe('StagesTable', () => {
       />,
     )
     const rows = screen.getAllByRole('row').slice(1)
-    expect(rows[0]).toHaveTextContent('1Котлован01.09 — 10.09')
+    expect(rows[0]).toHaveTextContent('1КотлованВТ 01.09 — ЧТ 10.09')
     expect(within(rows[1]!).getByText('задано вручную')).toBeInTheDocument()
   })
 
@@ -222,7 +222,7 @@ describe('StageStatusTable', () => {
       />,
     )
     const [, pit, slab, backfill] = screen.getAllByRole('row')
-    expect(pit).toHaveTextContent('01.09–10.09')
+    expect(pit).toHaveTextContent('ВТ 01.09–ЧТ 10.09')
     expect(pit).toHaveTextContent('Экскаватор после планового конца')
     expect(pit).toHaveTextContent('отставание 4 дн. · уверенность высокая')
     expect(within(pit!).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(

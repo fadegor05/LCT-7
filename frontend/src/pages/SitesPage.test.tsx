@@ -12,7 +12,7 @@ describe('SitesPage', () => {
     expect(await within(berezniki).findByText('Отставание 4 дней')).toBeInTheDocument()
     expect(within(berezniki).getByLabelText('Критично')).toHaveTextContent('1')
     expect(within(berezniki).getByLabelText('Внимание')).toHaveTextContent('2')
-    expect(await within(berezniki).findByText('18.09.2026')).toBeInTheDocument()
+    expect(await within(berezniki).findByText('ПТ 18.09.2026')).toBeInTheDocument()
     expect(within(berezniki).getByText('Высокая')).toBeInTheDocument()
     const synthetic = within(list).getByRole('link', { name: /Синтетический/ })
     expect(within(synthetic).getByText('Недостаточно данных')).toBeInTheDocument()

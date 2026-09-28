@@ -27,7 +27,7 @@ describe('SiteOverviewPage', () => {
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
     const pit = within(table).getByRole('row', { name: /Разработка котлована/ })
     expect(within(pit).getByText('Отставание')).toBeInTheDocument()
-    expect(within(pit).getByText('01.09–14.09')).toBeInTheDocument()
+    expect(within(pit).getByText('ВТ 01.09–ПН 14.09')).toBeInTheDocument()
     expect(within(pit).getByText('отставание 4 дн. · уверенность высокая')).toBeInTheDocument()
     expect(within(pit).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
       'href',
@@ -37,7 +37,7 @@ describe('SiteOverviewPage', () => {
     expect(within(backfill).getByText('Не начата')).toBeInTheDocument()
 
     expect(
-      await screen.findByRole('heading', { name: 'Последнее наблюдение · 18.09' }),
+      await screen.findByRole('heading', { name: 'Последнее наблюдение · ПТ 18.09' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Гусеничный экскаватор 2, самосвал 1 (максимум по снимкам).'),
