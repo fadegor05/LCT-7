@@ -23,15 +23,14 @@ interface StageKitEditorProps {
 }
 
 /**
- * Правило этапа (UC-2): проверяется ли этап по технике и какими комплектами. Любой из
- * комплектов подтверждает этап; правка пересчитывает выводы на сервере.
+ * Правило этапа (UC-2): проверяется ли этап по технике и каким комплектом. Комплект у этапа
+ * один; у этапа без комплекта сразу открыт пустой. Правка пересчитывает выводы на сервере.
  */
 export function StageKitEditor({ siteId, rule, stage, types }: StageKitEditorProps) {
   const update = useUpdateRule(siteId)
   const [check, setCheck] = useState(rule.is_verifiable)
   const [reason, setReason] = useState(rule.unverifiable_reason ?? '')
   const [reasonError, setReasonError] = useState<string>()
-  const [adding, setAdding] = useState(false)
 
   const dirty =
     check !== rule.is_verifiable || (!check && reason !== (rule.unverifiable_reason ?? ''))
@@ -104,8 +103,8 @@ export function StageKitEditor({ siteId, rule, stage, types }: StageKitEditorPro
       {rule.is_verifiable && check ? (
         <>
           {rule.sets.length === 0 && (
-            <Callout tone="caution" title="Комплектов нет">
-              Добавьте хотя бы один комплект, иначе этап нечем подтвердить.
+            <Callout tone="caution" title="Комплекта нет">
+              Добавьте технику в комплект, иначе этап нечем подтвердить.
             </Callout>
           )}
           {rule.sets.map((set, i) => (
@@ -118,21 +117,8 @@ export function StageKitEditor({ siteId, rule, stage, types }: StageKitEditorPro
               types={types}
             />
           ))}
-          {adding ? (
-            <SetEditor
-              siteId={siteId}
-              ruleId={rule.id}
-              set={null}
-              number={rule.sets.length + 1}
-              types={types}
-              onDone={() => setAdding(false)}
-            />
-          ) : (
-            <div>
-              <Button variant="ghost" size="sm" icon="plus" onClick={() => setAdding(true)}>
-                Добавить комплект
-              </Button>
-            </div>
+          {rule.sets.length === 0 && (
+            <SetEditor siteId={siteId} ruleId={rule.id} set={null} number={1} types={types} />
           )}
         </>
       ) : (

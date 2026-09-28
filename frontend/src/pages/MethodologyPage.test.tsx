@@ -68,36 +68,11 @@ describe('MethodologyPage', () => {
     expect(within(kit(1)).getByRole('button', { name: 'Сохранить' })).toBeDisabled()
   })
 
-  it('adds an alternative kit and deletes one', async () => {
-    const { user } = renderRoute('/sites/site-berezniki/methodology')
+  it('keeps a single kit: no adding or deleting kits', async () => {
+    renderRoute('/sites/site-berezniki/methodology')
     await screen.findByRole('region', { name: 'Комплект 1' })
-
-    await user.click(screen.getByRole('button', { name: 'Добавить комплект' }))
-    await user.click(within(kit(2)).getAllByRole('button', { name: 'Отмена' }).at(-1)!)
-    expect(screen.queryByRole('region', { name: 'Комплект 2' })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Добавить комплект' }))
-    await user.selectOptions(within(kit(2)).getByLabelText('Машина'), 'Колёсный экскаватор')
-    await user.type(within(kit(2)).getByLabelText('ГЭСН или источник'), 'по смыслу работы')
-    await user.click(within(kit(2)).getByRole('button', { name: 'Добавить' }))
-    await user.click(within(kit(2)).getByRole('button', { name: 'Сохранить' }))
-    await vi.waitFor(() =>
-      expect(stageButton(/Разработка котлована/)).toHaveTextContent(
-        '2 комплекта · маркер: гусеничный экскаватор, колёсный экскаватор',
-      ),
-    )
-
-    await user.click(screen.getByRole('button', { name: 'Удалить комплект 1' }))
-    await vi.waitFor(() =>
-      expect(stageButton(/Разработка котлована/)).toHaveTextContent(
-        '1 комплект · маркер: колёсный экскаватор',
-      ),
-    )
-    // Последний комплект проверяемого этапа удалить нельзя — это правило backend.
-    await user.click(screen.getByRole('button', { name: 'Удалить комплект 1' }))
-    expect(
-      await screen.findByText(/Нельзя удалить последний комплект проверяемого этапа/),
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Добавить комплект' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Удалить комплект/ })).not.toBeInTheDocument()
   })
 
   it('turns equipment check off with a reason and back on', async () => {
@@ -121,8 +96,19 @@ describe('MethodologyPage', () => {
     await user.click(screen.getByRole('button', { name: 'Проверяется' }))
     expect(screen.getByText('После сохранения добавьте комплект техники.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Сохранить' }))
-    expect(await screen.findByText('Комплектов нет')).toBeInTheDocument()
+    expect(await screen.findByText('Комплекта нет')).toBeInTheDocument()
     expect(stageButton(/Благоустройство/)).toHaveTextContent('0 комплектов · маркеров нет')
+
+    // У этапа без комплекта пустой комплект открыт сразу: машину добавляют и сохраняют.
+    await user.selectOptions(within(kit(1)).getByLabelText('Машина'), 'Колёсный экскаватор')
+    await user.type(within(kit(1)).getByLabelText('ГЭСН или источник'), 'по смыслу работы')
+    await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
+    await user.click(within(kit(1)).getByRole('button', { name: 'Сохранить' }))
+    await vi.waitFor(() =>
+      expect(stageButton(/Благоустройство/)).toHaveTextContent(
+        '1 комплект · маркер: колёсный экскаватор',
+      ),
+    )
   })
 
   it('shows save errors from the server', async () => {
