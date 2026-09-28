@@ -14,6 +14,22 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
+# Длина колонки schedule_stages.name
+MAX_STAGE_NAME_CHARS = 500
+
+
+def clean_stage_name(name: str) -> str:
+    """Название этапа для хранения: переносы строк и повторные пробелы — в один пробел.
+
+    В официальных планах в ячейке «Наименование» бывает целый маркированный список
+    (сотни символов, с переносами) — в колонку на 500 символов он не влезает.
+    Слишком длинное обрезается с многоточием, а не роняет импорт.
+    """
+    name = " ".join(name.split())
+    if len(name) > MAX_STAGE_NAME_CHARS:
+        name = name[: MAX_STAGE_NAME_CHARS - 1].rstrip() + "…"
+    return name
+
 
 class ScheduleFormatError(Exception):
     """Ошибка формата файла расписания."""
@@ -399,7 +415,7 @@ class ScheduleParser:
 
             # Обрезать название и привести к строке
             if isinstance(name, str):
-                name = name.strip()
+                name = clean_stage_name(name)
             elif isinstance(name, (datetime, date)):
                 # Если это дата/время, преобразуем в строку
                 name = str(name)

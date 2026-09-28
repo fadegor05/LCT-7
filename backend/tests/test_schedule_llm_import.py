@@ -187,3 +187,28 @@ async def test_http_client_bad_body_is_unavailable() -> None:
 async def test_null_client_is_unavailable() -> None:
     with pytest.raises(AssistantUnavailable):
         await NullScheduleLlmClient().parse([(1, ["a"])])
+
+
+# ---------- длинные названия (регрессия: varchar(500) ронял импорт 500-кой) ----------
+
+LONG_NAME = "Работы подготовительного периода:\n" + "\n".join(
+    f"- пункт {i} " * 5 for i in range(40)
+)
+
+
+async def test_builtin_long_multiline_name_is_saved_cleaned(client, container) -> None:
+    site_id, _ = await _site(client, container)
+    csv = f'Название;Начало;Окончание\n"{LONG_NAME}";01.01.2026;10.01.2026\n'.encode()
+    response = await _import(client, site_id, csv, "builtin")
+    assert response.status_code == 201
+    name = response.json()["stages"][0]["name"]
+    assert len(name) <= 500 and name.endswith("…")
+    assert "\n" not in name and name.startswith("Работы подготовительного периода: - пункт 0")
+
+
+async def test_llm_long_name_is_saved_cleaned(client, container) -> None:
+    site_id, fake = await _site(client, container)
+    fake.result = LlmScheduleResult(rows=[LlmScheduleRow(2, LONG_NAME, None, None)], issues=[])
+    response = await _import(client, site_id, STANDARD, "llm")
+    assert response.status_code == 201
+    assert len(response.json()["stages"][0]["name"]) <= 500
