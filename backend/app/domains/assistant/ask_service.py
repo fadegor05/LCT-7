@@ -1,25 +1,20 @@
 """Оркестрация вопроса к ассистенту с проверками, лимитом и маппингом ошибок."""
 
-from __future__ import annotations
-
 import json
 import logging
 import math
 import re
 import time
 import uuid
-from typing import TYPE_CHECKING
 
 from app.adapters.ml.assistant import AssistantClient, AssistantError
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings
 from app.domains.assistant.report import SITE_LABEL
 from app.domains.assistant.schemas import AssistantAnswerRead, AssistantStatusRead, StageRefRead
+from app.domains.assistant.service import AssistantReportService
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
-
-if TYPE_CHECKING:
-    from app.domains.assistant.service import AssistantReportService
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
 """AssistantService: оркестрация вопроса с проверками, лимитом и маппингом ошибок."""
 
 import logging
+import typing
 import uuid
 from unittest.mock import MagicMock
 
@@ -549,3 +550,31 @@ async def test_askrequest_границы() -> None:
     # Whitespace обрезается
     req = AskRequest(question="   тест   ")
     assert req.question == "тест"
+
+
+def test_аннотации_конструктора_разрешаются_для_di() -> None:
+    """typing.get_type_hints() на конструкторе работает и видит все зависимости."""
+    from app.adapters.ml.assistant import AssistantClient
+    from app.core.rate_limit import SlidingWindowRateLimiter
+    from app.core.settings import Settings
+    from app.domains.assistant.service import AssistantReportService
+    from app.domains.site.guard import SiteAccessGuard
+
+    # Должно не выбросить NameError
+    hints = typing.get_type_hints(AssistantService.__init__)
+
+    # Должны быть видны все пять типов зависимостей
+    assert "reports" in hints
+    assert hints["reports"] is AssistantReportService
+
+    assert "client" in hints
+    assert hints["client"] is AssistantClient
+
+    assert "limiter" in hints
+    assert hints["limiter"] is SlidingWindowRateLimiter
+
+    assert "guard" in hints
+    assert hints["guard"] is SiteAccessGuard
+
+    assert "settings" in hints
+    assert hints["settings"] is Settings
