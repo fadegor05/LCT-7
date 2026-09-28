@@ -70,6 +70,15 @@
   border-bottom: 0;
 }
 
+.table tbody tr:target {
+  background: var(--caution-soft);
+}
+
+.table tbody tr:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
 .stageName {
   display: flex;
   flex-direction: column;

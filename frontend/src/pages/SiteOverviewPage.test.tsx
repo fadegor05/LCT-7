@@ -26,6 +26,8 @@ describe('SiteOverviewPage', () => {
 
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
     const pit = within(table).getByRole('row', { name: /Разработка котлована/ })
+    expect(pit).toHaveAttribute('id', 'stage-site-berezniki-stage-2')
+    expect(pit).toHaveAttribute('tabindex', '-1')
     expect(within(pit).getByText('Отставание')).toBeInTheDocument()
     expect(within(pit).getByText('ВТ 01.09–ПН 14.09')).toBeInTheDocument()
     expect(within(pit).getByText('отставание 4 дн. · уверенность высокая')).toBeInTheDocument()
