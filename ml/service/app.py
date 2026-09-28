@@ -14,6 +14,7 @@ site_state.py и match_schedule.py, которые рассчитывают им
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -154,6 +155,66 @@ def report_export(req: ReportRequest,
         return HTMLResponse(to_html(result))
     return Response(content=body, media_type=media,
                     headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+
+class AskRequest(BaseModel):
+    """Вопрос по готовому отчёту."""
+
+    question: str = Field(min_length=3, max_length=500)
+    report: dict = Field(description="отчёт, полученный из POST /report")
+    site_id: str | None = Field(None, description="ограничить одной площадкой")
+
+
+@app.post("/ask", summary="Вопрос по отчёту на естественном языке")
+def ask_about_report(req: AskRequest) -> dict:
+    """Пересказ отчёта языковой моделью — с проверкой каждого числа.
+
+    Решение проекта (D-020): языковая модель **не порождает выводы**, она
+    пересказывает готовые. Выводы по-прежнему делают правила, и каждое число в
+    них прослеживается до нормы и снимка.
+
+    Риск пересказа — подставленное число. Поэтому ответ проверяется по двум
+    уровням: числа, которых в отчёте нет вовсе, и числа, которые в отчёте есть,
+    но относятся к другой площадке. Не прошло — в ответе стоит `verified:
+    false`, и подавать его как факт нельзя.
+
+    Проверяются числа, а не смысл: верное число, отнесённое не к тому этапу,
+    проверка не увидит. Это записано и здесь, и в ответе.
+    """
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import ask_report
+    from suggest_stage_mapping import from_env
+
+    base_url, api_key, model = (from_env("LLM_BASE_URL"), from_env("LLM_API_KEY"),
+                                from_env("LLM_MODEL"))
+    if not (base_url and api_key and model):
+        raise HTTPException(503, "языковая модель не настроена: нет LLM_BASE_URL, "
+                                 "LLM_API_KEY или LLM_MODEL")
+
+    data = ask_report.compact(req.report, req.site_id)
+    if not data["sites"]:
+        raise HTTPException(400, "в отчёте нет запрошенных площадок")
+
+    prompt = (f"Отчёт:\n{json.dumps(data, ensure_ascii=False)}\n\n"
+              f"Вопрос: {req.question}")
+    try:
+        answer = ask_report.ask(prompt, base_url, api_key, model,
+                                timeout=120, system=ask_report.SYSTEM)
+    except Exception as exc:
+        raise HTTPException(504, f"языковая модель не ответила: {exc}") from exc
+
+    missing = ask_report.unverified(answer, ask_report.collect_numbers(data))
+    wrong_site = ask_report.misattributed(answer, ask_report.numbers_by_site(data))
+    return {
+        "answer": answer.strip(),
+        "verified": not (missing or wrong_site),
+        "numbers_not_in_report": missing,
+        "numbers_of_other_site": wrong_site,
+        "limits": ("Проверяются числа, а не смысл: верное число может быть отнесено "
+                   "не к тому этапу, и проверка этого не увидит. Источник истины — "
+                   "сам отчёт, ответ лишь пересказывает его."),
+    }
 
 
 @app.post("/detect", response_model=FrameResult, summary="Детекции по одному кадру")

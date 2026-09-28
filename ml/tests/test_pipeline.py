@@ -21,6 +21,7 @@ from service.export import to_csv, to_html, to_xlsx      # noqa: E402
 from service.pipeline import build_report, summary        # noqa: E402
 from parse_schedule import classify_rows, parse_date     # noqa: E402
 import suggest_stage_mapping as suggest                  # noqa: E402
+import ask_report                                       # noqa: E402
 
 
 def frame(name, site, day, classes):
@@ -540,3 +541,60 @@ class TestВажностьИГраницы:
         stage = build_report(obs, SCHEDULE)["sites"][0]["stages"][0]
         assert stage["delay_days_min"] == 24
         assert stage["delay_days_max"] is None
+
+
+class TestПроверкаЧиселВОтвете:
+    """Ассистент пересказывает отчёт, а проверка сверяет каждое число.
+
+    Обычно с выдумками в пересказе борются уговорами в запросе. Уговор нельзя
+    проверить, поэтому здесь стоит сито: числа из ответа сверяются с отчётом.
+    Проверки ниже следят и за тем, что сито ловит, и за тем, что оно честно не
+    умеет.
+    """
+
+    ОТЧЁТ = {
+        "meta": {"sites": 2, "frames_in": 47},
+        "sites": [
+            {"site_id": "p03", "as_of": "2023-10-13",
+             "stages": [{"stage_code": "12.3.2", "delay_days": 14,
+                         "delay_days_min": 14, "delay_days_max": 43}],
+             "alerts": [], "forecast": {"shift_days": 108}},
+            {"site_id": "p08", "as_of": "2024-04-24",
+             "stages": [{"stage_code": "12.3.2", "delay_days": 24,
+                         "delay_days_min": 24, "delay_days_max": 55}],
+             "alerts": [], "forecast": {"shift_days": 24}},
+        ],
+    }
+
+    def known(self):
+        return ask_report.collect_numbers(ask_report.compact(self.ОТЧЁТ))
+
+    def test_верное_число_проходит(self):
+        assert ask_report.unverified("Площадка p03 отстаёт на 14 дней.", self.known()) == []
+
+    def test_выдуманное_число_ловится(self):
+        assert ask_report.unverified("Отстаёт на 999 дней.", self.known()) == ["999"]
+
+    def test_сумма_с_пробелами_не_распадается_на_части(self):
+        """«4 500 000» раньше разбиралось на куски, и каждый находился в отчёте."""
+        assert ask_report.unverified("Простой стоил 4 500 000 рублей.",
+                                     self.known()) == ["4500000"]
+
+    def test_число_чужой_площадки_ловится(self):
+        by = ask_report.numbers_by_site(ask_report.compact(self.ОТЧЁТ))
+        assert ask_report.misattributed("Площадка p08 отстаёт на 43 дня.", by)
+
+    def test_общие_числа_отчёта_разрешены_везде(self):
+        by = ask_report.numbers_by_site(ask_report.compact(self.ОТЧЁТ))
+        assert ask_report.misattributed("По p03 кадров 47.", by) == []
+
+    def test_проверка_не_видит_подмены_этапа(self):
+        """Честная граница: число верное и по той площадке, но не про тот этап.
+
+        Проверка этого не поймает, и документация об этом говорит прямо.
+        Тест закрепляет ограничение, чтобы его не забыли и не переоценили метод.
+        """
+        by = ask_report.numbers_by_site(ask_report.compact(self.ОТЧЁТ))
+        текст = "Площадка p03, этап 12.3.2: отставание 108 дней."
+        assert ask_report.unverified(текст, self.known()) == []
+        assert ask_report.misattributed(текст, by) == []
