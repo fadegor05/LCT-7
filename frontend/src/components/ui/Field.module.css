@@ -28,6 +28,22 @@
   color: var(--ink-muted);
 }
 
+.textarea {
+  font: inherit;
+  min-height: calc(var(--control-md) * 2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+  resize: vertical;
+}
+
+.textarea::placeholder {
+  color: var(--ink-muted);
+}
+
 /* Своя стрелка вместо системной: системная прижата к краю поля без отступа. */
 .select {
   position: relative;
