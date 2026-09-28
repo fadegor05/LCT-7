@@ -20,7 +20,7 @@ from app.domains.assistant.provider import AssistantClientProvider, AssistantPro
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.provider import PhotoProvider
-from app.domains.schedule.provider import ScheduleProvider
+from app.domains.schedule.provider import ScheduleLlmClientProvider, ScheduleProvider
 from app.domains.site.provider import SiteProvider
 from app.domains.user.provider import UserProvider
 from app.domains.utility.provider import UtilityProvider
@@ -60,6 +60,7 @@ def create_container() -> AsyncContainer:
         UserProvider(),
         SiteProvider(),
         ScheduleProvider(),
+        ScheduleLlmClientProvider(),
         MethodologyProvider(),
         PhotoProvider(),
         ObservationProvider(),

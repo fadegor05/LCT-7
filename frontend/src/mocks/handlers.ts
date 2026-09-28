@@ -3,6 +3,7 @@
  * работают в браузере (VITE_USE_MOCKS=true) и в тестах (src/test/setup.ts).
  */
 import { delay, http, HttpResponse } from 'msw'
+import { parseModeSchema } from '@/api/schemas'
 import { env } from '@/lib/env'
 import * as db from './db'
 import { user } from './fixtures'
@@ -91,9 +92,11 @@ export const handlers = [
     handle(() => db.getSchedule(params.siteId)),
   ),
   http.post<SiteParams>(api('/sites/:siteId/schedule/import'), async ({ params, request }) => {
-    const file = (await request.formData()).get('file')
+    const form = await request.formData()
+    const file = form.get('file')
     if (!isFile(file)) return HttpResponse.json({ detail: 'Нет файла' }, { status: 422 })
-    return handle(() => db.importSchedule(params.siteId, file.name), 201)
+    const mode = parseModeSchema.catch('auto').parse(form.get('mode'))
+    return handle(() => db.importSchedule(params.siteId, file.name, mode), 201)
   }),
   http.patch<{ siteId: string; stageId: string }>(
     api('/sites/:siteId/schedule/stages/:stageId'),

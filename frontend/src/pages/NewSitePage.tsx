@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router'
 import { useSchedule, useUpdateStageDates, useUploadSchedule } from '@/api/schedule'
-import { siteCreateSchema, type Site, type SiteCreate } from '@/api/schemas'
+import { siteCreateSchema, type ParseMode, type Site, type SiteCreate } from '@/api/schemas'
 import { useCreateSite, useSite, useUpdateSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs'
@@ -13,6 +14,7 @@ import { FileDrop } from '@/components/ui/FileDrop'
 import { Stepper } from '@/components/ui/Stepper'
 import { ImportSummary } from '@/features/new-site/ImportSummary'
 import { ObjectForm } from '@/features/new-site/ObjectForm'
+import { ParseModeSwitch } from '@/features/new-site/ParseModeSwitch'
 import { StagesTable } from '@/features/new-site/StagesTable'
 import { CREATE_STEPS } from '@/features/new-site/steps'
 import styles from '@/features/new-site/NewSite.module.css'
@@ -40,6 +42,7 @@ export function NewSitePage() {
   const updateSite = useUpdateSite(siteId ?? '')
   const upload = useUploadSchedule()
   const updateStage = useUpdateStageDates(siteId ?? '')
+  const [mode, setMode] = useState<ParseMode>('auto')
 
   const form = useForm<SiteCreate>({
     resolver: zodResolver(siteCreateSchema),
@@ -52,7 +55,7 @@ export function NewSitePage() {
       try {
         const target = siteId ?? (await createSite.mutateAsync(values)).id
         if (!siteId) void navigate(`/sites/${target}/setup`, { replace: true })
-        await upload.mutateAsync({ siteId: target, file: files[0]! })
+        await upload.mutateAsync({ siteId: target, file: files[0]!, mode })
       } catch {
         // Ошибка уже в состоянии мутации и показана в Callout ниже.
       }
@@ -77,6 +80,7 @@ export function NewSitePage() {
 
       <Card>
         <h3>График работ</h3>
+        <ParseModeSwitch value={mode} onChange={setMode} disabled={upload.isPending} />
         {current ? (
           <>
             <div className={styles.fileRow}>
@@ -105,7 +109,7 @@ export function NewSitePage() {
         ) : (
           <FileDrop
             title="Перетащите файл графика"
-            hint="CSV или XLSX до 5 МБ: колонки «Название» (или «Наименование»/«Этап»), «Начало», «Окончание». Техника в файле не нужна."
+            hint="CSV или XLSX до 5 МБ. Техника в файле не нужна."
             accept={ACCEPT}
             disabled={upload.isPending || createSite.isPending}
             onFiles={(files) => void onFiles(files)}
@@ -113,7 +117,9 @@ export function NewSitePage() {
         )}
         {(upload.isPending || createSite.isPending) && (
           <p className="muted" role="status">
-            Разбираем график…
+            {mode === 'builtin'
+              ? 'Разбираем график…'
+              : 'Разбираем график, с моделью это может занять несколько минут…'}
           </p>
         )}
       </Card>

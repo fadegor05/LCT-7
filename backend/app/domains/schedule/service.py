@@ -6,13 +6,47 @@ from datetime import date
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.adapters.ml.assistant import AssistantError
+from app.adapters.ml.schedule_llm import LlmScheduleResult, ScheduleLlmClient
 from app.domains.methodology.recalculator import StatusRecalculator
-from app.domains.schedule.models import DatesSource, Schedule, ScheduleImportIssue, ScheduleStage
-from app.domains.schedule.parser import ScheduleFormatError, ScheduleParser
+from app.domains.schedule.models import (
+    DatesSource,
+    ParseMethod,
+    ParseMode,
+    Schedule,
+    ScheduleImportIssue,
+    ScheduleStage,
+)
+from app.domains.schedule.parser import (
+    ParsedIssue,
+    ParsedRow,
+    ParseResult,
+    ScheduleFormatError,
+    ScheduleParser,
+)
 from app.domains.schedule.repository import ScheduleRepository
 from app.domains.schedule.schemas import IssueRead, ScheduleReport, StageDatesUpdate, StageRead
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
+
+
+def _from_llm(result: LlmScheduleResult) -> ParseResult:
+    """Ответ LLM → ParseResult, с той же проверкой порядка дат, что у встроенного парсера."""
+    rows: list[ParsedRow] = []
+    issues = [ParsedIssue(row_number=i.row, raw_row=i.raw, reason=i.reason) for i in result.issues]
+    for item in result.rows:
+        if item.start and item.end and item.end < item.start:
+            issues.append(
+                ParsedIssue(
+                    row_number=item.row,
+                    raw_row=item.name,
+                    reason="Дата окончания раньше даты начала",
+                )
+            )
+            continue
+        rows.append(ParsedRow(name=item.name, start=item.start, end=item.end))
+    issues.sort(key=lambda i: i.row_number)
+    return ParseResult(rows=rows, issues=issues, rows_total=len(rows) + len(issues))
 
 
 class ScheduleService:
@@ -25,12 +59,14 @@ class ScheduleService:
         guard: SiteAccessGuard,
         parser: ScheduleParser,
         recalculator: StatusRecalculator,
+        llm: ScheduleLlmClient,
     ) -> None:
         self._repository = repository
         self._session = session
         self._guard = guard
         self._parser = parser
         self._recalculator = recalculator
+        self._llm = llm
 
     async def _build_report(self, schedule: Schedule) -> ScheduleReport:
         """Построить ScheduleReport из Schedule с загрузкой связанных данных.
@@ -54,14 +90,84 @@ class ScheduleService:
             imported_at=schedule.imported_at,
             rows_total=schedule.rows_total or 0,
             rows_parsed=schedule.rows_parsed or 0,
+            parse_method=schedule.parse_method,
             stages_with_dates=stages_with_dates,
             stages_without_dates=stages_without_dates,
             stages=[StageRead.model_validate(stage) for stage in loaded_stages],
             issues=[IssueRead.model_validate(issue) for issue in loaded_issues],
         )
 
+    async def _parse_with_llm(self, filename: str, content: bytes) -> ParseResult:
+        """Разобрать файл моделью: таблица «как есть» → LLM → проверенные строки.
+
+        Raises:
+            ScheduleFormatError: файл нечитаем или пуст
+            AssistantError: LLM недоступна, не ответила или отвергла запрос
+        """
+        grid = self._parser.read_grid(filename, content)
+        return _from_llm(await self._llm.parse(grid))
+
+    async def _parse(
+        self, filename: str, content: bytes, mode: ParseMode
+    ) -> tuple[ParseResult, ParseMethod]:
+        """Разобрать файл в выбранном режиме.
+
+        builtin — только встроенный парсер; llm — только модель; auto — встроенный,
+        а если он не нашёл в файле ни одной работы, то модель. Если в auto не вышло
+        и у модели, пользователь видит причину отказа встроенного парсера (она
+        точнее говорит, что не так с файлом), плюс причину отказа модели.
+        """
+        try:
+            if mode is ParseMode.BUILTIN:
+                return self._parser.parse(filename, content), ParseMethod.BUILTIN
+
+            if mode is ParseMode.LLM:
+                result = await self._parse_with_llm(filename, content)
+                if not result.rows and not result.issues:
+                    raise AppError("Модель не нашла в файле ни одной работы", status_code=422)
+                return result, ParseMethod.LLM
+
+            builtin: ParseResult | None = None
+            reason: str
+            try:
+                builtin = self._parser.parse(filename, content)
+                reason = "во встроенном разборе не нашлось ни одной работы"
+            except ScheduleFormatError as e:
+                reason = str(e)
+            if builtin is not None and builtin.rows:
+                return builtin, ParseMethod.BUILTIN
+
+            try:
+                result = await self._parse_with_llm(filename, content)
+            except ScheduleFormatError:
+                # Файл нечитаем даже как «сырая» таблица — LLM тут не поможет
+                if builtin is None:
+                    raise
+                return builtin, ParseMethod.BUILTIN
+            except AssistantError as e:
+                if builtin is not None:
+                    return builtin, ParseMethod.BUILTIN
+                raise AppError(
+                    f"{reason}. Разбор моделью тоже не удался: {e.message}", status_code=422
+                ) from e
+            if not result.rows:
+                if builtin is not None:
+                    return builtin, ParseMethod.BUILTIN
+                raise AppError(
+                    f"{reason}. Модель тоже не нашла в файле ни одной работы", status_code=422
+                )
+            return result, ParseMethod.LLM
+        except ScheduleFormatError as e:
+            raise AppError(str(e), status_code=422) from e
+        except AssistantError as e:
+            raise AppError(e.message, e.status_code, code=e.code) from e
+
     async def import_schedule(
-        self, site_id: uuid.UUID, filename: str, content: bytes
+        self,
+        site_id: uuid.UUID,
+        filename: str,
+        content: bytes,
+        mode: ParseMode = ParseMode.AUTO,
     ) -> ScheduleReport:
         """Импортировать график из файла.
 
@@ -72,6 +178,7 @@ class ScheduleService:
             site_id: ID сайта
             filename: имя файла
             content: содержимое файла
+            mode: режим разбора (auto — встроенный, при неудаче LLM; llm; builtin)
 
         Returns:
             ScheduleReport с информацией об импорте
@@ -79,15 +186,13 @@ class ScheduleService:
         Raises:
             AppError(404) если сайт не принадлежит текущему пользователю
             AppError(422) если ошибка формата файла
+            AppError(503/504) если выбран LLM-разбор, а модель недоступна
         """
         # Проверка доступа
         await self._guard.require(site_id)
 
-        # Парсим файл
-        try:
-            parse_result = self._parser.parse(filename, content)
-        except ScheduleFormatError as e:
-            raise AppError(str(e), status_code=422) from e
+        # Парсим файл (LLM-вызов — до транзакции: старый график не трогаем, пока не разобрали новый)
+        parse_result, method = await self._parse(filename, content, mode)
 
         # Одна транзакция: удаляем старый график полностью, создаём новый
         await self._repository.delete_by_site(site_id)
@@ -98,6 +203,7 @@ class ScheduleService:
             source_filename=filename,
             rows_total=parse_result.rows_total,
             rows_parsed=len(parse_result.rows),
+            parse_method=method.value,
         )
         await self._repository.add(schedule)
 

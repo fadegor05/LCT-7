@@ -8,14 +8,93 @@ const file = () =>
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
 
+const importReport = (siteId: string, llm: boolean) => ({
+  id: 'sch-1',
+  site_id: siteId,
+  source_filename: 'plan.xlsx',
+  imported_at: '2026-09-28T10:00:00Z',
+  rows_total: 1,
+  rows_parsed: 1,
+  parse_method: llm ? 'llm' : 'builtin',
+  stages_with_dates: 1,
+  stages_without_dates: 0,
+  stages: [
+    {
+      id: 'st-1',
+      name: 'Фундамент',
+      position: 1,
+      planned_start: '2026-03-01',
+      planned_end: '2026-03-10',
+      dates_source: 'file',
+    },
+  ],
+  issues: [],
+})
+
 describe('creating a site', () => {
-  it('shows recognized column names in the upload hint', () => {
-    renderRoute('/sites/new')
-    expect(
-      screen.getByText(
-        'CSV или XLSX до 5 МБ: колонки «Название» (или «Наименование»/«Этап»), «Начало», «Окончание». Техника в файле не нужна.',
+  it('offers three parse modes, auto by default, each with its own hint', async () => {
+    const { user } = renderRoute('/sites/new')
+    const modes = screen.getByRole('group', { name: 'Режим разбора файла' })
+    expect(within(modes).getByRole('button', { name: 'Авто' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByTestId('parse-mode-hint')).toHaveTextContent(
+      /если он не нашёл в файле работ/,
+    )
+
+    await user.click(within(modes).getByRole('button', { name: 'Встроенный' }))
+    expect(screen.getByTestId('parse-mode-hint')).toHaveTextContent(
+      /«Название» \(или «Наименование»\/«Этап»\), «Начало», «Окончание»/,
+    )
+    await user.click(within(modes).getByRole('button', { name: 'LLM' }))
+    expect(screen.getByTestId('parse-mode-hint')).toHaveTextContent(/любыми названиями колонок/)
+  })
+
+  it.each([
+    ['Авто', 'auto'],
+    ['Встроенный', 'builtin'],
+    ['LLM', 'llm'],
+  ])('sends the %s mode with the file', async (label, mode) => {
+    let sent: FormDataEntryValue | null = null
+    server.use(
+      http.post('/api/sites/:siteId/schedule/import', async ({ request, params }) => {
+        sent = (await request.formData()).get('mode')
+        return HttpResponse.json(importReport(String(params.siteId), mode === 'llm'), {
+          status: 201,
+        })
+      }),
+    )
+    const { user } = renderRoute('/sites/new')
+    await user.type(screen.getByLabelText('Название'), 'Школа')
+    await user.click(
+      within(screen.getByRole('group', { name: 'Режим разбора файла' })).getByRole('button', {
+        name: label,
+      }),
+    )
+    await user.upload(screen.getByLabelText('Выбрать файл'), file())
+    await screen.findByText('Заменить файл')
+    expect(sent).toBe(mode)
+  })
+
+  it('warns that the schedule was parsed by the language model', async () => {
+    server.use(
+      http.post('/api/sites/:siteId/schedule/import', ({ params }) =>
+        HttpResponse.json(importReport(String(params.siteId), true), { status: 201 }),
       ),
-    ).toBeInTheDocument()
+    )
+    const { user } = renderRoute('/sites/new')
+    await user.type(screen.getByLabelText('Название'), 'Школа')
+    await user.upload(screen.getByLabelText('Выбрать файл'), file())
+    expect(await screen.findByText('График разобран языковой моделью')).toBeInTheDocument()
+  })
+
+  it('does not warn when the built-in parser was used', async () => {
+    const { user } = renderRoute('/sites/new')
+    await user.type(screen.getByLabelText('Название'), 'Школа')
+    await user.upload(screen.getByLabelText('Выбрать файл'), file())
+    await screen.findByText('Заменить файл')
+    expect(screen.queryByText('График разобран языковой моделью')).not.toBeInTheDocument()
   })
 
   it('walks through both steps', async () => {

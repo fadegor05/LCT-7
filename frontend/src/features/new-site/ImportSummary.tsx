@@ -21,6 +21,12 @@ export function ImportSummary({ data }: { data: ScheduleReport }) {
           </div>
         ))}
       </dl>
+      {data.parse_method === 'llm' && (
+        <Callout tone="caution" title="График разобран языковой моделью">
+          Названия и даты модель переписала из файла — сверьте их с оригиналом. Даты, которых нет в
+          строке файла, она не подставляет: такие строки попадают в список ошибок.
+        </Callout>
+      )}
       {lines.length > 0 && (
         <Callout tone="caution" title="Что проверить в графике">
           {lines.join(' ')}

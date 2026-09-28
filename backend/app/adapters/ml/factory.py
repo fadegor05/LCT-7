@@ -10,6 +10,11 @@ from app.adapters.ml.assistant import (
 from app.adapters.ml.base import DetectorClient
 from app.adapters.ml.http import HttpDetectorClient, normalize_base_url
 from app.adapters.ml.null import NullDetector
+from app.adapters.ml.schedule_llm import (
+    HttpScheduleLlmClient,
+    NullScheduleLlmClient,
+    ScheduleLlmClient,
+)
 from app.adapters.ml.stamp import HttpStampReader
 from app.core.settings import Settings
 from app.domains.photo.date_resolver import NullStampOcr, StampOcr
@@ -82,3 +87,17 @@ def create_assistant(
             settings=settings.assistant,
         )
     return NullAssistantClient()
+
+
+def create_schedule_llm(
+    settings: Settings,
+    client: httpx.AsyncClient | None,
+) -> ScheduleLlmClient:
+    """HttpScheduleLlmClient, если задан settings.detector.url, иначе заглушка."""
+    if settings.detector.url and settings.detector.url.strip() and client is not None:
+        return HttpScheduleLlmClient(
+            base_url=settings.detector.url,
+            client=client,
+            settings=settings.assistant,
+        )
+    return NullScheduleLlmClient()

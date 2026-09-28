@@ -167,6 +167,13 @@ def _ask_report_module():
     return ask_report
 
 
+def _schedule_llm_module():
+    """Ленивый импорт tools/schedule_llm.py (промпт и проверка разбора плана)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+    import schedule_llm  # noqa: E402
+    return schedule_llm
+
+
 @app.get("/health", summary="Жив ли сервис")
 def health() -> dict:
     return {"status": "ok", "model_loaded": _detector is not None}
@@ -310,6 +317,51 @@ def ask_about_report(req: AskRequest) -> dict:
         "numbers_not_in_report": missing,
         "numbers_of_other_site": wrong_site,
         "limits": ask_report.limits_for(answer, by_site),
+    }
+
+
+class ScheduleRow(BaseModel):
+    """Строка исходной таблицы графика: номер в файле и ячейки текстом."""
+
+    row: int = Field(ge=1, description="номер строки в файле")
+    cells: list[str] = Field(max_length=100)
+
+
+class ParseScheduleRequest(BaseModel):
+    rows: list[ScheduleRow] = Field(min_length=1, description="таблица плана целиком")
+
+
+@app.post("/parse-schedule", summary="Произвольная таблица плана → работы с датами (LLM)")
+def parse_schedule(req: ParseScheduleRequest) -> dict:
+    """Разбор плана стройки языковой моделью, когда встроенный парсер не справился.
+
+    Модель только раскладывает написанное по полям: название, начало, окончание.
+    Каждая её строка сверяется с исходной (название и даты должны в ней быть),
+    не прошедшее проверку уходит в `issues`, а не в график.
+    """
+    schedule_llm = _schedule_llm_module()
+    ask_report = _ask_report_module()
+
+    cfg = ask_report.llm_config()
+    if not cfg:
+        raise HTTPException(503, "языковая модель не настроена: нет LLM_BASE_URL, "
+                                 "LLM_API_KEY или LLM_MODEL")
+
+    table = [schedule_llm.Row(r.row, r.cells) for r in req.rows]
+    try:
+        works, issues = schedule_llm.parse_table(table, *cfg)
+    except schedule_llm.TooManyRows as exc:
+        raise HTTPException(413, str(exc)) from exc
+    except Exception as exc:
+        logger.warning("/parse-schedule: вызов LLM не удался: %s", ask_report.describe_llm_error(exc))
+        raise HTTPException(
+            504, f"языковая модель не ответила: {ask_report.describe_llm_error(exc)}") from exc
+
+    return {
+        "rows": [{"row": w.row, "name": w.name,
+                  "start": w.start.isoformat() if w.start else None,
+                  "end": w.end.isoformat() if w.end else None} for w in works],
+        "issues": [{"row": i.row, "raw": i.raw, "reason": i.reason} for i in issues],
     }
 
 
