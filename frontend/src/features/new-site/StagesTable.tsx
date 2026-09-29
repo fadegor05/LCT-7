@@ -29,7 +29,7 @@ function ManualDates({
   const save = () => {
     const s = parseRuDate(start, year)
     const e = parseRuDate(end, year)
-    if (!s || !e) return setError('Даты в формате дд.мм')
+    if (!s || !e) return setError('Даты в формате дд.мм.гггг (год можно не указывать)')
     if (e < s) return setError('Окончание раньше начала')
     setError(null)
     onSave(s, e)
@@ -40,7 +40,7 @@ function ManualDates({
       <div className={styles.dates}>
         <input
           className={styles.dateInput}
-          placeholder="дд.мм"
+          placeholder="дд.мм.гггг"
           aria-label={`Дата начала: ${stage.name}`}
           value={start}
           onChange={(event) => setStart(event.target.value)}
@@ -48,7 +48,7 @@ function ManualDates({
         <span aria-hidden="true">—</span>
         <input
           className={styles.dateInput}
-          placeholder="дд.мм"
+          placeholder="дд.мм.гггг"
           aria-label={`Дата окончания: ${stage.name}`}
           value={end}
           onChange={(event) => setEnd(event.target.value)}

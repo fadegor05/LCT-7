@@ -13,7 +13,7 @@ import { DetectBacklogSection } from '@/features/observations/DetectBacklogSecti
 import { EquipmentList } from '@/features/observations/EquipmentList'
 import { NeedsReviewSection } from '@/features/observations/NeedsReviewSection'
 import { PhotoStrip } from '@/features/observations/PhotoStrip'
-import { formatShortDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { useRequiredParam } from '@/lib/useParam'
 
 const column = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
@@ -63,7 +63,7 @@ export function ObservationsPage() {
 
           <section style={column}>
             <SectionHeader
-              title={date ? `Снимки за ${formatShortDate(date)}` : 'Все снимки с датой'}
+              title={date ? `Снимки за ${formatDate(date)}` : 'Все снимки с датой'}
               description="Рамки: найденная техника. Источник даты показан у каждого снимка."
             />
             <QueryState query={photos}>
