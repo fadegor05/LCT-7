@@ -28,10 +28,9 @@ describe('DeviationPage', () => {
     expect(within(importance).getByText('Критично')).toBeInTheDocument()
     expect(within(importance).getByText(/Вывод верен, пока верны/)).toBeInTheDocument()
     const check = screen.getByRole('complementary', { name: 'Проверить' })
-    expect(within(check).getByRole('link', { name: 'Наблюдения за ПТ 18.09' })).toHaveAttribute(
-      'href',
-      '/sites/site-berezniki/observations?date=2026-09-18',
-    )
+    expect(
+      within(check).getByRole('link', { name: 'Наблюдения за ПТ 18.09.2026' }),
+    ).toHaveAttribute('href', '/sites/site-berezniki/observations?date=2026-09-18')
     expect(within(check).getByRole('link', { name: 'Методика этапа' })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Методика этапа' })).toHaveLength(2)
   })
