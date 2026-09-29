@@ -34,7 +34,7 @@ describe('SiteOverviewPage', () => {
     expect(pit).toHaveAttribute('id', 'stage-site-berezniki-stage-2')
     expect(pit).toHaveAttribute('tabindex', '-1')
     expect(within(pit).getByText('Отставание')).toBeInTheDocument()
-    expect(within(pit).getByText('ВТ 01.09–ПН 14.09')).toBeInTheDocument()
+    expect(within(pit).getByText('ВТ 01.09.2026–ПН 14.09.2026')).toBeInTheDocument()
     expect(within(pit).getByText('отставание 4 дн. · уверенность высокая')).toBeInTheDocument()
     expect(within(pit).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
       'href',
@@ -44,7 +44,7 @@ describe('SiteOverviewPage', () => {
     expect(within(backfill).getByText('Не начата')).toBeInTheDocument()
 
     expect(
-      await screen.findByRole('heading', { name: 'Последнее наблюдение · ПТ 18.09' }),
+      await screen.findByRole('heading', { name: 'Последнее наблюдение · ПТ 18.09.2026' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Гусеничный экскаватор 2, самосвал 1 (максимум по снимкам).'),

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { DateSourceBadge } from '@/components/ui/DateSourceBadge'
 import { FrameView } from '@/components/ui/FrameView'
-import { formatShortDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { processingStatusLabels } from '@/lib/labels'
 import styles from './Observations.module.css'
 
@@ -30,7 +30,7 @@ export function PhotoStrip({ siteId, photos, withDate }: PhotoStripProps) {
             caption={
               <>
                 <span className="sm">{p.original_name}</span>
-                {withDate && <span className="data">{formatShortDate(p.captured_on)}</span>}
+                {withDate && <span className="data">{formatDate(p.captured_on)}</span>}
                 {p.date_source && <DateSourceBadge source={p.date_source} />}
                 {p.processing_status !== 'done' && (
                   <>

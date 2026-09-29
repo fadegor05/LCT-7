@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import type { DeviationDetail } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatShortDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { SeverityBadge } from './SeverityBadge'
 import styles from './Deviation.module.css'
 
@@ -37,7 +37,7 @@ export function SeverityCard({
         <p className="lab muted">Проверить</p>
         <div className={styles.links}>
           <Link to={`${base}/observations?date=${d.period_end}`}>
-            Наблюдения за {formatShortDate(d.period_end)}
+            Наблюдения за {formatDate(d.period_end)}
           </Link>
           {d.stage_id && <Link to={`${base}/methodology`}>Методика этапа</Link>}
         </div>

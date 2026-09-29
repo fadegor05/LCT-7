@@ -49,10 +49,10 @@ export function formatDateTime(value: string | null | undefined): string {
   return value ? `${formatDate(value)} ${formatTime(value)}` : '—'
 }
 
-/** Плановое окно этапа: ПН 24.08 — ПН 31.08 */
+/** Плановое окно этапа: ПН 24.08.2026 — ПН 31.08.2026 */
 export function formatWindow(start: string | null, end: string | null, sep = ' — '): string {
   if (!start && !end) return '—'
-  return `${formatShortDate(start)}${sep}${formatShortDate(end)}`
+  return `${formatDate(start)}${sep}${formatDate(end)}`
 }
 
 /** Отставание: «от 4 дн.» или «4–6 дн.» */

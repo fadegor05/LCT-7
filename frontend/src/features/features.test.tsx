@@ -42,7 +42,7 @@ describe('DeviationList', () => {
     expect(link).toHaveAttribute('href', '/sites/s1/deviations/d1')
     expect(within(link).getByText('Простой техники (гипотеза)')).toBeInTheDocument()
     expect(within(link).getByText('Все этапы')).toBeInTheDocument()
-    expect(within(link).getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
+    expect(within(link).getByText('ЧТ 17.09.2026 — ПТ 18.09.2026')).toBeInTheDocument()
     expect(within(link).getByText('ПТ 18.09.2026')).toBeInTheDocument()
   })
 
@@ -51,7 +51,7 @@ describe('DeviationList', () => {
       <DeviationList items={[{ ...deviation, stage_name: undefined }]} showSite />,
     )
     expect(screen.getByText('Стройка')).toBeInTheDocument()
-    expect(screen.getByText('ЧТ 17.09 — ПТ 18.09')).toBeInTheDocument()
+    expect(screen.getByText('ЧТ 17.09.2026 — ПТ 18.09.2026')).toBeInTheDocument()
   })
 
   it('has an empty state', () => {
@@ -162,7 +162,7 @@ describe('StagesTable', () => {
       />,
     )
     const rows = screen.getAllByRole('row').slice(1)
-    expect(rows[0]).toHaveTextContent('1КотлованВТ 01.09 — ЧТ 10.09')
+    expect(rows[0]).toHaveTextContent('1КотлованВТ 01.09.2026 — ЧТ 10.09.2026')
     expect(within(rows[1]!).getByText('задано вручную')).toBeInTheDocument()
   })
 
@@ -177,7 +177,7 @@ describe('StagesTable', () => {
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Задать' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Даты в формате дд.мм')
+    expect(screen.getByRole('alert')).toHaveTextContent('Даты в формате дд.мм.гггг')
     await user.type(screen.getByLabelText('Дата начала: Плита'), '10.10')
     await user.type(screen.getByLabelText('Дата окончания: Плита'), '01.10')
     await user.click(screen.getByRole('button', { name: 'Задать' }))
@@ -223,7 +223,7 @@ describe('StageStatusTable', () => {
       />,
     )
     const [, pit, slab, backfill] = screen.getAllByRole('row')
-    expect(pit).toHaveTextContent('ВТ 01.09–ЧТ 10.09')
+    expect(pit).toHaveTextContent('ВТ 01.09.2026–ЧТ 10.09.2026')
     expect(pit).toHaveTextContent('Экскаватор после планового конца')
     expect(pit).toHaveTextContent('отставание 4 дн. · уверенность высокая')
     expect(within(pit!).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(

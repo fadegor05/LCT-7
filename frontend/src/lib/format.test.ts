@@ -38,8 +38,8 @@ describe('format', () => {
   })
 
   it('formats plan windows', () => {
-    expect(formatWindow('2026-08-24', '2026-08-31')).toBe('ПН 24.08 — ПН 31.08')
-    expect(formatWindow('2026-08-24', '2026-08-31', '–')).toBe('ПН 24.08–ПН 31.08')
+    expect(formatWindow('2026-08-24', '2026-08-31')).toBe('ПН 24.08.2026 — ПН 31.08.2026')
+    expect(formatWindow('2026-08-24', '2026-08-31', '–')).toBe('ПН 24.08.2026–ПН 31.08.2026')
     expect(formatWindow(null, null)).toBe('—')
   })
 
