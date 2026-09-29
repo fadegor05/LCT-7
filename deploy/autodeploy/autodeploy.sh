@@ -66,6 +66,15 @@ cp -r "$TMP/deploy/." "$DIR/deploy/"
 sed -i "s|^BACKEND_TAG=.*|BACKEND_TAG=$TAG|;s|^FRONTEND_TAG=.*|FRONTEND_TAG=$TAG|;s|^ML_TAG=.*|ML_TAG=$TAG|" \
   "$DIR/deploy/versions.env"
 
+# Скрипт обновляет свою копию из посылки: иначе правки в репозитории до ВМ не
+# доходят (так 28.09 на ВМ остался старый скрипт с затиранием traefik.yml).
+# Копия через mv — атомарная замена файла, текущий запуск читает старый inode.
+if [ -f "$DIR/deploy/autodeploy/autodeploy.sh" ]; then
+  cp "$DIR/deploy/autodeploy/autodeploy.sh" "$DIR/bin/.autodeploy.sh.new"
+  chmod 755 "$DIR/bin/.autodeploy.sh.new"
+  mv "$DIR/bin/.autodeploy.sh.new" "$DIR/bin/autodeploy.sh"
+fi
+
 cd "$DIR"
 make "$DEPLOY_TARGET"
 
@@ -74,8 +83,18 @@ make "$DEPLOY_TARGET"
 echo "$REV" > "$STATE"
 docker image prune -f >/dev/null
 
+# С доменом (DEPLOY_TARGET=deploy) Traefik маршрутизирует по Host и на localhost
+# отвечает 404, поэтому проверяем по имени домена, но стучимся на эту же машину.
+# -k: проверяется приложение, а не сертификат (до выпуска он самоподписанный).
+DOMAIN=$(sed -n "s/^DOMAIN=//p" "$DIR/.env" | tr -d "\"' ")
+if [ "$DEPLOY_TARGET" = deploy ] && [ -n "$DOMAIN" ]; then
+  HEALTH_CMD=(curl -fsSk -o /dev/null --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/api/health")
+else
+  HEALTH_CMD=(curl -fsS -o /dev/null http://localhost/api/health)
+fi
+
 for _ in $(seq 1 30); do
-  if curl -fsS -o /dev/null http://localhost/api/health; then
+  if "${HEALTH_CMD[@]}"; then
     echo "готово: $REV, /api/health отвечает"
     exit 0
   fi
