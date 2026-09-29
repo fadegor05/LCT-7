@@ -25,7 +25,6 @@ RUN pip install --no-cache-dir \
 COPY service/ /app/service/
 COPY tools/ /app/tools/
 COPY configs/ /app/configs/
-COPY docs/CONTRACTS.md docs/MODEL_CARD.md /app/docs/
 
 # Веса не копируем в образ: 42 МБ и лицензия AGPL на них же. Монтируются томом.
 ENV WEIGHTS=/weights/mocs_m_best.pt     PYTHONUNBUFFERED=1     YOLO_OFFLINE=1     YOLO_CONFIG_DIR=/tmp
