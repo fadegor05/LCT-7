@@ -45,7 +45,7 @@ In `frontend/`: `pnpm dev` (mocks on by default via `.env.development`), `pnpm d
 
 ## Backend structure
 
-- `app/core/` — infrastructure: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `security.py`.
+- `app/core/` — infrastructure: `settings.py`, `database.py` (`Base`), `repository.py` (`BaseRepository`), `rate_limit.py`.
 - `app/plugins/` — cross-cutting: `di.py`, `routing.py`, `exceptions.py`.
 - `app/adapters/` — external systems (ML, ГЭСН reference data).
 - `app/domains/<domain>/` — one domain = one flat directory with `models.py`, `schemas.py`, `repository.py`, `service.py`, `router.py`, `provider.py` (omit files a domain doesn't need). `core/`, `plugins/`, `adapters/` are not domains.
@@ -63,3 +63,8 @@ Full convention: docs/architecture.md §6.
 - Tests sit next to code (`*.test.tsx`); pages are tested through `renderRoute(url)`. Every new component needs a test; coverage thresholds live in `vite.config.ts`.
 
 Full description: docs/architecture-frontend.md.
+
+## Documentation
+
+`documentation/` describes what is implemented (architecture, data model, API, business logic, install/run,
+configuration, limitations). `docs/architecture.md` and `docs/DataModel.md` are the target design and are wider than the code.

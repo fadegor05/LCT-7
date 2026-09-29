@@ -5,10 +5,10 @@ paths:
 
 **Dependency injection (Dishka).** Infrastructure providers (`Settings`, `AsyncEngine`, `async_sessionmaker` at `Scope.APP`; `AsyncSession` at `Scope.REQUEST`) live in `app/plugins/di.py`. `Scope.APP` also covers external-system clients, stateless parsers and reference caches; `Scope.REQUEST` covers the session, repositories and services. Each domain has its own `Provider` in `domains/<domain>/provider.py` (repository + service, `Scope.REQUEST`). Routes receive dependencies via `FromDishka[...]` + `@inject`. Constructors are wired automatically by type.
 
-- `app/core/` — infrastructure: `settings.py` (pydantic-settings, nested env via `__` e.g. `POSTGRES__HOST`), `database.py` (`Base`), `security.py` (bcrypt).
+- `app/core/` — infrastructure: `settings.py` (pydantic-settings, nested env via `__` e.g. `POSTGRES__HOST`), `database.py` (`Base`), `rate_limit.py`.
 - `app/plugins/` — cross-cutting: `di.py` (Dishka container), `exceptions.py`, `routing.py`.
 - `app/domains/<domain>/` — one folder per domain, flat, with `models.py / schemas.py / repository.py / service.py / provider.py / router.py` (omit files a domain doesn't need).
-- `app/adapters/` — external integrations (ML client planned).
+- `app/adapters/` — external integrations (ML detector, stamp reader, assistant and schedule-LLM clients; file storage).
 - `core/`, `plugins/` and `adapters/` are not domains.
 
 **Request flow.** router → service (business logic, raises `AppError(message, status_code)`) → repository (SQLAlchemy queries). The service owns the `AsyncSession` and calls `commit()`; repositories only stage changes.
