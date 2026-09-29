@@ -31,6 +31,18 @@ make ml-weights && make dev-ml
 
 Без весов оставьте `DETECTOR__URL` в `.env` пустым. Для демонстрации на старых снимках задайте `ASSESSMENT__AS_OF_MODE=last_observation`. Подробности в [documentation/install-and-run.md](documentation/install-and-run.md).
 
+## Языковая модель
+
+Ассистент по отчёту и разбор нестандартных графиков используют языковую модель. Подойдёт любой провайдер с API, совместимым с форматом chat completions (OpenAI), облачный или локальный. Настраивается тремя переменными в `.env`:
+
+```dotenv
+LLM_BASE_URL=https://api.example.com/v1
+LLM_API_KEY=<ключ>
+LLM_MODEL=<имя модели>
+```
+
+Пока любая из трёх пуста, ассистент и разбор графика моделью отключены, остальные функции работают.
+
 ## Команды
 
 | Команда | Что делает |
@@ -56,4 +68,4 @@ make ml-weights && make dev-ml
 
 ## Лицензия
 
-[AGPL-3.0](LICENSE): модели Ultralytics распространяются под AGPL-3.0, включая обученные веса (см. [ml/DECISIONS.md](ml/DECISIONS.md), D-001).
+[AGPL-3.0](LICENSE): модели Ultralytics распространяются под AGPL-3.0, включая обученные веса.
