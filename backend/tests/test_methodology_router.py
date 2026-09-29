@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import AsyncIterable
 
+import pytest
 from dishka import AsyncContainer, Provider, Scope, make_async_container, provide
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
@@ -125,6 +126,7 @@ async def test_get_equipment_types_returns_200_with_list(
     assert isinstance(first["synonyms"], list)
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_get_methodology_returns_200_with_rules(
     client: AsyncClient, container: AsyncContainer
 ) -> None:
@@ -559,6 +561,7 @@ async def test_post_set_with_source_note_too_long_returns_422(
     assert response.status_code == 422
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_put_set_replaces_requirements_returns_200(
     client: AsyncClient, container: AsyncContainer
 ) -> None:
@@ -604,6 +607,7 @@ async def test_put_set_replaces_requirements_returns_200(
     assert data["requirements"][0]["min_count"] == 3
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_delete_set_returns_204(client: AsyncClient, container: AsyncContainer) -> None:
     """DELETE /sites/{site_id}/methodology/sets/{set_id} возвращает 204."""
     await seed_stand_user(container)
@@ -630,6 +634,7 @@ async def test_delete_set_returns_204(client: AsyncClient, container: AsyncConta
     assert len(updated_rule["sets"]) == initial_set_count - 1
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_delete_last_set_of_verifiable_rule_returns_422(
     client: AsyncClient, container: AsyncContainer
 ) -> None:
@@ -670,6 +675,7 @@ async def test_delete_last_set_of_verifiable_rule_returns_422(
     assert "Нельзя удалить последний комплект проверяемого этапа" in response.json()["detail"]
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_delete_last_set_of_unverifiable_rule_returns_204(
     client: AsyncClient, container: AsyncContainer
 ) -> None:

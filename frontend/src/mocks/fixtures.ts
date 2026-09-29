@@ -6,7 +6,6 @@ import type {
   DeviationDetail,
   EquipmentType,
   ImportIssue,
-  Obligation,
   Site,
   StageStatus,
   User,
@@ -83,54 +82,9 @@ export const templateIssues = (prefix: string): ImportIssue[] => [
   { id: `${prefix}-issue-1`, row_number: 9, raw_row: 'ИТОГО;;', reason: 'Нет названия этапа' },
 ]
 
-// ---------- Методика: базовый набор (как methodology/defaults.py) ----------
+// ---------- Методика ----------
 
-type RequirementSeed = [
-  code: string,
-  obligation: Obligation,
-  gesn: string | null,
-  note: string | null,
-]
-
-export const DEFAULT_RULES: { keywords: string[]; sets: RequirementSeed[][] }[] = [
-  {
-    keywords: ['котлован'],
-    sets: [
-      [
-        ['excavator_crawler', 'normative', null, 'по смыслу работы (ФСЭМ 91.01.05-087)'],
-        ['dump_truck', 'logical', null, 'по смыслу работы: вывоз грунта'],
-      ],
-    ],
-  },
-  {
-    keywords: ['фундамент', 'бетонир'],
-    sets: [
-      [
-        ['concrete_pump', 'normative', '06-01-001-16', null],
-        ['concrete_mixer', 'logical', null, 'по смыслу работы: доставка бетона'],
-      ],
-      [
-        ['truck_crane', 'normative', '06-01-001-16', null],
-        ['concrete_mixer', 'logical', null, 'по смыслу работы: доставка бетона'],
-      ],
-    ],
-  },
-  {
-    keywords: ['засыпк', 'земляные'],
-    sets: [
-      [
-        ['bulldozer', 'normative', null, 'по смыслу работы (ФСЭМ 91.01.01-035)'],
-        ['dump_truck', 'logical', null, 'по смыслу работы'],
-      ],
-      [
-        ['excavator_wheeled', 'normative', null, 'по смыслу работы (ФСЭМ 91.01.05-104)'],
-        ['dump_truck', 'logical', null, 'по смыслу работы'],
-      ],
-    ],
-  },
-]
-
-export const NO_RULE_REASON = 'Нет правила в базовом наборе — задайте комплект'
+export const NO_RULE_REASON = 'Комплект не задан — добавьте технику для этапа'
 
 // ---------- Снимки ----------
 

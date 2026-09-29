@@ -310,3 +310,12 @@ async def assistant_client(container: AsyncContainer) -> FakeAssistantClient:
     """Получить FakeAssistantClient из контейнера для конфигурации в тестах."""
     client = await container.get(AssistantClient)
     return cast(FakeAssistantClient, client)
+
+
+@pytest.fixture
+def default_kits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Включить подстановку стартовых комплектов (в проде отключена)."""
+    from app.domains.methodology.materializer import RuleMaterializer
+    from tests.default_kits import materialize_with_default_kits
+
+    monkeypatch.setattr(RuleMaterializer, "materialize", materialize_with_default_kits)

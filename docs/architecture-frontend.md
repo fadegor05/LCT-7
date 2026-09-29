@@ -87,7 +87,7 @@ OpenAPI backend), перечисления — StrEnum из `models.py` доме
 | `GET /sites/{id}/schedule` (404 — графика нет), `POST /sites/{id}/schedule/import` (multipart `file`) | отчёт импорта: счётчики строк, этапы, `issues` |
 | `PATCH /sites/{id}/schedule/stages/{stageId}` | ручные даты этапа (`dates_source = manual`) |
 | `GET /equipment-types` | справочник техники |
-| `GET /sites/{id}/methodology` | правила этапов с комплектами; сервер лениво создаёт их из базового набора |
+| `GET /sites/{id}/methodology` | правила этапов с комплектами; сервер лениво создаёт пустые непроверяемые правила (комплекты не подставляются) |
 | `PATCH /sites/{id}/methodology/rules/{ruleId}` | проверяется ли этап по технике и почему нет |
 | `POST /sites/{id}/methodology/rules/{ruleId}/sets`, `PUT/DELETE /sites/{id}/methodology/sets/{setId}` | комплекты техники; без нормативной техники — 422 |
 | `GET /sites/{id}/photos` (`?undated=true`), `POST /sites/{id}/photos` (multipart `files`) | снимки и загрузка пачки (`UploadReport` по каждому файлу) |
