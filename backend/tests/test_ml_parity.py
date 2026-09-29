@@ -357,6 +357,7 @@ async def run_recalculation(
         await coordinator.recompute_site(site_db_id)
 
 
+@pytest.mark.usefixtures("default_kits")
 class TestMLParity:
     """Тест паритета: backend vs ML статусы этапов."""
 

@@ -5,6 +5,7 @@ import uuid
 from datetime import date
 
 import openpyxl
+import pytest
 from dishka import AsyncContainer
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -564,6 +565,7 @@ async def test_invalid_uuid_in_stage_id_returns_422(
     assert response.status_code == 422
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_site_deletion_removes_schedule(
     client: AsyncClient, container: AsyncContainer, engine
 ) -> None:
@@ -613,6 +615,7 @@ async def test_site_deletion_removes_schedule(
         assert len(schedule_issues.scalars().all()) == 0
 
 
+@pytest.mark.usefixtures("default_kits")
 async def test_import_computes_stage_statuses_without_observations(
     client: AsyncClient, container: AsyncContainer
 ) -> None:

@@ -6,30 +6,53 @@ import { renderRoute } from '@/test/render'
 const kit = (n: number) => screen.getByRole('region', { name: `Комплект ${n}` })
 const stageButton = (name: RegExp) => screen.getByRole('button', { name })
 
+type User = ReturnType<typeof renderRoute>['user']
+
+/** Комплекты по умолчанию не подставляются: этап включают в проверку и наполняют вручную. */
+async function createPitKit(user: User) {
+  await user.click(await screen.findByRole('button', { name: /Разработка котлована/ }))
+  await user.click(screen.getByRole('button', { name: 'Проверяется' }))
+  await user.click(screen.getByRole('button', { name: 'Сохранить' }))
+  await screen.findByText('Комплекта нет')
+
+  await user.selectOptions(within(kit(1)).getByLabelText('Машина'), 'Гусеничный экскаватор')
+  await user.type(within(kit(1)).getByLabelText('ГЭСН или источник'), 'по смыслу работы')
+  await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
+  await user.click(within(kit(1)).getByRole('button', { name: 'Добавить машину' }))
+  await user.selectOptions(within(kit(1)).getByLabelText('Машина'), 'Самосвал')
+  await user.selectOptions(within(kit(1)).getByLabelText('Обязательность'), 'Логическая')
+  await user.type(
+    within(kit(1)).getByLabelText('ГЭСН или источник'),
+    'по смыслу работы: вывоз грунта',
+  )
+  await user.click(within(kit(1)).getByRole('button', { name: 'Добавить' }))
+  await user.click(within(kit(1)).getByRole('button', { name: 'Сохранить' }))
+  await vi.waitFor(() =>
+    expect(stageButton(/Разработка котлована/)).toHaveTextContent(
+      '1 комплект · маркер: гусеничный экскаватор',
+    ),
+  )
+}
+
 describe('MethodologyPage', () => {
-  it('shows stages with their kits and markers and selects one', async () => {
+  it('starts without default kits and lets the engineer fill a stage', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
     const pit = await screen.findByRole('button', { name: /Разработка котлована/ })
-    expect(pit).toHaveTextContent('1 комплект · маркер: гусеничный экскаватор')
+    expect(pit).toHaveTextContent('Не проверяется по технике')
+    expect(stageButton(/Устройство фундамента/)).toHaveTextContent('Не проверяется по технике')
+    expect(screen.queryByRole('region', { name: /Комплект/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Комплект не задан — добавьте технику для этапа')).toBeInTheDocument()
+
+    await createPitKit(user)
     expect(pit).toHaveAttribute('aria-pressed', 'true')
-    expect(stageButton(/Устройство фундамента/)).toHaveTextContent(
-      '2 комплекта · маркер: автобетононасос, автокран',
-    )
-    expect(stageButton(/Подготовка территории/)).toHaveTextContent('Не проверяется по технике')
     expect(screen.getByText('ВТ 01.09 — ПН 14.09')).toBeInTheDocument()
     expect(within(kit(1)).getByText('Маркер')).toBeInTheDocument()
     expect(within(kit(1)).getByText('по смыслу работы: вывоз грунта')).toBeInTheDocument()
-
-    await user.click(stageButton(/Подготовка территории/))
-    expect(
-      screen.getByRole('heading', { level: 2, name: 'Подготовка территории' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Нет правила в базовом наборе — задайте комплект')).toBeInTheDocument()
   })
 
   it('edits a kit and saves it to the server', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
+    await createPitKit(user)
     const save = within(kit(1)).getByRole('button', { name: 'Сохранить' })
     expect(save).toBeDisabled()
 
@@ -60,7 +83,7 @@ describe('MethodologyPage', () => {
 
   it('does not save a kit without a marker', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
+    await createPitKit(user)
     await user.click(
       within(kit(1)).getByRole('button', { name: 'Убрать машину: Гусеничный экскаватор' }),
     )
@@ -69,15 +92,15 @@ describe('MethodologyPage', () => {
   })
 
   it('keeps a single kit: no adding or deleting kits', async () => {
-    renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    await createPitKit(user)
     expect(screen.queryByRole('button', { name: 'Добавить комплект' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Удалить комплект/ })).not.toBeInTheDocument()
   })
 
   it('turns equipment check off with a reason and back on', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
+    await createPitKit(user)
     await user.click(screen.getByRole('button', { name: 'Не проверяется' }))
     await user.click(screen.getAllByRole('button', { name: 'Отмена' })[0]!)
     expect(screen.getByRole('region', { name: 'Комплект 1' })).toBeInTheDocument()
@@ -112,6 +135,8 @@ describe('MethodologyPage', () => {
   })
 
   it('shows save errors from the server', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    await createPitKit(user)
     server.use(
       http.put('/api/sites/:siteId/methodology/sets/:setId', () =>
         HttpResponse.json({ detail: 'Нельзя' }, { status: 422 }),
@@ -120,8 +145,6 @@ describe('MethodologyPage', () => {
         HttpResponse.json({ detail: 'Правило не найдено' }, { status: 404 }),
       ),
     )
-    const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
     await user.click(within(kit(1)).getByRole('button', { name: 'Убрать машину: Самосвал' }))
     await user.click(within(kit(1)).getByRole('button', { name: 'Сохранить' }))
     expect(await within(kit(1)).findByText('Нельзя')).toBeInTheDocument()
@@ -134,7 +157,7 @@ describe('MethodologyPage', () => {
 
   it('reports when every machine is already in the kit', async () => {
     const { user } = renderRoute('/sites/site-berezniki/methodology')
-    await screen.findByRole('region', { name: 'Комплект 1' })
+    await createPitKit(user)
     for (let i = 0; i < 5; i++) {
       await user.click(within(kit(1)).getByRole('button', { name: 'Добавить машину' }))
       await user.type(within(kit(1)).getByLabelText('ГЭСН или источник'), 'x')
