@@ -1,8 +1,8 @@
 /**
  * Ассистент: API функции, классификация ошибок, хуки useAssistantStatus и useAskAssistant.
  * Ошибки типизированы по `code` из ответа backend, который отражает причину отказа.
- * Ответы эфемерны: хранятся только в мутации, очищаются при смене стройки или инвалидации
- * кэша запросов этой стройки.
+ * Хук держит только текущий ответ: он сбрасывается при смене стройки или инвалидации кэша
+ * запросов этой стройки. Историю переписки хранит чат (features/assistant/chatHistory.ts).
  */
 import { useCallback, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -90,6 +90,9 @@ export function classifyAssistantError(error: unknown): AssistantFailure {
   return failure('unknown', UNKNOWN_MESSAGE)
 }
 
+/** Результат вопроса для чата: ответ модели или разобранный отказ. */
+export type AssistantAskResult = { answer: AssistantAnswer } | { failure: AssistantFailure }
+
 export const assistantApi = {
   /** Включён ли ассистент: ML доступен и LLM настроена. Платный вызов не тратит. */
   status: (signal?: AbortSignal) =>
@@ -131,6 +134,8 @@ function belongsToSite(queryKey: readonly unknown[], siteId: string): boolean {
  * - `ask(question)` — проверяет вопрос локально (3–500 символов, trim), отправляет, возвращает
  *   ответ; при отказе или повторном нажатии во время ожидания возвращает `undefined` и не
  *   бросает исключений. Причина отказа — в `failure`.
+ * - `send(question)` — то же, но возвращает и ответ, и отказ: `{ answer }` или `{ failure }`
+ *   (`undefined` — повторное нажатие во время ожидания). Нужен чату, который пишет отказы в историю.
  * - `cancel()` — отменяет ожидание; `failure.kind === 'cancelled'`, показывать его не нужно.
  * - `reset()` — убирает ответ и отказ.
  * - Ответ живёт только в состоянии хука и сбрасывается (запрос отменяется) при смене `siteId`,
@@ -169,19 +174,27 @@ export function useAskAssistant(siteId: string) {
     }
   }, [resetMutation])
 
-  const ask = useCallback(
-    async (question: string): Promise<AssistantAnswer | undefined> => {
+  const send = useCallback(
+    async (question: string): Promise<AssistantAskResult | undefined> => {
       if (inFlight.current) return undefined
       inFlight.current = true
       try {
-        return await mutateAsync(question)
-      } catch {
-        return undefined // причина в mutation.error → failure
+        return { answer: await mutateAsync(question) }
+      } catch (error) {
+        return { failure: classifyAssistantError(error) }
       } finally {
         inFlight.current = false
       }
     },
     [mutateAsync],
+  )
+
+  const ask = useCallback(
+    async (question: string): Promise<AssistantAnswer | undefined> => {
+      const result = await send(question)
+      return result && 'answer' in result ? result.answer : undefined // причина в failure
+    },
+    [send],
   )
 
   // Смена стройки и размонтирование: чужой ответ показывать нельзя.
@@ -204,6 +217,7 @@ export function useAskAssistant(siteId: string) {
 
   return {
     ask,
+    send,
     cancel,
     reset: resetMutation,
     isPending: mutation.isPending,

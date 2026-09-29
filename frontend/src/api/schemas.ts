@@ -100,6 +100,9 @@ export const importIssueSchema = z.object({
   reason: z.string(),
 })
 
+/** Режим разбора файла графика (выбирает пользователь). */
+export const parseModeSchema = z.enum(['auto', 'llm', 'builtin'])
+
 export const scheduleReportSchema = z.object({
   id: z.string(),
   site_id: z.string(),
@@ -107,6 +110,8 @@ export const scheduleReportSchema = z.object({
   imported_at: isoDateTime,
   rows_total: z.number(),
   rows_parsed: z.number(),
+  /** Чем файл разобран на самом деле: в режиме «авто» это выясняется по ходу. */
+  parse_method: z.enum(['builtin', 'llm']),
   stages_with_dates: z.number(),
   stages_without_dates: z.number(),
   stages: z.array(stageSchema),
@@ -330,6 +335,7 @@ export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
 export type Stage = z.infer<typeof stageSchema>
 export type ImportIssue = z.infer<typeof importIssueSchema>
+export type ParseMode = z.infer<typeof parseModeSchema>
 export type ScheduleReport = z.infer<typeof scheduleReportSchema>
 export type StageDatesUpdate = z.infer<typeof stageDatesUpdateSchema>
 export type EquipmentType = z.infer<typeof equipmentTypeSchema>

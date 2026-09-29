@@ -392,6 +392,35 @@ describe('useAskAssistant', () => {
     expect(result.current.failure).toBeUndefined()
   })
 
+  it('send() возвращает ответ или разобранный отказ', async () => {
+    countingAsk()
+    const { result } = mountAsk()
+    let sent: Awaited<ReturnType<typeof result.current.send>>
+    await act(async () => {
+      sent = await result.current.send('где отставание')
+    })
+    expect(sent!).toEqual({ answer: answerBody })
+
+    server.use(
+      http.post(ASK_URL, () =>
+        HttpResponse.json(
+          { detail: 'Модель не ответила. Повторите вопрос позже.', code: 'assistant_timeout' },
+          { status: 504 },
+        ),
+      ),
+    )
+    await act(async () => {
+      sent = await result.current.send('где отставание')
+    })
+    expect(sent!).toEqual({
+      failure: {
+        kind: 'timeout',
+        message: 'Модель не ответила. Повторите вопрос позже.',
+        retryable: true,
+      },
+    })
+  })
+
   describe('эфемерность ответа', () => {
     it('ничего не пишется в localStorage и sessionStorage', async () => {
       countingAsk()

@@ -127,7 +127,7 @@ class TestPhotoProviderWiring:
         from app.domains.photo.provider import PhotoProvider
         from app.domains.photo.recalculator import NoopObservationRecalculator
         from app.domains.photo.recalculator import ObservationRecalculator as ObsRecalc
-        from app.domains.schedule.provider import ScheduleProvider
+        from app.domains.schedule.provider import ScheduleLlmClientProvider, ScheduleProvider
         from app.domains.site.provider import SiteProvider
         from app.domains.user.provider import UserProvider
         from app.domains.utility.provider import UtilityProvider
@@ -145,6 +145,7 @@ class TestPhotoProviderWiring:
                 UserProvider(),
                 SiteProvider(),
                 ScheduleProvider(),
+                ScheduleLlmClientProvider(),
                 MethodologyProvider(),
                 PhotoProvider(),  # Только PhotoProvider, без ObservationProvider
                 UtilityProvider(),

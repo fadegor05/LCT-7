@@ -1,7 +1,87 @@
+/* Чат ассистента: шапка, прокручиваемая переписка и поле вопроса внизу.
+   Высоту задаёт колонка SiteShell (aside); без неё чат занимает фиксированную высоту. */
 .section {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  height: 100%;
+  min-height: 480px;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.log {
+  flex: 1 1 0;
+  min-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-right: var(--space-1);
+  overscroll-behavior: contain;
+}
+
+.empty {
+  margin: auto 0;
+  text-align: center;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 92%;
+}
+
+.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.assistant {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.user .bubble {
+  background: var(--accent-soft);
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.assistant .bubble {
+  background: var(--surface-card);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.meta {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--ink-muted);
+}
+
+.note {
+  align-self: center;
+}
+
+.typing {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.composer {
+  flex: none;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
 @media print {

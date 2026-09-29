@@ -15,7 +15,11 @@ from app.adapters.ml.assistant import (
 )
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import AssistantSettings, Settings
-from app.domains.assistant.ask_service import AssistantService, referenced_stages
+from app.domains.assistant.ask_service import (
+    AssistantService,
+    humanize_answer,
+    referenced_stages,
+)
 from app.domains.assistant.report import BuiltReport
 from app.domains.assistant.schemas import AskRequest
 from app.plugins.exceptions import AppError
@@ -60,6 +64,7 @@ class FakeGuard:
             raise self.error
         site = MagicMock()
         site.owner_id = self.owner_id
+        site.name = "Жилой дом · Березники"
         return site
 
 
@@ -127,6 +132,19 @@ def test_referenced_stages_этап_30_не_читается_как_3() -> None:
     assert result[0].ref == "этап 30"
 
 
+def test_humanize_answer_меняет_метку_на_название_объекта() -> None:
+    """Метка p1 в ответе заменяется на название объекта, остальное не трогается."""
+    answer = "На площадке p1 этап 2 отстаёт. По P1 всё. p10 и p1a — не метка."
+    assert humanize_answer(answer, "Жилой дом") == (
+        "На площадке «Жилой дом» этап 2 отстаёт. По «Жилой дом» всё. p10 и p1a — не метка."
+    )
+
+
+def test_humanize_answer_без_метки_без_изменений() -> None:
+    """Ответ без метки возвращается как есть."""
+    assert humanize_answer("в данных этого нет", "Жилой дом") == "в данных этого нет"
+
+
 # Tests for AssistantService
 
 
@@ -173,6 +191,35 @@ async def test_успех_собирает_ответ_и_ссылки_на_эт�
     assert len(result.stages) == 2
     assert result.stages[0].ref == "этап 3"
     assert result.stages[1].ref == "этап 4"
+
+
+@pytest.mark.asyncio
+async def test_ответ_показывает_название_объекта_вместо_метки() -> None:
+    """В ответ пользователю уходит название объекта, в ML — по-прежнему метка p1."""
+    client = FakeAssistantClient(
+        answer=AssistantAnswer(
+            answer="На площадке p1 этап 3 отстаёт на 4 дня.",
+            verified=True,
+            numbers_not_in_report=[],
+            numbers_of_other_site=[],
+            limits="",
+        ),
+        enabled=True,
+    )
+    service = AssistantService(
+        reports=FakeReportService(),
+        client=client,
+        limiter=SlidingWindowRateLimiter(limit=10, window_s=60.0, clock=FakeClock()),
+        guard=FakeGuard(),
+        settings=Settings(),
+    )
+
+    result = await service.ask(uuid.uuid4(), "где отставание")
+
+    assert result.answer == "На площадке «Жилой дом · Березники» этап 3 отстаёт на 4 дня."
+    assert result.site_label == "p1"
+    assert client.calls[0][2] == "p1"
+    assert [s.ref for s in result.stages] == ["этап 3"]
 
 
 @pytest.mark.asyncio

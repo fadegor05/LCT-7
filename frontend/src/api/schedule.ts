@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, request } from './client'
 import { keys } from './keys'
-import { scheduleReportSchema, stageSchema, type StageDatesUpdate } from './schemas'
+import { scheduleReportSchema, stageSchema, type ParseMode, type StageDatesUpdate } from './schemas'
 
 export const scheduleApi = {
   /** Отчёт о загруженном графике с этапами; 404 — графика ещё нет. */
@@ -13,10 +13,14 @@ export const scheduleApi = {
       throw error
     }
   },
-  /** Импорт CSV/XLSX (multipart `file`); переимпорт заменяет график целиком. */
-  upload: (siteId: string, file: File) => {
+  /**
+   * Импорт CSV/XLSX (multipart `file` + `mode`); переимпорт заменяет график целиком.
+   * `mode`: auto — встроенный разбор, при неудаче LLM; llm; builtin.
+   */
+  upload: (siteId: string, file: File, mode: ParseMode = 'auto') => {
     const form = new FormData()
     form.append('file', file)
+    form.append('mode', mode)
     return request(`/sites/${siteId}/schedule/import`, {
       method: 'POST',
       body: form,
@@ -43,8 +47,8 @@ export function useSchedule(siteId: string | undefined) {
 export function useUploadSchedule() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ siteId, file }: { siteId: string; file: File }) =>
-      scheduleApi.upload(siteId, file),
+    mutationFn: ({ siteId, file, mode }: { siteId: string; file: File; mode?: ParseMode }) =>
+      scheduleApi.upload(siteId, file, mode),
     onSuccess: async (data, { siteId }) => {
       qc.setQueryData(keys.schedule(siteId), data)
       await qc.invalidateQueries({ queryKey: keys.site(siteId) })

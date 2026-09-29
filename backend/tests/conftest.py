@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.adapters.ml.assistant import AssistantClient
 from app.adapters.ml.base import DetectorClient
+from app.adapters.ml.schedule_llm import ScheduleLlmClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
 from app.core.settings import Settings, get_settings
@@ -41,7 +42,7 @@ from app.domains.user.provider import UserProvider
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
-from tests.fakes import FakeAssistantClient, FakeDetector
+from tests.fakes import FakeAssistantClient, FakeDetector, FakeScheduleLlmClient
 
 
 class TestAppProvider(Provider):
@@ -197,6 +198,14 @@ class TestAssistantClientProvider(Provider):
         return FakeAssistantClient()
 
 
+class TestScheduleLlmClientProvider(Provider):
+    """Тестовый DI провайдер LLM-разбора плана: FakeScheduleLlmClient вместо HTTP."""
+
+    @provide(scope=Scope.APP)
+    def schedule_llm(self) -> ScheduleLlmClient:
+        return FakeScheduleLlmClient()
+
+
 def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncContainer:
     storage_root = tmp_path / "storage"
     storage_root.mkdir(parents=True, exist_ok=True)
@@ -206,6 +215,7 @@ def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncConta
         UserProvider(),
         SiteProvider(),
         ScheduleProvider(),
+        TestScheduleLlmClientProvider(),
         MethodologyProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
@@ -251,6 +261,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         UserProvider(),
         SiteProvider(),
         ScheduleProvider(),
+        TestScheduleLlmClientProvider(),
         MethodologyProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),

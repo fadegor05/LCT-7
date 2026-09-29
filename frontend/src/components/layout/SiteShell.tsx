@@ -12,6 +12,8 @@ interface SiteShellProps {
   title?: ReactNode
   subtitle?: ReactNode
   actions?: ReactNode
+  /** Колонка справа от содержимого (чат ассистента); на узком экране уходит под него. */
+  aside?: ReactNode
   children: ReactNode
 }
 
@@ -21,8 +23,19 @@ const TABS = [
   { to: 'methodology', label: 'Методика' },
 ]
 
-/** Каркас экранов объекта: крошки, заголовок и вкладки «Обзор · Наблюдения · Методика». */
-export function SiteShell({ site, crumb, title, subtitle, actions, children }: SiteShellProps) {
+/**
+ * Каркас экранов объекта: крошки, заголовок и вкладки «Обзор · Наблюдения · Методика».
+ * С `aside` содержимое делится на две колонки: основная слева, `aside` — прилипает справа.
+ */
+export function SiteShell({
+  site,
+  crumb,
+  title,
+  subtitle,
+  actions,
+  aside,
+  children,
+}: SiteShellProps) {
   const base = `/sites/${site.id}`
   const crumbs: Crumb[] = [{ label: 'Стройки', to: '/sites' }]
   crumbs.push(crumb ? { label: site.name, to: base } : { label: site.name })
@@ -44,7 +57,14 @@ export function SiteShell({ site, crumb, title, subtitle, actions, children }: S
           </NavLink>
         ))}
       </nav>
-      {children}
+      {aside ? (
+        <div className={styles.withAside} data-layout="with-aside">
+          <div className={styles.main}>{children}</div>
+          <aside className={styles.aside}>{aside}</aside>
+        </div>
+      ) : (
+        children
+      )}
     </>
   )
 }

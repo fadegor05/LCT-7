@@ -146,7 +146,7 @@ class TestObservationProviderWiring:
         from dishka import make_async_container
 
         from app.domains.methodology.provider import MethodologyProvider
-        from app.domains.schedule.provider import ScheduleProvider
+        from app.domains.schedule.provider import ScheduleLlmClientProvider, ScheduleProvider
         from app.domains.site.provider import SiteProvider
         from app.domains.user.provider import UserProvider
         from app.domains.utility.provider import UtilityProvider
@@ -159,6 +159,7 @@ class TestObservationProviderWiring:
             UserProvider(),
             SiteProvider(),
             ScheduleProvider(),
+            ScheduleLlmClientProvider(),
             MethodologyProvider(),
             PhotoProvider(),
             # Заметьте: ObservationProvider() НЕ включён здесь

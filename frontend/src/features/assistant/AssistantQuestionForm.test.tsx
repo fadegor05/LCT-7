@@ -67,7 +67,8 @@ describe('AssistantQuestionForm', () => {
     await user.type(textarea, 'тест')
     await user.keyboard('{Enter}')
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith('тест')
-    expect(textarea).toHaveValue('тест')
+    // После отправки поле очищается под следующий вопрос.
+    expect(textarea).toHaveValue('')
   })
 
   it('inserts newline on Shift+Enter without submitting', async () => {

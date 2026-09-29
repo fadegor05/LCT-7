@@ -25,3 +25,55 @@
   border-bottom-color: var(--accent-strong);
   font-weight: 500;
 }
+
+.withAside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* Колонка прилипает к верху окна и занимает его высоту: переписка прокручивается внутри. */
+.aside {
+  position: sticky;
+  top: var(--space-6);
+  height: calc(100vh - 2 * var(--space-6));
+  min-width: 0;
+}
+
+/* Колонке нечего показать (ассистент выключен) — содержимое занимает всю ширину. */
+.withAside:has(> .aside:empty) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.aside:empty {
+  display: none;
+}
+
+@media (width <= 1100px) {
+  .withAside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aside {
+    position: static;
+    height: 640px;
+  }
+}
+
+@media print {
+  .withAside {
+    display: block;
+  }
+
+  .aside {
+    display: none;
+  }
+}
