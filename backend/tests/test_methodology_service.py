@@ -8,7 +8,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.domains.methodology.catalog import EquipmentCatalog
-from app.domains.methodology.defaults import DefaultRuleSet
 from app.domains.methodology.models import (
     EquipmentRequirement,
     MethodologyRule,
@@ -127,7 +126,6 @@ async def methodology_service(engine, container, site_and_schedule):
         # from list_rules. In prod (Postgres) each session has its own connection.
         await catalog.all()
 
-        defaults = DefaultRuleSet()
         recalculator = RecordingRecalculator()
 
         methodology_repo = MethodologyRepository(session)
@@ -144,7 +142,6 @@ async def methodology_service(engine, container, site_and_schedule):
             guard=guard,
             schedule_repository=schedule_repo,
             catalog=catalog,
-            defaults=defaults,
             recalculator=recalculator,
         )
 
@@ -169,7 +166,6 @@ class TestMethodologyServiceEquipmentTypes:
                 guard=None,
                 schedule_repository=None,
                 catalog=catalog,
-                defaults=None,
                 recalculator=None,
             )
 
@@ -186,30 +182,23 @@ class TestMethodologyServiceListRules:
     """Tests for list_rules."""
 
     @pytest.mark.asyncio
-    async def test_list_rules_materializes_defaults(self, methodology_service, site_and_schedule):
-        """list_rules creates rules from defaults on first call."""
+    async def test_list_rules_creates_empty_unverifiable_rules(
+        self, methodology_service, site_and_schedule
+    ):
+        """list_rules не подставляет комплекты: правила пустые и не проверяются."""
         session, service, recalculator = methodology_service
 
         rules = await service.list_rules(site_and_schedule["site_id"])
 
-        assert len(rules) == 3
-        assert rules[0].stage_name == "Устройство свай"
-        assert rules[1].stage_name == "Разработка котлована"
-        assert rules[2].stage_name == "Отделка фасада"
-
-        assert rules[0].rule.is_verifiable is True
-        assert rules[0].rule.unverifiable_reason is None
-        assert len(rules[0].sets) == 2
-
-        assert rules[1].rule.is_verifiable is True
-        assert rules[1].rule.unverifiable_reason is None
-        assert len(rules[1].sets) == 1
-
-        assert rules[2].rule.is_verifiable is False
-        assert (
-            rules[2].rule.unverifiable_reason == "Нет правила в базовом наборе — задайте комплект"
-        )
-        assert len(rules[2].sets) == 0
+        assert [r.stage_name for r in rules] == [
+            "Устройство свай",
+            "Разработка котлована",
+            "Отделка фасада",
+        ]
+        for rule in rules:
+            assert rule.rule.is_verifiable is False
+            assert rule.rule.unverifiable_reason == "Комплект не задан — добавьте технику для этапа"
+            assert rule.sets == []
 
         assert len(recalculator.calls) == 0
 
@@ -272,7 +261,6 @@ class TestMethodologyServiceListRules:
                 guard=guard,
                 schedule_repository=schedule_repo,
                 catalog=catalog,
-                defaults=DefaultRuleSet(),
                 recalculator=RecordingRecalculator(),
             )
 
@@ -309,6 +297,7 @@ class TestMethodologyServiceUpdateRule:
         assert recalculator.calls[0] == site_and_schedule["site_id"]
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_create_set_appends_position(self, methodology_service, site_and_schedule):
         """create_set appends at position max+1."""
         session, service, recalculator = methodology_service
@@ -365,6 +354,7 @@ class TestMethodologyServiceUpdateRule:
         assert len(recalculator.calls) == 0
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_delete_set_removes(self, methodology_service, site_and_schedule):
         """delete_set removes the set."""
         session, service, recalculator = methodology_service
@@ -433,7 +423,6 @@ class TestMethodologyServiceForeignOwner:
                 guard=guard,
                 schedule_repository=schedule_repo,
                 catalog=catalog,
-                defaults=DefaultRuleSet(),
                 recalculator=RecordingRecalculator(),
             )
 
@@ -473,7 +462,6 @@ class TestMethodologyServiceForeignOwner:
                 guard=guard,
                 schedule_repository=schedule_repo,
                 catalog=catalog,
-                defaults=DefaultRuleSet(),
                 recalculator=RecordingRecalculator(),
             )
 
@@ -538,7 +526,6 @@ class TestMethodologyServiceCrossSiteIsolation:
                 guard=guard,
                 schedule_repository=schedule_repo,
                 catalog=catalog,
-                defaults=DefaultRuleSet(),
                 recalculator=RecordingRecalculator(),
             )
 
@@ -622,6 +609,7 @@ class TestMethodologyServiceUpdatedAt:
         assert len(recalculator.calls) == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_delete_set_bumps_rule_updated_at(self, methodology_service, site_and_schedule):
         """delete_set bumps the rule's updated_at timestamp."""
         session, service, recalculator = methodology_service
@@ -679,6 +667,7 @@ class TestMethodologyServiceUnknownEquipmentType:
         assert len(recalculator.calls) == 0
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_replace_set_unknown_equipment_type_422(
         self, methodology_service, site_and_schedule
     ):
@@ -798,6 +787,7 @@ class TestMethodologyServiceReplaceSet:
     """Tests for replace_set behavior."""
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_replace_set_old_reqs_gone_new_present(
         self, methodology_service, site_and_schedule
     ):
@@ -839,6 +829,7 @@ class TestMethodologyServiceReplaceSet:
         assert len(recalculator.calls) == 1
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_replace_set_logical_only_422_old_intact(
         self, methodology_service, site_and_schedule
     ):
@@ -890,6 +881,7 @@ class TestMethodologyServiceListRulesStructure:
     """Tests for list_rules structure and details."""
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("default_kits")
     async def test_list_rules_piles_rule_structure(self, methodology_service, site_and_schedule):
         """Piles rule has correct structure with gesn_code and logical concrete_mixer."""
         session, service, recalculator = methodology_service

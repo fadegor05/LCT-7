@@ -1,5 +1,5 @@
 import type { Observation } from '@/api/schemas'
-import { formatShortDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { pluralPhotos } from '@/lib/labels'
 import styles from './Observations.module.css'
 
@@ -32,7 +32,7 @@ export function DayPicker({ days, value, onChange, undated }: DayPickerProps) {
           aria-pressed={value === d.observed_on}
           onClick={() => onChange(d.observed_on)}
         >
-          <span className="lab data">{formatShortDate(d.observed_on)}</span>
+          <span className="lab data">{formatDate(d.observed_on)}</span>
           <span className="sm muted">{pluralPhotos(d.photo_count)}</span>
         </button>
       ))}

@@ -3,7 +3,7 @@ import { annotatedImageUrl, useObservations, usePhotos } from '@/api/frames'
 import { DateSourceBadge } from '@/components/ui/DateSourceBadge'
 import { FrameView } from '@/components/ui/FrameView'
 import { SectionHeader } from '@/components/layout/PageHeader'
-import { formatShortDate } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { observationSentence } from './observationSentence'
 import styles from './Overview.module.css'
 
@@ -18,7 +18,7 @@ export function LastObservation({ siteId }: { siteId: string }) {
   return (
     <section className={styles.section}>
       <SectionHeader
-        title={`Последнее наблюдение · ${formatShortDate(last.observed_on)}`}
+        title={`Последнее наблюдение · ${formatDate(last.observed_on)}`}
         description={observationSentence(last)}
         actions={
           <Link to={`/sites/${siteId}/observations`} className="sm">

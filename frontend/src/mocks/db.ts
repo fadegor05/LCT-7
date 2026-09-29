@@ -26,7 +26,6 @@ import type {
 } from '@/api/schemas'
 import {
   BEREZNIKI,
-  DEFAULT_RULES,
   DEVIATION_SEEDS,
   equipmentByCode,
   equipmentTypes,
@@ -196,33 +195,16 @@ export function listEquipmentTypes() {
 }
 
 function materializeRules(stages: readonly Stage[]): Rule[] {
-  return stages.map((stage) => {
-    const ruleId = `${stage.id}-rule`
-    const match = DEFAULT_RULES.find((r) =>
-      r.keywords.some((k) => stage.name.toLowerCase().includes(k)),
-    )
-    const sets: EquipmentSet[] = (match?.sets ?? []).map((seeds, i) => ({
-      id: `${ruleId}-set-${i + 1}`,
-      position: i + 1,
-      requirements: seeds.map(([code, obligation, gesn, note], j) => ({
-        id: `${ruleId}-set-${i + 1}-req-${j + 1}`,
-        equipment_type: equipmentByCode(code),
-        min_count: 1,
-        obligation,
-        gesn_code: gesn,
-        source_note: note,
-      })),
-    }))
-    return {
-      id: ruleId,
-      stage_id: stage.id,
-      stage_name: stage.name,
-      is_verifiable: Boolean(match),
-      unverifiable_reason: match ? null : NO_RULE_REASON,
-      updated_at: now(),
-      sets,
-    }
-  })
+  // Комплекты по умолчанию не подставляются: инженер задаёт их сам (как на бэкенде).
+  return stages.map((stage) => ({
+    id: `${stage.id}-rule`,
+    stage_id: stage.id,
+    stage_name: stage.name,
+    is_verifiable: false,
+    unverifiable_reason: NO_RULE_REASON,
+    updated_at: now(),
+    sets: [],
+  }))
 }
 
 export function listRules(siteId: string): Rule[] {

@@ -8,7 +8,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.methodology.catalog import EquipmentCatalog, EquipmentTypeInfo
-from app.domains.methodology.defaults import DefaultRuleSet
 from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.models import (
     EquipmentRequirement,
@@ -62,7 +61,6 @@ class MethodologyService:
         guard: SiteAccessGuard,
         schedule_repository: ScheduleRepository,
         catalog: EquipmentCatalog,
-        defaults: DefaultRuleSet,
         recalculator: StatusRecalculator,
     ) -> None:
         self._repository = repository
@@ -70,9 +68,8 @@ class MethodologyService:
         self._guard = guard
         self._schedule_repository = schedule_repository
         self._catalog = catalog
-        self._defaults = defaults
         self._recalculator = recalculator
-        self._materializer = RuleMaterializer(repository, catalog, defaults)
+        self._materializer = RuleMaterializer(repository)
 
     async def list_equipment_types(self) -> list[EquipmentTypeInfo]:
         """Получить все типы оборудования из каталога."""
@@ -94,7 +91,6 @@ class MethodologyService:
         Raises:
             AppError(404) если сайт не принадлежит текущему пользователю
             AppError(404) если график не загружен
-            AppError(500) если справочник техники не содержит код из defaults
         """
         # Проверка доступа
         await self._guard.require(site_id)
