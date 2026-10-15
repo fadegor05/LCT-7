@@ -14,6 +14,7 @@ from app.core.settings import AsOfMode
 from app.domains.assessment.engine import (
     DeviationResult,
     EquipmentRequirementInput,
+    KitInput,
     ObservationInput,
     ObservedEquipmentInput,
     RuleEngine,
@@ -27,7 +28,10 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
-from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.catalog import (
+    SPECIFIC_EQUIPMENT_CODES,
+    EquipmentCatalog,
+)
 from app.domains.methodology.materializer import RuleMaterializer
 from app.domains.methodology.repository import MethodologyRepository
 from app.domains.observation.repository import (
@@ -231,6 +235,10 @@ class RecomputeCoordinator:
                     sets_by_rule_id[s.rule_id] = []
                 sets_by_rule_id[s.rule_id].append(s)
 
+            # Загрузить каталог оборудования один раз для определения specificity
+            equipment_catalog_items = await self._equipment_catalog.all()
+            equipment_by_id = {item.id: item for item in equipment_catalog_items}
+
             # Построить rules_by_stage (только для правил с stage_id)
             rules_by_stage: dict[uuid.UUID, RuleInput] = {}
             for rule in rules_orm:
@@ -238,19 +246,38 @@ class RecomputeCoordinator:
                     # Пропускаем базовые правила без привязки к этапу
                     continue
 
-                # Собрать требования для этого правила
+                # Собрать требования для этого правила (flat list)
                 rule_sets = sets_by_rule_id.get(rule.id, [])
                 rule_requirements: list[EquipmentRequirementInput] = []
-                for s in rule_sets:
+
+                # Построить kits из наборов (отсортированы по position)
+                kits: list[KitInput] = []
+                for s in sorted(rule_sets, key=lambda x: x.position):
                     reqs = requirements_by_set_id.get(s.id, [])
+                    kit_requirements: list[EquipmentRequirementInput] = []
                     for req in reqs:
-                        rule_requirements.append(
-                            EquipmentRequirementInput(
-                                equipment_type_id=req.equipment_type_id,
-                                obligation=req.obligation,
-                                min_count=req.min_count,
-                            )
+                        # Определить, специально ли это оборудование
+                        equipment_info = equipment_by_id.get(req.equipment_type_id)
+                        is_specific = (
+                            equipment_info is not None
+                            and equipment_info.code in SPECIFIC_EQUIPMENT_CODES
                         )
+
+                        # Создать требование
+                        equipment_req = EquipmentRequirementInput(
+                            equipment_type_id=req.equipment_type_id,
+                            obligation=req.obligation,
+                            min_count=req.min_count,
+                            is_specific=is_specific,
+                        )
+
+                        # Добавить в kit и flat список
+                        kit_requirements.append(equipment_req)
+                        rule_requirements.append(equipment_req)
+
+                    # Создать KitInput для этого набора
+                    if kit_requirements:  # Пропускаем пустые наборы
+                        kits.append(KitInput(position=s.position, requirements=kit_requirements))
 
                 rules_by_stage[rule.stage_id] = RuleInput(
                     stage_id=rule.stage_id,
@@ -258,6 +285,7 @@ class RecomputeCoordinator:
                     is_verifiable=rule.is_verifiable,
                     unverifiable_reason=rule.unverifiable_reason,
                     requirements=rule_requirements,
+                    kits=tuple(kits),
                 )
 
             # Шаг 4: Собрать ObservationInput[]
@@ -292,7 +320,8 @@ class RecomputeCoordinator:
 
             # Шаг 5: Запустить engine
             reference_date = self._resolve_as_of(observations)
-            equipment_names = {item.id: item.title for item in await self._equipment_catalog.all()}
+            # Переиспользовать equipment_catalog_items загруженный при построении kits
+            equipment_names = {item.id: item.title for item in equipment_catalog_items}
             computation = self._engine.compute_site(
                 stages, rules_by_stage, observations, reference_date, equipment_names
             )

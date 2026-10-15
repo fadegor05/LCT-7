@@ -43,6 +43,9 @@ class DefaultStageRule:
 
 # Правила по умолчанию для всех стадий (первое совпадение побеждает)
 DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
+    # Свайные работы: нормативное требование — буровая установка или копёр.
+    # Остальное (бетоносмеситель, погрузчик) — логическое (сопутствующее).
+    # Видимость буровой установки или копра достаточна для подтверждения этапа.
     DefaultStageRule(
         stage_key="piles",
         title="Свайные работы",
@@ -57,13 +60,13 @@ DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
                 ),
                 DefaultRequirement(
                     equipment_code="concrete_pump",
-                    obligation=Obligation.NORMATIVE,
+                    obligation=Obligation.LOGICAL,
                     gesn_code="05-01-079-01",
                 ),
                 DefaultRequirement(
                     equipment_code="wheel_loader",
-                    obligation=Obligation.NORMATIVE,
-                    gesn_code="05-01-079-01",
+                    obligation=Obligation.LOGICAL,
+                    source_note="по смыслу работы",
                 ),
                 DefaultRequirement(
                     equipment_code="concrete_mixer",
@@ -81,7 +84,7 @@ DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
                 ),
                 DefaultRequirement(
                     equipment_code="wheel_loader",
-                    obligation=Obligation.NORMATIVE,
+                    obligation=Obligation.LOGICAL,
                     source_note="по смыслу работы",
                 ),
             ),
