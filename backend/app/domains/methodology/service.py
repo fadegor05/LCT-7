@@ -1,6 +1,7 @@
 """Бизнес-логика методологии проверки оборудования на объекте строительства."""
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -8,7 +9,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domains.methodology.catalog import EquipmentCatalog, EquipmentTypeInfo
-from app.domains.methodology.materializer import RuleMaterializer
+from app.domains.methodology.defaults import DefaultRuleSet
+from app.domains.methodology.materializer import NO_KIT_REASON, RuleMaterializer
 from app.domains.methodology.models import (
     EquipmentRequirement,
     EquipmentSet,
@@ -21,6 +23,7 @@ from app.domains.methodology.schemas import (
     RuleUpdate,
     SetWrite,
 )
+from app.domains.schedule.models import ScheduleStage
 from app.domains.schedule.repository import ScheduleRepository
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
@@ -51,6 +54,15 @@ class RuleView:
     sets: list[SetView]
 
 
+@dataclass
+class ApplyDefaultsResult:
+    """Результат применения правил по умолчанию."""
+
+    applied: int
+    eligible: int
+    unmatched: int
+
+
 class MethodologyService:
     """Бизнес-логика методологии проверки оборудования."""
 
@@ -62,6 +74,7 @@ class MethodologyService:
         schedule_repository: ScheduleRepository,
         catalog: EquipmentCatalog,
         recalculator: StatusRecalculator,
+        default_rules: DefaultRuleSet,
     ) -> None:
         self._repository = repository
         self._session = session
@@ -70,6 +83,7 @@ class MethodologyService:
         self._catalog = catalog
         self._recalculator = recalculator
         self._materializer = RuleMaterializer(repository)
+        self._default_rules = default_rules
 
     async def list_equipment_types(self) -> list[EquipmentTypeInfo]:
         """Получить все типы оборудования из каталога."""
@@ -105,27 +119,7 @@ class MethodologyService:
         stages = await self._schedule_repository.list_stages(schedule_id)
 
         # Материализация с retry на IntegrityError (race condition protection)
-        max_retries = 2
-        for attempt in range(max_retries):
-            try:
-                need_commit = await self._materializer.materialize(site_id, stages)
-
-                # Коммитим, если создали что-то новое
-                if need_commit:
-                    await self._session.commit()
-
-                # Success - exit retry loop
-                break
-            except IntegrityError as e:
-                # Rollback and retry once
-                await self._session.rollback()
-                if attempt < max_retries - 1:
-                    # После rollback ORM-объекты expired — перечитываем этапы
-                    stages = await self._schedule_repository.list_stages(schedule_id)
-                    continue
-                else:
-                    # Re-raise on second attempt
-                    raise e
+        stages = await self._materialize_with_retry(site_id, schedule_id, stages)
 
         # Загружаем все правила с этапами
         rules = await self._repository.list_rules_by_site(site_id)
@@ -405,6 +399,197 @@ class MethodologyService:
 
         # Пересчитываем
         await self._recalculator.recalculate(site_id)
+
+    async def apply_defaults(self, site_id: uuid.UUID) -> ApplyDefaultsResult:
+        """Применить правила по умолчанию к пустым правилам.
+
+        Заполняет пустые правила наборами из DefaultRuleSet.
+        Правило пусто, если: is_verifiable=False, unverifiable_reason=NO_KIT_REASON и нет наборов.
+
+        Args:
+            site_id: ID сайта
+
+        Returns:
+            ApplyDefaultsResult с количеством применённых, подходящих и несовпадающих правил
+
+        Raises:
+            AppError(404) если сайт не принадлежит текущему пользователю
+            AppError(404) если график не загружен
+            AppError(500) если неизвестный код оборудования в defaults
+        """
+        # Проверка доступа
+        await self._guard.require(site_id)
+
+        # Получаем график
+        schedule = await self._schedule_repository.get_by_site(site_id)
+        if schedule is None:
+            raise AppError("График не загружен", status_code=404)
+
+        # Получаем этапы графика
+        schedule_id = schedule.id
+        stages = await self._schedule_repository.list_stages(schedule_id)
+
+        # Материализация с retry на IntegrityError (race condition protection)
+        stages = await self._materialize_with_retry(site_id, schedule_id, stages)
+
+        # Загружаем все правила
+        rules = await self._repository.list_rules_by_site(site_id)
+
+        # Собираем наборы по правилам
+        rule_ids = [rule.id for rule in rules]
+        sets_by_rule: dict[uuid.UUID, list[EquipmentSet]] = {}
+        if rule_ids:
+            all_sets = await self._repository.list_sets(rule_ids)
+            for s in all_sets:
+                if s.rule_id not in sets_by_rule:
+                    sets_by_rule[s.rule_id] = []
+                sets_by_rule[s.rule_id].append(s)
+
+        # Находим пустые правила (is_verifiable=False, reason=NO_KIT_REASON, нет наборов)
+        eligible_rules = []
+        for rule in rules:
+            if (
+                rule.is_verifiable is False
+                and rule.unverifiable_reason == NO_KIT_REASON
+                and rule.id not in sets_by_rule
+            ):
+                eligible_rules.append(rule)
+
+        eligible = len(eligible_rules)
+        applied = 0
+
+        # Для каждого пустого правила пытаемся применить defaults
+        for rule in eligible_rules:
+            # Найти stage
+            found_stage = next((s for s in stages if s.id == rule.stage_id), None)
+            if found_stage is None:
+                continue
+
+            # Попытаться найти совпадение по имени stage
+            default_rule = self._default_rules.match_stage(found_stage.name)
+            if default_rule is None:
+                # Совпадения нет — оставляем правило как есть
+                continue
+
+            # Есть совпадение — заполняем правило
+            # Заблокировать правило для предотвращения race condition
+            locked_rule = await self._repository.get_rule_for_update(rule.id)
+            if locked_rule is None or locked_rule.site_id != site_id:
+                continue
+
+            # Переповторяем проверку (может измениться между чтением и блокировкой)
+            if (
+                locked_rule.is_verifiable is True
+                or locked_rule.unverifiable_reason != NO_KIT_REASON
+            ):
+                # Rule was changed by someone else
+                continue
+
+            # Проверить, что правило всё ещё пусто
+            rule_sets = await self._repository.list_sets([locked_rule.id])
+            if len(rule_sets) > 0:
+                # Rule already has sets
+                continue
+
+            # Создаём наборы в порядке из default_rule.sets
+            max_pos = await self._repository.max_position(locked_rule.id)
+            for set_idx, default_set in enumerate(default_rule.sets):
+                equipment_set = await self._repository.add_set(
+                    locked_rule.id, max_pos + set_idx + 1
+                )
+
+                # Добавляем требования
+                requirements = []
+                for default_req in default_set:
+                    # Получить equipment_type по коду
+                    equipment_type = await self._catalog.by_code(default_req.equipment_code)
+                    if equipment_type is None:
+                        raise AppError(
+                            f"Неизвестный код оборудования в defaults: "
+                            f"{default_req.equipment_code}",
+                            status_code=500,
+                        )
+
+                    # Каждое requirement помечено "базовая методика"
+                    # (с опциональной доп. информацией из default)
+                    if default_req.source_note:
+                        source_note = f"базовая методика: {default_req.source_note}"
+                    else:
+                        source_note = "базовая методика"
+
+                    req = EquipmentRequirement(
+                        set_id=equipment_set.id,
+                        equipment_type_id=equipment_type.id,
+                        min_count=default_req.min_count,
+                        obligation=default_req.obligation,
+                        gesn_code=default_req.gesn_code,
+                        source_note=source_note,
+                    )
+                    requirements.append(req)
+
+                await self._repository.add_requirements(equipment_set.id, requirements)
+
+            # Обновляем правило
+            locked_rule.is_verifiable = True
+            locked_rule.unverifiable_reason = None
+            locked_rule.updated_at = datetime.now(UTC)
+
+            applied += 1
+
+        # Коммитим, если что-то изменилось
+        if applied > 0:
+            await self._session.commit()
+            # Пересчитываем только если применили что-то
+            await self._recalculator.recalculate(site_id)
+
+        unmatched = eligible - applied
+
+        return ApplyDefaultsResult(
+            applied=applied,
+            eligible=eligible,
+            unmatched=unmatched,
+        )
+
+    async def _materialize_with_retry(
+        self, site_id: uuid.UUID, schedule_id: uuid.UUID, stages: Sequence[ScheduleStage]
+    ) -> Sequence[ScheduleStage]:
+        """Материализировать правила с retry на IntegrityError.
+
+        Args:
+            site_id: ID сайта
+            schedule_id: ID графика
+            stages: Этапы графика
+
+        Returns:
+            Этапы графика (возможно перечитанные после rollback)
+
+        Raises:
+            IntegrityError если после двух попыток всё ещё конфликт
+        """
+        max_retries = 2
+        current_stages = stages
+        for attempt in range(max_retries):
+            try:
+                need_commit = await self._materializer.materialize(site_id, current_stages)
+
+                # Коммитим, если создали что-то новое
+                if need_commit:
+                    await self._session.commit()
+
+                # Success - exit retry loop
+                break
+            except IntegrityError as e:
+                # Rollback and retry once
+                await self._session.rollback()
+                if attempt < max_retries - 1:
+                    # После rollback ORM-объекты expired — перечитываем этапы
+                    current_stages = await self._schedule_repository.list_stages(schedule_id)
+                    continue
+                else:
+                    # Re-raise on second attempt
+                    raise e
+
+        return current_stages
 
     async def _get_site_rule(self, site_id: uuid.UUID, rule_id: uuid.UUID) -> MethodologyRule:
         """Получить правило, проверив владение сайтом.

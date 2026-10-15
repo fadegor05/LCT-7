@@ -81,7 +81,8 @@ KNOWN_DIVERGENCES: dict[tuple[str, str], tuple[str, str | None]] = {
     ("p04", "12.4.28"): ("not_started", "behind"),
     ("p05", "12.3.9"): ("not_started", "behind"),
     ("p08", "12.3.1"): ("on_track", "ahead"),
-    ("p08", "12.4.14"): ("not_observed", "not_checked"),
+    # окно этапа ещё не началось на as_of, движок не выдаёт статус
+    ("p08", "12.4.14"): ("not_observed", None),
     ("p09", "12.3.2"): ("not_started", "behind"),
     ("p10", "12.3.1"): ("not_started", "behind"),
     ("p10", "12.3.2"): ("not_observed", None),

@@ -180,4 +180,86 @@ describe('MethodologyPage', () => {
     renderRoute('/sites/site-synthetic/methodology')
     expect(await screen.findByText('График не загружен')).toBeInTheDocument()
   })
+
+  it('shows the apply defaults button', async () => {
+    renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    expect(button).toBeInTheDocument()
+  })
+
+  it('opens and closes the apply defaults dialog', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    await user.click(button)
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(
+      screen.getByText('Подставить базовые комплекты для этапов без комплектов?'),
+    ).toBeInTheDocument()
+
+    const cancelButton = screen.getByRole('button', { name: 'Отмена' })
+    await user.click(cancelButton)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('applies defaults and shows success message with counts', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    await user.click(button)
+    const applyButton = screen.getByRole('button', { name: 'Применить' })
+    await user.click(applyButton)
+    expect(
+      await screen.findByText((content) => content.includes('Комплекты подставлены для')),
+    ).toBeInTheDocument()
+  })
+
+  it('shows message when no eligible stages', async () => {
+    server.use(
+      http.post('/api/sites/:siteId/methodology/apply-defaults', () =>
+        HttpResponse.json({ applied: 0, eligible: 0, unmatched: 0 }, { status: 200 }),
+      ),
+    )
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    await user.click(button)
+    const applyButton = screen.getByRole('button', { name: 'Применить' })
+    await user.click(applyButton)
+    expect(
+      await screen.findByText('Нет этапов без комплекта — подставлять нечего.'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows unmatched stages message with correct grammar for unmatched=1', async () => {
+    server.use(
+      http.post('/api/sites/:siteId/methodology/apply-defaults', () =>
+        HttpResponse.json({ applied: 2, eligible: 3, unmatched: 1 }, { status: 200 }),
+      ),
+    )
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    await user.click(button)
+    const applyButton = screen.getByRole('button', { name: 'Применить' })
+    await user.click(applyButton)
+    expect(
+      await screen.findByText((content) => content.includes('Комплекты подставлены для 2 из 3')),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText((content) =>
+        content.includes('1 этап не подошёл ни под одно правило — задайте вручную'),
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows error when apply defaults fails', async () => {
+    server.use(
+      http.post('/api/sites/:siteId/methodology/apply-defaults', () =>
+        HttpResponse.json({ detail: 'Ошибка сервера' }, { status: 500 }),
+      ),
+    )
+    const { user } = renderRoute('/sites/site-berezniki/methodology')
+    const button = await screen.findByRole('button', { name: 'Подставить базовые комплекты' })
+    await user.click(button)
+    const applyButton = screen.getByRole('button', { name: 'Применить' })
+    await user.click(applyButton)
+    expect(await screen.findByText('Ошибка сервера')).toBeInTheDocument()
+  })
 })

@@ -297,6 +297,53 @@ export function deleteSet(siteId: string, setId: string): void {
   rule.updated_at = now()
 }
 
+export function applyDefaultKits(siteId: string): {
+  applied: number
+  eligible: number
+  unmatched: number
+} {
+  const rules = listRules(siteId)
+  let eligible = 0
+  let applied = 0
+
+  for (const rule of rules) {
+    // Only process rules with empty sets (no kit assigned)
+    if (!rule.is_verifiable && rule.sets.length === 0) {
+      eligible++
+      // Match by stage name: котлован or свай
+      const stageName = (rule.stage_name ?? '').toLowerCase()
+      if (stageName.includes('котлован') || stageName.includes('свай')) {
+        // Create a default kit with excavator
+        const excavator = equipmentTypes.find((e) => e.code === 'ЭХ')
+        if (excavator) {
+          const set = buildSet(nextId('set'), 1, {
+            requirements: [
+              {
+                equipment_type_id: excavator.id,
+                min_count: 1,
+                obligation: 'normative',
+                gesn_code: null,
+                source_note: 'Автоматически подставлено',
+              },
+            ],
+          })
+          rule.sets.push(set)
+          rule.is_verifiable = true
+          rule.unverifiable_reason = null
+          rule.updated_at = now()
+          applied++
+        }
+      }
+    }
+  }
+
+  return {
+    applied,
+    eligible,
+    unmatched: eligible - applied,
+  }
+}
+
 // ---------- Снимки и наблюдения ----------
 
 const toPhoto = ({ detections: _, ...photo }: StoredPhoto): Photo => photo
