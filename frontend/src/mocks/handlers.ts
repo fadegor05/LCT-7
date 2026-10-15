@@ -136,6 +136,9 @@ export const handlers = [
     api('/sites/:siteId/methodology/sets/:setId'),
     ({ params }) => handle(() => db.deleteSet(params.siteId, params.setId)),
   ),
+  http.post<SiteParams>(api('/sites/:siteId/methodology/apply-defaults'), ({ params }) =>
+    handle(() => db.applyDefaultKits(params.siteId), 200),
+  ),
 
   // ---------- Снимки ----------
   http.get<SiteParams>(api('/sites/:siteId/photos'), ({ params, request }) => {

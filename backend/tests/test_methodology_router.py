@@ -906,3 +906,65 @@ async def test_status_recalculator_called_on_mutation() -> None:
             assert delete_resp.status_code == 204
             assert len(recording_recalculator.calls) == 3
             assert recording_recalculator.calls[2] == site_id
+
+
+async def test_post_apply_defaults_fills_empty_rules_and_is_idempotent(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """POST apply-defaults подставляет комплекты в пустые правила; повтор ничего не дублирует."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+    site_id, _ = await create_site_with_schedule(client, container)
+
+    response = await client.post(f"/sites/{site_id}/methodology/apply-defaults")
+
+    assert response.status_code == 200
+    # Свайные работы и котлован совпали с правилами, «Отделка фасада» — нет
+    assert response.json() == {"applied": 2, "eligible": 3, "unmatched": 1}
+
+    rules = {r["stage_name"]: r for r in (await client.get(f"/sites/{site_id}/methodology")).json()}
+    piles = rules["Устройство свай"]
+    assert piles["is_verifiable"] is True
+    assert piles["unverifiable_reason"] is None
+    assert len(piles["sets"]) == 2
+    assert all(
+        req["source_note"].startswith("базовая методика")
+        for equipment_set in piles["sets"]
+        for req in equipment_set["requirements"]
+        if req["source_note"] is not None
+    )
+    assert rules["Отделка фасада"]["is_verifiable"] is False
+    assert rules["Отделка фасада"]["sets"] == []
+
+    # Повторное нажатие: подставлять уже нечего, наборы не дублируются
+    repeat = await client.post(f"/sites/{site_id}/methodology/apply-defaults")
+    assert repeat.status_code == 200
+    assert repeat.json() == {"applied": 0, "eligible": 1, "unmatched": 1}
+    rules_after = {
+        r["stage_name"]: r for r in (await client.get(f"/sites/{site_id}/methodology")).json()
+    }
+    assert len(rules_after["Устройство свай"]["sets"]) == 2
+
+
+async def test_post_apply_defaults_for_nonexistent_site_returns_404(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """POST apply-defaults для несуществующего сайта возвращает 404."""
+    await seed_stand_user(container)
+
+    response = await client.post(f"/sites/{uuid.uuid4()}/methodology/apply-defaults")
+
+    assert response.status_code == 404
+
+
+async def test_post_apply_defaults_without_schedule_returns_404(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """POST apply-defaults без загруженного графика возвращает 404."""
+    await seed_stand_user(container)
+    site_id = (await client.post("/sites", json={"name": "Test Site"})).json()["id"]
+
+    response = await client.post(f"/sites/{site_id}/methodology/apply-defaults")
+
+    assert response.status_code == 404
+    assert "График не загружен" in response.json()["detail"]

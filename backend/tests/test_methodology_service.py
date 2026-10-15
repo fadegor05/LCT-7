@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.methodology.defaults import DefaultRuleSet
 from app.domains.methodology.models import (
     EquipmentRequirement,
     MethodologyRule,
@@ -143,6 +144,7 @@ async def methodology_service(engine, container, site_and_schedule):
             schedule_repository=schedule_repo,
             catalog=catalog,
             recalculator=recalculator,
+            default_rules=DefaultRuleSet(),
         )
 
         yield session, service, recalculator
@@ -167,6 +169,7 @@ class TestMethodologyServiceEquipmentTypes:
                 schedule_repository=None,
                 catalog=catalog,
                 recalculator=None,
+                default_rules=DefaultRuleSet(),
             )
 
             types = await service.list_equipment_types()
@@ -262,6 +265,7 @@ class TestMethodologyServiceListRules:
                 schedule_repository=schedule_repo,
                 catalog=catalog,
                 recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
             )
 
             with pytest.raises(AppError) as exc_info:
@@ -424,6 +428,7 @@ class TestMethodologyServiceForeignOwner:
                 schedule_repository=schedule_repo,
                 catalog=catalog,
                 recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
             )
 
             with pytest.raises(AppError) as exc_info:
@@ -463,6 +468,7 @@ class TestMethodologyServiceForeignOwner:
                 schedule_repository=schedule_repo,
                 catalog=catalog,
                 recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
             )
 
             with pytest.raises(AppError) as exc_info:
@@ -527,6 +533,7 @@ class TestMethodologyServiceCrossSiteIsolation:
                 schedule_repository=schedule_repo,
                 catalog=catalog,
                 recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
             )
 
             rules_b = await service.list_rules(site_b_id)
@@ -1069,3 +1076,276 @@ class TestMethodologyServiceCoarseEquipment:
 
         assert exc_info.value.status_code == 422
         assert "excavator_unknown" in exc_info.value.message
+
+
+class TestMethodologyServiceApplyDefaults:
+    """Tests for apply_defaults method."""
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_empty_rule_matched_gets_kits(
+        self, methodology_service, site_and_schedule
+    ):
+        """Empty rule with matching stage gets sets and requirements from defaults."""
+        session, service, recalculator = methodology_service
+
+        # Get initial rules (empty, unmatched stages)
+        rules = await service.list_rules(site_and_schedule["site_id"])
+        assert len(rules) == 3
+        assert all(r.rule.is_verifiable is False for r in rules)
+        assert len(rules[0].sets) == 0
+        assert len(rules[1].sets) == 0
+
+        # Apply defaults
+        result = await service.apply_defaults(site_and_schedule["site_id"])
+
+        # Verify results
+        # Устройство свай (piles) - should match
+        # Разработка котлована (excavation) - should match
+        # Отделка фасада (facade) - should NOT match
+        assert result.eligible == 3  # All three were empty
+        assert result.applied == 2  # Two matched
+        assert result.unmatched == 1  # One didn't match
+
+        # Recalculator should be called once
+        assert len(recalculator.calls) == 1
+        assert recalculator.calls[0] == site_and_schedule["site_id"]
+
+        # Verify the rules were updated
+        rules_after = await service.list_rules(site_and_schedule["site_id"])
+
+        # Piles rule should be verifiable with sets
+        piles_rule = rules_after[0]
+        assert piles_rule.stage_name == "Устройство свай"
+        assert piles_rule.rule.is_verifiable is True
+        assert piles_rule.rule.unverifiable_reason is None
+        assert len(piles_rule.sets) > 0  # Should have sets now
+
+        # Excavation rule should be verifiable with sets
+        excavation_rule = rules_after[1]
+        assert excavation_rule.stage_name == "Разработка котлована"
+        assert excavation_rule.rule.is_verifiable is True
+        assert excavation_rule.rule.unverifiable_reason is None
+        assert len(excavation_rule.sets) > 0  # Should have sets now
+
+        # Facade rule should still be unverifiable
+        facade_rule = rules_after[2]
+        assert facade_rule.stage_name == "Отделка фасада"
+        assert facade_rule.rule.is_verifiable is False
+        assert facade_rule.rule.unverifiable_reason is not None
+        assert len(facade_rule.sets) == 0
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_requirement_has_source_note(
+        self, methodology_service, site_and_schedule
+    ):
+        """Requirements from defaults have source_note starting with 'базовая методика'."""
+        session, service, recalculator = methodology_service
+
+        # Apply defaults
+        await service.apply_defaults(site_and_schedule["site_id"])
+
+        # Verify requirements have correct source_note
+        rules_after = await service.list_rules(site_and_schedule["site_id"])
+        piles_rule = rules_after[0]
+
+        # Track which types of source_note we saw
+        has_marker_only = False
+        has_marker_with_note = False
+
+        for set_view in piles_rule.sets:
+            for req in set_view.requirements:
+                # Every requirement starts with "базовая методика"
+                assert req.requirement.source_note is not None
+                assert req.requirement.source_note.startswith("базовая методика")
+
+                # Track if we have both forms: marker alone and marker with note
+                if req.requirement.source_note == "базовая методика":
+                    has_marker_only = True
+                elif ":" in req.requirement.source_note:
+                    has_marker_with_note = True
+
+        # Verify we have at least one of each form (defaults have mix of no-note and with-note)
+        assert has_marker_only, "Should have at least one requirement with just 'базовая методика'"
+        assert has_marker_with_note, (
+            "Should have at least one requirement with 'базовая методика: ...'"
+        )
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_edited_rule_unchanged(
+        self, methodology_service, site_and_schedule
+    ):
+        """Rule that was edited (has sets) is not touched by apply_defaults."""
+        session, service, recalculator = methodology_service
+
+        rules = await service.list_rules(site_and_schedule["site_id"])
+        piles_rule = rules[0]
+
+        # Add a set to the piles rule manually
+        equipment_types = await service.list_equipment_types()
+        drilling_rig = next(e for e in equipment_types if e.code == "drilling_rig")
+
+        await service.create_set(
+            site_and_schedule["site_id"],
+            piles_rule.rule.id,
+            SetWrite(
+                requirements=[
+                    RequirementIn(
+                        equipment_type_id=drilling_rig.id,
+                        obligation=Obligation.NORMATIVE,
+                        gesn_code="test-code",
+                    ),
+                ]
+            ),
+        )
+
+        # Clear recalculator calls from create_set
+        recalculator.calls.clear()
+
+        # Apply defaults
+        result = await service.apply_defaults(site_and_schedule["site_id"])
+
+        # Piles rule should NOT be counted as eligible (already has sets)
+        assert result.eligible == 2  # Only excavation and facade were empty
+        assert result.applied == 1  # Only excavation matched
+        assert result.unmatched == 1  # Only facade didn't match
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_disabled_rule_unchanged(
+        self, methodology_service, site_and_schedule
+    ):
+        """Rule disabled by engineer (different reason) is not touched."""
+        session, service, recalculator = methodology_service
+
+        rules = await service.list_rules(site_and_schedule["site_id"])
+        excavation_rule = rules[1]
+
+        # Disable excavation rule with custom reason
+        await service.update_rule(
+            site_and_schedule["site_id"],
+            excavation_rule.rule.id,
+            RuleUpdate(is_verifiable=False, unverifiable_reason="Нет согласования с инженером"),
+        )
+
+        # Clear recalculator calls from update_rule
+        recalculator.calls.clear()
+
+        # Apply defaults
+        result = await service.apply_defaults(site_and_schedule["site_id"])
+
+        # Excavation rule should NOT be counted as eligible (custom reason)
+        assert result.eligible == 2  # Only piles and facade were empty with NO_KIT_REASON
+        assert result.applied == 1  # Only piles matched
+        assert result.unmatched == 1  # Only facade didn't match
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_second_call_no_changes(
+        self, methodology_service, site_and_schedule
+    ):
+        """Second call to apply_defaults returns applied=0 and creates no duplicates."""
+        session, service, recalculator = methodology_service
+
+        # First call
+        result1 = await service.apply_defaults(site_and_schedule["site_id"])
+        assert result1.applied == 2  # piles + excavation matched
+        recalculator.calls.clear()
+
+        # Second call
+        result2 = await service.apply_defaults(site_and_schedule["site_id"])
+
+        # Second call should find nothing to apply
+        assert result2.applied == 0
+        assert result2.eligible == 1  # Only unmatched facade is still empty
+        assert result2.unmatched == 1
+
+        # Recalculator should not be called (applied == 0)
+        assert len(recalculator.calls) == 0
+
+        # Verify no duplicate sets were created
+        rules = await service.list_rules(site_and_schedule["site_id"])
+        piles_rule = rules[0]
+        excavation_rule = rules[1]
+
+        assert len(piles_rule.sets) == 2  # Same as before
+        assert len(excavation_rule.sets) == 1  # Same as before
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_foreign_owner_404(
+        self, engine, container, db_setup, site_and_schedule
+    ):
+        """Foreign owner cannot apply defaults."""
+        owner2_id = uuid.uuid4()
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner2 = User(id=owner2_id, full_name="Owner 2")
+            session.add(owner2)
+            await session.commit()
+
+        sessionmaker_inst = async_sessionmaker(engine, expire_on_commit=False)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            catalog = EquipmentCatalog(sessionmaker_inst)
+            await catalog.all()
+
+            methodology_repo = MethodologyRepository(session)
+            schedule_repo = ScheduleRepository(session)
+            site_repo = SiteRepository(session)
+
+            guard = SiteAccessGuard(site_repo, type("CurrentUser", (), {"id": owner2_id})())
+
+            service = MethodologyService(
+                repository=methodology_repo,
+                session=session,
+                guard=guard,
+                schedule_repository=schedule_repo,
+                catalog=catalog,
+                recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
+            )
+
+            with pytest.raises(AppError) as exc_info:
+                await service.apply_defaults(site_and_schedule["site_id"])
+
+            assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_apply_defaults_no_schedule_404(self, container, db_setup):
+        """apply_defaults without schedule raises 404."""
+        owner_id = uuid.uuid4()
+        site_id = uuid.uuid4()
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            owner = User(id=owner_id, full_name="Test Owner")
+            session.add(owner)
+            site = Site(id=site_id, name="Test Site", owner_id=owner_id)
+            session.add(site)
+            await session.commit()
+
+        async with container() as request_container:
+            engine = await request_container.get(AsyncEngine)
+            sessionmaker_inst = async_sessionmaker(engine, expire_on_commit=False)
+            session = await request_container.get(AsyncSession)
+            catalog = EquipmentCatalog(sessionmaker_inst)
+
+            methodology_repo = MethodologyRepository(session)
+            schedule_repo = ScheduleRepository(session)
+            site_repo = SiteRepository(session)
+
+            guard = SiteAccessGuard(site_repo, type("CurrentUser", (), {"id": owner_id})())
+
+            service = MethodologyService(
+                repository=methodology_repo,
+                session=session,
+                guard=guard,
+                schedule_repository=schedule_repo,
+                catalog=catalog,
+                recalculator=RecordingRecalculator(),
+                default_rules=DefaultRuleSet(),
+            )
+
+            with pytest.raises(AppError) as exc_info:
+                await service.apply_defaults(site_id)
+
+            assert exc_info.value.status_code == 404
+            assert exc_info.value.message == "График не загружен"

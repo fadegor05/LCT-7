@@ -177,6 +177,29 @@ DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
         ),
     ),
     DefaultStageRule(
+        stage_key="frame",
+        title="Возведение каркаса",
+        name_keywords=("каркас",),
+        sets=(
+            # Набор 1: башенный кран
+            (
+                DefaultRequirement(
+                    equipment_code="tower_crane",
+                    obligation=Obligation.NORMATIVE,
+                    source_note="по смыслу работы",
+                ),
+            ),
+            # Набор 2: автокран
+            (
+                DefaultRequirement(
+                    equipment_code="truck_crane",
+                    obligation=Obligation.NORMATIVE,
+                    source_note="по смыслу работы (ФСЭМ 91.05.05-015)",
+                ),
+            ),
+        ),
+    ),
+    DefaultStageRule(
         stage_key="monolith",
         title="Монолитные работы ниже нуля",
         name_keywords=("монолит", "бетонир", "фундамент"),
@@ -210,24 +233,76 @@ DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
         ),
     ),
     DefaultStageRule(
-        stage_key="frame",
-        title="Возведение каркаса",
-        name_keywords=("каркас",),
+        stage_key="demolition",
+        title="Снос зданий",
+        name_keywords=("снос зданий", "снос строений", "демонтаж здани", "демонтаж строени"),
         sets=(
-            # Набор 1: башенный кран
+            # Набор 1: экскаватор гусеничный
             (
                 DefaultRequirement(
-                    equipment_code="tower_crane",
+                    equipment_code="excavator_crawler",
                     obligation=Obligation.NORMATIVE,
-                    source_note="по смыслу работы",
+                    source_note="по смыслу работы (ml/configs/rules.json)",
+                ),
+                DefaultRequirement(
+                    equipment_code="dump_truck",
+                    obligation=Obligation.LOGICAL,
+                    source_note="по смыслу работы: вывоз отходов",
                 ),
             ),
-            # Набор 2: автокран
+        ),
+    ),
+    DefaultStageRule(
+        stage_key="road_surface",
+        title="Дорожная одежда",
+        name_keywords=("дорожная одежда", "асфальт"),
+        sets=(
+            # Набор 1: асфальтоукладчик + каток
             (
+                DefaultRequirement(
+                    equipment_code="paver",
+                    obligation=Obligation.NORMATIVE,
+                    source_note="по смыслу работы (ml/configs/rules.json)",
+                ),
+                DefaultRequirement(
+                    equipment_code="roller",
+                    obligation=Obligation.NORMATIVE,
+                    source_note="по смыслу работы (ml/configs/rules.json)",
+                ),
+                DefaultRequirement(
+                    equipment_code="dump_truck",
+                    obligation=Obligation.LOGICAL,
+                    source_note="по смыслу работы: доставка асфальтовой смеси",
+                ),
+            ),
+        ),
+    ),
+    DefaultStageRule(
+        stage_key="external_networks",
+        title="Наружные инженерные сети",
+        name_keywords=(
+            "наружные сети",
+            "наружных сетей",
+            "наружные инженерные",
+            "наружных инженерных",
+        ),
+        sets=(
+            # Набор 1: экскаватор гусеничный + кран грузовой
+            (
+                DefaultRequirement(
+                    equipment_code="excavator_crawler",
+                    obligation=Obligation.NORMATIVE,
+                    source_note="по смыслу работы (ml/configs/rules.json)",
+                ),
                 DefaultRequirement(
                     equipment_code="truck_crane",
                     obligation=Obligation.NORMATIVE,
-                    source_note="по смыслу работы (ФСЭМ 91.05.05-015)",
+                    source_note="по смыслу работы (ml/configs/rules.json)",
+                ),
+                DefaultRequirement(
+                    equipment_code="dump_truck",
+                    obligation=Obligation.LOGICAL,
+                    source_note="по смыслу работы: вывоз земли и материалов",
                 ),
             ),
         ),

@@ -175,6 +175,12 @@ export const setWriteSchema = z.object({
   requirements: z.array(requirementInputSchema).min(1),
 })
 
+export const applyDefaultsResultSchema = z.object({
+  applied: z.number(),
+  eligible: z.number(),
+  unmatched: z.number(),
+})
+
 // ---------- Снимки (photo) ----------
 
 export const detectionSchema = z.object({

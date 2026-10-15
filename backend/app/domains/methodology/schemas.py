@@ -114,3 +114,11 @@ class RuleRead(BaseModel):
     unverifiable_reason: str | None
     updated_at: datetime
     sets: list[SetRead]
+
+
+class ApplyDefaultsRead(BaseModel):
+    """Чтение результата применения правил по умолчанию."""
+
+    applied: int
+    eligible: int
+    unmatched: int

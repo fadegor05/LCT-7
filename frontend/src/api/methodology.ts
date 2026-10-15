@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { request } from './client'
 import { keys } from './keys'
 import {
+  applyDefaultsResultSchema,
   equipmentSetSchema,
   equipmentTypeSchema,
   ruleSchema,
@@ -35,6 +36,11 @@ export const methodologyApi = {
   deleteSet: (siteId: string, setId: string) =>
     request(`/sites/${siteId}/methodology/sets/${setId}`, { method: 'DELETE' }),
   equipmentTypes: () => request('/equipment-types', { schema: z.array(equipmentTypeSchema) }),
+  applyDefaults: (siteId: string) =>
+    request(`/sites/${siteId}/methodology/apply-defaults`, {
+      method: 'POST',
+      schema: applyDefaultsResultSchema,
+    }),
 }
 
 export function useMethodology(siteId: string) {
@@ -84,4 +90,8 @@ export function useReplaceSet(siteId: string) {
 
 export function useDeleteSet(siteId: string) {
   return useMethodologyMutation(siteId, (setId: string) => methodologyApi.deleteSet(siteId, setId))
+}
+
+export function useApplyDefaults(siteId: string) {
+  return useMethodologyMutation(siteId, () => methodologyApi.applyDefaults(siteId))
 }

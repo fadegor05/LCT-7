@@ -7,6 +7,7 @@ from fastapi import APIRouter
 
 from app.domains.methodology.models import Obligation
 from app.domains.methodology.schemas import (
+    ApplyDefaultsRead,
     EquipmentTypeRead,
     RequirementRead,
     RuleRead,
@@ -222,3 +223,32 @@ async def delete_set(
         404: Сайт не найден, не принадлежит текущему пользователю или набор не найден
     """
     await service.delete_set(site_id, set_id)
+
+
+@router.post("/sites/{site_id}/methodology/apply-defaults")
+@inject
+async def apply_defaults(
+    site_id: uuid.UUID,
+    service: FromDishka[MethodologyService],
+) -> ApplyDefaultsRead:
+    """Применить правила по умолчанию к пустым правилам.
+
+    Заполняет пустые правила наборами из DefaultRuleSet на основе совпадения названия этапа.
+
+    Args:
+        site_id: ID сайта
+        service: Сервис методологии
+
+    Returns:
+        ApplyDefaultsRead с количеством применённых, подходящих и несовпадающих правил
+
+    Raises:
+        404: Сайт не найден, не принадлежит текущему пользователю или график не загружен
+        500: Внутренняя ошибка при обработке defaults
+    """
+    result = await service.apply_defaults(site_id)
+    return ApplyDefaultsRead(
+        applied=result.applied,
+        eligible=result.eligible,
+        unmatched=result.unmatched,
+    )
