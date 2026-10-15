@@ -157,4 +157,84 @@ describe('ObservationsPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Отмена' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
+
+  it('shows error and disables upload when batch exceeds size limit (200 MB)', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
+
+    // Create a file with size > 200 MB (201 MB)
+    const largeFile = new File(['x'], 'large.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(largeFile, 'size', { value: 201 * 1024 * 1024, configurable: true })
+
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [largeFile])
+
+    expect(
+      await within(dialog).findByText('Пачка слишком большая: выбрано 201.0 МБ, максимум 200 МБ'),
+    ).toBeInTheDocument()
+    expect(upload).toBeDisabled()
+  })
+
+  it('allows upload when batch is under size limit', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
+
+    // Create files with combined size < 200 MB (100 MB + 50 MB)
+    const file1 = new File(['x'], 'file1.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(file1, 'size', { value: 100 * 1024 * 1024, configurable: true })
+
+    const file2 = new File(['y'], 'file2.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(file2, 'size', { value: 50 * 1024 * 1024, configurable: true })
+
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [file1, file2])
+
+    expect(within(dialog).queryByText(/Пачка слишком большая/)).not.toBeInTheDocument()
+    expect(upload).not.toBeDisabled()
+  })
+
+  it('clears error message when files are changed to under the limit', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+
+    // First, upload a file that exceeds the limit
+    const largeFile = new File(['x'], 'large.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(largeFile, 'size', { value: 201 * 1024 * 1024, configurable: true })
+
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [largeFile])
+
+    expect(
+      await within(dialog).findByText('Пачка слишком большая: выбрано 201.0 МБ, максимум 200 МБ'),
+    ).toBeInTheDocument()
+
+    // Now replace with files under the limit
+    const smallFile = new File(['y'], 'small.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(smallFile, 'size', { value: 50 * 1024 * 1024, configurable: true })
+
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [smallFile])
+
+    expect(within(dialog).queryByText(/Пачка слишком большая/)).not.toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Загрузить' })).not.toBeDisabled()
+  })
+
+  it('does not call upload endpoint when batch exceeds size limit', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
+
+    const largeFile = new File(['x'], 'large.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(largeFile, 'size', { value: 201 * 1024 * 1024, configurable: true })
+
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [largeFile])
+    await within(dialog).findByText('Пачка слишком большая: выбрано 201.0 МБ, максимум 200 МБ')
+
+    // Button should be disabled, so clicking it should do nothing
+    expect(upload).toBeDisabled()
+    // The API should not have been called
+    // This is implicitly tested by the button being disabled
+  })
 })

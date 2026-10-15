@@ -35,11 +35,17 @@ class StorageSettings(BaseModel):
     local_root: str = "/data/storage"
     max_upload_mb: float = 20
     max_batch_files: int = 50
+    max_batch_mb: float = 200
 
     @property
     def max_upload_bytes(self) -> int:
         """Максимальный размер одного загружаемого файла в байтах."""
         return int(self.max_upload_mb * 1024 * 1024)
+
+    @property
+    def max_batch_bytes(self) -> int:
+        """Максимальный общий размер пачки файлов в байтах."""
+        return int(self.max_batch_mb * 1024 * 1024)
 
 
 class DetectorSettings(BaseModel):

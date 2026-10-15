@@ -146,6 +146,152 @@ class TestPhotoRouter:
         assert "слишком большой" in data["items"][0]["error"].lower()
 
     @pytest.mark.asyncio
+    async def test_post_upload_batch_exceeds_size_limit_with_413(
+        self, client: AsyncClient, container: AsyncContainer, monkeypatch
+    ) -> None:
+        """POST /photos с пачкой, превышающей max_batch_mb, возвращает 413 БЕЗ чтения контента."""
+        from starlette.datastructures import UploadFile
+
+        await seed_stand_user(container)
+
+        site_resp = await client.post("/sites", json={"name": "Test Site"})
+        site_id = site_resp.json()["id"]
+
+        # Устанавливаем очень маленький лимит на пачку (300 байт)
+        max_batch_bytes = 300  # bytes
+        async with container() as request_container:
+            settings = await request_container.get(Settings)
+            # max_batch_mb в MB, 300 байт = 300 / (1024*1024) МБ
+            monkeypatch.setattr(settings.storage, "max_batch_mb", 300 / (1024 * 1024))
+            assert settings.storage.max_batch_bytes < 350  # Проверяем, что лимит~300 байт
+
+        # Патчим UploadFile.read чтобы считать вызовы
+        read_call_count = 0
+        original_read = UploadFile.read
+
+        async def counting_read(self, size: int = -1):
+            nonlocal read_call_count
+            read_call_count += 1
+            return await original_read(self, size)
+
+        monkeypatch.setattr(UploadFile, "read", counting_read)
+
+        # Создаём две небольших картинки, вместе превышающие лимит
+        small_jpeg = create_jpeg_image(50, 50)  # ~1-2 KB каждая
+        response = await client.post(
+            f"/sites/{site_id}/photos",
+            files=[
+                ("files", ("test1.jpg", small_jpeg, "image/jpeg")),
+                ("files", ("test2.jpg", small_jpeg, "image/jpeg")),
+            ],
+        )
+
+        # Ожидаем 413 с сообщением об ошибке
+        assert response.status_code == 413
+        data = response.json()
+        assert "Пачка слишком большая" in data["detail"]
+
+        # Проверяем строгий формат сообщения с лимитом
+        limit_mb = max_batch_bytes / (1024 * 1024)
+        expected_limit_str = f"{limit_mb:g}"
+        assert f"максимум {expected_limit_str}" in data["detail"]
+
+        # Доказательство что контент НЕ был прочитан: read_call_count == 0
+        assert read_call_count == 0, "UploadFile.read должен был быть вызван 0 раз"
+
+        # Проверяем что никакие фото не были сохранены
+        photos_resp = await client.get(f"/sites/{site_id}/photos")
+        assert photos_resp.status_code == 200
+        assert photos_resp.json() == []
+
+    @pytest.mark.asyncio
+    async def test_post_upload_batch_defence_in_depth_size_none_with_413(
+        self, client: AsyncClient, container: AsyncContainer, monkeypatch
+    ) -> None:
+        """POST /photos: defence-in-depth срабатывает при size=None (неизвестный размер файла)."""
+        from starlette.datastructures import UploadFile
+
+        await seed_stand_user(container)
+
+        site_resp = await client.post("/sites", json={"name": "Test Site"})
+        site_id = site_resp.json()["id"]
+
+        # Устанавливаем очень маленький лимит на пачку (300 байт)
+        async with container() as request_container:
+            settings = await request_container.get(Settings)
+            monkeypatch.setattr(settings.storage, "max_batch_mb", 300 / (1024 * 1024))
+
+        # Патчим UploadFile.size чтобы вернуть None (размер неизвестен)
+        # и считаем вызовы read
+        read_call_count = 0
+        original_read = UploadFile.read
+        original_init = UploadFile.__init__
+
+        def patched_init(self, file, *, size=None, filename=None, headers=None):
+            # Не устанавливаем size (будет None)
+            original_init(self, file, size=None, filename=filename, headers=headers)
+
+        async def counting_read(self, size: int = -1):
+            nonlocal read_call_count
+            read_call_count += 1
+            return await original_read(self, size)
+
+        monkeypatch.setattr(UploadFile, "__init__", patched_init)
+        monkeypatch.setattr(UploadFile, "read", counting_read)
+
+        # Создаём три картинки - вместе очень большие
+        small_jpeg = create_jpeg_image(50, 50)  # ~1-2 KB каждая
+
+        # С 3+ файлами defence-in-depth прочитает первый (1 вызов read),
+        # возможно второй (2 вызова), но не все, потому что сумма превысит лимит
+        response = await client.post(
+            f"/sites/{site_id}/photos",
+            files=[
+                ("files", ("test1.jpg", small_jpeg, "image/jpeg")),
+                ("files", ("test2.jpg", small_jpeg, "image/jpeg")),
+                ("files", ("test3.jpg", small_jpeg, "image/jpeg")),
+            ],
+        )
+
+        # Ожидаем 413 (defence-in-depth срабатывает во время чтения)
+        assert response.status_code == 413
+        data = response.json()
+        assert "Пачка слишком большая" in data["detail"]
+
+        # Defence-in-depth: read был вызван >= 1 раз, но < 3 раз
+        # (остановился при суммировании байт)
+        assert read_call_count >= 1, "Defence-in-depth должен прочитать хотя бы 1 файл"
+        assert read_call_count < 3, (
+            "Defence-in-depth должен был остановиться раньше "
+            f"(прочитано {read_call_count}/3 файлов)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_post_upload_normal_batch_still_works(
+        self, client: AsyncClient, container: AsyncContainer
+    ) -> None:
+        """POST /photos с нормальной пачкой под лимитом возвращает 201."""
+        await seed_stand_user(container)
+
+        site_resp = await client.post("/sites", json={"name": "Test Site"})
+        site_id = site_resp.json()["id"]
+
+        # Загружаем две маленьких картинки (должны быть под лимитом 200 МБ)
+        jpeg_data = create_jpeg_image(100, 100)
+        response = await client.post(
+            f"/sites/{site_id}/photos",
+            files=[
+                ("files", ("test1.jpg", jpeg_data, "image/jpeg")),
+                ("files", ("test2.jpg", jpeg_data, "image/jpeg")),
+            ],
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["uploaded"] == 2
+        assert data["failed"] == 0
+
+    @pytest.mark.asyncio
     async def test_get_list_photos_with_200(
         self, client: AsyncClient, container: AsyncContainer
     ) -> None:
