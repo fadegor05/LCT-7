@@ -21,6 +21,13 @@ from app.plugins.exceptions import AppError
 router = APIRouter(prefix="/sites/{site_id}/photos", tags=["photos"])
 
 
+def _format_batch_size_error(total_bytes: int, max_batch_bytes: int) -> str:
+    """Форматировать сообщение об ошибке превышения размера пачки."""
+    sent_mb = total_bytes / (1024 * 1024)
+    limit_mb = max_batch_bytes / (1024 * 1024)
+    return f"Пачка слишком большая: отправлено {sent_mb:.1f} МБ, максимум {limit_mb:g} МБ"
+
+
 @router.post("", status_code=201)
 @inject
 async def upload_photos(
@@ -31,7 +38,7 @@ async def upload_photos(
 ) -> UploadReport:
     """Загрузить пакет фотографий.
 
-    Проверяет количество файлов перед чтением, затем валидирует каждый файл.
+    Проверяет количество файлов и общий размер перед чтением, затем валидирует каждый файл.
     Ошибка одного файла не влияет на остальные.
 
     Args:
@@ -44,7 +51,7 @@ async def upload_photos(
         UploadReport с результатами загрузки
 
     Raises:
-        413: Слишком много файлов в пачке
+        413: Слишком много файлов в пачке или превышен общий размер пачки
         422: Список файлов пуст или другая ошибка валидации
     """
     # Проверяем количество файлов перед чтением
@@ -54,13 +61,37 @@ async def upload_photos(
             status_code=413,
         )
 
-    # Читаем содержимое файлов
+    # Проверяем общий размер пачки по declared sizes перед чтением контента
+    total_declared_bytes = 0
+    all_have_size = True
+    for file in files:
+        if file.size is not None:
+            total_declared_bytes += file.size
+        else:
+            all_have_size = False
+
+    if all_have_size and total_declared_bytes > settings.storage.max_batch_bytes:
+        raise AppError(
+            _format_batch_size_error(total_declared_bytes, settings.storage.max_batch_bytes),
+            status_code=413,
+        )
+
+    # Читаем содержимое файлов (с защитой от размера пачки по факту прочитанных байт)
     upload_inputs: list[UploadInput] = []
+    total_read_bytes = 0
     for file in files:
         # Читаем с лимитом, чтобы не загружать слишком большой файл
         content = await file.read(settings.storage.max_upload_bytes + 1)
         filename = file.filename or ""
         content_type = file.content_type
+
+        # Defence in depth: если file.size было None, считаем реально прочитанные байты
+        total_read_bytes += len(content)
+        if total_read_bytes > settings.storage.max_batch_bytes:
+            raise AppError(
+                _format_batch_size_error(total_read_bytes, settings.storage.max_batch_bytes),
+                status_code=413,
+            )
 
         upload_inputs.append(
             UploadInput(filename=filename, content=content, content_type=content_type)

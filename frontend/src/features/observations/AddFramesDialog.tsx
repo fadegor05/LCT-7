@@ -6,6 +6,9 @@ import { Callout } from '@/components/ui/Callout'
 import { Dialog } from '@/components/ui/Dialog'
 import { FileDrop } from '@/components/ui/FileDrop'
 
+// Зеркалит StorageSettings.max_batch_mb на бэкенде
+const MAX_BATCH_MB = 200
+
 function Failed({ report }: { report: UploadReport }) {
   return (
     <Callout tone="caution" title={`Загружено ${report.uploaded}, с ошибкой ${report.failed}`}>
@@ -28,6 +31,10 @@ export function AddFramesDialog({ siteId, onClose }: { siteId: string; onClose: 
   const [files, setFiles] = useState<File[]>([])
   const report = upload.data
 
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
+  const totalMb = totalBytes / 1024 / 1024
+  const isBatchTooLarge = totalBytes > MAX_BATCH_MB * 1024 * 1024
+
   const submit = () =>
     upload.mutate(files, {
       onSuccess: (result) => {
@@ -45,7 +52,10 @@ export function AddFramesDialog({ siteId, onClose }: { siteId: string; onClose: 
           <Button variant="ghost" onClick={onClose}>
             {report ? 'Готово' : 'Отмена'}
           </Button>
-          <Button onClick={submit} disabled={files.length === 0 || upload.isPending}>
+          <Button
+            onClick={submit}
+            disabled={files.length === 0 || upload.isPending || isBatchTooLarge}
+          >
             Загрузить
           </Button>
         </>
@@ -63,6 +73,11 @@ export function AddFramesDialog({ siteId, onClose }: { siteId: string; onClose: 
         <p className="sm" role="status">
           Выбрано: {files.map((f) => f.name).join(', ')}
         </p>
+      )}
+      {isBatchTooLarge && (
+        <Callout tone="caution">
+          Пачка слишком большая: выбрано {totalMb.toFixed(1)} МБ, максимум {MAX_BATCH_MB} МБ
+        </Callout>
       )}
       {report && report.failed > 0 && <Failed report={report} />}
       {upload.error && (
