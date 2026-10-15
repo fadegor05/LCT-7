@@ -13,6 +13,8 @@ describe('SiteOverviewPage', () => {
   })
 
   it('shows verdict, data state, deviations, stages and last observation', async () => {
+    // Бейдж сравнивает плановое начало с сегодняшним днём — фиксируем «сегодня» моков.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(`${TODAY}T12:00:00`) })
     renderRoute('/sites/site-berezniki')
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' }),
