@@ -9,6 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domains.methodology.models import EquipmentType
 
+# Коды оборудования, которое требует специального подтверждения.
+# Зеркалирует meta.class_specificity.specific из ml/configs/rules.json.
+SPECIFIC_EQUIPMENT_CODES: frozenset[str] = frozenset(
+    {
+        "drilling_rig",
+        "pile_driver",
+        "dwall_rig",
+        "paver",
+        "grader",
+        "concrete_pump",
+        "roller",
+    }
+)
+
 
 @dataclass(frozen=True)
 class EquipmentTypeInfo:

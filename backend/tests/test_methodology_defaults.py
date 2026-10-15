@@ -75,6 +75,36 @@ class TestDefaultRulesStructure:
                     f"Ключевое слово '{keyword}' в правиле {rule.stage_key} не в нижнем регистре"
                 )
 
+    def test_piles_rule_each_set_has_exactly_one_normative(self):
+        """Правило 'piles': каждый набор имеет ровно одно нормативное требование.
+
+        Нормативное требование — специфичная машина метода:
+        - Набор 1 (буровая установка): drilling_rig NORMATIVE
+        - Набор 2 (копёр): pile_driver NORMATIVE
+        """
+        rule_set = DefaultRuleSet()
+        piles_rule = next((rule for rule in rule_set.rules if rule.stage_key == "piles"), None)
+        assert piles_rule is not None, "Правило 'piles' не найдено"
+
+        # Проверить, что drilling_rig и pile_driver — нормативные
+        set_1_normative = [
+            req.equipment_code
+            for req in piles_rule.sets[0]
+            if req.obligation == Obligation.NORMATIVE
+        ]
+        set_2_normative = [
+            req.equipment_code
+            for req in piles_rule.sets[1]
+            if req.obligation == Obligation.NORMATIVE
+        ]
+
+        assert set_1_normative == ["drilling_rig"], (
+            f"Набор 1: ожидается ['drilling_rig'], получено {set_1_normative}"
+        )
+        assert set_2_normative == ["pile_driver"], (
+            f"Набор 2: ожидается ['pile_driver'], получено {set_2_normative}"
+        )
+
 
 class TestDefaultRuleSetMatchStage:
     """Тесты для метода match_stage."""

@@ -20,6 +20,15 @@ class EquipmentRequirementInput:
     equipment_type_id: uuid.UUID
     obligation: str  # "normative" | "logical" | "auxiliary"
     min_count: int
+    is_specific: bool = False
+
+
+@dataclass(frozen=True)
+class KitInput:
+    """Набор оборудования для подтверждения этапа."""
+
+    position: int
+    requirements: Sequence[EquipmentRequirementInput]
 
 
 @dataclass(frozen=True)
@@ -31,6 +40,14 @@ class RuleInput:
     is_verifiable: bool
     unverifiable_reason: str | None
     requirements: Sequence[EquipmentRequirementInput]
+    kits: Sequence[KitInput] = ()
+
+    @property
+    def effective_kits(self) -> Sequence[KitInput]:
+        """Вернуть kits если непусто, иначе один kit с flat requirements."""
+        if self.kits:
+            return self.kits
+        return (KitInput(position=0, requirements=self.requirements),)
 
 
 @dataclass(frozen=True)
@@ -206,9 +223,15 @@ class RuleEngine:
                 basis_dates=(),
             )
 
-        # Проверяем наличие нормативных требований (маркеры)
-        markers = {r.equipment_type_id for r in rule.requirements if r.obligation == "normative"}
-        if not markers:
+        # Проверяем наличие нормативных требований в наборах
+        effective_kits = rule.effective_kits
+        # Только наборы с нормативными требованиями считаются
+        kits_with_normative = [
+            kit
+            for kit in effective_kits
+            if any(r.obligation == "normative" for r in kit.requirements)
+        ]
+        if not kits_with_normative:
             return StageStatusResult(
                 stage_id=stage.stage_id,
                 status=StageStatusValue.NOT_CHECKED,
@@ -226,8 +249,8 @@ class RuleEngine:
             # Окно ещё не началось, этап не оценивается
             return None
 
-        # Шаг 3: Вычисляем маркерные даты
-        marker_dates = self._extract_marker_dates(observations, markers)
+        # Шаг 3: Вычисляем маркерные даты (даты, когда хотя бы один набор выполнен)
+        marker_dates = self._extract_marker_dates_for_kits(observations, kits_with_normative)
         first_marker = marker_dates[0] if marker_dates else None
         latest_obs_on = observations[-1].observed_on if observations else None
         markers_active_now = latest_obs_on is not None and latest_obs_on in marker_dates
@@ -244,7 +267,7 @@ class RuleEngine:
             # stage.planned_end не None, так как end_passed требует это
             delay_days = (today - (stage.planned_end or today)).days
             confidence, reason = self._compute_confidence_for_status(
-                marker_dates, first_marker, observations
+                marker_dates, first_marker, observations, kits_with_normative
             )
         elif (
             stage.planned_start is not None
@@ -255,7 +278,7 @@ class RuleEngine:
             status = StageStatusValue.BEHIND
             delay_days = (first_marker - stage.planned_start).days
             confidence, reason = self._compute_confidence_for_status(
-                marker_dates, first_marker, observations
+                marker_dates, first_marker, observations, kits_with_normative
             )
         elif (
             stage.planned_start is not None
@@ -266,14 +289,14 @@ class RuleEngine:
             status = StageStatusValue.AHEAD
             delay_days = (stage.planned_start - first_marker).days
             confidence, reason = self._compute_confidence_for_status(
-                marker_dates, first_marker, observations
+                marker_dates, first_marker, observations, kits_with_normative
             )
         elif first_marker is not None:
             # d. Маркер в окне
             status = StageStatusValue.ON_TRACK
             delay_days = None
             confidence, reason = self._compute_confidence_for_status(
-                marker_dates, first_marker, observations
+                marker_dates, first_marker, observations, kits_with_normative
             )
         else:
             # e. Маркер никогда не видели
@@ -299,16 +322,56 @@ class RuleEngine:
             basis_dates=tuple(marker_dates),
         )
 
-    def _extract_marker_dates(
-        self, observations: Sequence[ObservationInput], markers: set[uuid.UUID]
+    def _has_equipment(
+        self, observation: ObservationInput, requirement: EquipmentRequirementInput
+    ) -> bool:
+        """Проверить, есть ли в наблюдении оборудование, соответствующее требованию."""
+        for obs_eq in observation.equipment:
+            if (
+                obs_eq.equipment_type_id == requirement.equipment_type_id
+                and obs_eq.count_min >= requirement.min_count
+            ):
+                return True
+        return False
+
+    def _is_kit_fulfilled(self, kit: KitInput, observation: ObservationInput) -> bool:
+        """Проверить, выполнены ли ВСЕ нормативные требования набора в наблюдении."""
+        normative_reqs = [r for r in kit.requirements if r.obligation == "normative"]
+        if not normative_reqs:
+            return False
+
+        return all(self._has_equipment(observation, req) for req in normative_reqs)
+
+    def _is_kit_strong(self, kit: KitInput, observation: ObservationInput) -> bool:
+        """Проверить, является ли выполненный набор STRONG.
+
+        Набор strong если:
+        - Содержит нормативное требование с is_specific=True, ИЛИ
+        - ВСЕ его логические требования присутствуют с достаточным count_min.
+        """
+        # Проверяем is_specific
+        has_specific_normative = any(
+            r.obligation == "normative" and r.is_specific for r in kit.requirements
+        )
+        if has_specific_normative:
+            return True
+
+        # Проверяем логические требования
+        logical_reqs = [r for r in kit.requirements if r.obligation == "logical"]
+        if not logical_reqs:
+            # Нет логических требований -> считаем как all present
+            return True
+
+        return all(self._has_equipment(observation, req) for req in logical_reqs)
+
+    def _extract_marker_dates_for_kits(
+        self, observations: Sequence[ObservationInput], kits: Sequence[KitInput]
     ) -> list[date]:
-        """Извлечь отсортированные даты, когда видели маркер."""
+        """Извлечь отсортированные даты, когда выполнен хотя бы один набор."""
         marker_dates = []
         for obs in observations:
-            has_marker = any(
-                eq.equipment_type_id in markers and eq.count_min >= 1 for eq in obs.equipment
-            )
-            if has_marker:
+            # Проверяем, выполнен ли хотя бы один набор
+            if any(self._is_kit_fulfilled(kit, obs) for kit in kits):
                 marker_dates.append(obs.observed_on)
         return sorted(marker_dates)
 
@@ -317,10 +380,11 @@ class RuleEngine:
         marker_dates: list[date],
         first_marker: date | None,
         observations: Sequence[ObservationInput],
+        kits: Sequence[KitInput] | None = None,
     ) -> tuple[Confidence, str]:
         """Рассчитать confidence и причину для статуса со статусом (AHEAD/ON_TRACK/BEHIND).
 
-        Шаг 6-7 алгоритма.
+        Шаг 6-7 алгоритма. С поддержкой kit strength.
         """
         if first_marker is None:
             # Не должно быть вызвано, но на всякий случай
@@ -356,6 +420,24 @@ class RuleEngine:
         reason = date_reason
         if marker_eq_confidence != Confidence.HIGH:
             reason = "уверенность ограничена уверенностью детекции маркерной техники"
+
+        # Проверка kit strength: если ни один marker_date не is_strong, ограничиваем confidence
+        if kits is not None:
+            # Проверяем, есть ли strong marker date
+            has_strong_marker_date = False
+            for marker_date in marker_dates:
+                marker_obs = next((o for o in observations if o.observed_on == marker_date), None)
+                if marker_obs and any(
+                    self._is_kit_fulfilled(kit, marker_obs) and self._is_kit_strong(kit, marker_obs)
+                    for kit in kits
+                ):
+                    has_strong_marker_date = True
+                    break
+
+            # Если нет strong marker date, ограничиваем confidence до LOW
+            if not has_strong_marker_date:
+                final_confidence = self._min_confidence(final_confidence, Confidence.LOW)
+                reason = "подтверждено только универсальной техникой"
 
         return final_confidence, reason
 
@@ -465,14 +547,15 @@ class RuleEngine:
         if rule is None:
             return deviations
 
-        # Получаем маркеры и требуемую технику
-        markers = {r.equipment_type_id for r in rule.requirements if r.obligation == "normative"}
+        # Получаем требуемую технику (из flat requirements или из kits)
         all_required = {r.equipment_type_id for r in rule.requirements}
+        # Если используются kits, добавляем технику из них
+        for kit in rule.effective_kits:
+            for req in kit.requirements:
+                all_required.add(req.equipment_type_id)
 
-        # 2. missing_equipment
-        deviations.extend(
-            self._check_missing_equipment(stage, latest_obs, latest_obs_on, markers, rule)
-        )
+        # 2. missing_equipment (работает с kits внутри)
+        deviations.extend(self._check_missing_equipment(stage, latest_obs, latest_obs_on, rule))
 
         # 2b. missing_logical_equipment (LCT-15) — мягкое предупреждение по
         # "логической" технике методики: ожидаемой на этапе, но не
@@ -613,34 +696,45 @@ class RuleEngine:
         stage: StageInput,
         latest_obs: ObservationInput,
         latest_obs_on: date,
-        markers: set[uuid.UUID],
         rule: RuleInput,
     ) -> list[DeviationResult]:
-        """Проверить отклонение missing_equipment."""
+        """Проверить отклонение missing_equipment.
+
+        С поддержкой kits: проверяем, выполнен ли хотя бы один набор.
+        """
         if latest_obs.observability == "high":
-            has_marker = any(
-                eq.equipment_type_id in markers and eq.count_min >= 1 for eq in latest_obs.equipment
-            )
-            if not has_marker:
-                return [
-                    DeviationResult(
-                        stage_id=stage.stage_id,
-                        type=DeviationType.MISSING_EQUIPMENT,
-                        is_hypothesis=False,
-                        severity=Severity.CRITICAL,
-                        confidence=Confidence.HIGH,
-                        period_start=latest_obs_on,
-                        period_end=latest_obs_on,
-                        expected="Присутствие маркерной техники этапа",
-                        observed="Маркерная техника не обнаружена",
-                        limits_text=(
-                            "Не доказывает остановку работ вне времени и мест съёмки — "
-                            "техника могла работать вне зоны обзора камер."
-                        ),
-                        rule_id=rule.rule_id,
-                        evidence_dates=(latest_obs_on,),
-                    )
-                ]
+            effective_kits = rule.effective_kits
+            # Проверяем, есть ли хотя бы один набор с нормативными требованиями
+            kits_with_normative = [
+                kit
+                for kit in effective_kits
+                if any(r.obligation == "normative" for r in kit.requirements)
+            ]
+            if kits_with_normative:
+                # Проверяем, выполнен ли хотя бы один набор
+                any_kit_fulfilled = any(
+                    self._is_kit_fulfilled(kit, latest_obs) for kit in kits_with_normative
+                )
+                if not any_kit_fulfilled:
+                    return [
+                        DeviationResult(
+                            stage_id=stage.stage_id,
+                            type=DeviationType.MISSING_EQUIPMENT,
+                            is_hypothesis=False,
+                            severity=Severity.CRITICAL,
+                            confidence=Confidence.HIGH,
+                            period_start=latest_obs_on,
+                            period_end=latest_obs_on,
+                            expected="Присутствие маркерной техники этапа",
+                            observed="Маркерная техника не обнаружена",
+                            limits_text=(
+                                "Не доказывает остановку работ вне времени и мест съёмки — "
+                                "техника могла работать вне зоны обзора камер."
+                            ),
+                            rule_id=rule.rule_id,
+                            evidence_dates=(latest_obs_on,),
+                        )
+                    ]
 
         return []
 
