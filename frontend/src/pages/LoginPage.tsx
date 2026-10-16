@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router'
+import { Link, useNavigate, useLocation } from 'react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -81,6 +81,9 @@ export function LoginPage() {
             {login.isPending ? 'Загрузка...' : 'Вход'}
           </Button>
         </form>
+        <p className={styles.alt}>
+          Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+        </p>
       </Card>
     </div>
   )

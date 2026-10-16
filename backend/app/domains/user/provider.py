@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 CurrentUser = NewType("CurrentUser", User)
 LoginRateLimiter = NewType("LoginRateLimiter", SlidingWindowRateLimiter)
+RegisterRateLimiter = NewType("RegisterRateLimiter", SlidingWindowRateLimiter)
 
 
 class UserProvider(Provider):
@@ -36,6 +37,15 @@ class UserProvider(Provider):
         return LoginRateLimiter(
             SlidingWindowRateLimiter(
                 limit=settings.auth.login_rate_limit_per_min,
+                window_s=60.0,
+            )
+        )
+
+    @provide(scope=Scope.APP)
+    def register_rate_limiter(self, settings: Settings) -> RegisterRateLimiter:
+        return RegisterRateLimiter(
+            SlidingWindowRateLimiter(
+                limit=settings.auth.register_rate_limit_per_min,
                 window_s=60.0,
             )
         )

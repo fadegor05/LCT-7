@@ -40,7 +40,7 @@ from app.domains.schedule.provider import ScheduleProvider
 from app.domains.site.guard import SiteAccessGuard
 from app.domains.site.provider import SiteProvider
 from app.domains.user.auth_service import AuthService
-from app.domains.user.provider import CurrentUser, LoginRateLimiter
+from app.domains.user.provider import CurrentUser, LoginRateLimiter, RegisterRateLimiter
 from app.domains.user.repository import UserRepository
 from app.domains.user.service import STAND_USER_ID, UserService
 from app.domains.utility.provider import UtilityProvider
@@ -80,6 +80,15 @@ class TestUserProvider(Provider):
         return LoginRateLimiter(
             SlidingWindowRateLimiter(
                 limit=settings.auth.login_rate_limit_per_min,
+                window_s=60.0,
+            )
+        )
+
+    @provide(scope=Scope.APP)
+    def register_rate_limiter(self, settings: Settings) -> RegisterRateLimiter:
+        return RegisterRateLimiter(
+            SlidingWindowRateLimiter(
+                limit=settings.auth.register_rate_limit_per_min,
                 window_s=60.0,
             )
         )

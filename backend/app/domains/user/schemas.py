@@ -30,6 +30,16 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class RegisterRequest(BaseModel):
+    """Запрос на регистрацию: логин, пароль и (необязательно) ФИО."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    login: str = Field(min_length=3, max_length=64)
+    password: str = Field(min_length=8, max_length=256)
+    full_name: str | None = Field(default=None, max_length=255)
+
+
 class LoginResponse(BaseModel):
     """Ответ на вход: JWT токен и данные пользователя."""
 

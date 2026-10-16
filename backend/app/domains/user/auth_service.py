@@ -1,11 +1,19 @@
 """Логика аутентификации (вход по логину и паролю)."""
 
+import uuid
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import AuthSettings
 from app.domains.user.models import User
 from app.domains.user.repository import UserRepository
-from app.domains.user.security import create_token, verify_against_dummy, verify_password
+from app.domains.user.security import (
+    create_token,
+    hash_password,
+    verify_against_dummy,
+    verify_password,
+)
 from app.plugins.exceptions import AppError
 
 
@@ -37,3 +45,30 @@ class AuthService:
 
         token = create_token(user.id, self._settings)
         return token, user
+
+    async def register(self, login: str, password: str, full_name: str | None) -> tuple[str, User]:
+        """Зарегистрировать пользователя и сразу выдать токен.
+
+        Поднимает AppError 409, если логин занят (в том числе при гонке двух запросов:
+        её ловит уникальный индекс).
+        """
+        login_lower = login.strip().lower()
+        taken = AppError("Логин уже занят", status_code=409, code="login_taken")
+
+        if await self._repository.get_by_login(login_lower) is not None:
+            raise taken
+
+        user = User(
+            id=uuid.uuid4(),
+            full_name=(full_name or "").strip() or login_lower,
+            login=login_lower,
+            password_hash=await hash_password(password),
+        )
+        try:
+            await self._repository.add(user)
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            raise taken from None
+
+        return create_token(user.id, self._settings), user

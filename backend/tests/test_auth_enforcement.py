@@ -274,3 +274,80 @@ async def _user_id(container: AsyncContainer, login: str) -> uuid.UUID:
         user = await repository.get_by_login(login)
     assert user is not None
     return user.id
+
+
+class TestRegister:
+    async def _register_via_api(self, client: AsyncClient, login: str = "Newbie", **extra: str):
+        body = {"login": login, "password": PASSWORD, **extra}
+        return await client.post("/auth/register", json=body)
+
+    async def test_register_returns_working_token(self, auth_client: AsyncClient) -> None:
+        response = await self._register_via_api(auth_client, "  Newbie ", full_name="Иванов И.")
+
+        assert response.status_code == 201
+        body = response.json()
+        assert body["user"]["login"] == "newbie"
+        assert body["user"]["full_name"] == "Иванов И."
+        headers = {"Authorization": f"Bearer {body['access_token']}"}
+        me = await auth_client.get("/users/me", headers=headers)
+        assert me.status_code == 200
+        assert me.json()["login"] == "newbie"
+
+    async def test_login_works_after_register(self, auth_client: AsyncClient) -> None:
+        await self._register_via_api(auth_client, "newbie")
+
+        await _login(auth_client, "NEWBIE")
+
+    async def test_full_name_defaults_to_login(self, auth_client: AsyncClient) -> None:
+        response = await self._register_via_api(auth_client, "newbie")
+
+        assert response.json()["user"]["full_name"] == "newbie"
+
+    async def test_duplicate_login_is_409(self, auth_client: AsyncClient) -> None:
+        await self._register_via_api(auth_client, "newbie")
+
+        response = await self._register_via_api(auth_client, "NewBie")
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Логин уже занят"
+
+    async def test_short_password_is_422(self, auth_client: AsyncClient) -> None:
+        response = await auth_client.post(
+            "/auth/register", json={"login": "newbie", "password": "short"}
+        )
+
+        assert response.status_code == 422
+
+    async def test_short_login_is_422(self, auth_client: AsyncClient) -> None:
+        response = await auth_client.post(
+            "/auth/register", json={"login": "ab", "password": PASSWORD}
+        )
+
+        assert response.status_code == 422
+
+    async def test_registered_users_do_not_see_each_others_sites(
+        self, auth_client: AsyncClient
+    ) -> None:
+        first = (await self._register_via_api(auth_client, "first")).json()["access_token"]
+        second = (await self._register_via_api(auth_client, "second")).json()["access_token"]
+        created = await auth_client.post(
+            "/sites", json={"name": "Объект"}, headers={"Authorization": f"Bearer {first}"}
+        )
+
+        foreign = await auth_client.get(
+            f"/sites/{created.json()['id']}", headers={"Authorization": f"Bearer {second}"}
+        )
+
+        assert foreign.status_code == 404
+
+    async def test_rate_limit_is_429(
+        self, auth_client: AsyncClient, auth_settings: AuthSettings
+    ) -> None:
+        for index in range(auth_settings.register_rate_limit_per_min):
+            ok = await self._register_via_api(auth_client, f"user{index}")
+            assert ok.status_code == 201
+
+        blocked = await self._register_via_api(auth_client, "one-more")
+
+        assert blocked.status_code == 429
+        assert blocked.json()["code"] == "rate_limited"
