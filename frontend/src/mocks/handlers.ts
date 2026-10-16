@@ -86,6 +86,21 @@ export const handlers = [
     })
   }),
 
+  http.post(api('/auth/register'), async ({ request }) => {
+    const data = await json<{ login: string; password: string; full_name?: string }>(request)
+    return handle(() => {
+      const login = data.login.trim().toLowerCase()
+      if (login === 'demo') {
+        throw new db.MockError(409, 'Логин уже занят')
+      }
+      return {
+        access_token: 'mock-token',
+        token_type: 'bearer' as const,
+        user: { ...user, login, full_name: data.full_name?.trim() || login },
+      }
+    })
+  }),
+
   http.get(api('/users/me'), ({ request }) => {
     const authHeader = request.headers.get('Authorization')
     if (!authHeader) {

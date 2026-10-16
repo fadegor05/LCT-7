@@ -38,3 +38,11 @@
   font-size: 14px;
   line-height: 20px;
 }
+
+.alt {
+  margin: var(--space-6) 0 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import { RequireAuth } from './RequireAuth'
 import { DeviationPage } from '@/pages/DeviationPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MethodologyPage } from '@/pages/MethodologyPage'
+import { RegisterPage } from '@/pages/RegisterPage'
 import { NewSiteMethodologyPage } from '@/pages/NewSiteMethodologyPage'
 import { NewSitePage } from '@/pages/NewSitePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -17,6 +18,7 @@ import { SitesPage } from '@/pages/SitesPage'
  */
 export const routes: RouteObject[] = [
   { path: 'login', element: <LoginPage /> },
+  { path: 'register', element: <RegisterPage /> },
   {
     element: <RequireAuth />,
     children: [

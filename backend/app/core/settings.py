@@ -121,6 +121,7 @@ class AuthSettings(BaseModel):
     secret_key: str = DEFAULT_AUTH_SECRET_KEY
     token_ttl_minutes: int = 720
     login_rate_limit_per_min: int = 10
+    register_rate_limit_per_min: int = 5
     seed_login: str | None = None
     seed_password: str | None = None
 
