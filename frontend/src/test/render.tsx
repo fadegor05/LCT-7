@@ -4,6 +4,7 @@ import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router'
 import { routes } from '@/app/routes'
+import { setToken } from '@/lib/authStorage'
 
 export function createTestQueryClient() {
   return new QueryClient({
@@ -11,8 +12,16 @@ export function createTestQueryClient() {
   })
 }
 
+interface RenderRouteOptions {
+  authed?: boolean
+}
+
 /** Рендер всего приложения на нужном URL (интеграционные тесты страниц поверх MSW). */
-export function renderRoute(url: string) {
+export function renderRoute(url: string, { authed = true }: RenderRouteOptions = {}) {
+  // Set token by default so existing tests keep passing
+  if (authed) {
+    setToken('mock-token')
+  }
   const client = createTestQueryClient()
   const router = createMemoryRouter(routes, { initialEntries: [url] })
   const user = userEvent.setup()

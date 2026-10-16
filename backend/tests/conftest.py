@@ -25,6 +25,7 @@ from app.adapters.ml.base import DetectorClient
 from app.adapters.ml.schedule_llm import ScheduleLlmClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
+from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
 from app.domains.assistant.provider import AssistantProvider
@@ -38,10 +39,14 @@ from app.domains.photo.service import PhotoService
 from app.domains.schedule.provider import ScheduleProvider
 from app.domains.site.guard import SiteAccessGuard
 from app.domains.site.provider import SiteProvider
-from app.domains.user.provider import UserProvider
+from app.domains.user.auth_service import AuthService
+from app.domains.user.provider import CurrentUser, LoginRateLimiter
+from app.domains.user.repository import UserRepository
+from app.domains.user.service import STAND_USER_ID, UserService
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
+from app.plugins.exceptions import AppError
 from tests.fakes import FakeAssistantClient, FakeDetector, FakeScheduleLlmClient
 
 
@@ -50,7 +55,61 @@ class TestAppProvider(Provider):
 
     @provide
     def settings(self) -> Settings:
-        return get_settings()
+        settings = get_settings()
+        settings.auth.secret_key = "test-secret-key-at-least-32-bytes!!"
+        return settings
+
+
+class TestUserProvider(Provider):
+    """Тестовый DI провайдер для user домена.
+
+    Переопределяет current_user, чтобы вернуть стендового пользователя без
+    требования токена. Это позволяет существующим тестам работать без изменений.
+
+    Для тестирования реальной аутентификации используйте fixture auth_client
+    с реальным UserProvider.
+    """
+
+    scope = Scope.REQUEST
+
+    repository = provide(UserRepository)
+
+    @provide(scope=Scope.APP)
+    def login_rate_limiter(self, settings: Settings) -> LoginRateLimiter:
+        """Rate limiter для login endpoint."""
+        return LoginRateLimiter(
+            SlidingWindowRateLimiter(
+                limit=settings.auth.login_rate_limit_per_min,
+                window_s=60.0,
+            )
+        )
+
+    @provide(scope=Scope.REQUEST)
+    async def service(
+        self, repository: UserRepository, session: AsyncSession, settings: Settings
+    ) -> UserService:
+        return UserService(repository, session, settings.auth)
+
+    @provide(scope=Scope.REQUEST)
+    async def auth_service(
+        self, repository: UserRepository, session: AsyncSession, settings: Settings
+    ) -> AuthService:
+        return AuthService(repository, session, settings.auth)
+
+    @provide(scope=Scope.REQUEST)
+    async def current_user(self, repository: UserRepository) -> CurrentUser:
+        """Вернуть стендового пользователя без требования токена.
+
+        Это переопределение для тестов, чтобы не требовать JWT.
+        """
+
+        user = await repository.get(STAND_USER_ID)
+        if user is None:
+            raise AppError(
+                "Стенд не инициализирован: пользователь не создан",
+                status_code=503,
+            )
+        return CurrentUser(user)
 
 
 class TestDatabaseProvider(Provider):
@@ -206,13 +265,16 @@ class TestScheduleLlmClientProvider(Provider):
         return FakeScheduleLlmClient()
 
 
-def _make_container(tmp_path: Path, *, foreign_keys: bool = False) -> AsyncContainer:
+def _make_container(
+    tmp_path: Path, *, foreign_keys: bool = False, user_provider: Provider | None = None
+) -> AsyncContainer:
+    """Тестовый контейнер. `user_provider` подменяет TestUserProvider (реальная авторизация)."""
     storage_root = tmp_path / "storage"
     storage_root.mkdir(parents=True, exist_ok=True)
     return make_async_container(
         TestAppProvider(),
         TestDatabaseProvider(db_path=tmp_path / "test.db", foreign_keys=foreign_keys),
-        UserProvider(),
+        user_provider or TestUserProvider(),
         SiteProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
@@ -258,7 +320,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
     container = make_async_container(
         TestAppProvider(),
         TestDatabaseProvider(db_path=db_path),
-        UserProvider(),
+        TestUserProvider(),
         SiteProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),

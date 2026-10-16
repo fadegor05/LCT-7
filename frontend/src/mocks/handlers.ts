@@ -71,7 +71,30 @@ type SiteParams = { siteId: string }
 export const handlers = [
   http.all(api('/*'), latency),
 
-  http.get(api('/users/me'), () => HttpResponse.json(user)),
+  http.post(api('/auth/login'), async ({ request }) => {
+    const data = await json<{ login: string; password: string }>(request)
+    // Demo credentials: demo/demo
+    return handle(() => {
+      if (data.login.toLowerCase() === 'demo' && data.password === 'demo') {
+        return {
+          access_token: 'mock-token',
+          token_type: 'bearer' as const,
+          user,
+        }
+      }
+      throw new db.MockError(401, 'Неверный логин или пароль')
+    })
+  }),
+
+  http.get(api('/users/me'), ({ request }) => {
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader) {
+      return handle(() => {
+        throw new db.MockError(401, 'Требуется авторизация')
+      })
+    }
+    return HttpResponse.json(user)
+  }),
 
   // ---------- Стройки ----------
   http.get(api('/sites'), () => handle(db.listSites)),

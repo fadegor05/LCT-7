@@ -63,7 +63,14 @@ const isoDateTime = z.string()
 export const userSchema = z.object({
   id: z.string(),
   full_name: z.string(),
+  login: z.string().nullable(),
   created_at: isoDateTime,
+})
+
+export const loginResponseSchema = z.object({
+  access_token: z.string(),
+  token_type: z.literal('bearer'),
+  user: userSchema,
 })
 
 // ---------- Стройка (site) ----------
@@ -338,6 +345,7 @@ export type DeviationType = z.infer<typeof deviationTypeSchema>
 export type Severity = z.infer<typeof severitySchema>
 
 export type User = z.infer<typeof userSchema>
+export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
 export type Stage = z.infer<typeof stageSchema>

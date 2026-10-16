@@ -1,5 +1,6 @@
 /** Ключи TanStack Query. Иерархия ['site', id, ...] позволяет инвалидировать всё по стройке разом. */
 export const keys = {
+  login: ['login'] as const,
   me: ['me'] as const,
   sites: ['sites'] as const,
   site: (siteId: string) => ['site', siteId] as const,

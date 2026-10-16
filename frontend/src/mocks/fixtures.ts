@@ -16,6 +16,7 @@ export const TODAY = '2026-09-18'
 export const user: User = {
   id: 'user-1',
   full_name: 'инженер [ФИО]',
+  login: 'demo',
   created_at: '2026-09-01T09:00:00Z',
 }
 

@@ -17,6 +17,8 @@ dependencies = [
     "boto3>=1.43.101",
     "pillow>=12.3.0",
     "httpx>=0.28.1",
+    "pyjwt>=2.8.0",
+    "argon2-cffi>=23.1.0",
 ]
 
 [dependency-groups]

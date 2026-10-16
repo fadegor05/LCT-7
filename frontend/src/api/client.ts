@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import { env } from '@/lib/env'
+import { getToken, clearToken } from '@/lib/authStorage'
 
 /** Ошибка HTTP или контракта. `detail` — поле FastAPI HTTPException, если оно есть. `code` — код ошибки из тела ответа для типизированной классификации. */
 export class ApiError extends Error {
@@ -24,6 +25,12 @@ interface RequestOptions<S extends z.ZodType | undefined> {
   body?: unknown
   query?: Query
   signal?: AbortSignal
+}
+
+let unauthorizedHandler: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: () => void): void {
+  unauthorizedHandler = handler
 }
 
 function buildUrl(path: string, query?: Query): string {
@@ -74,6 +81,10 @@ export async function request<S extends z.ZodType | undefined = undefined>(
   { method = 'GET', schema, body, query, signal }: RequestOptions<S> = {},
 ): Promise<S extends z.ZodType ? z.output<S> : void> {
   const headers: Record<string, string> = { Accept: 'application/json' }
+  const token = getToken()
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
   let payload: BodyInit | undefined
   if (body instanceof FormData) {
     payload = body
@@ -89,7 +100,20 @@ export async function request<S extends z.ZodType | undefined = undefined>(
     const detail = (data as { detail?: unknown; code?: unknown } | undefined)?.detail
     const code = (data as { code?: unknown } | undefined)?.code
     const codeString = typeof code === 'string' ? code : undefined
-    throw new ApiError(response.status, errorMessage(detail, response.status), detail, codeString)
+    const error = new ApiError(
+      response.status,
+      errorMessage(detail, response.status),
+      detail,
+      codeString,
+    )
+
+    // Handle 401 on protected routes
+    if (response.status === 401 && path !== '/auth/login') {
+      clearToken()
+      unauthorizedHandler?.()
+    }
+
+    throw error
   }
   if (!schema) return undefined as never
 

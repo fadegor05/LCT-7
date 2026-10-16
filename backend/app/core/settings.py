@@ -11,6 +11,8 @@ from functools import lru_cache
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_AUTH_SECRET_KEY = "dev-insecure-change-me"
+
 
 class PostgresSettings(BaseModel):
     host: str = "postgres"
@@ -113,6 +115,16 @@ class AssistantSettings(BaseModel):
     parse_timeout_s: float = 600.0
 
 
+class AuthSettings(BaseModel):
+    """Параметры аутентификации (JWT и rate limiting)."""
+
+    secret_key: str = DEFAULT_AUTH_SECRET_KEY
+    token_ttl_minutes: int = 720
+    login_rate_limit_per_min: int = 10
+    seed_login: str | None = None
+    seed_password: str | None = None
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -135,8 +147,21 @@ class Settings(BaseSettings):
     observation: ObservationSettings = ObservationSettings()
     assessment: AssessmentSettings = AssessmentSettings()
     assistant: AssistantSettings = AssistantSettings()
+    auth: AuthSettings = AuthSettings()
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def check_auth_secret(settings: Settings) -> None:
+    """Проверить что secret_key не использует значение по умолчанию в secure режиме.
+
+    Поднимает RuntimeError если secure=True и secret_key равен DEFAULT_AUTH_SECRET_KEY.
+    """
+    if settings.secure and settings.auth.secret_key == DEFAULT_AUTH_SECRET_KEY:
+        raise RuntimeError(
+            "INSECURE: secure=True but auth.secret_key is still the default. "
+            "Set AUTH__SECRET_KEY in environment."
+        )
