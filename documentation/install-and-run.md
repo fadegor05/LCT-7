@@ -133,7 +133,7 @@ curl -s "http://localhost/api/sites/$SITE/assessment/summary"
 curl -s -X POST "http://localhost/api/sites/$SITE/photos" -F files=@frame1.jpg -F files=@frame2.jpg
 ```
 
-Дата берётся из EXIF, штампа (при `DETECTOR__STAMP_ENABLED=true`), имени файла или от соседних снимков пачки, иначе её задают вручную (`PATCH .../photos/{id}/date`).
+Дата берётся из EXIF, штампа (по умолчанию включено, нужен `DETECTOR__URL`; отключается `DETECTOR__STAMP_ENABLED=false`), имени файла или от соседних снимков пачки, иначе её задают вручную (`PATCH .../photos/{id}/date`).
 
 ## Способ C. Без Docker
 

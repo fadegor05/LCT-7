@@ -412,7 +412,8 @@ function recompute(siteId: string, date: string): void {
 
 export function listObservations(siteId: string): Observation[] {
   getSite(siteId)
-  return state.observations.get(siteId) ?? []
+  // Как бэкенд: от новых к старым.
+  return [...(state.observations.get(siteId) ?? [])].reverse()
 }
 
 export function getObservation(siteId: string, date: string): Observation {

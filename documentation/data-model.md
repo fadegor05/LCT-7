@@ -241,7 +241,7 @@ erDiagram
 | Перечисление | Значения | Где определено |
 |---|---|---|
 | Статус этапа | `ahead` опережение, `on_track` в графике, `behind` отставание, `not_started` не начат, `not_observed` не наблюдалось, `not_checked` не проверяется по технике | `assessment/models.py` |
-| Тип отклонения | `missing_equipment` нет нужной техники, `missing_logical_equipment` нет логической техники, `stage_mismatch` несоответствие этапу, `stale_data` данные устарели, `idle` простой, `extra_equipment` лишняя техника, `out_of_zone` вне рабочей зоны, `no_progress` нет прогресса | `assessment/models.py` |
+| Тип отклонения | `missing_equipment` нет нужной техники, `missing_logical_equipment` нет логической техники, `stage_mismatch` несоответствие этапу, `stale_data` данные устарели, `idle` простой, `extra_equipment` лишняя техника, `out_of_zone` вне рабочей зоны, `no_progress` нет прогресса, `behind_schedule` отставание от графика | `assessment/models.py` |
 | Важность | `critical`, `attention` | `assessment/models.py` |
 | Уверенность | `high`, `medium`, `low` | `observation/models.py` |
 | Наблюдаемость | `high`, `medium`, `low` | `observation/models.py` |

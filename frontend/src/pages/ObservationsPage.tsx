@@ -13,7 +13,7 @@ import { DetectBacklogSection } from '@/features/observations/DetectBacklogSecti
 import { EquipmentList } from '@/features/observations/EquipmentList'
 import { NeedsReviewSection } from '@/features/observations/NeedsReviewSection'
 import { PhotoStrip } from '@/features/observations/PhotoStrip'
-import { formatDate } from '@/lib/format'
+import { formatDate, latestObservation } from '@/lib/format'
 import { useRequiredParam } from '@/lib/useParam'
 
 const column = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
@@ -28,7 +28,7 @@ export function ObservationsPage() {
   const photos = usePhotos(siteId)
   const undated = useUndatedPhotos(siteId)
 
-  const lastDay = days.data?.at(-1)?.observed_on ?? null
+  const lastDay = latestObservation(days.data)?.observed_on ?? null
   const param = params.get('date')
   const date = param === 'all' ? null : (param ?? lastDay)
   const observation = useObservation(siteId, date)

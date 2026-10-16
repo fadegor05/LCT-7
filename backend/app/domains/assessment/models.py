@@ -42,6 +42,7 @@ class DeviationType(StrEnum):
     EXTRA_EQUIPMENT = "extra_equipment"
     OUT_OF_ZONE = "out_of_zone"
     NO_PROGRESS = "no_progress"
+    BEHIND_SCHEDULE = "behind_schedule"
 
 
 class Severity(StrEnum):

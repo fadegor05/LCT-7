@@ -988,13 +988,8 @@ class TestRecomputeCoordinatorAsOfMode:
             dev_repo = DeviationRepository(await request_container.get(AsyncSession))
             deviations = await dev_repo.list_by_site(site_id)
             stale = next((d for d in deviations if d.type == DeviationType.STALE_DATA.value), None)
-            # Без наблюдений stale_data всегда срабатывает (latest_obs_on is None).
-            assert stale is not None
-            # Опорная дата упала обратно именно на self._today() (инжектированный
-            # Clock), а не на реальное date.today() — период отклонения
-            # датирован ИМЕННО инжектированной датой.
-            assert stale.period_start == injected_today
-            assert stale.period_end == injected_today
+            # Без наблюдений «Данные устарели» не создаётся: данных нет, а не устарели.
+            assert stale is None
 
     @pytest.mark.asyncio
     async def test_default_mode_is_today_unchanged(self, container) -> None:
@@ -1294,13 +1289,8 @@ class TestRecomputeCoordinatorAsOfMode:
             dev_repo = DeviationRepository(await request_container.get(AsyncSession))
             deviations = await dev_repo.list_by_site(site_id)
             stale = next((d for d in deviations if d.type == DeviationType.STALE_DATA.value), None)
-            # Без наблюдений stale_data всегда срабатывает (latest_obs_on is None).
-            assert stale is not None
-            # Опорная дата упала обратно именно на self._today() (инжектированный
-            # Clock), а не на реальное date.today() — период отклонения
-            # датирован ИМЕННО инжектированной датой.
-            assert stale.period_start == injected_today
-            assert stale.period_end == injected_today
+            # Без наблюдений «Данные устарели» не создаётся: данных нет, а не устарели.
+            assert stale is None
 
 
 class TestLiveStatusRecalculator:

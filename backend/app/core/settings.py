@@ -59,7 +59,7 @@ class DetectorSettings(BaseModel):
     retry_other: int = 1
     retry_backoff_s: tuple[float, ...] = (2.0, 5.0, 10.0)
     retry_budget_s: float = 20.0
-    stamp_enabled: bool = False  # LCT-13
+    stamp_enabled: bool = True  # LCT-13; без DETECTOR__URL всё равно NullStampOcr
 
 
 class ObservationSettings(BaseModel):
