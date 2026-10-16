@@ -5,7 +5,7 @@ import { useObservations, useUndatedPhotos } from '@/api/frames'
 import { useSchedule } from '@/api/schedule'
 import type { SiteSummary } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatDate } from '@/lib/format'
+import { formatDate, latestObservation } from '@/lib/format'
 import { levelLabels, plural } from '@/lib/labels'
 import { verdictText } from '@/features/sites/verdict'
 import styles from './Overview.module.css'
@@ -79,7 +79,7 @@ function VerdictCard({ siteId, summary }: { siteId: string; summary: SiteSummary
 function DataStateCard({ siteId }: { siteId: string }) {
   const observations = useObservations(siteId).data ?? []
   const undated = useUndatedPhotos(siteId).data?.length ?? 0
-  const last = observations.at(-1)
+  const last = latestObservation(observations)
   const dated = observations.reduce((sum, o) => sum + o.photo_count, 0)
   return (
     <Card aria-labelledby="data-state-title">

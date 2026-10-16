@@ -50,7 +50,7 @@
 | `DETECTOR__RETRY_OTHER` | `1` | Повторов при другой 5xx, таймауте, сетевой ошибке |
 | `DETECTOR__RETRY_BACKOFF_S` | `2, 5, 10` | Паузы перед повторами |
 | `DETECTOR__RETRY_BUDGET_S` | `20` | Общий бюджет пауз на один снимок |
-| `DETECTOR__STAMP_ENABLED` | `false` | Читать дату со штампа кадра через ML |
+| `DETECTOR__STAMP_ENABLED` | `true` | Читать дату со штампа кадра (левый и правый нижний угол) через ML. Без `DETECTOR__URL` не действует |
 
 ## Наблюдения
 

@@ -105,3 +105,13 @@ export function daysAgo(days: number): string {
   if (days === 1) return 'вчера'
   return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`
 }
+
+/** Наблюдение с наибольшей датой. Порядок списка от API не гарантирован (бэкенд отдаёт по убыванию). */
+export function latestObservation<T extends { observed_on: string }>(
+  observations: readonly T[] | undefined,
+): T | undefined {
+  return observations?.reduce<T | undefined>(
+    (best, o) => (!best || o.observed_on > best.observed_on ? o : best),
+    undefined,
+  )
+}

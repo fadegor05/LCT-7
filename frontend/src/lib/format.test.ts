@@ -3,6 +3,7 @@ import {
   formatDate,
   formatDateTime,
   formatDelay,
+  latestObservation,
   formatFileSize,
   formatShortDate,
   formatShortDateTime,
@@ -83,5 +84,15 @@ describe('format', () => {
     expect(daysAgo(2)).toBe('2 дня назад')
     expect(daysAgo(5)).toBe('5 дней назад')
     expect(daysAgo(21)).toBe('21 день назад')
+  })
+})
+
+describe('latestObservation', () => {
+  it('takes the greatest date regardless of list order', () => {
+    const list = [{ observed_on: '2023-10-13' }, { observed_on: '2023-06-19' }]
+    expect(latestObservation(list)?.observed_on).toBe('2023-10-13')
+    expect(latestObservation([...list].reverse())?.observed_on).toBe('2023-10-13')
+    expect(latestObservation([])).toBeUndefined()
+    expect(latestObservation(undefined)).toBeUndefined()
   })
 })

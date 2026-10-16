@@ -39,7 +39,7 @@ sequenceDiagram
   UI->>API: POST /api/sites/{id}/photos, файлы
   loop каждый файл по порядку
     API->>API: размер, формат, целостность
-    API->>ML: POST /stamp (только при DETECTOR__STAMP_ENABLED)
+    API->>ML: POST /stamp (если не отключено DETECTOR__STAMP_ENABLED=false)
     API->>ST: сохранить оригинал
     API->>ML: POST /detect
     ML-->>API: рамки в долях кадра

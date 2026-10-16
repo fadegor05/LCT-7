@@ -20,7 +20,7 @@ class TestDeviationStaleData:
     """Тесты отклонения stale_data."""
 
     def test_stale_data_no_observations(self):
-        """Нет наблюдений вообще -> stale_data с severity=CRITICAL."""
+        """Нет наблюдений вообще -> отклонения stale_data нет (данных нет, а не устарели)."""
         config = EngineConfig(
             tolerance_days=5,
             stale_data_days=30,
@@ -64,15 +64,9 @@ class TestDeviationStaleData:
 
         result = engine.compute_site(stages, rules, observations, today)
 
-        # Должно быть отклонение stale_data
+        # Пустая стройка: данных нет, а не устарели — отклонения нет
         stale = [d for d in result.deviations if d.type == DeviationType.STALE_DATA]
-        assert len(stale) == 1
-        deviation = stale[0]
-        assert deviation.stage_id is None
-        assert deviation.severity == Severity.CRITICAL
-        assert deviation.is_hypothesis is False
-        assert deviation.confidence == Confidence.HIGH
-        assert len(deviation.limits_text) > 0
+        assert stale == []
 
     def test_stale_data_observations_too_old(self):
         """Последнее наблюдение старше stale_data_days -> stale_data."""
@@ -1203,3 +1197,108 @@ class TestDeviationMissingLogicalEquipment:
             d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
         ]
         assert len(warnings) == 0
+
+
+def _engine() -> RuleEngine:
+    return RuleEngine(
+        EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+    )
+
+
+def _stage_and_rule(start: date, end: date, required_id: uuid.UUID):
+    stage_id = uuid.uuid4()
+    stage = StageInput(
+        stage_id=stage_id, name="Этап", position=1, planned_start=start, planned_end=end
+    )
+    rule = RuleInput(
+        stage_id=stage_id,
+        rule_id=uuid.uuid4(),
+        is_verifiable=True,
+        unverifiable_reason=None,
+        requirements=[
+            EquipmentRequirementInput(
+                equipment_type_id=required_id, obligation="normative", min_count=1
+            )
+        ],
+    )
+    return stage, rule
+
+
+def _obs(on: date, equipment_id: uuid.UUID) -> ObservationInput:
+    return ObservationInput(
+        observed_on=on,
+        photo_count=5,
+        observability="high",
+        equipment=[
+            ObservedEquipmentInput(
+                equipment_type_id=equipment_id, count_min=1, activity="works", confidence="high"
+            )
+        ],
+    )
+
+
+class TestBehindSchedule:
+    """Отставание от графика попадает в список отклонений."""
+
+    def test_behind_stage_produces_deviation_with_delay(self):
+        required = uuid.uuid4()
+        stage, rule = _stage_and_rule(date(2024, 1, 1), date(2024, 1, 10), required)
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            [_obs(date(2024, 1, 18), required)],
+            date(2024, 1, 20),
+        )
+        behind = [d for d in result.deviations if d.type == DeviationType.BEHIND_SCHEDULE]
+        assert len(behind) == 1
+        assert behind[0].stage_id == stage.stage_id
+        assert behind[0].severity == Severity.ATTENTION
+        assert "10.01.2024" in behind[0].expected
+        assert "10 дн." in behind[0].observed
+
+    def test_on_track_stage_has_no_delay_deviation(self):
+        required = uuid.uuid4()
+        stage, rule = _stage_and_rule(date(2024, 1, 10), date(2024, 1, 25), required)
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            [_obs(date(2024, 1, 12), required)],
+            date(2024, 1, 14),
+        )
+        assert not [d for d in result.deviations if d.type == DeviationType.BEHIND_SCHEDULE]
+
+
+class TestStageMismatchScope:
+    """Несоответствие этапу — только для этапа, который идёт в день снимка."""
+
+    def test_finished_stage_gets_no_mismatch_from_later_photo(self):
+        required, other = uuid.uuid4(), uuid.uuid4()
+        past, past_rule = _stage_and_rule(date(2024, 1, 1), date(2024, 1, 5), required)
+        current, current_rule = _stage_and_rule(date(2024, 1, 15), date(2024, 1, 25), required)
+        result = _engine().compute_site(
+            [past, current],
+            {past.stage_id: past_rule, current.stage_id: current_rule},
+            [_obs(date(2024, 1, 3), required), _obs(date(2024, 1, 18), other)],
+            date(2024, 1, 20),
+        )
+        mismatch = [d for d in result.deviations if d.type == DeviationType.STAGE_MISMATCH]
+        assert [d.stage_id for d in mismatch] == [current.stage_id]
+
+    def test_expected_names_required_equipment(self):
+        required, other = uuid.uuid4(), uuid.uuid4()
+        stage, rule = _stage_and_rule(date(2024, 1, 10), date(2024, 1, 25), required)
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            [_obs(date(2024, 1, 18), other)],
+            date(2024, 1, 20),
+            {required: "Экскаватор", other: "Самосвал"},
+        )
+        mismatch = next(d for d in result.deviations if d.type == DeviationType.STAGE_MISMATCH)
+        assert "Экскаватор" in mismatch.expected
+        assert "Самосвал" in mismatch.observed

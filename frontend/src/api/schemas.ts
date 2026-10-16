@@ -49,6 +49,7 @@ export const deviationTypeSchema = z.enum([
   'extra_equipment',
   'out_of_zone',
   'no_progress',
+  'behind_schedule',
 ])
 /** assessment.models.Severity */
 export const severitySchema = z.enum(['critical', 'attention'])

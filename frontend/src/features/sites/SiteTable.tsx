@@ -2,14 +2,14 @@ import { Link } from 'react-router'
 import { useSummary } from '@/api/deviations'
 import { useObservations } from '@/api/frames'
 import type { Site } from '@/api/schemas'
-import { formatDate } from '@/lib/format'
+import { formatDate, latestObservation } from '@/lib/format'
 import { ObservabilityBadge, VerdictBadge } from './SiteBadges'
 import styles from './SiteTable.module.css'
 
 /** Строка стройки: итог и последнее наблюдение приходят отдельными запросами по стройке. */
 function SiteRow({ site }: { site: Site }) {
   const summary = useSummary(site.id).data
-  const last = useObservations(site.id).data?.at(-1)
+  const last = latestObservation(useObservations(site.id).data)
   return (
     <Link to={`/sites/${site.id}`} className={`${styles.grid} ${styles.row}`}>
       <span className={styles.name}>

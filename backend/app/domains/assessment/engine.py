@@ -193,6 +193,11 @@ class RuleEngine:
                         stage, rule, sorted_observations, today, stage_status.basis_dates, names
                     )
                 )
+                deviations.extend(
+                    self._check_schedule_delay(
+                        stage, rule, stage_status, sorted_observations, today
+                    )
+                )
 
         return SiteComputation(statuses=statuses, deviations=deviations)
 
@@ -485,22 +490,82 @@ class RuleEngine:
 
         return status, confidence, reason, basis_dates
 
+    def _check_schedule_delay(
+        self,
+        stage: StageInput,
+        rule: RuleInput | None,
+        status: StageStatusResult,
+        observations: Sequence[ObservationInput],
+        today: date,
+    ) -> list[DeviationResult]:
+        """Отклонение behind_schedule: этап со статусом «Отстаёт» и числом дней отставания."""
+        if status.status != StageStatusValue.BEHIND or not status.delay_days:
+            return []
+        if status.delay_days <= 0 or not status.basis_dates:
+            return []
+
+        tolerance = timedelta(days=self.config.tolerance_days)
+        latest_obs_on = observations[-1].observed_on if observations else None
+        end_passed = stage.planned_end is not None and today > stage.planned_end + tolerance
+        if end_passed and latest_obs_on is not None and latest_obs_on in status.basis_dates:
+            # a. План закончился, а маркерная техника всё ещё на площадке
+            planned_end = stage.planned_end
+            assert planned_end is not None
+            expected = f"Этап завершён по графику к {planned_end:%d.%m.%Y}"
+            observed = (
+                f"Маркерная техника ещё на площадке ({latest_obs_on:%d.%m.%Y}), "
+                f"отставание {status.delay_days} дн."
+            )
+            period_start, period_end = planned_end, latest_obs_on
+        else:
+            # b. Работы начались позже плана
+            first_marker = status.basis_dates[0]
+            expected = (
+                f"Начало работ по графику {stage.planned_start:%d.%m.%Y}"
+                if stage.planned_start
+                else "Начало работ по графику"
+            )
+            observed = (
+                f"Маркерная техника впервые замечена {first_marker:%d.%m.%Y}, "
+                f"отставание {status.delay_days} дн."
+            )
+            period_start = stage.planned_start or first_marker
+            period_end = first_marker
+
+        return [
+            DeviationResult(
+                stage_id=stage.stage_id,
+                type=DeviationType.BEHIND_SCHEDULE,
+                is_hypothesis=False,
+                severity=Severity.ATTENTION,
+                confidence=status.confidence,
+                period_start=period_start,
+                period_end=max(period_start, period_end),
+                expected=expected,
+                observed=observed,
+                limits_text=(
+                    "Оценка по снимкам: техника могла появиться или уйти между съёмками, "
+                    "поэтому срок отставания приблизителен."
+                ),
+                rule_id=rule.rule_id if rule else None,
+                evidence_dates=status.basis_dates,
+            )
+        ]
+
     def _check_stale_data(
         self, observations: Sequence[ObservationInput], today: date
     ) -> list[DeviationResult]:
         """Проверить отклонение stale_data (один раз для всего объекта)."""
+        # Без наблюдений данные не «устарели», их просто нет: статусы этапов
+        # в этом случае «Не наблюдалось», а критичное отклонение было бы шумом.
         if not observations:
-            latest_obs_on = None
-        else:
-            latest_obs_on = observations[-1].observed_on
+            return []
 
-        if latest_obs_on is None or (today - latest_obs_on).days > self.config.stale_data_days:
-            if latest_obs_on is None:
-                period_start = today
-                period_end = today
-            else:
-                period_start = latest_obs_on
-                period_end = today
+        latest_obs_on = observations[-1].observed_on
+
+        if (today - latest_obs_on).days > self.config.stale_data_days:
+            period_start = latest_obs_on
+            period_end = today
 
             return [
                 DeviationResult(
@@ -512,9 +577,7 @@ class RuleEngine:
                     period_start=period_start,
                     period_end=period_end,
                     expected="Актуальные данные съёмки",
-                    observed="Последнее наблюдение из прошлого"
-                    if latest_obs_on
-                    else "Наблюдений нет",
+                    observed=f"Последнее наблюдение {latest_obs_on:%d.%m.%Y}",
                     limits_text=(
                         "Не доказывает текущее состояние объекта — "
                         "техника могла измениться после последней съёмки."
@@ -545,6 +608,19 @@ class RuleEngine:
         latest_obs = observations[-1]
 
         if rule is None:
+            return deviations
+
+        # Техника последнего наблюдения сравнивается с методикой этапа, только
+        # если этап в это время идёт по графику (или его маркеры ещё видны).
+        # Иначе завершённый или будущий этап получает «несоответствие» по снимку,
+        # который к нему не относится.
+        tolerance = timedelta(days=self.config.tolerance_days)
+        in_window = (
+            stage.planned_start is None or latest_obs_on >= stage.planned_start - tolerance
+        ) and (stage.planned_end is None or latest_obs_on <= stage.planned_end + tolerance)
+        if not in_window and latest_obs_on not in status_basis_dates:
+            if len(observations) >= 2:
+                deviations.extend(self._check_no_progress(observations, stage, rule))
             return deviations
 
         # Получаем требуемую технику (из flat requirements или из kits)
@@ -583,7 +659,10 @@ class RuleEngine:
                     confidence=self._worst_confidence(latest_obs.equipment),
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
-                    expected="Техника, предусмотренная методикой этапа",
+                    expected=(
+                        "Техника этапа по методике: "
+                        f"{self._format_equipment_names(all_required, equipment_names)}"
+                    ),
                     observed=f"Техника: {mismatch_names}",
                     limits_text=(
                         "Не доказывает завершённость этапа или смену техники — "
@@ -646,7 +725,10 @@ class RuleEngine:
                     ),
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
-                    expected="Только техника, предусмотренная методикой",
+                    expected=(
+                        "Только техника этапа по методике: "
+                        f"{self._format_equipment_names(all_required, equipment_names)}"
+                    ),
                     observed=f"Дополнительная техника: {extra_names}",
                     limits_text=(
                         "Гипотеза — не доказывает незапланированные работы, "

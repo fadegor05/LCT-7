@@ -3,14 +3,14 @@ import { annotatedImageUrl, useObservations, usePhotos } from '@/api/frames'
 import { DateSourceBadge } from '@/components/ui/DateSourceBadge'
 import { FrameView } from '@/components/ui/FrameView'
 import { SectionHeader } from '@/components/layout/PageHeader'
-import { formatDate } from '@/lib/format'
+import { formatDate, latestObservation } from '@/lib/format'
 import { observationSentence } from './observationSentence'
 import styles from './Overview.module.css'
 
 const VISIBLE = 3
 
 export function LastObservation({ siteId }: { siteId: string }) {
-  const last = useObservations(siteId).data?.at(-1)
+  const last = latestObservation(useObservations(siteId).data)
   const photos = usePhotos(siteId).data ?? []
 
   if (!last) return null
