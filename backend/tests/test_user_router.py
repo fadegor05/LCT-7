@@ -30,7 +30,7 @@ async def test_me_response_has_no_legacy_fields(
 
     response = await client.get("/users/me")
 
-    assert set(response.json()) == {"id", "full_name", "created_at"}
+    assert set(response.json()) == {"id", "full_name", "login", "created_at"}
 
 
 async def test_patch_me_updates_full_name(client: AsyncClient, container: AsyncContainer) -> None:

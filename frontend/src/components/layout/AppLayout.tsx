@@ -1,9 +1,33 @@
-import { Link, NavLink, Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
+import { useMe } from '@/api/auth'
+import { clearToken } from '@/lib/authStorage'
+import { setUnauthorizedHandler } from '@/api/client'
 import { env } from '@/lib/env'
+import { useQueryClient } from '@tanstack/react-query'
 import styles from './AppLayout.module.css'
 
 export function AppLayout() {
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+  const me = useMe()
+
+  // Initialize unauthorized handler once when AppLayout mounts
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void qc.clear()
+      void navigate('/login', { replace: true })
+    })
+  }, [navigate, qc])
+
+  const handleLogout = () => {
+    clearToken()
+    void qc.clear()
+    void navigate('/login', { replace: true })
+  }
+
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -21,6 +45,12 @@ export function AppLayout() {
             Моки
           </span>
         )}
+        <div className={styles.userSection}>
+          {me.data && <span className={styles.userName}>{me.data.full_name}</span>}
+          <Button variant="secondary" size="sm" onClick={handleLogout}>
+            Выйти
+          </Button>
+        </div>
       </header>
       <main className={styles.main}>
         <div className={styles.content}>

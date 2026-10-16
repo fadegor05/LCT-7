@@ -11,6 +11,7 @@ class UserRead(BaseModel):
 
     id: uuid.UUID
     full_name: str
+    login: str | None
     created_at: datetime
 
 
@@ -20,3 +21,18 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
 
     full_name: str = Field(min_length=1, max_length=255)
+
+
+class LoginRequest(BaseModel):
+    """Запрос на вход: логин и пароль."""
+
+    login: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class LoginResponse(BaseModel):
+    """Ответ на вход: JWT токен и данные пользователя."""
+
+    access_token: str
+    token_type: str = "bearer"
+    user: UserRead

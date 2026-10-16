@@ -12,7 +12,7 @@ from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 
 from app.adapters.ml.base import DetectorClient
-from app.core.settings import get_settings
+from app.core.settings import check_auth_secret, get_settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
@@ -26,12 +26,15 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    check_auth_secret(settings)
+
     # Схема БД накатывается миграциями Alembic (`alembic upgrade head`) до старта
     # сервера — см. команду запуска в deploy/docker/dev/core.yaml и Dockerfile.
-    # Здесь только идемпотентный seed стендового пользователя.
+    # Здесь только идемпотентный seed стендового пользователя и его логина/пароля.
     async with app.state.dishka_container() as request_container:
         service = await request_container.get(UserService)
         await service.ensure_stand_user()
+        await service.ensure_seed_credentials()
 
     # Проверяем соответствие классов детектора каталогу оборудования
     try:

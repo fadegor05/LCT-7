@@ -27,6 +27,43 @@ flowchart LR
 
 ## Потоки данных
 
+### Аутентификация и авторизация
+
+```mermaid
+sequenceDiagram
+  participant UI as Браузер
+  participant API as backend
+  participant DB as PostgreSQL
+  UI->>API: POST /api/auth/login {login, password}
+  API->>DB: SELECT * FROM app_user WHERE login = ?
+  alt логин найден
+    API->>API: verify_password(plain, hash) с argon2
+    alt пароль верен
+      API->>API: create_token(user_id) — JWT HS256
+      API-->>UI: {access_token, token_type, user}
+      UI->>UI: сохранить токен в localStorage['lct7.token']
+    else пароль неверен
+      API-->>UI: 401 «Неверный логин или пароль»
+    end
+  else логин не найден
+    API->>API: verify_against_dummy(plain) — timing equalization
+    API-->>UI: 401 «Неверный логин или пароль»
+  end
+
+  UI->>API: GET /api/sites, Authorization: Bearer {token}
+  API->>API: decode_token(token) — проверка HS256 подписи и exp
+  alt токен валиден
+    API->>DB: SELECT * FROM app_user WHERE id = ?
+    API->>DB: SELECT * FROM sites WHERE owner_id = ?
+    API-->>UI: сайты
+  else токен невалиден или истёк
+    API-->>UI: 401 «Требуется авторизация»
+    UI->>UI: clearToken(), redirect на /login
+  end
+```
+
+Токен хранится в `localStorage['lct7.token']` и передаётся в заголовке `Authorization` при каждом защищённом запросе. Срок жизни токена — `AUTH__TOKEN_TTL_MINUTES` (по умолчанию 720 минут). После истечения пользователь видит 401 на любом эндпоинте и редиректится на /login.
+
 ### Загрузка снимка
 
 ```mermaid
@@ -36,7 +73,7 @@ sequenceDiagram
   participant ST as Хранилище
   participant ML as ml
   participant DB as PostgreSQL
-  UI->>API: POST /api/sites/{id}/photos, файлы
+  UI->>API: POST /api/sites/{id}/photos, файлы, Authorization: Bearer {token}
   loop каждый файл по порядку
     API->>API: размер, формат, целостность
     API->>ML: POST /stamp (если не отключено DETECTOR__STAMP_ENABLED=false)

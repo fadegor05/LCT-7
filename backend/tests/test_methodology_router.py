@@ -22,11 +22,11 @@ from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.methodology.seed import EQUIPMENT_SEED
 from app.domains.schedule.provider import ScheduleProvider
 from app.domains.site.provider import SiteProvider
-from app.domains.user.provider import UserProvider
 from app.domains.user.service import UserService
 from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
+from tests.conftest import TestUserProvider
 from tests.fakes import FakeDetector, FakeScheduleLlmClient
 
 
@@ -811,7 +811,7 @@ async def test_status_recalculator_called_on_mutation() -> None:
     test_container = make_async_container(
         TestAppProvider(),
         TestDatabaseProvider(),
-        UserProvider(),
+        TestUserProvider(),
         SiteProvider(),
         ScheduleProvider(),
         ScheduleLlmProvider(),

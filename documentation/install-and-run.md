@@ -135,6 +135,24 @@ curl -s -X POST "http://localhost/api/sites/$SITE/photos" -F files=@frame1.jpg -
 
 Дата берётся из EXIF, штампа (по умолчанию включено, нужен `DETECTOR__URL`; отключается `DETECTOR__STAMP_ENABLED=false`), имени файла или от соседних снимков пачки, иначе её задают вручную (`PATCH .../photos/{id}/date`).
 
+### Создание пользователя
+
+В демо-режиме на моках логин в интерфейс происходит с логином/паролем `demo`/`demo`.
+
+На реальном бэкенде нужно создать пользователя через CLI:
+
+```bash
+# Способ B: через Docker
+docker compose exec backend python -m app.cli create-user --login mylogin [--full-name "My Name"] [--password mypassword]
+
+# Способ C: без Docker, из backend/
+python -m app.cli create-user --login mylogin [--full-name "My Name"] [--password mypassword]
+```
+
+Пароль можно задать флагом `--password`. Если флага нет, программа два раза спросит пароль (повторный ввод для проверки опечаток).
+
+Логин будет преобразован в нижний регистр и примет значение ФИО по умолчанию, если оно не задано флагом `--full-name`.
+
 ## Способ C. Без Docker
 
 ### PostgreSQL

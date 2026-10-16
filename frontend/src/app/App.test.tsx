@@ -1,10 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { ApiError } from '@/api/client'
+import { setToken } from '@/lib/authStorage'
 import { App } from './App'
 import { createQueryClient } from './queryClient'
 
 describe('App', () => {
   it('boots with the router and query client', async () => {
+    setToken('mock-token')
     window.history.pushState({}, '', '/sites')
     render(<App />)
     expect(await screen.findByRole('heading', { level: 1, name: 'Стройки' })).toBeInTheDocument()
