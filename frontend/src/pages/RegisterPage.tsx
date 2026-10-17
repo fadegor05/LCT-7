@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card'
 import { TextField } from '@/components/ui/TextField'
 import { useRegister } from '@/api/auth'
 import { ApiError } from '@/api/client'
+import { AuthBackdrop } from '@/features/auth/AuthBackdrop'
 import { getToken } from '@/lib/authStorage'
 import styles from './LoginPage.module.css'
 
@@ -60,6 +61,7 @@ export function RegisterPage() {
 
   return (
     <div className={styles.container}>
+      <AuthBackdrop />
       <Card className={styles.card}>
         <h1 className={styles.title}>Регистрация</h1>
         <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
