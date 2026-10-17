@@ -1,15 +1,22 @@
+/* Позади карточки — фон AuthBackdrop, он растягивается на контейнер. */
 .container {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   padding: var(--space-6);
-  background: var(--background);
+  background: var(--surface);
 }
 
 .card {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 400px;
+  box-shadow: var(--shadow-pop);
 }
 
 .title {
