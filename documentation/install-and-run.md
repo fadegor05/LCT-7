@@ -105,9 +105,25 @@ docker compose --project-directory . --env-file ./.env --env-file ./deploy/versi
   -f deploy/docker/common/core.yaml -f deploy/docker/common/infra.yaml down -v --remove-orphans
 ```
 
-### 5. Пробный проход через API
+### 5. Заведите пользователя
 
-Команды создают стройку, загружают маленький график и читают результат. Снимков в репозитории нет (материалы организаторов публиковать нельзя), поэтому проход без ML заканчивается статусом «не наблюдалось».
+Все эндпоинты, кроме входа, регистрации и служебных (`/health`, `/ready`, `/version`), требуют токена. На моках (способ A) вход `demo` / `demo`.
+
+На реальном бэкенде аккаунт заводится одним из трёх способов:
+
+- в интерфейсе на странице `/register`;
+- запросом `POST /api/auth/register` (пример в следующем шаге);
+- командой CLI из контейнера бэкенда:
+
+```bash
+docker compose exec backend python -m app.cli create-user --login mylogin [--full-name "My Name"] [--password mypassword]
+```
+
+Без Docker та же команда запускается из `backend/`: `python -m app.cli create-user ...`. Если флага `--password` нет, программа дважды спросит пароль. Логин приводится к нижнему регистру, ФИО по умолчанию равно логину.
+
+### 6. Пробный проход через API
+
+Команды регистрируют пользователя, создают стройку, загружают маленький график, подставляют базовые комплекты и читают результат. Снимков в репозитории нет (материалы организаторов публиковать нельзя), поэтому проход без ML заканчивается статусом «не наблюдалось».
 
 ```bash
 cat > /tmp/schedule.csv <<'EOF'
@@ -117,41 +133,28 @@ cat > /tmp/schedule.csv <<'EOF'
 Монолитные работы ниже нуля;01.07.2026;30.09.2026
 EOF
 
-SITE=$(curl -s -X POST http://localhost/api/sites -H 'Content-Type: application/json' \
-  -d '{"name":"Проба","address":"Москва"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
+TOKEN=$(curl -s -X POST http://localhost/api/auth/register -H 'Content-Type: application/json'   -d '{"login":"proba","password":"proba-pass-1"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')
+AUTH="Authorization: Bearer $TOKEN"
 
-curl -s -X POST "http://localhost/api/sites/$SITE/schedule/import" -F file=@/tmp/schedule.csv -F mode=builtin
-curl -s "http://localhost/api/sites/$SITE/assessment/stages"
-curl -s "http://localhost/api/sites/$SITE/assessment/summary"
+SITE=$(curl -s -X POST http://localhost/api/sites -H "$AUTH" -H 'Content-Type: application/json'   -d '{"name":"Проба","address":"Москва"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["id"])')
+
+curl -s -X POST "http://localhost/api/sites/$SITE/schedule/import" -H "$AUTH" -F file=@/tmp/schedule.csv -F mode=builtin
+curl -s -X POST "http://localhost/api/sites/$SITE/methodology/apply-defaults" -H "$AUTH"
+curl -s "http://localhost/api/sites/$SITE/assessment/stages" -H "$AUTH"
+curl -s "http://localhost/api/sites/$SITE/assessment/summary" -H "$AUTH"
 ```
 
-Ожидаемый результат. Три этапа разобраны. Комплекты по умолчанию не подставляются, поэтому все три этапа получают пустые правила и статус `not_checked`. Итог `insufficient_data`. В списке отклонений одно `stale_data` со словами «Наблюдений нет». Чтобы этапы начали проверяться, задайте комплект во вкладке «Методика» или через `POST /api/sites/$SITE/methodology/rules/{ruleId}/sets`.
+Если логин `proba` уже занят, регистрация вернёт `409`: возьмите другой логин или получите токен через `POST /api/auth/login` с теми же полями.
+
+Ожидаемый результат. Три этапа разобраны. После импорта у всех этапов пустые правила и статус `not_checked`: комплекты сами не подставляются. Вызов `apply-defaults` отвечает `{"applied":3,"eligible":3,"unmatched":0}`: все три названия совпали с базовыми правилами (котлован, сваи, монолит). Снимков нет, поэтому начавшиеся этапы получают статус `not_observed`, итог `insufficient_data`, отклонений нет. Комплект можно задать и вручную во вкладке «Методика» или через `POST /api/sites/$SITE/methodology/rules/{ruleId}/sets`.
 
 Чтобы получить осмысленные статусы, нужны снимки и работающий детектор. Загрузка:
 
 ```bash
-curl -s -X POST "http://localhost/api/sites/$SITE/photos" -F files=@frame1.jpg -F files=@frame2.jpg
+curl -s -X POST "http://localhost/api/sites/$SITE/photos" -H "$AUTH" -F files=@frame1.jpg -F files=@frame2.jpg
 ```
 
 Дата берётся из EXIF, штампа (по умолчанию включено, нужен `DETECTOR__URL`; отключается `DETECTOR__STAMP_ENABLED=false`), имени файла или от соседних снимков пачки, иначе её задают вручную (`PATCH .../photos/{id}/date`).
-
-### Создание пользователя
-
-В демо-режиме на моках логин в интерфейс происходит с логином/паролем `demo`/`demo`.
-
-На реальном бэкенде нужно создать пользователя через CLI:
-
-```bash
-# Способ B: через Docker
-docker compose exec backend python -m app.cli create-user --login mylogin [--full-name "My Name"] [--password mypassword]
-
-# Способ C: без Docker, из backend/
-python -m app.cli create-user --login mylogin [--full-name "My Name"] [--password mypassword]
-```
-
-Пароль можно задать флагом `--password`. Если флага нет, программа два раза спросит пароль (повторный ввод для проверки опечаток).
-
-Логин будет преобразован в нижний регистр и примет значение ФИО по умолчанию, если оно не задано флагом `--full-name`.
 
 ## Способ C. Без Docker
 
