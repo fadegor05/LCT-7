@@ -1,6 +1,7 @@
-import { Navigate, type RouteObject } from 'react-router'
+import type { RouteObject } from 'react-router'
 import { RequireAuth } from './RequireAuth'
 import { DeviationPage } from '@/pages/DeviationPage'
+import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MethodologyPage } from '@/pages/MethodologyPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -17,12 +18,12 @@ import { SitesPage } from '@/pages/SitesPage'
  * 5 Обзор · 6 Наблюдения · 7 Отклонение. Экран 4 «Камеры» не подключён: в backend нет камер.
  */
 export const routes: RouteObject[] = [
+  { index: true, element: <LandingPage /> },
   { path: 'login', element: <LoginPage /> },
   { path: 'register', element: <RegisterPage /> },
   {
     element: <RequireAuth />,
     children: [
-      { index: true, element: <Navigate to="/sites" replace /> },
       { path: 'sites', element: <SitesPage /> },
       { path: 'sites/new', element: <NewSitePage /> },
       { path: 'sites/:siteId/setup', element: <NewSitePage /> },
