@@ -96,6 +96,11 @@
   opacity: 0.8;
 }
 
+.ahead {
+  background: var(--status-ahead);
+  opacity: 0.8;
+}
+
 .today {
   position: absolute;
   top: 0;
@@ -132,6 +137,10 @@
   white-space: nowrap;
   box-shadow: var(--shadow-pop);
   transition: left 0.12s linear;
+}
+
+.chipAhead {
+  color: var(--status-ahead);
 }
 
 @media (prefers-reduced-motion: reduce) {
