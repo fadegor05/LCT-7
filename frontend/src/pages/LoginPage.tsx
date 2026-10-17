@@ -57,7 +57,8 @@ export function LoginPage() {
           <TextField
             label="Логин"
             type="text"
-            placeholder="demo"
+            placeholder="Например, ivanov"
+            autoComplete="username"
             error={errors.login?.message}
             disabled={login.isPending}
             {...register('login')}
@@ -65,7 +66,8 @@ export function LoginPage() {
           <TextField
             label="Пароль"
             type="password"
-            placeholder="demo"
+            placeholder="Введите пароль"
+            autoComplete="current-password"
             error={errors.password?.message}
             disabled={login.isPending}
             {...register('password')}
