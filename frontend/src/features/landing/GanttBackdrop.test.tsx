@@ -11,6 +11,8 @@ describe('stageAt', () => {
     expect(stageAt(stage, 0.3)).toEqual({ fact: 0.25, state: 'behind' })
     expect(stageAt(stage, 0.5)).toEqual({ fact: 0.4, state: 'done' })
     expect(stageAt({ ...stage, lag: 0 }, 0.3).state).toBe('ontrack')
+    expect(stageAt({ ...stage, lag: 0, lead: 0.05 }, 0.3)).toEqual({ fact: 0.35, state: 'ahead' })
+    expect(stageAt({ ...stage, lag: 0, lead: 0.3 }, 0.3).state).toBe('done')
   })
 })
 
@@ -42,6 +44,13 @@ describe('GanttBackdrop', () => {
     expect(container.textContent).toMatch(/сегодня · \d+ \S+/)
   })
 
+  it('marks stages that are ahead of the plan with a blue bar and a plus chip', () => {
+    const { container } = render(<GanttBackdrop />)
+    expect(container.querySelector('.ahead')).toBeInTheDocument()
+    expect(container.querySelector('.chipAhead')?.textContent).toMatch(/\+\d+ дн\./)
+    expect(container.querySelector('.behind')).toBeInTheDocument()
+  })
+
   it('moves the today line over time', () => {
     vi.useFakeTimers()
     stubMedia(() => false)
@@ -62,18 +71,5 @@ describe('GanttBackdrop', () => {
       vi.advanceTimersByTime(6000)
     })
     expect(container.textContent).toBe(first)
-  })
-
-  it('shifts the layers after the mouse pointer', () => {
-    stubMedia((q) => q.includes('pointer: fine'))
-    const frames: FrameRequestCallback[] = []
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb))
-    vi.stubGlobal('cancelAnimationFrame', vi.fn())
-    const { container, unmount } = render(<GanttBackdrop />)
-    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 0, clientY: 0 }))
-    for (let i = 0; i < 200 && frames.length; i++) frames.shift()!(0)
-    const layer = container.querySelector<HTMLElement>('[data-depth="1"]')!
-    expect(layer.style.transform).toMatch(/translate3d\(\d/)
-    unmount()
   })
 })

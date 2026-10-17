@@ -25,7 +25,8 @@ export function AppLayout() {
   const handleLogout = () => {
     clearToken()
     void qc.clear()
-    void navigate('/login', { replace: true })
+    // Вышли сами — возвращаем на лендинг, а не на форму входа.
+    void navigate('/', { replace: true })
   }
 
   return (

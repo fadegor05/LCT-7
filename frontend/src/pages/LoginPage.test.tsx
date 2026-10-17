@@ -70,9 +70,9 @@ describe('LoginPage', () => {
     expect(router.state.location.hash).toBe('#info')
   })
 
-  it('logout button clears token and shows login page', async () => {
+  it('logout button clears the token and returns to the landing page', async () => {
     clearToken()
-    const { user } = renderRoute('/sites', { authed: true })
+    const { user, router } = renderRoute('/sites', { authed: true })
 
     // Verify we're on sites page
     expect(await screen.findByRole('heading', { level: 1, name: /стройки/i })).toBeInTheDocument()
@@ -82,10 +82,11 @@ describe('LoginPage', () => {
     const logoutButton = screen.getByRole('button', { name: /выйти/i })
     await user.click(logoutButton)
 
-    // Token should be cleared and we should see login page
+    // Токен сброшен, а пользователь на лендинге: сам вышел, поэтому форма входа ему не нужна.
     expect(getToken()).toBe(null)
     expect(localStorage.getItem('lct7.token')).toBe(null)
-    await screen.findByRole('heading', { name: /вход/i })
+    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
+    expect(router.state.location.pathname).toBe('/')
   })
 
   it('401 from a protected request clears the token and sends the user to login', async () => {
