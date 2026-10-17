@@ -18,9 +18,6 @@ export function LandingPage() {
           <Logo />
           Веха
         </span>
-        <Link to="/login" className={styles.ghost}>
-          Войти
-        </Link>
       </header>
 
       <main className={styles.hero}>

@@ -131,11 +131,13 @@
   font-weight: 500;
   white-space: nowrap;
   box-shadow: var(--shadow-pop);
+  transition: left 0.12s linear;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fact,
-  .today {
+  .today,
+  .chip {
     transition: none;
   }
 }
