@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import * as db from '@/mocks/db'
@@ -53,9 +53,7 @@ describe('SiteOverviewPage', () => {
     ).toBeInTheDocument()
     const photos = await screen.findAllByRole('img', { name: /Снимок IMG_/ })
     expect(photos).toHaveLength(3)
-    expect(photos[0]).toHaveStyle({
-      backgroundImage: 'url(/api/sites/site-berezniki/photos/ph-9/annotated)',
-    })
+    await waitFor(() => expect(photos[0]).toHaveStyle({ backgroundImage: 'url(blob:test)' }))
   })
 
   it('prints the report', async () => {
