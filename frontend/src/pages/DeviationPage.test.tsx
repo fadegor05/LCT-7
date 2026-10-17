@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import { renderRoute } from '@/test/render'
 
 describe('DeviationPage', () => {
@@ -18,9 +18,8 @@ describe('DeviationPage', () => {
     expect(screen.getByText(/только гусеничный экскаватор и самосвал/)).toBeInTheDocument()
     const evidence = screen.getAllByRole('img', { name: /Снимок-доказательство/ })
     expect(evidence).toHaveLength(2)
-    expect(evidence[0]).toHaveStyle({
-      backgroundImage: 'url(/api/sites/site-berezniki/photos/ph-9/annotated)',
-    })
+    // Снимок забирается запросом с токеном и показывается из памяти.
+    await waitFor(() => expect(evidence[0]).toHaveStyle({ backgroundImage: 'url(blob:test)' }))
     expect(screen.getByRole('img', { name: 'Уверенность: высокая' })).toBeInTheDocument()
     expect(screen.getByText(/техника могла стоять вне кадра/)).toBeInTheDocument()
 

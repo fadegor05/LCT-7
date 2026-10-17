@@ -35,16 +35,27 @@ describe('Well', () => {
     }
   })
 
-  it('locks a falling piece and reports the row it completes', () => {
+  it('lowers a piece cell by cell and locks it the moment it touches the floor', () => {
     const well = new Well(4, 3, seeded())
-    well.falling.push({ type: 'I', x: 0, y: -1 })
-    expect(well.step()).toEqual([])
-    expect(well.step()).toEqual([])
-    expect(well.step()).toEqual([])
-    expect(well.step()).toEqual([2])
+    const piece = { type: 'I' as const, x: 0, y: -1 }
+    well.falling.push(piece)
+    expect(well.advance(piece)).toBe(false)
+    expect(well.advance(piece)).toBe(false)
+    expect(piece.y).toBe(1)
+    expect(well.advance(piece)).toBe(true)
     expect(well.falling).toEqual([])
+    expect(well.fullRows()).toEqual([2])
     well.removeRows([2])
     expect(well.stackHeight()).toBe(0)
+  })
+
+  it('builds up to a height and returns the pieces in order', () => {
+    const well = new Well(12, 10, seeded(4))
+    const placed = well.fillTo(3)
+    expect(well.stackHeight()).toBeGreaterThanOrEqual(3)
+    expect(placed.length).toBeGreaterThan(0)
+    for (const piece of placed) expect(well.collides(piece.type, piece.x, piece.y + 1)).toBe(true)
+    expect(well.fillTo(3)).toEqual([])
   })
 
   it('shifts the rows above a cleared row down', () => {

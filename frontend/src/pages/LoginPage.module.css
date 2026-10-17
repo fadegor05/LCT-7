@@ -19,6 +19,18 @@
   box-shadow: var(--shadow-pop);
 }
 
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  color: var(--ink);
+}
+
 .title {
   margin: 0 0 var(--space-8) 0;
   font-size: 28px;
@@ -40,8 +52,8 @@
 .errorMessage {
   padding: var(--space-4);
   border-radius: var(--radius-lg);
-  background: var(--attention-10);
-  color: var(--attention-100);
+  background: var(--status-behind-soft);
+  color: var(--status-behind);
   font-size: 14px;
   line-height: 20px;
 }

@@ -5,10 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Logo } from '@/components/ui/Logo'
 import { TextField } from '@/components/ui/TextField'
 import { useLogin } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { AuthBackdrop } from '@/features/auth/AuthBackdrop'
+import { afterBackdrop, signalBackdrop } from '@/features/auth/backdrop'
 import { getToken } from '@/lib/authStorage'
 import styles from './LoginPage.module.css'
 
@@ -45,8 +47,10 @@ export function LoginPage() {
     login.mutate(data, {
       onSuccess: () => {
         const from = (location.state as { from?: string } | undefined)?.from || '/sites'
-        void navigate(from, { replace: true })
+        signalBackdrop('success')
+        afterBackdrop(() => void navigate(from, { replace: true }))
       },
+      onError: () => signalBackdrop('error'),
     })
   }
 
@@ -54,6 +58,10 @@ export function LoginPage() {
     <div className={styles.container}>
       <AuthBackdrop />
       <Card className={styles.card}>
+        <div className={styles.brand}>
+          <Logo />
+          Веха
+        </div>
         <h1 className={styles.title}>Вход</h1>
         <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
           <TextField

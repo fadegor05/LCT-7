@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Logo } from '@/components/ui/Logo'
 import { TextField } from '@/components/ui/TextField'
 import { useRegister } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { AuthBackdrop } from '@/features/auth/AuthBackdrop'
+import { afterBackdrop, setBackdropProgress, signalBackdrop } from '@/features/auth/backdrop'
 import { getToken } from '@/lib/authStorage'
 import styles from './LoginPage.module.css'
 
@@ -43,8 +45,19 @@ export function RegisterPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) })
+  const values = useWatch({ control })
+  // Каждое верно заполненное поле добавляет слой стройки на фоне.
+  const progress = [
+    (values.login?.trim().length ?? 0) >= 3,
+    (values.fullName?.trim().length ?? 0) > 0,
+    (values.password?.length ?? 0) >= 8,
+    !!values.passwordConfirm && values.passwordConfirm === values.password,
+  ].filter(Boolean).length
+
+  useEffect(() => setBackdropProgress(progress), [progress])
 
   useEffect(() => {
     if (getToken()) {
@@ -55,14 +68,24 @@ export function RegisterPage() {
   const onSubmit = (data: RegisterFormData) => {
     registration.mutate(
       { login: data.login, password: data.password, fullName: data.fullName || undefined },
-      { onSuccess: () => void navigate('/sites', { replace: true }) },
+      {
+        onSuccess: () => {
+          signalBackdrop('success')
+          afterBackdrop(() => void navigate('/sites', { replace: true }))
+        },
+        onError: () => signalBackdrop('error'),
+      },
     )
   }
 
   return (
     <div className={styles.container}>
-      <AuthBackdrop />
+      <AuthBackdrop mode="build" />
       <Card className={styles.card}>
+        <div className={styles.brand}>
+          <Logo />
+          Веха
+        </div>
         <h1 className={styles.title}>Регистрация</h1>
         <form onSubmit={handleSubmit(onSubmit)} className={styles.form}>
           <TextField

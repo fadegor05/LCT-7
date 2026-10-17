@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AuthBackdrop } from './AuthBackdrop'
-import { cellSize } from './backdrop'
+import { afterBackdrop, cellSize, setBackdropProgress, signalBackdrop } from './backdrop'
 
 /** Детерминированный генератор вместо Math.random. */
 function seeded(seed = 1) {
@@ -208,6 +208,98 @@ describe('AuthBackdrop', () => {
     window.dispatchEvent(new Event('resize'))
     vi.advanceTimersByTime(200)
     expect(container.querySelector('canvas')!.width).toBe(700)
+  })
+
+  it('answers typing, submit, errors and success', () => {
+    const { ctx } = setup()
+    render(
+      <form aria-label="Вход">
+        <AuthBackdrop />
+        <input aria-label="Логин" />
+      </form>,
+    )
+    runFrames(10)
+    const input = screen.getByLabelText('Логин')
+    fireEvent.input(input, { target: { value: 'i' } })
+    fireEvent.submit(screen.getByRole('form', { name: 'Вход' }))
+    act(() => signalBackdrop('error'))
+    runFrames(5)
+    expect(ctx.fillRect).toHaveBeenCalled()
+
+    const before = ctx.drawImage.mock.calls.length
+    act(() => signalBackdrop('success'))
+    runFrames(3, 300)
+    // Стопка погасла волной, затем строится заново каскадом.
+    runFrames(20, 300)
+    expect(ctx.drawImage.mock.calls.length).toBeGreaterThan(before)
+  })
+
+  it('fades and slows down while a field has focus', async () => {
+    setup()
+    const { container } = render(
+      <div>
+        <AuthBackdrop />
+        <input aria-label="Пароль" />
+      </div>,
+    )
+    const canvas = container.querySelector('canvas')!
+    act(() => screen.getByLabelText('Пароль').focus())
+    expect(canvas.dataset.calm).toBe('true')
+    act(() => screen.getByLabelText('Пароль').blur())
+    await waitFor(() => expect(canvas.dataset.calm).toBe('false'))
+  })
+
+  it('builds the registration site field by field', () => {
+    const { ctx } = setup()
+    render(<AuthBackdrop mode="build" />)
+    runFrames(10)
+    const before = ctx.drawImage.mock.calls.length
+    runFrames(5)
+    const idle = ctx.drawImage.mock.calls.length - before
+
+    act(() => setBackdropProgress(4))
+    runFrames(5)
+    const grown = ctx.drawImage.mock.calls.length - before - idle
+    // Четыре слоя сверху фундамента: за те же кадры рисуется больше клеток.
+    expect(grown).toBeGreaterThan(idle)
+    act(() => setBackdropProgress(2))
+    runFrames(2)
+  })
+
+  it('builds the registration site at once when motion is reduced', () => {
+    const { ctx } = setup({ reduced: true })
+    render(<AuthBackdrop mode="build" />)
+    const before = ctx.drawImage.mock.calls.length
+    act(() => setBackdropProgress(3))
+    expect(ctx.drawImage.mock.calls.length).toBeGreaterThan(before)
+  })
+
+  it('lets the page navigate after the success wave', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const navigate = vi.fn()
+    afterBackdrop(navigate)
+    expect(navigate).toHaveBeenCalledTimes(1)
+
+    setup()
+    render(<AuthBackdrop />)
+    const later = vi.fn()
+    afterBackdrop(later)
+    expect(later).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(700)
+    expect(later).toHaveBeenCalled()
+  })
+
+  it('shows the demo controls only with ?demo in development', () => {
+    const { unmount } = render(<AuthBackdrop />)
+    expect(screen.queryByRole('group', { name: 'Демо эффектов фона' })).not.toBeInTheDocument()
+    unmount()
+
+    window.history.pushState({}, '', '/login?demo')
+    render(<AuthBackdrop />)
+    expect(screen.getByRole('group', { name: 'Демо эффектов фона' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Успех' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ошибка' }))
+    window.history.pushState({}, '', '/')
   })
 
   it('stops the animation and listeners on unmount', () => {

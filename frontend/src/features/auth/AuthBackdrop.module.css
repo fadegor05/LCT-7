@@ -1,4 +1,4 @@
-/* Слой приглушён до 40 %, чтобы фон не спорил с формой; клики проходят насквозь. */
+/* Слой приглушён до 60 %, чтобы фон не спорил с формой; клики проходят насквозь. */
 .canvas {
   position: absolute;
   inset: 0;
@@ -6,6 +6,49 @@
   display: block;
   width: 100%;
   height: 100%;
-  opacity: 0.4;
+  opacity: 0.6;
   pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* Фокус в поле: фон уступает форме. */
+.canvas[data-calm='true'] {
+  opacity: 0.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    transition: none;
+  }
+}
+
+/* Только dev и ?demo: проиграть успех или ошибку без бэкенда. */
+.demo {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 2;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse);
+  box-shadow: var(--shadow-pop);
+}
+
+.demo button {
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--on-inverse);
+  cursor: pointer;
+}
+
+.demo button:hover {
+  background: rgb(255 255 255 / 12%);
 }
