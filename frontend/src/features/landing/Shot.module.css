@@ -1,0 +1,35 @@
+.shot {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.box {
+  position: absolute;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+}
+
+.box i {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 100%;
+  padding: 1px 4px;
+  overflow: hidden;
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

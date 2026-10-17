@@ -1,96 +1,64 @@
-import { act, screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { renderRoute } from '@/test/render'
 
+const H1 = 'Видно, где стройка отстаёт от графика'
+
 describe('LandingPage', () => {
-  it('explains the product and leads to sign-in and registration', async () => {
+  it('explains the product and leads to the example, sign-in and registration', async () => {
     renderRoute('/', { authed: false })
-    expect(
-      await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' }),
-    ).toBeInTheDocument()
-    const signIn = screen.getAllByRole('link', { name: 'Войти' })
-    expect(signIn[0]).toHaveAttribute('href', '/login')
-    expect(screen.getByRole('link', { name: 'Зарегистрироваться' })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { level: 1, name: H1 })).toBeInTheDocument()
+    // главная кнопка ведёт к примеру без регистрации
+    expect(screen.getByRole('link', { name: 'Посмотреть пример' })).toHaveAttribute(
+      'href',
+      '#timeline',
+    )
+    expect(screen.getByRole('link', { name: 'Попробовать на своём графике' })).toHaveAttribute(
+      'href',
+      '/register',
+    )
+    const header = screen.getAllByRole('banner')[0]!
+    expect(within(header).getByRole('link', { name: 'Войти' })).toHaveAttribute('href', '/login')
+    expect(within(header).getByRole('link', { name: 'Попробовать' })).toHaveAttribute(
       'href',
       '/register',
     )
   })
 
-  it('shows the building crane next to the offer', async () => {
+  it('shows the product window over a real site photo in the first screen', async () => {
+    renderRoute('/', { authed: false })
+    await screen.findByRole('heading', { level: 1, name: H1 })
+    expect(screen.getByRole('img', { name: /Площадка p03, 19 июня 2023/ })).toHaveAttribute(
+      'src',
+      '/landing/p03/hero.jpg',
+    )
+    // то же окно продукта стоит и в финальном призыве
+    expect(screen.getAllByRole('img', { name: /Экран «Обзор» Вехи/ })).toHaveLength(2)
+  })
+
+  it('tells the whole story from context to the final call', async () => {
+    renderRoute('/', { authed: false })
+    await screen.findByRole('heading', { level: 1, name: H1 })
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual([
+      'Камеры на стройках уже есть. Ответа «идёт ли по графику» нет',
+      'Так отставание видно во времени',
+      'Три шага от графика до вывода',
+      'Посмотрите на настоящем объекте',
+      'Вывод всегда можно проверить',
+      'Что измерено',
+      'Чем Веха отличается от привычного и от продуктов рынка',
+      'Кому это нужно',
+      'Вопросы, которые обычно задают первыми',
+      'Ставится у вас и проверяется вашими людьми',
+      'Покажем на вашем графике',
+    ])
+  })
+
+  it('has no crane and no decorative backdrop any more', async () => {
     const { container } = renderRoute('/', { authed: false })
-    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
-    expect(container.querySelector('[data-layer="crane"]')).toBeInTheDocument()
-    expect(container.querySelectorAll('[data-depth]').length).toBeGreaterThan(4)
-    // график работ — отдельный блок ниже, а не фон под краном
-    expect(screen.getByRole('heading', { name: 'Отставание видно на графике' })).toBeInTheDocument()
-  })
-
-  it('moves the sign-in buttons to the top corner once the offer is scrolled past', async () => {
-    let notify: (entries: Partial<IntersectionObserverEntry>[]) => void = () => {}
-    vi.stubGlobal(
-      'IntersectionObserver',
-      class {
-        constructor(cb: typeof notify) {
-          notify = cb
-        }
-        observe() {}
-        disconnect() {}
-      },
-    )
-    const { container } = renderRoute('/', { authed: false })
-    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
-    const floating = () => container.querySelector('[class*="floatCta"]')!
-    expect(floating()).toHaveAttribute('aria-hidden', 'true')
-    act(() =>
-      notify([{ isIntersecting: false, boundingClientRect: { top: -50 } as DOMRectReadOnly }]),
-    )
-    expect(floating()).toHaveAttribute('aria-hidden', 'false')
-    expect(screen.getAllByRole('link', { name: 'Зарегистрироваться' })).toHaveLength(2)
-    vi.unstubAllGlobals()
-  })
-
-  it('layers the crane scene by depth and explains how to read the schedule', async () => {
-    const { container } = renderRoute('/', { authed: false })
-    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
-    const depths = [...container.querySelectorAll('svg [data-depth]')].map((n) =>
-      n.getAttribute('data-depth'),
-    )
-    expect(new Set(depths).size).toBeGreaterThan(2)
-    expect(screen.getByRole('complementary', { name: 'Как читать график' })).toBeInTheDocument()
-  })
-
-  it('lets the schedule peek out and scrolls to it on request', async () => {
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
-    const { user } = renderRoute('/', { authed: false })
-    await user.click(await screen.findByRole('button', { name: /Смотреть график/ }))
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' })
-  })
-
-  it('jumps without animation when the system asks for less motion', async () => {
-    const scrollIntoView = vi.fn()
-    Element.prototype.scrollIntoView = scrollIntoView
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn((q: string) => ({ matches: q.includes('reduce') || q.includes('width') })),
-    )
-    const { user } = renderRoute('/', { authed: false })
-    await user.click(await screen.findByRole('button', { name: /Смотреть график/ }))
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto' })
-    vi.unstubAllGlobals()
-  })
-
-  it('keeps only the schedule backdrop on a phone: no crane scene', async () => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn(() => ({ matches: false })),
-    )
-    const { container } = renderRoute('/', { authed: false })
-    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
+    await screen.findByRole('heading', { level: 1, name: H1 })
     expect(container.querySelector('[data-layer="crane"]')).not.toBeInTheDocument()
-    expect(container.textContent).toMatch(/сегодня/)
-    expect(screen.queryByRole('heading', { name: 'Отставание видно на графике' })).toBeNull()
-    expect(screen.queryByRole('button', { name: /Смотреть график/ })).toBeNull()
-    vi.unstubAllGlobals()
+    expect(container.querySelector('[data-depth]')).not.toBeInTheDocument()
   })
 
   it('sends a signed-in user straight to the sites', async () => {

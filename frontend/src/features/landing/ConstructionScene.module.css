@@ -1,7 +1,0 @@
-/* Сцена занимает всю ширину блока; низ плавно уходит в цвет фона страницы. */
-.scene {
-  display: block;
-  width: 100%;
-  height: auto;
-  mask-image: linear-gradient(180deg, #000 0%, #000 84%, transparent 100%);
-}
