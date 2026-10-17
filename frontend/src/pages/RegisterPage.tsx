@@ -66,6 +66,9 @@ export function RegisterPage() {
           <TextField
             label="Логин"
             type="text"
+            placeholder="Например, ivanov"
+            hint="От 3 до 64 символов"
+            autoComplete="username"
             error={errors.login?.message}
             disabled={registration.isPending}
             {...register('login')}
@@ -73,6 +76,9 @@ export function RegisterPage() {
           <TextField
             label="ФИО (необязательно)"
             type="text"
+            placeholder="Иванов Иван Иванович"
+            hint="Покажем в шапке вместо логина"
+            autoComplete="name"
             error={errors.fullName?.message}
             disabled={registration.isPending}
             {...register('fullName')}
@@ -80,6 +86,9 @@ export function RegisterPage() {
           <TextField
             label="Пароль"
             type="password"
+            placeholder="Придумайте пароль"
+            hint="Не короче 8 символов"
+            autoComplete="new-password"
             error={errors.password?.message}
             disabled={registration.isPending}
             {...register('password')}
@@ -87,6 +96,8 @@ export function RegisterPage() {
           <TextField
             label="Повторите пароль"
             type="password"
+            placeholder="Введите пароль ещё раз"
+            autoComplete="new-password"
             error={errors.passwordConfirm?.message}
             disabled={registration.isPending}
             {...register('passwordConfirm')}
