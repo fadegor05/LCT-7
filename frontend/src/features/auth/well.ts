@@ -24,7 +24,9 @@ interface Move {
 const SINK_AT = 0.6
 const SINK_SHARE = 0.3
 /** До этой доли колодец заполняется сразу, чтобы фон не начинался с пустого экрана. */
-const WARMUP_SHARE = 0.36
+export const WARMUP_SHARE = 0.36
+/** Слой считается построенным, когда заняты столько его клеток: дыры под T, S и Z неизбежны. */
+const FILL_SHARE = 0.8
 /** Одна падающая фигура на каждые столько столбцов: на широком экране их несколько. */
 const COLS_PER_PIECE = 8
 /**
@@ -93,17 +95,36 @@ export class Well {
     return piece
   }
 
-  /** Шаг падения: фигуры опускаются на клетку, упавшие ложатся в стопку. Возвращает полные ряды. */
-  step(): number[] {
-    for (const piece of [...this.falling]) {
-      if (!this.collides(piece.type, piece.x, piece.y + 1)) {
-        piece.y++
-      } else {
-        this.lock(piece)
-        this.falling.splice(this.falling.indexOf(piece), 1)
-      }
+  /**
+   * Опускает фигуру на клетку; коснувшись стопки, она сразу ложится в неё.
+   * У каждой фигуры свой темп, поэтому шагают они по отдельности. `true` — фигура легла.
+   */
+  advance(piece: FallingPiece): boolean {
+    if (!this.collides(piece.type, piece.x, piece.y + 1)) piece.y++
+    if (!this.collides(piece.type, piece.x, piece.y + 1)) return false
+    this.lock(piece)
+    this.falling.splice(this.falling.indexOf(piece), 1)
+    return true
+  }
+
+  /**
+   * Укладывает фигуры, пока стопка в среднем не дорастёт до `height` рядов (занято 80 % клеток
+   * этой высоты), и возвращает их по порядку — для анимации стройки. Полные ряды не убирает:
+   * их погасит обычная очистка.
+   */
+  fillTo(height: number): FallingPiece[] {
+    const placed: FallingPiece[] = []
+    const target = Math.min(height, this.rows - 1) * this.cols * FILL_SHARE
+    let filled = this.board.reduce((sum, row) => sum + row.filter(Boolean).length, 0)
+    for (let guard = 0; guard < 400 && filled < target; guard++) {
+      const piece = this.pick()
+      if (!piece) break
+      piece.y = this.landing(piece.type, piece.x)
+      this.lock(piece)
+      placed.push(piece)
+      filled += TETROMINOES[piece.type].cells.length
     }
-    return this.fullRows()
+    return placed
   }
 
   fullRows(): number[] {
