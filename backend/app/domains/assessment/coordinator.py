@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol, cast
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,8 @@ from app.domains.assessment.repository import (
     StageStatusRepository,
     StatusBasisRepository,
 )
+from app.domains.camera.models import Camera
+from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import (
     SPECIFIC_EQUIPMENT_CODES,
     EquipmentCatalog,
@@ -38,7 +40,7 @@ from app.domains.observation.repository import (
     ObservationRepository,
     ObservedEquipmentRepository,
 )
-from app.domains.photo.models import ProcessingStatus
+from app.domains.photo.models import Photo, ProcessingStatus
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
 from app.plugins.exceptions import AppError
@@ -131,6 +133,46 @@ class RecomputeCoordinator:
         self._session = session
         self._today = today
         self._as_of_config = as_of_config
+
+    async def _zone_flags(self, photos: Sequence[Photo]) -> dict[tuple[date, uuid.UUID], bool]:
+        """Положение техники относительно рабочей зоны камеры за дату.
+
+        Ключ — (дата наблюдения, тип техники). Берутся те же фото и рамки, что сводятся в
+        наблюдение: обработанные, с датой съёмки и камерой, у которой есть зона. True — хотя
+        бы одна рамка типа внутри зоны; False — все рамки типа на зонированных камерах снаружи.
+        Ключа нет, если зонированных рамок типа нет: правило «вне зоны» тогда не срабатывает.
+        """
+        zoned = [
+            p
+            for p in photos
+            if p.camera_id is not None
+            and p.captured_on is not None
+            and p.processing_status == ProcessingStatus.DONE.value
+        ]
+        if not zoned:
+            return {}
+        result = await self._session.execute(
+            select(Camera.id, Camera.zone).where(Camera.id.in_({p.camera_id for p in zoned}))
+        )
+        zone_by_camera = {camera_id: zone for camera_id, zone in result.all() if zone is not None}
+        day_zone_by_photo = {
+            p.id: (p.captured_on, zone_by_camera[p.camera_id])
+            for p in zoned
+            if p.camera_id in zone_by_camera
+        }
+        if not day_zone_by_photo:
+            return {}
+
+        flags: dict[tuple[date, uuid.UUID], bool] = {}
+        detections = await self._detection_repo.list_by_photos(list(day_zone_by_photo))
+        for det in detections:
+            day, zone = day_zone_by_photo[det.photo_id]
+            inside = bbox_in_zone(det.bbox, zone)
+            if inside is None:
+                continue
+            key = (day, det.equipment_type_id)
+            flags[key] = flags.get(key, False) or inside
+        return flags
 
     def _resolve_as_of(self, observations: Sequence[ObservationInput]) -> date:
         """Определить опорную дату расчёта для площадки (LCT-14).
@@ -296,6 +338,10 @@ class RecomputeCoordinator:
             for obs in observations_orm:
                 observation_id_by_date[obs.observed_on] = obs.id
 
+            # Фото сайта одним запросом: нужны для зон здесь и для доказательств на шаге 9
+            all_photos = await self._photo_repo.list_by_site(site_id)
+            zone_flags = await self._zone_flags(all_photos)
+
             observations: list[ObservationInput] = []
             for obs in observations_orm:
                 equipment_orm = await self._observed_equipment_repo.list_by_observation(obs.id)
@@ -305,7 +351,7 @@ class RecomputeCoordinator:
                         count_min=e.count_min,
                         activity=e.activity,
                         confidence=e.confidence,
-                        in_zone=None,  # MVP ограничение: нет зоны
+                        in_zone=zone_flags.get((obs.observed_on, e.equipment_type_id)),
                     )
                     for e in equipment_orm
                 ]
@@ -411,10 +457,7 @@ class RecomputeCoordinator:
                 deviations.append(dev)
 
             # Шаг 9: Персистировать DeviationEvidence
-            # Получить все фото для сайта один раз
-            all_photos = await self._photo_repo.list_by_site(site_id)
-
-            # Построить dict фото по captured_on
+            # Построить dict фото по captured_on (all_photos загружены на шаге 4)
             photos_by_date: dict[date, list] = {}
             for photo in all_photos:
                 if photo.captured_on is not None:

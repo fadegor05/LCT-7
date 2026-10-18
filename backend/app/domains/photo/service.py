@@ -18,6 +18,8 @@ from app.adapters.ml.base import (
 )
 from app.adapters.storage.base import FileStorage, StorageError
 from app.core.settings import Settings
+from app.domains.camera.models import Camera
+from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.date_resolver import (
     DateResolver,
@@ -87,7 +89,12 @@ class PhotoService:
         self._settings = settings
         self._recalculator = recalculator
 
-    async def upload_batch(self, site_id: uuid.UUID, files: Sequence[UploadInput]) -> UploadReport:
+    async def upload_batch(
+        self,
+        site_id: uuid.UUID,
+        files: Sequence[UploadInput],
+        camera_id: uuid.UUID | None = None,
+    ) -> UploadReport:
         """Загрузить пакет фотографий.
 
         Проверяет доступ к сайту, валидирует файлы (размер, формат, целостность).
@@ -98,12 +105,14 @@ class PhotoService:
         Args:
             site_id: ID стройки
             files: Список файлов для загрузки
+            camera_id: Камера, с которой снят пакет; None — загружено вручную
 
         Returns:
             UploadReport с результатами
 
         Raises:
             AppError(404) если сайт не принадлежит пользователю
+            AppError(404) если камера не найдена на этом объекте
             AppError(422) если список пуст
             AppError(413) если файлов больше лимита
         """
@@ -120,12 +129,15 @@ class PhotoService:
                 status_code=413,
             )
 
+        if camera_id is not None:
+            await self._require_camera(site_id, camera_id)
+
         items: list[UploadItem] = []
         batch_photo_ids: list[uuid.UUID] = []
 
         # Обрабатываем файлы в порядке
         for file_input in files:
-            item = await self._process_single_file(site_id, file_input)
+            item = await self._process_single_file(site_id, file_input, camera_id)
             items.append(item)
             if item.photo is not None:
                 batch_photo_ids.append(item.photo.id)
@@ -169,7 +181,15 @@ class PhotoService:
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
-    async def _process_single_file(self, site_id: uuid.UUID, file_input: UploadInput) -> UploadItem:
+    async def _require_camera(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> None:
+        """Камера должна существовать и принадлежать тому же объекту."""
+        camera = await self._session.get(Camera, camera_id)
+        if camera is None or camera.site_id != site_id:
+            raise AppError("Камера не найдена", status_code=404)
+
+    async def _process_single_file(
+        self, site_id: uuid.UUID, file_input: UploadInput, camera_id: uuid.UUID | None = None
+    ) -> UploadItem:
         """Обработать один файл: валидация, загрузка, создание Photo, детекция.
 
         Ошибка на любом этапе становится UploadItem.error.
@@ -178,6 +198,7 @@ class PhotoService:
         Args:
             site_id: ID стройки
             file_input: Входные данные файла
+            camera_id: Камера снимка; None — загружено вручную
 
         Returns:
             UploadItem с результатом
@@ -258,6 +279,7 @@ class PhotoService:
             captured_on=resolved_date.captured_on,
             date_source=resolved_date.source.value if resolved_date.source else None,
             processing_status=ProcessingStatus.PENDING.value,
+            camera_id=camera_id,
         )
 
         self._session.add(photo)
@@ -501,6 +523,12 @@ class PhotoService:
         # Получаем детекции
         detections_db = await self._detections.list_by_photo(photo_id)
 
+        # Зона камеры снимка (одна выборка на фото); без камеры или зоны — in_zone не считаем
+        zone = None
+        if photo.camera_id is not None:
+            camera = await self._session.get(Camera, photo.camera_id)
+            zone = camera.zone if camera is not None else None
+
         # Обогащаем детекции кодом и названием оборудования
         detections_read = []
         for det in detections_db:
@@ -515,6 +543,7 @@ class PhotoService:
                     bbox=det.bbox,
                     score=det.score,
                     model_version=det.model_version,
+                    in_zone=bbox_in_zone(det.bbox, zone),
                 )
             else:
                 det_read = DetectionRead(
@@ -525,6 +554,7 @@ class PhotoService:
                     bbox=det.bbox,
                     score=det.score,
                     model_version=det.model_version,
+                    in_zone=bbox_in_zone(det.bbox, zone),
                 )
             detections_read.append(det_read)
 
@@ -538,6 +568,7 @@ class PhotoService:
             date_source=photo.date_source,
             processing_status=photo.processing_status,
             uploaded_at=photo.uploaded_at,
+            camera_id=photo.camera_id,
             detections=detections_read,
         )
 

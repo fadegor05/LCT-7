@@ -1,9 +1,10 @@
 """HTTP-роуты для управления фотографиями и детекциями."""
 
 import uuid
+from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Header, UploadFile
+from fastapi import APIRouter, Form, Header, UploadFile
 from fastapi.responses import Response
 
 from app.core.settings import Settings
@@ -35,22 +36,26 @@ async def upload_photos(
     files: list[UploadFile],
     service: FromDishka[PhotoService],
     settings: FromDishka[Settings],
+    camera_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> UploadReport:
     """Загрузить пакет фотографий.
 
     Проверяет количество файлов и общий размер перед чтением, затем валидирует каждый файл.
-    Ошибка одного файла не влияет на остальные.
+    Ошибка одного файла не влияет на остальные. camera_id необязателен: камера должна
+    принадлежать тому же объекту.
 
     Args:
         site_id: ID стройки
         files: Список файлов для загрузки
         service: Сервис фотографий
         settings: Настройки приложения
+        camera_id: Камера, с которой снят пакет; None — загружено вручную
 
     Returns:
         UploadReport с результатами загрузки
 
     Raises:
+        404: Камера не найдена на этом объекте
         413: Слишком много файлов в пачке или превышен общий размер пачки
         422: Список файлов пуст или другая ошибка валидации
     """
@@ -98,7 +103,7 @@ async def upload_photos(
         )
 
     # Загружаем пакет
-    report = await service.upload_batch(site_id, upload_inputs)
+    report = await service.upload_batch(site_id, upload_inputs, camera_id=camera_id)
     return report
 
 
