@@ -625,3 +625,84 @@ def test_аннотации_конструктора_разрешаются_дл
 
     assert "settings" in hints
     assert hints["settings"] is Settings
+
+
+@pytest.mark.asyncio
+async def test_нет_графика_404_не_тратит_квоту() -> None:
+    """Нет графика: 404 «График не загружен» выходит до списания квоты лимита."""
+    clock = FakeClock()
+
+    async def build_with_error(site_id):
+        raise AppError("График не загружен", 404)
+
+    report_service = FakeReportService()
+    report_service.build = build_with_error
+
+    guard = FakeGuard()
+    client = FakeAssistantClient()
+    limiter = SlidingWindowRateLimiter(limit=1, window_s=60.0, clock=clock)
+
+    service = AssistantService(
+        reports=report_service,
+        client=client,
+        limiter=limiter,
+        guard=guard,
+        settings=Settings(),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await service.ask(uuid.uuid4(), "Вопрос")
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.message == "График не загружен"
+    # Квота не потрачена: единственный хит в лимите 1/мин ещё доступен
+    assert limiter.hit(str(guard.owner_id)) is None
+
+
+@pytest.mark.asyncio
+async def test_ml_недоступен_после_кэша_возвращает_квоту() -> None:
+    """Статус говорил «доступен», но ML упал при вызове: квота возвращается."""
+    clock = FakeClock()
+    client = FakeAssistantClient(error=AssistantUnavailable(), enabled=True)
+    guard = FakeGuard()
+    limiter = SlidingWindowRateLimiter(limit=1, window_s=60.0, clock=clock)
+
+    service = AssistantService(
+        reports=FakeReportService(),
+        client=client,
+        limiter=limiter,
+        guard=guard,
+        settings=Settings(),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await service.ask(uuid.uuid4(), "Вопрос")
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.code == "assistant_unavailable"
+    assert len(client.calls) == 1
+    # Вызова не состоялось: попытка возвращена, следующий запрос проходит
+    assert limiter.hit(str(guard.owner_id)) is None
+
+
+@pytest.mark.asyncio
+async def test_ошибка_ассистента_не_возвращает_квоту() -> None:
+    """Обычная ошибка ассистента (400) квоту не возвращает: вызов состоялся."""
+    clock = FakeClock()
+    client = FakeAssistantClient(error=AssistantBadRequest(), enabled=True)
+    guard = FakeGuard()
+    limiter = SlidingWindowRateLimiter(limit=1, window_s=60.0, clock=clock)
+
+    service = AssistantService(
+        reports=FakeReportService(),
+        client=client,
+        limiter=limiter,
+        guard=guard,
+        settings=Settings(),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await service.ask(uuid.uuid4(), "Вопрос")
+
+    assert exc_info.value.status_code == 400
+    assert limiter.hit(str(guard.owner_id)) is not None

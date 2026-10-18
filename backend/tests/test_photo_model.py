@@ -50,6 +50,7 @@ async def test_photo_columns(engine: AsyncEngine) -> None:
             "captured_on",
             "date_source",
             "processing_status",
+            "camera_id",
             "uploaded_at",
         }
 

@@ -5,6 +5,7 @@
  * выводы движка для демо-стройки; у новых строек движок ещё ничего не посчитал.
  */
 import type {
+  Camera,
   Detection,
   DeviationDetail,
   EquipmentSet,
@@ -23,6 +24,7 @@ import type {
   SiteSummary,
   UploadReport,
   AssistantAnswer,
+  Zone,
 } from '@/api/schemas'
 import {
   BEREZNIKI,
@@ -74,6 +76,7 @@ interface State {
   observations: Map<string, Observation[]>
   statuses: Map<string, Map<string, Omit<StageStatus, 'stage_id' | 'stage_name' | 'position'>>>
   deviations: Map<string, DeviationDetail[]>
+  cameras: Map<string, Camera[]>
   seq: number
   assistantScenario: AssistantScenario
 }
@@ -186,6 +189,77 @@ export function updateStageDates(siteId: string, stageId: string, data: StageDat
   }
   Object.assign(stage, { planned_start: start, planned_end: end, dates_source: 'manual' })
   return stage
+}
+
+/**
+ * Объединение соседних этапов: как на бэкенде — первый этап остаётся с названием и правилом,
+ * окно — объединение дат, наборы остальных переезжают в его правило (одинаковые не дублируются).
+ */
+export function mergeStages(siteId: string, stageIds: readonly string[]): ScheduleReport {
+  const schedule = getSchedule(siteId)
+  const distinct = [...new Set(stageIds)]
+  if (distinct.length < 2) throw new MockError(422, 'Выберите хотя бы два разных этапа')
+  const chosen = schedule.stages
+    .filter((s) => distinct.includes(s.id))
+    .sort((a, b) => a.position - b.position)
+  if (chosen.length !== distinct.length) throw new MockError(404, 'Этап не найден')
+  const positions = chosen.map((s) => s.position)
+  if (positions.some((p, i) => p !== positions[0]! + i)) {
+    throw new MockError(422, 'Объединять можно только соседние этапы')
+  }
+
+  const [target, ...rest] = chosen as [Stage, ...Stage[]]
+  const rules = listRules(siteId)
+  const targetRule = rules.find((r) => r.stage_id === target.id)!
+  const restRules = rules.filter((r) => rest.some((s) => s.id === r.stage_id))
+
+  const signature = (set: EquipmentSet) =>
+    set.requirements
+      .map((r) =>
+        JSON.stringify([
+          r.equipment_type.id,
+          r.obligation,
+          r.min_count,
+          r.gesn_code,
+          r.source_note,
+        ]),
+      )
+      .sort()
+      .join('|')
+  const seen = new Set(targetRule.sets.map(signature))
+  let position = Math.max(-1, ...targetRule.sets.map((s) => s.position)) + 1
+  for (const restRule of restRules) {
+    for (const set of restRule.sets) {
+      const key = signature(set)
+      if (seen.has(key)) continue
+      seen.add(key)
+      targetRule.sets.push({ ...set, position: position++ })
+    }
+  }
+  if (!targetRule.is_verifiable && restRules.some((r) => r.is_verifiable)) {
+    targetRule.is_verifiable = true
+    targetRule.unverifiable_reason = null
+  }
+  state.rules.set(
+    siteId,
+    rules.filter((r) => !restRules.includes(r)),
+  )
+
+  const starts = chosen.map((s) => s.planned_start).filter((d): d is string => Boolean(d))
+  const ends = chosen.map((s) => s.planned_end).filter((d): d is string => Boolean(d))
+  target.planned_start = starts.sort()[0] ?? null
+  target.planned_end = ends.sort().at(-1) ?? null
+  if (chosen.some((s) => s.dates_source === 'manual')) target.dates_source = 'manual'
+
+  for (const stage of rest) state.statuses.get(siteId)?.delete(stage.id)
+  schedule.stages = schedule.stages.filter((s) => !rest.includes(s))
+  schedule.stages.forEach((stage, i) => {
+    stage.position = i + 1
+  })
+  const withDates = schedule.stages.filter((s) => s.planned_start && s.planned_end).length
+  schedule.stages_with_dates = withDates
+  schedule.stages_without_dates = schedule.stages.length - withDates
+  return schedule
 }
 
 // ---------- Методика ----------
@@ -741,6 +815,123 @@ function seedBerezniki(): void {
   )
 }
 
+// ---------- Камеры ----------
+
+/** Как `_stream_url` и `_interval` бэкенда: ссылка — rtsp(s)/http(s), без ссылки снимать нечего. */
+const STREAM_SCHEMES = ['rtsp://', 'rtsps://', 'http://', 'https://']
+const DEFAULT_CAPTURE_EVERY_S = 300
+
+export interface CameraWrite {
+  name: string
+  stream_url: string | null
+  capture_every_s: number | null
+  zone: Zone | null
+}
+
+export function listCameras(siteId: string): Camera[] {
+  getSite(siteId)
+  return state.cameras.get(siteId) ?? []
+}
+
+function findCamera(siteId: string, cameraId: string): Camera {
+  const camera = listCameras(siteId).find((c) => c.id === cameraId)
+  if (!camera) throw new MockError(404, 'Камера не найдена')
+  return camera
+}
+
+/** Ссылка проверяется отдельно: текст ошибки не повторяет саму ссылку (в ней могут быть пароли). */
+function checkStreamUrl(value: string | null | undefined): string | null {
+  const url = value?.trim() ?? ''
+  if (!url) return null
+  if (!STREAM_SCHEMES.some((scheme) => url.toLowerCase().startsWith(scheme))) {
+    throw new MockError(422, 'ссылка на стрим — rtsp://, rtsps://, http:// или https://')
+  }
+  return url
+}
+
+const intervalFor = (url: string | null, every: number | null | undefined) =>
+  url === null ? null : every || DEFAULT_CAPTURE_EVERY_S
+
+export function createCamera(siteId: string, data: CameraWrite): Camera {
+  const url = checkStreamUrl(data.stream_url)
+  const camera: Camera = {
+    id: nextId('camera'),
+    name: data.name,
+    stream_url: url,
+    capture_every_s: intervalFor(url, data.capture_every_s),
+    last_capture_at: null,
+    last_capture_error: null,
+    last_capture_attempt_at: null,
+    capture_failures: 0,
+    zone: data.zone ?? null,
+    frames_count: 0,
+    created_at: now(),
+  }
+  state.cameras.set(siteId, [...listCameras(siteId), camera])
+  return camera
+}
+
+/** Частичная правка: поле, которого нет в `data`, не меняется; `null` — очистить. */
+export function updateCamera(siteId: string, cameraId: string, data: Partial<CameraWrite>): Camera {
+  const camera = findCamera(siteId, cameraId)
+  if (data.name !== undefined) camera.name = data.name
+  if (data.stream_url !== undefined) camera.stream_url = checkStreamUrl(data.stream_url)
+  if (data.zone !== undefined) camera.zone = data.zone
+  if (data.stream_url !== undefined || data.capture_every_s !== undefined) {
+    camera.capture_every_s = intervalFor(
+      camera.stream_url,
+      data.capture_every_s ?? camera.capture_every_s,
+    )
+  }
+  return camera
+}
+
+/**
+ * «Снять кадр сейчас», как `CameraCaptureService`: кадр — в ленту стройки с датой снимка и
+ * источником «channel», итог попытки — у камеры. В моках сбой даёт ссылка с «offline», занятый
+ * стрим — ссылка с «busy» (это не попытка, поэтому статус камеры не меняется).
+ */
+export function captureCamera(siteId: string, cameraId: string): Photo {
+  const camera = findCamera(siteId, cameraId)
+  if (!camera.stream_url) throw new MockError(422, 'У камеры нет ссылки на стрим')
+  if (camera.stream_url.includes('busy')) throw new MockError(409, 'Снимок уже идёт, подождите')
+  const at = now()
+  camera.last_capture_attempt_at = at
+  if (camera.stream_url.includes('offline')) {
+    camera.last_capture_error = 'Камера не ответила за 15 с'
+    camera.capture_failures = (camera.capture_failures ?? 0) + 1
+    throw new MockError(422, camera.last_capture_error)
+  }
+  const date = at.slice(0, 10)
+  const photo: StoredPhoto = {
+    id: nextId('ph'),
+    site_id: siteId,
+    original_name: `stream-${at.slice(0, 19).replace(/[-:T]/g, '')}.jpg`,
+    width: 1920,
+    height: 1080,
+    captured_on: date,
+    date_source: 'channel',
+    processing_status: 'pending',
+    uploaded_at: at,
+    detections: [],
+  }
+  state.photos.push(photo)
+  camera.last_capture_at = at
+  camera.last_capture_error = null
+  camera.capture_failures = 0
+  camera.frames_count += 1
+  recompute(siteId, date)
+  return toPhoto(photo)
+}
+
+export function deleteCamera(siteId: string, cameraId: string): void {
+  findCamera(siteId, cameraId)
+  state.cameras.set(
+    siteId,
+    listCameras(siteId).filter((c) => c.id !== cameraId),
+  )
+}
+
 export function resetDb(): void {
   // В режиме тестов всегда 'ok'; в браузере может быть задан через ?assistant=
   const initialScenario =
@@ -758,6 +949,7 @@ export function resetDb(): void {
     observations: new Map(),
     statuses: new Map(),
     deviations: new Map(),
+    cameras: new Map(),
     seq: 0,
     assistantScenario: initialScenario,
   }

@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class StageRead(BaseModel):
@@ -67,3 +67,9 @@ class StageDatesUpdate(BaseModel):
 
     planned_start: date | None = None
     planned_end: date | None = None
+
+
+class StagesMerge(BaseModel):
+    """Объединение соседних этапов графика: id этапов (не меньше двух)."""
+
+    stage_ids: list[uuid.UUID] = Field(min_length=2)

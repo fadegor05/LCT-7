@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from app.adapters.ml.base import DetectorClient
 from app.core.settings import check_auth_secret, get_settings
+from app.domains.camera.stream import start_stream_capture
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
@@ -44,7 +45,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Ошибка при проверке классов детектора при запуске: {e}")
 
+    # Фоновые снимки со стрима — только при STREAM__ENABLED=true (по умолчанию выключены)
+    stream_capture = await start_stream_capture(app.state.dishka_container, settings)
+
     yield
+    if stream_capture is not None:
+        await stream_capture.stop()
     await app.state.dishka_container.close()
 
 

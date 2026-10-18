@@ -86,6 +86,22 @@ class DetectionRepository(BaseRepository[Detection]):
         )
         return result.scalars().all()
 
+    async def list_by_photos(self, photo_ids: Sequence[uuid.UUID]) -> Sequence[Detection]:
+        """Получить детекции нескольких фотографий одним запросом.
+
+        Args:
+            photo_ids: ID фотографий.
+
+        Returns:
+            Список детекций (порядок не важен для вызывающего).
+        """
+        if not photo_ids:
+            return []
+        result = await self._session.execute(
+            select(self.model).where(self.model.photo_id.in_(photo_ids))
+        )
+        return result.scalars().all()
+
     async def add_many(self, detections: Sequence[Detection]) -> None:
         """Добавить несколько детекций и флашить.
 

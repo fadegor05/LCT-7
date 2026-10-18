@@ -18,6 +18,8 @@ class DetectionRead(BaseModel):
     bbox: list[float]
     score: float
     model_version: str
+    # Центр нижней кромки в рабочей зоне камеры снимка; None — камеры или зоны нет
+    in_zone: bool | None = None
 
 
 class PhotoRead(BaseModel):
@@ -34,6 +36,7 @@ class PhotoRead(BaseModel):
     date_source: str | None
     processing_status: str
     uploaded_at: datetime
+    camera_id: uuid.UUID | None = None
 
 
 class PhotoDetail(PhotoRead):

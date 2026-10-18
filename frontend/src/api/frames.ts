@@ -54,6 +54,11 @@ export const framesApi = {
     }),
 }
 
+/** Исходный снимок без рамок (`/image`): подложка для рисования рабочей зоны камеры. */
+export function photoImageUrl(siteId: string, photoId: string): string {
+  return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/image`
+}
+
 /** Снимок с рамками найденной техники: JPEG рисует и кэширует сервер (`/annotated`). */
 export function annotatedImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`

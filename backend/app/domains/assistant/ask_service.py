@@ -7,7 +7,7 @@ import re
 import time
 import uuid
 
-from app.adapters.ml.assistant import AssistantClient, AssistantError
+from app.adapters.ml.assistant import AssistantClient, AssistantError, AssistantUnavailable
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings
 from app.domains.assistant.report import SITE_LABEL
@@ -122,10 +122,11 @@ class AssistantService:
         Порядок проверок (дёшево и не потребляющие квоту сначала):
         1. guard.require(site_id) → 404 если чужая площадка
         2. client.available() → 503 если не доступен (НЕ потребляет квоту)
-        3. limiter.hit() → 429 если превышен лимит
-        4. reports.build() → пропускает AppError без изменений
+        3. reports.build() → 404 если графика нет (НЕ потребляет квоту)
+        4. limiter.hit() → 429 если превышен лимит
         5. size check → 413 если отчёт слишком большой
-        6. client.ask() → маппирует AssistantError в AppError
+        6. client.ask() → маппирует AssistantError в AppError; при AssistantUnavailable
+           квота возвращается (вызова модели по сути не было)
 
         Args:
             site_id: ID площадки
@@ -154,7 +155,12 @@ class AssistantService:
                     code="assistant_unavailable",
                 )
 
-            # 3. Проверка лимита частоты
+            # 3. Сборка отчёта: 404 «График не загружен» выходит до списания квоты
+            built_report = await self._reports.build(site_id)
+            report = built_report.report
+            stage_ids = built_report.stage_ids
+
+            # 4. Проверка лимита частоты
             wait_s = self._limiter.hit(str(site.owner_id))
             if wait_s is not None:
                 wait_ceil = math.ceil(wait_s)
@@ -163,11 +169,6 @@ class AssistantService:
                     status_code=429,
                     code="rate_limited",
                 )
-
-            # 4. Сборка отчёта
-            built_report = await self._reports.build(site_id)
-            report = built_report.report
-            stage_ids = built_report.stage_ids
 
             # 5. Проверка размера отчёта
             report_json = json.dumps(report, ensure_ascii=False)
@@ -184,6 +185,11 @@ class AssistantService:
             # 6. Вызов ассистента
             try:
                 answer_data = await self._client.ask(question, report, site_id=SITE_LABEL)
+            except AssistantUnavailable as e:
+                # Статус в кэше говорил «доступен», а ML уже недоступен:
+                # вызова не было, поэтому квоту возвращаем
+                self._limiter.refund(str(site.owner_id))
+                raise AppError(e.message, e.status_code, code=e.code) from e
             except AssistantError as e:
                 raise AppError(e.message, e.status_code, code=e.code) from e
 

@@ -1,0 +1,92 @@
+.frame {
+  position: relative;
+
+  /* Кадр не выше 40 % экрана: окно камеры целиком без прокрутки на ноутбуке (высота 800).
+     Ширина явная — по ней колонка кадра в окне камеры, справа сразу кнопки */
+  width: calc(40vh * var(--aspect, 4 / 3));
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.svg:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+
+/* Зона — зелёная, как в наблюдениях и в макете 4а: рамки техники оранжевые, их не спутать */
+.area {
+  fill: rgb(11 122 99 / 16%);
+  stroke: var(--status-ontrack);
+  stroke-width: 3;
+}
+
+.path {
+  fill: none;
+  stroke: var(--status-ontrack);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+}
+
+.edge {
+  stroke: transparent;
+
+  /* Полоса нажатия по стороне — в экранных пикселях при любом масштабе кадра */
+  stroke-width: 24px;
+  vector-effect: non-scaling-stroke;
+  cursor: copy;
+}
+
+/* Вершина — кнопка постоянного размера поверх кадра: 28 px, в неё попадает палец */
+.vertex {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.vertex::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border: 3px solid var(--status-ontrack);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.vertex:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+
+.selected::after {
+  background: var(--status-ontrack);
+}
+
+.first::after {
+  inset: 5px;
+  border-width: 4px;
+}
