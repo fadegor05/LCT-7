@@ -5,92 +5,6 @@ import { SNAPSHOTS } from './demo/timeline'
 import { Shot } from './Shot'
 import styles from './Visuals.module.css'
 
-const FOLDERS = ['backend/', 'frontend/', 'ml/', 'deploy/', 'docs/']
-
-/** «Открытый код»: окно редактора с шапкой лицензии и папками репозитория. */
-export function CodeArt() {
-  return (
-    <div
-      className={`${styles.win} ${styles.dark}`}
-      role="img"
-      aria-label="Окно редактора: лицензия AGPL-3.0 и папки репозитория backend, frontend, ml, deploy, docs"
-    >
-      <div className={styles.bar} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span>LCT-7 / LICENSE</span>
-      </div>
-      <pre aria-hidden="true">
-        <b>GNU AFFERO GENERAL PUBLIC LICENSE</b>
-        {'\n'}
-        <span>Version 3, 19 November 2007</span>
-        {'\n\n'}
-        {FOLDERS.map((f) => (
-          <em key={f}>{f}</em>
-        ))}
-      </pre>
-    </div>
-  )
-}
-
-/** «Запуск у вас»: две команды и четыре поднятых сервиса. */
-export function RunArt() {
-  return (
-    <div
-      className={`${styles.win} ${styles.dark}`}
-      role="img"
-      aria-label="Терминал: команды cp .env.dist .env и make deploy-tunnel, сервисы запущены"
-    >
-      <div className={styles.bar} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span>terminal</span>
-      </div>
-      <pre aria-hidden="true">
-        <span>$ cp .env.dist .env</span>
-        {'\n'}
-        <span>$ make deploy-tunnel</span>
-        {'\n\n'}
-        <em>✔ postgres</em>
-        <em>✔ ml</em>
-        {'\n'}
-        <em>✔ backend</em>
-        <em>✔ frontend</em>
-      </pre>
-    </div>
-  )
-}
-
-/** «Без видеокарты»: окно в том же стиле, что соседние, со временем обработки кадра. */
-export function CpuArt() {
-  return (
-    <div
-      className={`${styles.win} ${styles.dark}`}
-      role="img"
-      aria-label="Окно терминала: 364 миллисекунды на кадр на процессоре ноутбука, видеокарта не нужна"
-    >
-      <div className={styles.bar} aria-hidden="true">
-        <i />
-        <i />
-        <i />
-        <span>detector</span>
-      </div>
-      <pre aria-hidden="true">
-        <span>устройство</span>
-        <b>процессор ноутбука</b>
-        {'\n'}
-        <span>на кадр</span>
-        <b>364 мс</b>
-        {'\n'}
-        <span>видеокарта</span>
-        <em>не нужна</em>
-      </pre>
-    </div>
-  )
-}
-
 interface RoleShotProps {
   children: ReactNode
   photo: ReactNode
@@ -154,8 +68,8 @@ export function ItShot() {
         />
       }
     >
-      <code>$ make deploy-tunnel</code>
-      <span>Детектор на процессоре: 364 мс на кадр.</span>
+      <code>$ make deploy</code>
+      <span>Распознавание на обычном процессоре, около 0,4 с на снимок.</span>
     </RoleShot>
   )
 }

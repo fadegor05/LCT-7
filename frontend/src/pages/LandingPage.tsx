@@ -7,9 +7,7 @@ import {
   Facts,
   Faq,
   FinalCta,
-  Footer,
   HowItWorks,
-  OpenSource,
   Proof,
   SiteHeader,
   Timeline,
@@ -40,10 +38,8 @@ export function LandingPage() {
         <Compare />
         <Audience />
         <Faq />
-        <OpenSource />
         <FinalCta />
       </main>
-      <Footer />
     </div>
   )
 }

@@ -34,9 +34,16 @@ describe('p03 demo data', () => {
           expect(y1).toBeLessThanOrEqual(1)
           expect(x1).toBeGreaterThan(x0)
           expect(y1).toBeGreaterThan(y0)
-          expect(b.conf).toBeGreaterThanOrEqual(0.5)
+          expect(b.conf).toBeGreaterThanOrEqual(0.2)
         }
       }
     }
+  })
+
+  it('shows every confident find of the detector, not a selection', () => {
+    const piles = DEMO_FINDINGS.find((f) => f.id === 'piles')!
+    const labels = piles.frames[0]!.boxes.filter((b) => b.conf >= 0.5).map((b) => b.label)
+    expect(labels).toContain('Экскаватор')
+    expect(labels.filter((l) => l === 'Буровая установка')).toHaveLength(2)
   })
 })

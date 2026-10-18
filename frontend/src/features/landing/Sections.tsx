@@ -1,14 +1,17 @@
 import { useRef, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { ButtonLink } from '@/components/ui/Button'
+import { buttonClassName } from '@/components/ui/buttonClass'
 import { Logo } from '@/components/ui/Logo'
 import { PhotosArt, ScheduleArt, StatusArt } from './Art'
-import { PILOT_CONTACT, REPO_URL } from './config'
+import { PILOT_CONTACT } from './config'
+import { GanttBackdrop } from './GanttBackdrop'
 import { LiveDemo } from './LiveDemo'
 import { NAV } from './nav'
 import { PinnedTimeline } from './PinnedTimeline'
 import { ProductWindow } from './ProductWindow'
+import { useCursorParallax } from './useParallax'
 import { useInView } from './useScroll'
-import { CodeArt, CpuArt, InspectorShot, ItShot, RunArt, SupervisorShot } from './Visuals'
+import { InspectorShot, ItShot, SupervisorShot } from './Visuals'
 import styles from './Sections.module.css'
 
 interface SectionProps {
@@ -67,12 +70,12 @@ export function SiteHeader() {
         ))}
       </nav>
       <div className={styles.headerCta}>
-        <Link to="/login" className={styles.ghostSm}>
+        <ButtonLink to="/login" variant="ghost" size="sm" className={styles.login}>
           Войти
-        </Link>
-        <Link to="/register" className={styles.primarySm}>
+        </ButtonLink>
+        <ButtonLink to="/register" size="sm">
           Попробовать
-        </Link>
+        </ButtonLink>
       </div>
     </header>
   )
@@ -125,7 +128,7 @@ export function Timeline() {
       index="02"
       label="Как видно"
       title="Так отставание видно во времени"
-      lead="Листайте. Линия среза идёт по плану площадки p03, на датах появляются настоящие снимки, а Веха сверяет их с графиком."
+      lead="Листайте. Линия даты идёт по графику настоящей стройки, на датах появляются снимки с неё, а Веха сверяет их с планом."
       wide
     >
       <PinnedTimeline />
@@ -179,7 +182,7 @@ export function Demo() {
       index="04"
       label="Пример"
       title="Посмотрите на настоящем объекте"
-      lead="Демо-площадка p03: календарный график и снимки, которых модель при обучении не видела. Регистрация не нужна."
+      lead="Настоящая стройка: её календарный график и снимки, которых модель при обучении не видела. Регистрация не нужна."
       wide
     >
       <LiveDemo />
@@ -228,34 +231,36 @@ export function Trust() {
   )
 }
 
+/** Цифры привязаны к тому, что человек видит на странице: стройки, снимки, проверки из блока «Контекст». */
 const PROOF = [
   {
     value: '19 из 20',
-    label: 'статусов этапов совпали с эталоном',
-    caveat: 'Цепочка ML на демо-наборе. На стенде расхождения есть, они описаны в тестах проекта.',
+    label: 'этапов получили тот же статус, что и при ручной разметке техники на тех же снимках',
+    caveat: 'Одно расхождение есть. Оно разобрано в документации проекта, а не спрятано.',
   },
   {
-    value: '0.445',
-    label: 'mAP50 на площадках, которых модель не видела',
+    value: '2 из 3',
+    label: 'машин на снимке сервис находит сам, на стройках, которых не видел при обучении',
     caveat:
-      '28 кадров, 215 рамок, 13 групп классов. mAP50 считается по рамкам, это другая мера, чем доля верных ответов, и с числами других команд её сравнивать нельзя.',
+      'Поэтому вывод по этапу опирается на все снимки за период и на технику, характерную для этапа, а не на одну рамку.',
   },
   {
-    value: '364 мс',
-    label: 'на кадр на процессоре',
+    value: '0,4 с',
+    label: 'на снимок на обычном ноутбуке, видеокарта не нужна',
     caveat:
-      'Одно ядро обработает снимки годового надзора Москвы за 36 часов при сотне снимков на проверку.',
-  },
-  {
-    value: '70%',
-    label: 'потолок согласия двух независимых разметок',
-    caveat: 'Разметили инженер и языковая модель. Выше этого числа метрика простоя теряет смысл.',
+      'Годовой объём надзора по Москве, около 3 600 проверок по сотне снимков, один компьютер разберёт примерно за полтора дня.',
   },
 ]
 
 export function Proof() {
   return (
-    <Section id="proof" index="06" label="Измерено" title="Что измерено">
+    <Section
+      id="proof"
+      index="06"
+      label="Измерено"
+      title="Проверили на настоящих стройках"
+      lead="Площадки для проверки модель при обучении не видела."
+    >
       <ul className={styles.proof}>
         {PROOF.map((p) => (
           <li key={p.value}>
@@ -265,11 +270,6 @@ export function Proof() {
           </li>
         ))}
       </ul>
-      {REPO_URL ? (
-        <a className={styles.link} href={`${REPO_URL}/blob/main/ml/EXPERIMENTS.md`}>
-          Все эксперименты, включая неудачные
-        </a>
-      ) : null}
     </Section>
   )
 }
@@ -309,18 +309,8 @@ const MARKET = [
     cells: ['Да, на каждый вывод', 'Не всегда', 'Да', 'Да', 'Да, по нарушению'],
   },
   {
-    row: 'Различает виды «нет»',
-    cells: ['Да, четыре вида', 'Нет', 'Не раскрыто', 'Не раскрыто', 'Нет'],
-  },
-  {
-    row: 'Код открыт',
-    cells: [
-      'Да, AGPL-3.0',
-      'Не применимо',
-      'Закрытый продукт',
-      'Закрытый продукт',
-      'Закрытый продукт',
-    ],
+    row: 'Отличает «работ нет» от «плохо видно»',
+    cells: ['Да', 'Нет', 'Не раскрыто', 'Не раскрыто', 'Нет'],
   },
 ]
 
@@ -364,10 +354,6 @@ export function Compare() {
           ))}
         </tbody>
       </table>
-      <p className={styles.note}>
-        Сведения о других продуктах взяты из их открытых материалов на 20.09.2026. Где не раскрыто,
-        так и написано. Источники в репозитории: ml/research/part_Q_products.md.
-      </p>
     </Section>
   )
 }
@@ -385,7 +371,7 @@ const AUDIENCE = [
   },
   {
     title: 'ИТ и департамент данных',
-    text: 'Открытый код, запуск через Docker Compose, работа на процессоре, выгрузки CSV, XLSX и печатная версия.',
+    text: 'Ставится на ваш сервер, работает на обычном процессоре без видеокарты. Выгрузки CSV, XLSX и печатная версия.',
     shot: <ItShot />,
   },
 ]
@@ -409,7 +395,7 @@ export function Audience() {
 const FAQ = [
   {
     q: 'Что если Веха ошибётся?',
-    a: 'Вывод по этапу строится на технике-маркере и показывается интервалом, а не точным числом. Низкая уверенность понижает важность. Решение остаётся за инженером: гипотезы он подтверждает или отклоняет сам.',
+    a: 'Вывод по этапу строится на технике, характерной для этапа, например буровой установке для свай, и показывается интервалом, а не точным числом. Низкая уверенность понижает важность. Решение остаётся за инженером: гипотезы он подтверждает или отклоняет сам.',
   },
   {
     q: 'Нужны ли особые камеры или BIM?',
@@ -417,15 +403,11 @@ const FAQ = [
   },
   {
     q: 'Что если снимков мало или площадка видна плохо?',
-    a: 'Сервис оценивает наблюдаемость. Когда она низкая, он пишет, что участок вне контроля, и не делает вывод «работы не ведутся».',
+    a: 'Сервис оценивает, насколько хорошо площадка видна на снимках. Если видна плохо, он пишет, что участок вне контроля, и не делает вывод «работы не ведутся».',
   },
   {
     q: 'Где хранятся данные?',
     a: 'Снимки и графики лежат на сервере, где развёрнута Веха: у вас, если вы ставите её у себя. Оригиналы снимков не меняются. Каждая стройка видна только тому, кто её завёл. Пароли хранятся в виде хеша, частота попыток входа ограничена. Вопросы ассистенту и разбор графика языковой моделью отправляют текст отчёта или строки таблицы выбранному вами провайдеру модели, снимки туда не уходят. Без настроенной модели эти две функции выключены, остальное работает.',
-  },
-  {
-    q: 'Сколько это стоит?',
-    a: 'Лицензия бесплатная, AGPL-3.0. Закрытое внедрение без открытия кода потребует коммерческой лицензии на детектор Ultralytics. Стоимость пилота обсуждаем отдельно.',
   },
 ]
 
@@ -444,55 +426,16 @@ export function Faq() {
   )
 }
 
-const OPEN = [
-  {
-    title: 'Открытый код',
-    text: 'Лицензия AGPL-3.0, исходники можно прочитать и проверить.',
-    art: <CodeArt />,
-  },
-  {
-    title: 'Запуск у вас',
-    text: 'Docker Compose и одна команда: make deploy-tunnel.',
-    art: <RunArt />,
-  },
-  {
-    title: 'Без видеокарты',
-    text: 'Детектор работает на процессоре ноутбука, 364 мс на кадр.',
-    art: <CpuArt />,
-  },
-]
-
-export function OpenSource() {
-  return (
-    <Section
-      id="open"
-      index="10"
-      label="Открытость"
-      title="Ставится у вас и проверяется вашими людьми"
-      wide
-    >
-      <ul className={styles.trio}>
-        {OPEN.map((o) => (
-          <li key={o.title}>
-            <div className={styles.art}>{o.art}</div>
-            <h3>{o.title}</h3>
-            <p>{o.text}</p>
-          </li>
-        ))}
-      </ul>
-      {REPO_URL ? (
-        <a className={styles.link} href={REPO_URL}>
-          Репозиторий проекта
-        </a>
-      ) : null}
-    </Section>
-  )
-}
-
 export function FinalCta() {
+  const panel = useRef<HTMLDivElement>(null)
+  useCursorParallax(panel)
   return (
     <section id="pilot" className={styles.final} aria-labelledby="pilot-h">
-      <div className={styles.finalPanel}>
+      <div ref={panel} className={styles.finalPanel}>
+        <div className={styles.finalGantt}>
+          <GanttBackdrop labels={false} />
+        </div>
+        <div className={styles.finalVeil} aria-hidden="true" />
         <div className={styles.finalWin}>
           <ProductWindow />
         </div>
@@ -505,11 +448,11 @@ export function FinalCta() {
             кадры-доказательства.
           </p>
           <div className={styles.finalCta}>
-            <Link to="/register" className={styles.primary}>
+            <ButtonLink to="/register" size="lg">
               Попробовать самому
-            </Link>
+            </ButtonLink>
             {PILOT_CONTACT ? (
-              <a href={PILOT_CONTACT} className={styles.ghost}>
+              <a href={PILOT_CONTACT} className={buttonClassName('ghost', 'lg')}>
                 Запросить пилот
               </a>
             ) : null}
@@ -517,20 +460,5 @@ export function FinalCta() {
         </div>
       </div>
     </section>
-  )
-}
-
-export function Footer() {
-  return (
-    <footer className={styles.footer}>
-      <div className={styles.footInner}>
-        <span className={styles.brand}>
-          <Logo />
-          Веха
-        </span>
-        <p>Проект команды XX_prod, ЛЦТ-2026, задача 7. Лицензия AGPL-3.0.</p>
-        {REPO_URL ? <a href={REPO_URL}>Исходный код</a> : null}
-      </div>
-    </footer>
   )
 }

@@ -1,4 +1,4 @@
-import type { DemoBox } from './p03'
+import { FRAME_BOXES, type DemoBox } from './p03'
 
 /**
  * Данные и расчёт для закреплённого таймлайна: этапы p03 по плану, снимки на датах и шаги рассказа.
@@ -59,7 +59,7 @@ export const SNAPSHOTS: readonly Snapshot[] = [
     src: '/landing/p03/start-1.jpg',
     alt: 'Площадка 19 июня 2023: арматурные каркасы и гусеничный кран',
     caption: 'До планового конца этапа свай',
-    boxes: [],
+    boxes: FRAME_BOXES['start-1'],
   },
   {
     iso: '2023-08-14',
@@ -67,10 +67,7 @@ export const SNAPSHOTS: readonly Snapshot[] = [
     src: '/landing/p03/piles-1.jpg',
     alt: 'Площадка 14 августа 2023: две буровые установки у шпунтового ограждения',
     caption: 'Буровые на кадре, плановый конец прошёл',
-    boxes: [
-      { label: 'Буровая установка', conf: 0.91, box: [0.405, 0, 0.592, 0.5] },
-      { label: 'Буровая установка', conf: 0.76, box: [0.345, 0, 0.47, 0.458] },
-    ],
+    boxes: FRAME_BOXES['piles-1'],
   },
   {
     iso: '2023-10-13',
@@ -78,7 +75,7 @@ export const SNAPSHOTS: readonly Snapshot[] = [
     src: '/landing/p03/sheet-1.jpg',
     alt: 'Площадка 13 октября 2023: в котловане работает экскаватор, шпунтовой техники нет',
     caption: 'Шпунтовой техники нет',
-    boxes: [{ label: 'Экскаватор', conf: 0.93, box: [0.436, 0.463, 0.775, 0.711] }],
+    boxes: FRAME_BOXES['sheet-1'],
   },
 ]
 

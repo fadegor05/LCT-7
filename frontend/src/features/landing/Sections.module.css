@@ -46,47 +46,8 @@
   gap: var(--space-2);
 }
 
-.primary,
-.ghost,
-.primarySm,
-.ghostSm {
-  display: inline-flex;
-  align-items: center;
-  height: var(--control-lg);
-  padding: 0 var(--space-8);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  font-size: 17px;
-  text-decoration: none;
-  transition: background 0.3s ease;
-}
-
-.primarySm,
-.ghostSm {
-  height: var(--control-sm);
-  padding: 0 var(--space-5);
-  font-size: 15px;
-}
-
-.primary,
-.primarySm {
-  background: var(--ink);
-  color: var(--surface-card);
-}
-
-.primary:hover,
-.primarySm:hover {
-  background: #2c2c2c;
-}
-
-.ghost,
-.ghostSm {
-  border-color: var(--line-control);
-  color: var(--ink);
-}
-
-.ghost:hover,
-.ghostSm:hover {
+/* Шапка полупрозрачная поверх тёплого фона: наведённая ghost-кнопка светлеет, а не сливается с ним. */
+a.login:hover {
   background: var(--surface);
 }
 
@@ -181,11 +142,6 @@
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.025em;
-}
-
-.link {
-  justify-self: start;
-  font-size: 16px;
 }
 
 /* Контекст: два факта, у каждого рубрика, крупное значение, пояснение и источник */
@@ -367,8 +323,7 @@
 }
 
 /* Колонки с фотографией сверху */
-.cols,
-.trio {
+.cols {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-8);
@@ -379,26 +334,6 @@
   gap: var(--space-3);
   align-content: start;
   grid-template-rows: auto auto 1fr;
-}
-
-.trio > li {
-  display: grid;
-  gap: var(--space-3);
-  align-content: start;
-  grid-template-rows: 224px auto 1fr;
-}
-
-.trio h3 {
-  font-size: 22px;
-  line-height: 28px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.trio p {
-  font-size: 16px;
-  line-height: 25px;
-  color: var(--ink-muted);
 }
 
 /* Таблицы */
@@ -485,15 +420,36 @@
 .finalPanel {
   position: relative;
   max-width: 1360px;
-  min-height: 420px;
+  min-height: 560px;
   margin: 0 auto;
   overflow: hidden;
   border-radius: var(--radius-xl);
   background: var(--surface);
 }
 
+/* Живой график под призывом: бледный, чтобы не спорить с текстом и окном продукта. */
+.finalGantt {
+  position: absolute;
+  inset: 0;
+  opacity: 0.6;
+}
+
+/* Под текстом график уходит в белое, к окну продукта проступает. */
+.finalVeil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--surface) 34%,
+    rgb(255 255 255 / 70%) 46%,
+    rgb(255 255 255 / 0%) 62%
+  );
+  pointer-events: none;
+}
+
 .finalWin {
   position: absolute;
+  z-index: 1;
   top: var(--space-12);
   right: calc(var(--space-12) * -1);
   width: min(640px, 54%);
@@ -504,8 +460,10 @@
   z-index: 1;
   display: grid;
   gap: var(--space-5);
+  align-content: center;
   justify-items: start;
   max-width: 560px;
+  min-height: 560px;
   padding: var(--space-16);
 }
 
@@ -520,22 +478,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-}
-
-.footer {
-  padding: var(--space-8) var(--space-10);
-  border-top: 1px solid var(--line);
-}
-
-.footInner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4) var(--space-8);
-  max-width: 1360px;
-  margin: 0 auto;
-  font-size: 14px;
-  color: var(--ink-muted);
 }
 
 @media (width <= 1000px) {
@@ -578,8 +520,7 @@
 
   .ledger,
   .steps,
-  .cols,
-  .trio {
+  .cols {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
   }
@@ -607,7 +548,14 @@
   }
 
   .finalCopy {
+    min-height: 0;
     padding: var(--space-8) var(--space-6);
+  }
+
+  /* На узком экране текст лежит прямо на графике: фон убираем, он уже не читается. */
+  .finalGantt,
+  .finalVeil {
+    display: none;
   }
 
   /* Таблицы превращаются в карточки: подпись столбца стоит перед значением. */
@@ -653,7 +601,7 @@
 }
 
 @media (width <= 480px) {
-  .headerCta .ghostSm {
+  .headerCta .login {
     display: none;
   }
 }

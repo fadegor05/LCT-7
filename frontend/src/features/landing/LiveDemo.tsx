@@ -10,7 +10,10 @@ function Frame({ frame }: { frame: DemoFrame }) {
   return (
     <figure className={styles.frame}>
       <Shot src={frame.src} alt={frame.alt} boxes={frame.boxes} />
-      <figcaption>Снимок от {frame.date}. Рамки с уверенностью детектора от 0.50.</figcaption>
+      <figcaption>
+        Снимок от {frame.date}. Сплошная рамка: техника распознана уверенно, вывод строится по ней.
+        Пунктир: распознавание неуверенное, в вывод не идёт.
+      </figcaption>
     </figure>
   )
 }

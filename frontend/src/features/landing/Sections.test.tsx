@@ -7,9 +7,7 @@ import {
   Facts,
   Faq,
   FinalCta,
-  Footer,
   HowItWorks,
-  OpenSource,
   Proof,
   SiteHeader,
   Timeline,
@@ -30,9 +28,7 @@ function all() {
       <Compare />
       <Audience />
       <Faq />
-      <OpenSource />
       <FinalCta />
-      <Footer />
     </MemoryRouter>,
   )
 }
@@ -64,19 +60,35 @@ describe('landing sections', () => {
     expect(screen.getByText(/mskagency\.ru\/materials\/3489311/)).toBeInTheDocument()
   })
 
-  it('gives every measured number a caveat in the same row', () => {
+  it('ties every measured number to something a visitor knows, with a caveat in the same row', () => {
     all()
-    const proof = screen.getByRole('region', { name: 'Что измерено' })
+    const proof = screen.getByRole('region', { name: 'Проверили на настоящих стройках' })
     const rows = within(proof).getAllByRole('listitem')
-    expect(rows).toHaveLength(4)
-    const [match, map, speed, ceiling] = rows
-    expect(within(match!).getByText('19 из 20')).toBeInTheDocument()
-    expect(within(match!).getByText(/На стенде расхождения есть/)).toBeInTheDocument()
-    expect(within(map!).getByText('0.445')).toBeInTheDocument()
-    expect(within(map!).getByText(/сравнивать нельзя/)).toBeInTheDocument()
-    expect(within(speed!).getByText('364 мс')).toBeInTheDocument()
-    expect(within(speed!).getByText(/36 часов/)).toBeInTheDocument()
-    expect(within(ceiling!).getByText('70%')).toBeInTheDocument()
+    expect(rows).toHaveLength(3)
+    const [statuses, machines, speed] = rows
+    expect(within(statuses!).getByText('19 из 20')).toBeInTheDocument()
+    expect(within(statuses!).getByText(/Одно расхождение есть/)).toBeInTheDocument()
+    expect(within(machines!).getByText('2 из 3')).toBeInTheDocument()
+    expect(within(machines!).getByText(/а не на одну рамку/)).toBeInTheDocument()
+    expect(within(speed!).getByText('0,4 с')).toBeInTheDocument()
+    expect(within(speed!).getByText(/3 600 проверок/)).toBeInTheDocument()
+  })
+
+  it('speaks the visitor language, not the team jargon', () => {
+    const { container } = all()
+    const text = container.textContent ?? ''
+    for (const jargon of [
+      'mAP',
+      'deploy-tunnel',
+      '.md',
+      'Ultralytics',
+      'маркер',
+      'мс на кадр',
+      'Демо-площадка p03',
+      'потолок согласия',
+    ]) {
+      expect(text).not.toContain(jargon)
+    }
   })
 
   it('lists what makes a conclusion checkable', () => {
@@ -108,19 +120,10 @@ describe('landing sections', () => {
     expect(within(demo).queryByText(/Прогноза сроков/)).toBeNull()
   })
 
-  it('puts a photo into each fact and an illustration into each open source card', () => {
+  it('puts a photo into each fact', () => {
     all()
     const context = screen.getByRole('region', { name: /Камеры на стройках/ })
     expect(within(context).getAllByRole('img')).toHaveLength(2)
-    const open = screen.getByRole('region', { name: /Ставится у вас/ })
-    expect(within(open).getAllByRole('img')).toHaveLength(3)
-    expect(
-      within(open).getByRole('img', { name: /Окно редактора: лицензия AGPL-3.0/ }),
-    ).toBeInTheDocument()
-    expect(within(open).getByRole('img', { name: /Терминал: команды/ })).toBeInTheDocument()
-    expect(
-      within(open).getByRole('img', { name: /364 миллисекунды на кадр на процессоре/ }),
-    ).toBeInTheDocument()
   })
 
   it('shows a mini screen above every step and a photo with a hint for every audience', () => {
@@ -137,26 +140,38 @@ describe('landing sections', () => {
   it('answers the objections, with the first question open', () => {
     const { container } = all()
     const faq = screen.getByRole('region', { name: 'Вопросы, которые обычно задают первыми' })
-    expect(within(faq).getAllByText(/\?$/)).toHaveLength(5)
+    expect(within(faq).getAllByText(/\?$/)).toHaveLength(4)
     const details = container.querySelectorAll('details')
     expect(details[0]).toHaveAttribute('open')
     expect(details[1]).not.toHaveAttribute('open')
     expect(within(faq).getByText(/снимки туда не уходят/)).toBeInTheDocument()
-    expect(within(faq).getByText(/AGPL-3\.0/)).toBeInTheDocument()
   })
 
-  it('shows three audiences and three reasons to install it yourself', () => {
+  it('shows three audiences', () => {
     all()
     const audience = screen.getByRole('region', { name: 'Кому это нужно' })
     expect(within(audience).getAllByRole('heading', { level: 3 })).toHaveLength(3)
-    const open = screen.getByRole('region', { name: /Ставится у вас/ })
-    expect(within(open).getByText('Без видеокарты')).toBeInTheDocument()
+  })
+
+  it('says nothing about licences, open code or price', () => {
+    const { container } = all()
+    const text = container.textContent ?? ''
+    for (const word of [
+      'AGPL',
+      'Открытый код',
+      'Код открыт',
+      'исходник',
+      'лицензи',
+      'Сколько это стоит',
+    ]) {
+      expect(text).not.toContain(word)
+    }
+    expect(screen.queryByRole('region', { name: /Ставится у вас/ })).toBeNull()
   })
 
   it('hides the pilot contact and the repository link until the team sets them', () => {
     all()
     expect(screen.queryByRole('link', { name: 'Запросить пилот' })).toBeNull()
-    expect(screen.queryByRole('link', { name: 'Репозиторий проекта' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Исходный код' })).toBeNull()
     expect(screen.getByRole('link', { name: 'Попробовать самому' })).toHaveAttribute(
       'href',

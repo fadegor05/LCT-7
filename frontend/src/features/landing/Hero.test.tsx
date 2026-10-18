@@ -34,4 +34,31 @@ describe('Hero', () => {
     expect(within(window).getByText('Устройство свай')).toBeInTheDocument()
     expect(within(window).getByText('snmpsh.ru / sites / p03')).toBeInTheDocument()
   })
+
+  it('shows the crane only on a wide screen and hides it from screen readers', () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((q: string) => ({ matches: q.includes('1100px') })),
+    )
+    const { container, unmount } = render(
+      <MemoryRouter>
+        <Hero />
+      </MemoryRouter>,
+    )
+    const scene = container.querySelector('[data-layer="crane"]')?.closest('svg')
+    expect(scene).toHaveAttribute('aria-hidden', 'true')
+    unmount()
+
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({ matches: false })),
+    )
+    const view = render(
+      <MemoryRouter>
+        <Hero />
+      </MemoryRouter>,
+    )
+    expect(view.container.querySelector('[data-layer="crane"]')).toBeNull()
+    vi.unstubAllGlobals()
+  })
 })

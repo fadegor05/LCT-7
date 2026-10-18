@@ -8,8 +8,13 @@
 
 .top {
   display: grid;
+}
+
+.copy {
+  display: grid;
   gap: var(--space-6);
   justify-items: start;
+  align-content: center;
 }
 
 .title {
@@ -19,6 +24,30 @@
   font-weight: 600;
   letter-spacing: -0.05em;
   text-wrap: balance;
+}
+
+/* С краном: текст слева, сцена справа заходит в поля секции, чтобы стрела не упиралась в край. */
+.withCrane {
+  grid-template-columns: minmax(560px, 1fr) minmax(0, 1.1fr);
+  align-items: center;
+  column-gap: var(--space-4);
+}
+
+.withCrane .title {
+  max-width: 11ch;
+  font-size: clamp(56px, 5.6vw, 86px);
+}
+
+.crane {
+  margin: -64px calc(var(--space-10) * -1) -16px 0;
+  animation: crane-in 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes crane-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
 }
 
 .lead {
@@ -39,34 +68,8 @@
   gap: var(--space-3);
 }
 
-.primary,
-.ghost {
-  display: inline-flex;
-  align-items: center;
-  height: var(--control-lg);
-  padding: 0 var(--space-8);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  font-size: 17px;
-  text-decoration: none;
-  transition: background 0.3s ease;
-}
-
-.primary {
-  background: var(--ink);
-  color: var(--surface-card);
-}
-
-.primary:hover {
-  background: #2c2c2c;
-}
-
-.ghost {
-  border-color: var(--line-control);
-  color: var(--ink);
-}
-
-.ghost:hover {
+/* Кнопки из дизайн-системы. Фон страницы тёплый, как наведённая ghost-кнопка, поэтому при наведении она светлеет. */
+a.onWarm:hover {
   background: var(--surface);
 }
 
@@ -137,7 +140,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .window {
+  .window,
+  .crane {
     animation: none;
   }
 }

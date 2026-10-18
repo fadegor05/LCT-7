@@ -45,20 +45,34 @@ describe('LandingPage', () => {
       'Три шага от графика до вывода',
       'Посмотрите на настоящем объекте',
       'Вывод всегда можно проверить',
-      'Что измерено',
+      'Проверили на настоящих стройках',
       'Чем Веха отличается от привычного и от продуктов рынка',
       'Кому это нужно',
       'Вопросы, которые обычно задают первыми',
-      'Ставится у вас и проверяется вашими людьми',
       'Покажем на вашем графике',
     ])
   })
 
-  it('has no crane and no decorative backdrop any more', async () => {
+  it('puts the tower crane next to the headline and a live schedule under the final call', async () => {
     const { container } = renderRoute('/', { authed: false })
     await screen.findByRole('heading', { level: 1, name: H1 })
-    expect(container.querySelector('[data-layer="crane"]')).not.toBeInTheDocument()
-    expect(container.querySelector('[data-depth]')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-layer="crane"]')).toBeInTheDocument()
+    const pilot = screen.getByRole('region', { name: 'Покажем на вашем графике' })
+    expect(within(pilot).getByText(/сегодня · \d+ \S+/)).toBeInTheDocument()
+  })
+
+  it('uses the design-system buttons and ends without a footer', async () => {
+    renderRoute('/', { authed: false })
+    await screen.findByRole('heading', { level: 1, name: H1 })
+    expect(screen.getByRole('link', { name: 'Посмотреть пример' })).toHaveClass(
+      'btn',
+      'primary',
+      'lg',
+    )
+    expect(screen.getByRole('link', { name: 'Попробовать самому' })).toHaveClass('btn', 'primary')
+    const header = screen.getAllByRole('banner')[0]!
+    expect(within(header).getByRole('link', { name: 'Войти' })).toHaveClass('btn', 'ghost', 'sm')
+    expect(screen.queryByRole('contentinfo')).toBeNull()
   })
 
   it('sends a signed-in user straight to the sites', async () => {
