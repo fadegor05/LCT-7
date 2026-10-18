@@ -163,6 +163,11 @@ a.login:hover {
   border-left: 1px solid var(--line);
 }
 
+/* У правой колонки поля с двух сторон: левой даём такое же, чтобы снимки вышли одного размера. */
+.ledger li:first-child {
+  padding-right: var(--space-16);
+}
+
 .big {
   display: flex;
   align-items: baseline;
@@ -185,10 +190,12 @@ a.login:hover {
   color: var(--accent-strong);
 }
 
+/* Кадр срезается снизу: там штамп даты камеры. */
 .factPhoto {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
+  object-position: 50% 0;
   border-radius: var(--radius-lg);
 }
 
@@ -523,6 +530,10 @@ a.login:hover {
   .cols {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
+  }
+
+  .ledger li:first-child {
+    padding-right: var(--space-8);
   }
 
   .ledger li + li {
