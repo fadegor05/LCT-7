@@ -50,7 +50,20 @@ DOMAIN=xxprod.ru
 SECURE=true
 API_PREFIX=/api
 POSTGRES__PASSWORD=<не supersecretpassword>
+NOTIFY__PUBLIC_URL=https://xxprod.ru
 ```
+
+Доставка уведомлений в телеграм включается двумя переменными:
+
+```dotenv
+NOTIFY__TELEGRAM__TOKEN=<токен от @BotFather>
+NOTIFY__TELEGRAM__BOT_USERNAME=<имя бота без @>
+```
+
+Без них уведомления работают, но остаются только в интерфейсе: сообщения пишутся
+в лог приложения, кнопка привязки в личном кабинете отвечает «канал не настроен».
+`NOTIFY__PUBLIC_URL` нужен, чтобы ссылки в сообщениях были абсолютными, иначе из
+телеграма по ним не перейти.
 
 Затем:
 
