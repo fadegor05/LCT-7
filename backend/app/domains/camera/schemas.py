@@ -86,6 +86,9 @@ class CameraRead(BaseModel):
     capture_every_s: int | None
     last_capture_at: datetime | None
     last_capture_error: str | None
+    # Момент последней попытки (удачной или нет) и сбои подряд; у новой камеры — пусто и 0
+    last_capture_attempt_at: datetime | None = None
+    capture_failures: int = 0
     zone: list[list[float]] | None
     frames_count: int
     created_at: datetime

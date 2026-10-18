@@ -22,6 +22,8 @@ def _read(view: CameraView) -> CameraRead:
         capture_every_s=c.capture_every_s,
         last_capture_at=c.last_capture_at,
         last_capture_error=c.last_capture_error,
+        last_capture_attempt_at=c.last_capture_attempt_at,
+        capture_failures=c.capture_failures,
         zone=c.zone,
         frames_count=view.frames_count,
         created_at=c.created_at,
