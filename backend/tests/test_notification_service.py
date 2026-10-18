@@ -75,6 +75,23 @@ async def test_list_returns_newest_first_with_unread_count(container: AsyncConta
         assert unread == 2
 
 
+async def test_created_at_distinguishes_notifications_made_back_to_back(
+    container: AsyncContainer,
+) -> None:
+    """Иначе порядок ленты решает тай-брейкер по случайному UUID, и он произволен.
+
+    server_default=func.now() даёт секундную точность в SQLite и время начала
+    транзакции в Postgres — два уведомления подряд получают одинаковый штамп.
+    """
+    await seed_user(container)
+
+    async with make_service(container, RecordingDispatcher()) as service:
+        first = await service.notify(STAND_USER_ID, NotificationType.SYSTEM, "Первое", "a", None)
+        second = await service.notify(STAND_USER_ID, NotificationType.SYSTEM, "Второе", "b", None)
+
+        assert first.created_at < second.created_at
+
+
 async def test_mark_all_read_zeroes_the_counter(container: AsyncContainer) -> None:
     await seed_user(container)
 

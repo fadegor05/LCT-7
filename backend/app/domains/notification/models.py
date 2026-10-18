@@ -6,7 +6,7 @@
 """
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
@@ -54,8 +54,15 @@ class Notification(Base):
     link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # NULL — непрочитанное; шторка проставляет время при открытии
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Время ставит приложение, а не БД: server_default=func.now() в Postgres возвращает
+    # время начала транзакции, а в SQLite округляет до секунды, и два уведомления подряд
+    # получают одинаковый штамп. Тогда порядок ленты решает тай-брейкер по случайному
+    # UUID — то есть он произволен. Микросекунды из datetime.now() это чинят.
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        server_default=func.now(),
+        nullable=False,
     )
 
     __table_args__ = (
