@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Link, Navigate } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import { Logo } from '@/components/ui/Logo'
 import { ConstructionScene } from '@/features/landing/ConstructionScene'
 import { GanttBackdrop } from '@/features/landing/GanttBackdrop'
@@ -29,7 +29,27 @@ export function LandingPage() {
   const desktop = useMediaQuery('(width >= 1100px)')
   // Прокрутили мимо кнопок оффера — они переезжают в правый верхний угол.
   const docked = useScrolledPast(cta)
-  if (getToken()) return <Navigate to="/sites" replace />
+  const location = useLocation()
+  // Вошедшего ведём к стройкам, но не когда он пришёл с логотипа «Веха» (state.landing).
+  const signedIn = Boolean(getToken())
+  const fromLogo = Boolean((location.state as { landing?: boolean } | null)?.landing)
+  if (signedIn && !fromLogo) return <Navigate to="/sites" replace />
+
+  // Для вошедшего вместо входа и регистрации одна ссылка к стройкам; вёрстка та же.
+  const actions = signedIn ? (
+    <Link to="/sites" className={styles.primary}>
+      К стройкам
+    </Link>
+  ) : (
+    <>
+      <Link to="/login" className={styles.primary}>
+        Войти
+      </Link>
+      <Link to="/register" className={styles.ghost}>
+        Зарегистрироваться
+      </Link>
+    </>
+  )
 
   return (
     <div ref={page} className={styles.page}>
@@ -75,12 +95,7 @@ export function LandingPage() {
             </li>
           </ol>
           <div ref={cta} className={styles.cta}>
-            <Link to="/login" className={styles.primary}>
-              Войти
-            </Link>
-            <Link to="/register" className={styles.ghost}>
-              Зарегистрироваться
-            </Link>
+            {actions}
           </div>
         </main>
 
@@ -138,12 +153,7 @@ export function LandingPage() {
         aria-hidden={!docked}
         inert={!docked}
       >
-        <Link to="/login" className={styles.primary}>
-          Войти
-        </Link>
-        <Link to="/register" className={styles.ghost}>
-          Зарегистрироваться
-        </Link>
+        {actions}
       </div>
     </div>
   )

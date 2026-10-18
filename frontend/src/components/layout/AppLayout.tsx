@@ -32,7 +32,8 @@ export function AppLayout() {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link to="/sites" className={styles.logo}>
+        {/* state.landing — явный переход на лендинг, даже для вошедшего (см. LandingPage). */}
+        <Link to="/" state={{ landing: true }} className={styles.logo}>
           <Logo />
           Веха
         </Link>

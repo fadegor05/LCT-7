@@ -97,4 +97,29 @@ describe('LandingPage', () => {
     renderRoute('/')
     expect(await screen.findByRole('heading', { level: 1, name: 'Стройки' })).toBeInTheDocument()
   })
+
+  it('keeps a signed-in user on the landing when it is opened from the app logo', async () => {
+    renderRoute('/', { authed: true, state: { landing: true } })
+    expect(
+      await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Войти' })).toBeNull()
+    expect(screen.getAllByRole('link', { name: 'К стройкам' })[0]).toHaveAttribute('href', '/sites')
+  })
+
+  it('shows sign-in to a guest and no sites link', async () => {
+    renderRoute('/', { authed: false })
+    await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' })
+    expect(screen.getAllByRole('link', { name: 'Войти' })[0]).toHaveAttribute('href', '/login')
+    expect(screen.queryByRole('link', { name: 'К стройкам' })).toBeNull()
+  })
+
+  it('opens the landing from the app logo on the sites page', async () => {
+    const { user } = renderRoute('/sites')
+    await user.click(await screen.findByRole('link', { name: 'Веха' }))
+    expect(
+      await screen.findByRole('heading', { name: 'Видно, где стройка отстаёт от графика' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'К стройкам' })[0]).toHaveAttribute('href', '/sites')
+  })
 })
