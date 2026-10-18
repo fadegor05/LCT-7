@@ -1,5 +1,6 @@
 import type { RouteObject } from 'react-router'
 import { RequireAuth } from './RequireAuth'
+import { CamerasPage } from '@/pages/CamerasPage'
 import { DeviationPage } from '@/pages/DeviationPage'
 import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -15,7 +16,7 @@ import { SitesPage } from '@/pages/SitesPage'
 /**
  * Карта экранов (макет «ЛЦТ — MVP: экраны»):
  * 1 Стройки · 2 Новая стройка · 3 Методика (шаг 2) · 3а Методика объекта ·
- * 5 Обзор · 6 Наблюдения · 7 Отклонение. Экран 4 «Камеры» не подключён: в backend нет камер.
+ * 4 Камеры · 5 Обзор · 6 Наблюдения · 7 Отклонение.
  */
 export const routes: RouteObject[] = [
   { index: true, element: <LandingPage /> },
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
       { path: 'sites/:siteId', element: <SiteOverviewPage /> },
       { path: 'sites/:siteId/observations', element: <ObservationsPage /> },
       { path: 'sites/:siteId/methodology', element: <MethodologyPage /> },
+      { path: 'sites/:siteId/cameras', element: <CamerasPage /> },
       { path: 'sites/:siteId/deviations/:deviationId', element: <DeviationPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

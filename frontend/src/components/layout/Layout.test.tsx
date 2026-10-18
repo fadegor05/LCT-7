@@ -53,7 +53,7 @@ describe('SiteShell', () => {
       within(tabs)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['Обзор', 'Наблюдения', 'Методика'])
+    ).toEqual(['Обзор', 'Наблюдения', 'Методика', 'Камеры'])
     expect(within(tabs).getByRole('link', { name: 'Методика' })).toHaveAttribute(
       'aria-current',
       'page',

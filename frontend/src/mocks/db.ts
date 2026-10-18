@@ -5,6 +5,7 @@
  * выводы движка для демо-стройки; у новых строек движок ещё ничего не посчитал.
  */
 import type {
+  Camera,
   Detection,
   DeviationDetail,
   EquipmentSet,
@@ -23,6 +24,7 @@ import type {
   SiteSummary,
   UploadReport,
   AssistantAnswer,
+  Zone,
 } from '@/api/schemas'
 import {
   BEREZNIKI,
@@ -74,6 +76,7 @@ interface State {
   observations: Map<string, Observation[]>
   statuses: Map<string, Map<string, Omit<StageStatus, 'stage_id' | 'stage_name' | 'position'>>>
   deviations: Map<string, DeviationDetail[]>
+  cameras: Map<string, Camera[]>
   seq: number
   assistantScenario: AssistantScenario
 }
@@ -741,6 +744,83 @@ function seedBerezniki(): void {
   )
 }
 
+// ---------- Камеры ----------
+
+/** Как `_stream_url` и `_interval` бэкенда: ссылка — rtsp(s)/http(s), без ссылки снимать нечего. */
+const STREAM_SCHEMES = ['rtsp://', 'rtsps://', 'http://', 'https://']
+const DEFAULT_CAPTURE_EVERY_S = 300
+
+export interface CameraWrite {
+  name: string
+  stream_url: string | null
+  capture_every_s: number | null
+  zone: Zone | null
+}
+
+export function listCameras(siteId: string): Camera[] {
+  getSite(siteId)
+  return state.cameras.get(siteId) ?? []
+}
+
+function findCamera(siteId: string, cameraId: string): Camera {
+  const camera = listCameras(siteId).find((c) => c.id === cameraId)
+  if (!camera) throw new MockError(404, 'Камера не найдена')
+  return camera
+}
+
+/** Ссылка проверяется отдельно: текст ошибки не повторяет саму ссылку (в ней могут быть пароли). */
+function checkStreamUrl(value: string | null | undefined): string | null {
+  const url = value?.trim() ?? ''
+  if (!url) return null
+  if (!STREAM_SCHEMES.some((scheme) => url.toLowerCase().startsWith(scheme))) {
+    throw new MockError(422, 'ссылка на стрим — rtsp://, rtsps://, http:// или https://')
+  }
+  return url
+}
+
+const intervalFor = (url: string | null, every: number | null | undefined) =>
+  url === null ? null : every || DEFAULT_CAPTURE_EVERY_S
+
+export function createCamera(siteId: string, data: CameraWrite): Camera {
+  const url = checkStreamUrl(data.stream_url)
+  const camera: Camera = {
+    id: nextId('camera'),
+    name: data.name,
+    stream_url: url,
+    capture_every_s: intervalFor(url, data.capture_every_s),
+    last_capture_at: null,
+    last_capture_error: null,
+    zone: data.zone ?? null,
+    frames_count: 0,
+    created_at: now(),
+  }
+  state.cameras.set(siteId, [...listCameras(siteId), camera])
+  return camera
+}
+
+/** Частичная правка: поле, которого нет в `data`, не меняется; `null` — очистить. */
+export function updateCamera(siteId: string, cameraId: string, data: Partial<CameraWrite>): Camera {
+  const camera = findCamera(siteId, cameraId)
+  if (data.name !== undefined) camera.name = data.name
+  if (data.stream_url !== undefined) camera.stream_url = checkStreamUrl(data.stream_url)
+  if (data.zone !== undefined) camera.zone = data.zone
+  if (data.stream_url !== undefined || data.capture_every_s !== undefined) {
+    camera.capture_every_s = intervalFor(
+      camera.stream_url,
+      data.capture_every_s ?? camera.capture_every_s,
+    )
+  }
+  return camera
+}
+
+export function deleteCamera(siteId: string, cameraId: string): void {
+  findCamera(siteId, cameraId)
+  state.cameras.set(
+    siteId,
+    listCameras(siteId).filter((c) => c.id !== cameraId),
+  )
+}
+
 export function resetDb(): void {
   // В режиме тестов всегда 'ok'; в браузере может быть задан через ?assistant=
   const initialScenario =
@@ -758,6 +838,7 @@ export function resetDb(): void {
     observations: new Map(),
     statuses: new Map(),
     deviations: new Map(),
+    cameras: new Map(),
     seq: 0,
     assistantScenario: initialScenario,
   }
