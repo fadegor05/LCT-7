@@ -8,6 +8,8 @@ interface StagesTableProps {
   stages: readonly Stage[]
   year: number
   onSetDates: (stageId: string, start: string, end: string) => void
+  /** Объединить этап со следующим (ids: этап и следующий за ним). */
+  onMerge?: (stageId: string, nextStageId: string) => void
   pending?: boolean
 }
 
@@ -69,7 +71,7 @@ function ManualDates({
 }
 
 /** Таблица этапов графика: порядок и плановое окно; даты, которых нет в файле, задаются вручную. */
-export function StagesTable({ stages, year, onSetDates, pending }: StagesTableProps) {
+export function StagesTable({ stages, year, onSetDates, onMerge, pending }: StagesTableProps) {
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -79,36 +81,59 @@ export function StagesTable({ stages, year, onSetDates, pending }: StagesTablePr
             <th scope="col">№</th>
             <th scope="col">Этап</th>
             <th scope="col">Плановое окно</th>
+            {onMerge && (
+              <th scope="col">
+                <span className="srOnly">Действия</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
-          {stages.map((stage) => (
-            <tr key={stage.id}>
-              <td className="data">{stage.position}</td>
-              <th scope="row" style={{ fontWeight: 400, fontSize: 16 }}>
-                {stage.name}
-              </th>
-              <td>
-                {stage.planned_start && stage.planned_end ? (
-                  <div className={styles.cell}>
-                    <span className="data">
-                      {formatWindow(stage.planned_start, stage.planned_end)}
-                    </span>
-                    {stage.dates_source === 'manual' && (
-                      <span className="sm muted">задано вручную</span>
+          {stages.map((stage, index) => {
+            const next = stages[index + 1]
+            return (
+              <tr key={stage.id}>
+                <td className="data">{stage.position}</td>
+                <th scope="row" style={{ fontWeight: 400, fontSize: 16 }}>
+                  {stage.name}
+                </th>
+                <td>
+                  {stage.planned_start && stage.planned_end ? (
+                    <div className={styles.cell}>
+                      <span className="data">
+                        {formatWindow(stage.planned_start, stage.planned_end)}
+                      </span>
+                      {stage.dates_source === 'manual' && (
+                        <span className="sm muted">задано вручную</span>
+                      )}
+                    </div>
+                  ) : (
+                    <ManualDates
+                      stage={stage}
+                      year={year}
+                      pending={pending}
+                      onSave={(start, end) => onSetDates(stage.id, start, end)}
+                    />
+                  )}
+                </td>
+                {onMerge && (
+                  <td>
+                    {next && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={pending}
+                        aria-label={`Объединить «${stage.name}» со следующим этапом`}
+                        onClick={() => onMerge(stage.id, next.id)}
+                      >
+                        Объединить со следующим
+                      </Button>
                     )}
-                  </div>
-                ) : (
-                  <ManualDates
-                    stage={stage}
-                    year={year}
-                    pending={pending}
-                    onSave={(start, end) => onSetDates(stage.id, start, end)}
-                  />
+                  </td>
                 )}
-              </td>
-            </tr>
-          ))}
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

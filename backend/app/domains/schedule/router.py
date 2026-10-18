@@ -7,7 +7,12 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Form, UploadFile
 
 from app.domains.schedule.models import ParseMode
-from app.domains.schedule.schemas import ScheduleReport, StageDatesUpdate, StageRead
+from app.domains.schedule.schemas import (
+    ScheduleReport,
+    StageDatesUpdate,
+    StageRead,
+    StagesMerge,
+)
 from app.domains.schedule.service import ScheduleService
 from app.plugins.exceptions import AppError
 
@@ -68,6 +73,30 @@ async def get_schedule(site_id: uuid.UUID, service: FromDishka[ScheduleService])
     """
     report = await service.get_schedule(site_id)
     return report
+
+
+@router.post("/stages/merge", response_model=ScheduleReport)
+@inject
+async def merge_stages(
+    site_id: uuid.UUID,
+    data: StagesMerge,
+    service: FromDishka[ScheduleService],
+) -> ScheduleReport:
+    """Объединить соседние этапы графика в первый из них.
+
+    Args:
+        site_id: ID сайта
+        data: id объединяемых этапов (не меньше двух)
+        service: Сервис графика
+
+    Returns:
+        ScheduleReport с этапами после объединения
+
+    Raises:
+        404: Сайт не найден, не принадлежит текущему пользователю, график или этап не найден
+        422: Этапы не разные или не соседние
+    """
+    return await service.merge_stages(site_id, data.stage_ids)
 
 
 @router.patch("/stages/{stage_id}")

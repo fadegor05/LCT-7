@@ -164,6 +164,13 @@ export const handlers = [
     const mode = parseModeSchema.catch('auto').parse(form.get('mode'))
     return handle(() => db.importSchedule(params.siteId, file.name, mode), 201)
   }),
+  http.post<SiteParams>(
+    api('/sites/:siteId/schedule/stages/merge'),
+    async ({ params, request }) => {
+      const data = await json<{ stage_ids: string[] }>(request)
+      return handle(() => db.mergeStages(params.siteId, data.stage_ids))
+    },
+  ),
   http.patch<{ siteId: string; stageId: string }>(
     api('/sites/:siteId/schedule/stages/:stageId'),
     async ({ params, request }) => {

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router'
-import { useSchedule, useUpdateStageDates, useUploadSchedule } from '@/api/schedule'
+import { useMergeStages, useSchedule, useUpdateStageDates, useUploadSchedule } from '@/api/schedule'
 import { siteCreateSchema, type ParseMode, type Site, type SiteCreate } from '@/api/schemas'
 import { useCreateSite, useSite, useUpdateSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
@@ -42,6 +42,7 @@ export function NewSitePage() {
   const updateSite = useUpdateSite(siteId ?? '')
   const upload = useUploadSchedule()
   const updateStage = useUpdateStageDates(siteId ?? '')
+  const mergeStages = useMergeStages(siteId ?? '')
   const [mode, setMode] = useState<ParseMode>('auto')
 
   const form = useForm<SiteCreate>({
@@ -68,7 +69,8 @@ export function NewSitePage() {
 
   const current = schedule.data
   const canProceed = Boolean(siteId && current)
-  const error = createSite.error ?? upload.error ?? updateSite.error ?? updateStage.error
+  const error =
+    createSite.error ?? upload.error ?? updateSite.error ?? updateStage.error ?? mergeStages.error
 
   return (
     <>
@@ -134,10 +136,11 @@ export function NewSitePage() {
           <StagesTable
             stages={current.stages}
             year={Number(current.imported_at.slice(0, 4))}
-            pending={updateStage.isPending}
+            pending={updateStage.isPending || mergeStages.isPending}
             onSetDates={(stageId, start, end) =>
               updateStage.mutate({ stageId, data: { planned_start: start, planned_end: end } })
             }
+            onMerge={(stageId, nextStageId) => mergeStages.mutate([stageId, nextStageId])}
           />
         </section>
       )}

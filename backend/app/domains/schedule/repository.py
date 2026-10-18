@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from sqlalchemy import delete, select
 
 from app.core.repository import BaseRepository
+from app.domains.methodology.models import EquipmentRequirement, EquipmentSet, MethodologyRule
 from app.domains.schedule.models import Schedule, ScheduleImportIssue, ScheduleStage
 
 
@@ -81,3 +82,54 @@ class ScheduleRepository(BaseRepository[Schedule]):
             .order_by(ScheduleImportIssue.row_number)
         )
         return result.scalars().all()
+
+    async def add_rule(self, rule: MethodologyRule) -> MethodologyRule:
+        """Добавить правило методики и флашить."""
+        self._session.add(rule)
+        await self._session.flush()
+        return rule
+
+    async def list_rules_of_stages(
+        self, stage_ids: Sequence[uuid.UUID]
+    ) -> Sequence[MethodologyRule]:
+        """Правила методики этапов (этапы без правила не попадают в список)."""
+        if not stage_ids:
+            return []
+        result = await self._session.execute(
+            select(MethodologyRule).where(MethodologyRule.stage_id.in_(stage_ids))
+        )
+        return result.scalars().all()
+
+    async def list_sets_of_rules(self, rule_ids: Sequence[uuid.UUID]) -> Sequence[EquipmentSet]:
+        """Наборы техники правил, упорядочены по rule_id и position."""
+        if not rule_ids:
+            return []
+        result = await self._session.execute(
+            select(EquipmentSet)
+            .where(EquipmentSet.rule_id.in_(rule_ids))
+            .order_by(EquipmentSet.rule_id, EquipmentSet.position)
+        )
+        return result.scalars().all()
+
+    async def list_requirements_of_sets(
+        self, set_ids: Sequence[uuid.UUID]
+    ) -> Sequence[EquipmentRequirement]:
+        """Требования наборов техники."""
+        if not set_ids:
+            return []
+        result = await self._session.execute(
+            select(EquipmentRequirement).where(EquipmentRequirement.set_id.in_(set_ids))
+        )
+        return result.scalars().all()
+
+    async def delete_rules(self, rule_ids: Sequence[uuid.UUID]) -> None:
+        """Удалить правила вместе с их наборами и требованиями (явно: SQLite без FK-каскада)."""
+        if not rule_ids:
+            return
+        set_ids = select(EquipmentSet.id).where(EquipmentSet.rule_id.in_(rule_ids))
+        await self._session.execute(
+            delete(EquipmentRequirement).where(EquipmentRequirement.set_id.in_(set_ids))
+        )
+        await self._session.execute(delete(EquipmentSet).where(EquipmentSet.rule_id.in_(rule_ids)))
+        await self._session.execute(delete(MethodologyRule).where(MethodologyRule.id.in_(rule_ids)))
+        await self._session.flush()

@@ -27,6 +27,13 @@ export const scheduleApi = {
       schema: scheduleReportSchema,
     })
   },
+  /** Объединить соседние этапы (id не меньше двух, разных); в ответе — отчёт графика. */
+  mergeStages: (siteId: string, stageIds: string[]) =>
+    request(`/sites/${siteId}/schedule/stages/merge`, {
+      method: 'POST',
+      body: { stage_ids: stageIds },
+      schema: scheduleReportSchema,
+    }),
   updateStage: (siteId: string, stageId: string, data: StageDatesUpdate) =>
     request(`/sites/${siteId}/schedule/stages/${stageId}`, {
       method: 'PATCH',
@@ -50,6 +57,18 @@ export function useUploadSchedule() {
     mutationFn: ({ siteId, file, mode }: { siteId: string; file: File; mode?: ParseMode }) =>
       scheduleApi.upload(siteId, file, mode),
     onSuccess: async (data, { siteId }) => {
+      qc.setQueryData(keys.schedule(siteId), data)
+      await qc.invalidateQueries({ queryKey: keys.site(siteId) })
+    },
+  })
+}
+
+/** Объединение этапов меняет этапы и их методику: отчёт графика кладём в кэш, стройку сбрасываем. */
+export function useMergeStages(siteId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (stageIds: string[]) => scheduleApi.mergeStages(siteId, stageIds),
+    onSuccess: async (data) => {
       qc.setQueryData(keys.schedule(siteId), data)
       await qc.invalidateQueries({ queryKey: keys.site(siteId) })
     },

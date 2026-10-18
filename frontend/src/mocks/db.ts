@@ -191,6 +191,77 @@ export function updateStageDates(siteId: string, stageId: string, data: StageDat
   return stage
 }
 
+/**
+ * Объединение соседних этапов: как на бэкенде — первый этап остаётся с названием и правилом,
+ * окно — объединение дат, наборы остальных переезжают в его правило (одинаковые не дублируются).
+ */
+export function mergeStages(siteId: string, stageIds: readonly string[]): ScheduleReport {
+  const schedule = getSchedule(siteId)
+  const distinct = [...new Set(stageIds)]
+  if (distinct.length < 2) throw new MockError(422, 'Выберите хотя бы два разных этапа')
+  const chosen = schedule.stages
+    .filter((s) => distinct.includes(s.id))
+    .sort((a, b) => a.position - b.position)
+  if (chosen.length !== distinct.length) throw new MockError(404, 'Этап не найден')
+  const positions = chosen.map((s) => s.position)
+  if (positions.some((p, i) => p !== positions[0]! + i)) {
+    throw new MockError(422, 'Объединять можно только соседние этапы')
+  }
+
+  const [target, ...rest] = chosen as [Stage, ...Stage[]]
+  const rules = listRules(siteId)
+  const targetRule = rules.find((r) => r.stage_id === target.id)!
+  const restRules = rules.filter((r) => rest.some((s) => s.id === r.stage_id))
+
+  const signature = (set: EquipmentSet) =>
+    set.requirements
+      .map((r) =>
+        JSON.stringify([
+          r.equipment_type.id,
+          r.obligation,
+          r.min_count,
+          r.gesn_code,
+          r.source_note,
+        ]),
+      )
+      .sort()
+      .join('|')
+  const seen = new Set(targetRule.sets.map(signature))
+  let position = Math.max(-1, ...targetRule.sets.map((s) => s.position)) + 1
+  for (const restRule of restRules) {
+    for (const set of restRule.sets) {
+      const key = signature(set)
+      if (seen.has(key)) continue
+      seen.add(key)
+      targetRule.sets.push({ ...set, position: position++ })
+    }
+  }
+  if (!targetRule.is_verifiable && restRules.some((r) => r.is_verifiable)) {
+    targetRule.is_verifiable = true
+    targetRule.unverifiable_reason = null
+  }
+  state.rules.set(
+    siteId,
+    rules.filter((r) => !restRules.includes(r)),
+  )
+
+  const starts = chosen.map((s) => s.planned_start).filter((d): d is string => Boolean(d))
+  const ends = chosen.map((s) => s.planned_end).filter((d): d is string => Boolean(d))
+  target.planned_start = starts.sort()[0] ?? null
+  target.planned_end = ends.sort().at(-1) ?? null
+  if (chosen.some((s) => s.dates_source === 'manual')) target.dates_source = 'manual'
+
+  for (const stage of rest) state.statuses.get(siteId)?.delete(stage.id)
+  schedule.stages = schedule.stages.filter((s) => !rest.includes(s))
+  schedule.stages.forEach((stage, i) => {
+    stage.position = i + 1
+  })
+  const withDates = schedule.stages.filter((s) => s.planned_start && s.planned_end).length
+  schedule.stages_with_dates = withDates
+  schedule.stages_without_dates = schedule.stages.length - withDates
+  return schedule
+}
+
 // ---------- Методика ----------
 
 export function listEquipmentTypes() {
