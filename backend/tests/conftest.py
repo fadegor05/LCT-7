@@ -29,6 +29,7 @@ from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
 from app.domains.assistant.provider import AssistantProvider
+from app.domains.camera.provider import CameraProvider
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.observation.provider import ObservationProvider
@@ -285,6 +286,7 @@ def _make_container(
         TestDatabaseProvider(db_path=tmp_path / "test.db", foreign_keys=foreign_keys),
         user_provider or TestUserProvider(),
         SiteProvider(),
+        CameraProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
@@ -331,6 +333,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         TestDatabaseProvider(db_path=db_path),
         TestUserProvider(),
         SiteProvider(),
+        CameraProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),

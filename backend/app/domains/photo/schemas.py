@@ -34,6 +34,7 @@ class PhotoRead(BaseModel):
     date_source: str | None
     processing_status: str
     uploaded_at: datetime
+    camera_id: uuid.UUID | None = None
 
 
 class PhotoDetail(PhotoRead):
