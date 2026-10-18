@@ -18,6 +18,9 @@ export const framesApi = {
     request(`/sites/${siteId}/observations`, { schema: z.array(observationSchema) }),
   observation: (siteId: string, date: string) =>
     request(`/sites/${siteId}/observations/${date}`, { schema: observationSchema }),
+  /** Снимок с рамками распознавания (детекциями). */
+  photo: (siteId: string, photoId: string) =>
+    request(`/sites/${siteId}/photos/${photoId}`, { schema: photoDetailSchema }),
   /** Все снимки стройки; `undated` — только снимки без даты. */
   photos: (siteId: string, undated = false) =>
     request(`/sites/${siteId}/photos`, {
@@ -59,6 +62,11 @@ export function photoImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/image`
 }
 
+/** Исходный снимок без рамок (`/image`) для просмотра с наложенными рамками в браузере. */
+export function originalImageUrl(siteId: string, photoId: string): string {
+  return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/image`
+}
+
 /** Снимок с рамками найденной техники: JPEG рисует и кэширует сервер (`/annotated`). */
 export function annotatedImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`
@@ -76,6 +84,14 @@ export function useObservation(siteId: string, date: string | null) {
     queryKey: keys.observation(siteId, date ?? ''),
     queryFn: () => framesApi.observation(siteId, date!),
     enabled: Boolean(date),
+  })
+}
+
+export function usePhoto(siteId: string, photoId: string | null) {
+  return useQuery({
+    queryKey: keys.photo(siteId, photoId ?? ''),
+    queryFn: () => framesApi.photo(siteId, photoId!),
+    enabled: Boolean(photoId),
   })
 }
 

@@ -12,7 +12,7 @@ describe('AppLayout', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'Веха' })).toHaveAttribute('href', '/sites')
+    expect(screen.getByRole('link', { name: 'Веха' })).toHaveAttribute('href', '/')
     expect(await screen.findByRole('heading', { level: 1, name: 'Стройки' })).toBeInTheDocument()
   })
 

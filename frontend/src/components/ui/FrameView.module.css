@@ -3,8 +3,36 @@
   min-width: 0;
 }
 
+.open {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: zoom-in;
+}
+
+.open:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.open:hover .img {
+  filter: brightness(0.96);
+  transform: translateY(-2px);
+}
+
 .img {
+  display: block;
   position: relative;
+  transition:
+    filter 0.2s ease,
+    transform 0.2s ease;
   aspect-ratio: 4 / 3;
   overflow: hidden;
   border-radius: var(--radius-md);

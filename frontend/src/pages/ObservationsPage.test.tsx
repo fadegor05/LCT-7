@@ -237,4 +237,16 @@ describe('ObservationsPage', () => {
     // The API should not have been called
     // This is implicitly tested by the button being disabled
   })
+
+  it('opens a photo in the viewer and closes it with Escape', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    const [open] = await screen.findAllByRole('button', { name: /^Открыть: Снимок / })
+    const fileName = open!.getAttribute('aria-label')!.replace('Открыть: Снимок ', '')
+
+    await user.click(open!)
+    expect(await screen.findByRole('dialog', { name: new RegExp(fileName) })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })
