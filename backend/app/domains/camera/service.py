@@ -1,5 +1,6 @@
 """Бизнес-логика камер стройки и их рабочих зон."""
 
+import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,6 +18,9 @@ DEFAULT_CAPTURE_EVERY_S = 300
 # Протоколы, по которым снимается кадр; локальные (`file:`) не принимаем
 STREAM_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://")
 MAX_STREAM_URL_LENGTH = 500
+# Схема и учётные данные (до последнего «@») — как в adapters/stream/base.mask_credentials
+_CREDENTIALS = re.compile(r"([a-z][a-z0-9+.-]*://)(\S*)@", re.IGNORECASE)
+_MASKED_CREDENTIALS = re.compile(r"([a-z][a-z0-9+.-]*://)\*\*\*@", re.IGNORECASE)
 
 
 @dataclass
@@ -63,7 +67,7 @@ class CameraService:
         camera = await self._get(site_id, camera_id)
         changes = data.model_dump(exclude_unset=True)
         if "stream_url" in changes:
-            changes["stream_url"] = _stream_url(changes["stream_url"])
+            changes["stream_url"] = _stream_url(changes["stream_url"], stored=camera.stream_url)
         stream_changed = "stream_url" in changes and changes["stream_url"] != camera.stream_url
         for field, value in changes.items():
             setattr(camera, field, value)
@@ -94,8 +98,11 @@ class CameraService:
         return [CameraView(c, counts.get(c.id, 0)) for c in cameras]
 
 
-def _stream_url(value: str | None) -> str | None:
+def _stream_url(value: str | None, stored: str | None = None) -> str | None:
     """Проверить ссылку на стрим; пустая — None.
+
+    API отдаёт ссылку с паролем замаскированным (`rtsp://***@host`). Если такую ссылку прислали
+    обратно, берём учётные данные из сохранённой, иначе — 422 (пароля в базе нет или ссылка новая).
 
     Текст ошибки не содержит саму ссылку: в ней могут быть учётные данные камеры.
     """
@@ -108,7 +115,18 @@ def _stream_url(value: str | None) -> str | None:
         )
     if not url.lower().startswith(STREAM_SCHEMES):
         raise AppError("ссылка на стрим — rtsp://, rtsps://, http:// или https://", status_code=422)
-    return url
+    return _with_stored_credentials(url, stored)
+
+
+def _with_stored_credentials(url: str, stored: str | None) -> str:
+    """`rtsp://***@host` → `rtsp://<логин:пароль из сохранённой ссылки>@host`."""
+    masked = _MASKED_CREDENTIALS.match(url)
+    if masked is None:
+        return url
+    kept = _CREDENTIALS.match(stored or "")
+    if kept is None:
+        raise AppError("ссылка на стрим — вставьте её целиком, с паролем", status_code=422)
+    return f"{masked.group(1)}{kept.group(2)}@{url[masked.end() :]}"
 
 
 def _interval(stream_url: str | None, every_s: int | None) -> int | None:

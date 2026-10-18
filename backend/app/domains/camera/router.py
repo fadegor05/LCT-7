@@ -5,6 +5,7 @@ import uuid
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 
+from app.adapters.stream.base import mask_credentials
 from app.domains.camera.capture import CameraCaptureService
 from app.domains.camera.schemas import CameraIn, CameraRead, CameraUpdate
 from app.domains.camera.service import CameraService, CameraView
@@ -14,11 +15,15 @@ router = APIRouter(prefix="/sites/{site_id}/cameras", tags=["cameras"])
 
 
 def _read(view: CameraView) -> CameraRead:
+    """Пароль камеры в ответах не отдаём: ссылка в ответе с `***` вместо пароля.
+
+    Правка с такой ссылкой сохраняет пароль из базы (см. CameraService).
+    """
     c = view.camera
     return CameraRead(
         id=c.id,
         name=c.name,
-        stream_url=c.stream_url,
+        stream_url=mask_credentials(c.stream_url) if c.stream_url is not None else None,
         capture_every_s=c.capture_every_s,
         last_capture_at=c.last_capture_at,
         last_capture_error=c.last_capture_error,
