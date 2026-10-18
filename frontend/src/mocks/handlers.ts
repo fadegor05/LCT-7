@@ -261,6 +261,10 @@ export const handlers = [
       return handle(() => db.updateCamera(params.siteId, params.cameraId, body))
     },
   ),
+  http.post<{ siteId: string; cameraId: string }>(
+    api('/sites/:siteId/cameras/:cameraId/capture'),
+    ({ params }) => handle(() => db.captureCamera(params.siteId, params.cameraId), 201),
+  ),
   http.delete<{ siteId: string; cameraId: string }>(
     api('/sites/:siteId/cameras/:cameraId'),
     ({ params }) => handle(() => db.deleteCamera(params.siteId, params.cameraId)),

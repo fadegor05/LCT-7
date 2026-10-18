@@ -48,15 +48,24 @@ export function CameraList({ cameras, onEdit }: CameraListProps) {
   )
 }
 
+// Столько сбоев подряд — снимки уже не идут, а не единичная осечка стрима
+const STALLED_AFTER_FAILURES = 3
+
 /** Стрим в строке камеры: идут ли снимки и почему нет. */
 function StreamStatus({ camera }: { camera: Camera }) {
   if (!camera.stream_url) return <span className="sm muted">Без стрима, только загрузка</span>
   if (camera.last_capture_error) {
     const text = `Стрим недоступен: ${camera.last_capture_error}`
+    const failures = camera.capture_failures ?? 0
     return (
-      <span className={styles.streamError} title={text}>
-        {text}
-      </span>
+      <>
+        <span className={styles.streamError} title={text}>
+          {text}
+        </span>
+        {failures >= STALLED_AFTER_FAILURES && (
+          <span className="sm muted">Снимки не идут · сбоев подряд: {failures}</span>
+        )}
+      </>
     )
   }
   return (

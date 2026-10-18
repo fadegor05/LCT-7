@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useDeleteCamera, useSaveCamera } from '@/api/cameras'
+import { useCaptureNow, useDeleteCamera, useSaveCamera } from '@/api/cameras'
 import { photoImageUrl, usePhotos } from '@/api/frames'
 import type { Camera, Zone } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
@@ -47,6 +47,9 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
 
   const save = useSaveCamera(siteId)
   const remove = useDeleteCamera(siteId)
+  const capture = useCaptureNow(siteId, camera?.id ?? null)
+  // Снять можно только по сохранённой ссылке: сервер снимает по ссылке камеры, а не из поля
+  const canCapture = Boolean(camera?.stream_url) && stream.trim() === camera?.stream_url
   // Подложка — последний снимок стройки: пока у камеры нет своих кадров, это ориентир для зоны
   const photos = usePhotos(siteId)
   const frame = newestPhoto(photos.data)
@@ -70,8 +73,11 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
     if (!name.trim()) return setNameError('Укажите название камеры')
     const link = splitLink(stream).trim()
     const minutes = Number(every)
+    // Пустой интервал: сервер снимает по умолчанию раз в 5 минут, как и без этого поля
+    const hasEvery = every.trim() !== ''
     const badEvery =
       link !== '' &&
+      hasEvery &&
       !(Number.isInteger(minutes) && minutes >= MIN_EVERY_MIN && minutes <= MAX_EVERY_MIN)
     setEveryError(badEvery ? `От ${MIN_EVERY_MIN} до ${MAX_EVERY_MIN} минут` : undefined)
     if (badEvery) return
@@ -86,7 +92,7 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
         data: {
           name: name.trim(),
           stream_url: link || null,
-          capture_every_s: link ? minutes * 60 : null,
+          capture_every_s: link && hasEvery ? minutes * 60 : null,
           zone,
         },
       },
@@ -166,6 +172,7 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
               inputMode="numeric"
               min={MIN_EVERY_MIN}
               max={MAX_EVERY_MIN}
+              placeholder={String(DEFAULT_EVERY_MIN)}
               disabled={!stream.trim()}
               value={every}
               onChange={(e) => setEvery(e.target.value)}
@@ -214,6 +221,27 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
                 ? 'Ориентир — последний снимок стройки. Кликайте по нему, чтобы ставить вершины; замкните контур на первой точке.'
                 : 'Снимков стройки пока нет: зона рисуется на пустом поле. Загрузите снимки, чтобы видеть ориентир.'}
             </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!canCapture || capture.isPending}
+              onClick={() => capture.mutate()}
+            >
+              {capture.isPending ? 'Снимаем кадр…' : 'Снять кадр сейчас'}
+            </Button>
+            {!canCapture && (
+              <p className="sm muted">Сохраните камеру со ссылкой, чтобы снять кадр</p>
+            )}
+            {capture.isSuccess && (
+              <p className="sm" role="status">
+                Кадр со стрима снят и добавлен в ленту камеры
+              </p>
+            )}
+            {capture.error && (
+              <Callout tone="caution" title="Кадр со стрима не снят">
+                {capture.error.message}
+              </Callout>
+            )}
             <Button
               variant="ghost"
               size="sm"

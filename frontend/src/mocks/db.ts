@@ -790,6 +790,8 @@ export function createCamera(siteId: string, data: CameraWrite): Camera {
     capture_every_s: intervalFor(url, data.capture_every_s),
     last_capture_at: null,
     last_capture_error: null,
+    last_capture_attempt_at: null,
+    capture_failures: 0,
     zone: data.zone ?? null,
     frames_count: 0,
     created_at: now(),
@@ -811,6 +813,44 @@ export function updateCamera(siteId: string, cameraId: string, data: Partial<Cam
     )
   }
   return camera
+}
+
+/**
+ * «Снять кадр сейчас», как `CameraCaptureService`: кадр — в ленту стройки с датой снимка и
+ * источником «channel», итог попытки — у камеры. В моках сбой даёт ссылка с «offline», занятый
+ * стрим — ссылка с «busy» (это не попытка, поэтому статус камеры не меняется).
+ */
+export function captureCamera(siteId: string, cameraId: string): Photo {
+  const camera = findCamera(siteId, cameraId)
+  if (!camera.stream_url) throw new MockError(422, 'У камеры нет ссылки на стрим')
+  if (camera.stream_url.includes('busy')) throw new MockError(409, 'Снимок уже идёт, подождите')
+  const at = now()
+  camera.last_capture_attempt_at = at
+  if (camera.stream_url.includes('offline')) {
+    camera.last_capture_error = 'Камера не ответила за 15 с'
+    camera.capture_failures = (camera.capture_failures ?? 0) + 1
+    throw new MockError(422, camera.last_capture_error)
+  }
+  const date = at.slice(0, 10)
+  const photo: StoredPhoto = {
+    id: nextId('ph'),
+    site_id: siteId,
+    original_name: `stream-${at.slice(0, 19).replace(/[-:T]/g, '')}.jpg`,
+    width: 1920,
+    height: 1080,
+    captured_on: date,
+    date_source: 'channel',
+    processing_status: 'pending',
+    uploaded_at: at,
+    detections: [],
+  }
+  state.photos.push(photo)
+  camera.last_capture_at = at
+  camera.last_capture_error = null
+  camera.capture_failures = 0
+  camera.frames_count += 1
+  recompute(siteId, date)
+  return toPhoto(photo)
 }
 
 export function deleteCamera(siteId: string, cameraId: string): void {

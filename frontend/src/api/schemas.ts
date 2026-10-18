@@ -343,6 +343,9 @@ export const cameraSchema = z.object({
   capture_every_s: z.number().nullable(),
   last_capture_at: isoDateTime.nullable(),
   last_capture_error: z.string().nullable(),
+  // Поля статуса снимков: бэкенд отдаёт их не во всех ответах, поэтому необязательные
+  last_capture_attempt_at: isoDateTime.nullish(),
+  capture_failures: z.number().int().nullish(),
   zone: zoneSchema.nullable(),
   frames_count: z.number(),
   created_at: isoDateTime,
