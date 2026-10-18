@@ -1,0 +1,34 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+  background: var(--scrim);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  height: 100%;
+  padding: var(--space-6);
+  gap: var(--space-4);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.head h2 {
+  flex-grow: 1;
+}
+
+.body {
+  flex-grow: 1;
+  overflow-y: auto;
+}
