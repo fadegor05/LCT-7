@@ -2,6 +2,7 @@
 
 import zlib
 from collections.abc import Sequence
+from functools import lru_cache
 from io import BytesIO
 from typing import cast
 
@@ -12,12 +13,45 @@ from app.domains.photo.schemas import DetectionRead
 
 # Версия формата отрисовки: входит в ключ кэша и ETag, поэтому при смене
 # рендера (цвета, размер, формат) старые закэшированные картинки не отдаются.
-RENDER_VERSION = "2"
+RENDER_VERSION = "3"
 
 # Длинная сторона результата: снимок показывается в карточке, полный
 # размер камеры (4000+ px) только раздувает ответ и время кодирования.
 MAX_SIDE = 1920
 JPEG_QUALITY = 85
+
+# Шрифты с кириллицей: Debian-образ бэкенда (пакет fonts-dejavu-core), macOS разработчика.
+FONT_CANDIDATES = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+)
+
+
+@lru_cache(maxsize=16)
+def label_font(size: int) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, bool]:
+    """Шрифт подписи и признак «рисует кириллицу».
+
+    Перебирает FONT_CANDIDATES; если ни один не найден, возвращает встроенный шрифт
+    Pillow и False: тогда подпись строится по коду класса (встроенный шрифт кириллицу
+    не рисует). Кэш нужен, чтобы не читать файл шрифта на каждый кадр.
+    """
+    for path in FONT_CANDIDATES:
+        try:
+            return ImageFont.truetype(path, size), True
+        except OSError:
+            continue
+    return ImageFont.load_default(size), False
+
+
+def annotation_label(title: str, code: str, score: float, *, cyrillic: bool) -> str:
+    """Текст подписи: русское название техники и уверенность в процентах.
+
+    Без шрифта с кириллицей название не нарисовать, поэтому берётся код класса.
+    """
+    name = title if cyrillic else code
+    return f"{name} {round(score * 100)}%"
 
 
 def render_annotated(
@@ -30,7 +64,8 @@ def render_annotated(
     Открывает изображение, применяет EXIF транспозицию, конвертирует в RGB,
     уменьшает до max_side по длинной стороне, рисует для каждой детекции
     прямоугольник по координатам bbox (как доли [0..1]) и метку с кодом
-    и confidence над коробкой. Возвращает JPEG байты: PNG фотографии весит
+    и confidence над коробкой. В метке — русское название техники (если есть
+    шрифт с кириллицей), иначе код. Возвращает JPEG байты: PNG фотографии весит
     в разы больше и кодируется в разы дольше.
 
     Цвет детекции детерминирован по equipment_code (crc32).
@@ -84,11 +119,8 @@ def render_annotated(
     # Вычисляем толщину линии
     line_width = max(2, min(width, height) // 200)
 
-    # Используем дефолтный шрифт
-    try:
-        font = ImageFont.load_default()
-    except Exception:
-        font = None
+    # Шрифт с кириллицей (если в среде есть), иначе встроенный шрифт Pillow
+    font, cyrillic = label_font(max(12, min(width, height) // 40))
 
     for detection in detections:
         # Извлекаем bbox как доли [x1, y1, x2, y2]
@@ -122,38 +154,31 @@ def render_annotated(
         # Рисуем прямоугольник
         draw.rectangle([x1, y1, x2, y2], outline=color, width=line_width)
 
-        # Рисуем метку с кодом и score
-        label_text = f"{detection.equipment_code} {detection.score:.2f}"
+        label_text = annotation_label(
+            detection.equipment_title,
+            detection.equipment_code,
+            detection.score,
+            cyrillic=cyrillic,
+        )
 
-        # Измеряем размер текста
-        if font:
-            # Рисуем чёрный текст на белом фоне
-            # bbox = draw.textbbox((0, 0), label_text, font=font)
-            # text_width = bbox[2] - bbox[0]
-            # text_height = bbox[3] - bbox[1]
-            # Используем приблизительный размер для дефолтного шрифта
-            text_width = len(label_text) * 6
-            text_height = 11
+        # Размер подписи по реальным метрикам шрифта, а не по приблизительной ширине
+        left, top, right, bottom = draw.textbbox((0, 0), label_text, font=font)
+        text_width = int(right - left) + 4
+        text_height = int(bottom - top) + 4
 
-            # Пытаемся разместить метку над коробкой
-            label_x = x1
-            label_y = max(0, y1 - text_height - 2)
+        # Над коробкой; у верхнего края кадра — внутри коробки
+        label_y = y1 - text_height if y1 >= text_height else y1
+        # У левого края коробки, но не за правым краем кадра
+        label_x = max(0, min(x1, width - text_width))
 
-            # Если коробка касается верхней границы, размещаем метку внутри
-            if label_y == 0 and y1 == 0:
-                label_y = y1 + 2
-
-            # Обрезаем метку если она выходит за границы
-            label_x2 = min(label_x + text_width, width)
-            label_y2 = min(label_y + text_height, height)
-
-            # Рисуем белый фон для текста
-            draw.rectangle(
-                [label_x, label_y, label_x2, label_y2], fill="white", outline=color, width=1
-            )
-
-            # Рисуем сам текст
-            draw.text((label_x + 1, label_y + 1), label_text, fill="black", font=font)
+        # Белый фон с рамкой цвета детекции и чёрный текст поверх
+        draw.rectangle(
+            [label_x, label_y, label_x + text_width, label_y + text_height],
+            fill="white",
+            outline=color,
+            width=1,
+        )
+        draw.text((label_x + 2, label_y + 2 - top), label_text, fill="black", font=font)
 
     return _encode(img)
 

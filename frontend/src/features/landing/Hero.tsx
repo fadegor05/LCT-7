@@ -3,6 +3,7 @@ import { ButtonLink } from '@/components/ui/Button'
 import { buttonClassName } from '@/components/ui/buttonClass'
 import { ConstructionScene } from './ConstructionScene'
 import { ProductWindow } from './ProductWindow'
+import type { SignedInProps } from './Sections'
 import { useMediaQuery } from './useMediaQuery'
 import { useCursorParallax } from './useParallax'
 import styles from './Hero.module.css'
@@ -12,7 +13,7 @@ import styles from './Hero.module.css'
  * графика (цвет блока — статус). Ниже окно продукта на настоящем снимке площадки p03, оно выезжает
  * снизу один раз при загрузке. Кран только для широкого экрана, слои сцены едут за курсором.
  */
-export function Hero() {
+export function Hero({ signedIn = false }: SignedInProps) {
   const root = useRef<HTMLElement>(null)
   const wide = useMediaQuery('(width >= 1100px)')
   useCursorParallax(root)
@@ -31,9 +32,15 @@ export function Hero() {
             <a href="#timeline" className={buttonClassName('primary', 'lg')}>
               Посмотреть пример
             </a>
-            <ButtonLink to="/register" variant="ghost" size="lg" className={styles.onWarm}>
-              Попробовать на своём графике
-            </ButtonLink>
+            {signedIn ? (
+              <ButtonLink to="/sites" variant="ghost" size="lg" className={styles.onWarm}>
+                К стройкам
+              </ButtonLink>
+            ) : (
+              <ButtonLink to="/register" variant="ghost" size="lg" className={styles.onWarm}>
+                Попробовать на своём графике
+              </ButtonLink>
+            )}
           </div>
         </div>
         {wide ? (

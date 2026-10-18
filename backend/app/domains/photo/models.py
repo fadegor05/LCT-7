@@ -62,6 +62,10 @@ class Photo(Base):
     processing_status: Mapped[str] = mapped_column(
         String(16), default=ProcessingStatus.PENDING.value, nullable=False
     )
+    # Камера, с которой снят кадр; null — загружен вручную, как раньше
+    camera_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

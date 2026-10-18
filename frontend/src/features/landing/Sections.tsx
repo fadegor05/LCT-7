@@ -54,8 +54,13 @@ function Section({ id, index, label, title, lead, wide = false, children }: Sect
   )
 }
 
+/** Вошёл ли человек: тогда вместо входа и регистрации одна ссылка к стройкам. */
+export interface SignedInProps {
+  signedIn?: boolean
+}
+
 /** Липкая шапка: меню по якорям и вход. Кнопки входа всегда на виду. */
-export function SiteHeader() {
+export function SiteHeader({ signedIn = false }: SignedInProps) {
   return (
     <header className={styles.header}>
       <a href="#top" className={styles.brand}>
@@ -70,12 +75,20 @@ export function SiteHeader() {
         ))}
       </nav>
       <div className={styles.headerCta}>
-        <ButtonLink to="/login" variant="ghost" size="sm" className={styles.login}>
-          Войти
-        </ButtonLink>
-        <ButtonLink to="/register" size="sm">
-          Попробовать
-        </ButtonLink>
+        {signedIn ? (
+          <ButtonLink to="/sites" size="sm">
+            К стройкам
+          </ButtonLink>
+        ) : (
+          <>
+            <ButtonLink to="/login" variant="ghost" size="sm" className={styles.login}>
+              Войти
+            </ButtonLink>
+            <ButtonLink to="/register" size="sm">
+              Попробовать
+            </ButtonLink>
+          </>
+        )}
       </div>
     </header>
   )
@@ -426,7 +439,7 @@ export function Faq() {
   )
 }
 
-export function FinalCta() {
+export function FinalCta({ signedIn = false }: SignedInProps) {
   const panel = useRef<HTMLDivElement>(null)
   useCursorParallax(panel)
   return (
@@ -448,9 +461,15 @@ export function FinalCta() {
             кадры-доказательства.
           </p>
           <div className={styles.finalCta}>
-            <ButtonLink to="/register" size="lg">
-              Попробовать самому
-            </ButtonLink>
+            {signedIn ? (
+              <ButtonLink to="/sites" size="lg">
+                К стройкам
+              </ButtonLink>
+            ) : (
+              <ButtonLink to="/register" size="lg">
+                Попробовать самому
+              </ButtonLink>
+            )}
             {PILOT_CONTACT ? (
               <a href={PILOT_CONTACT} className={buttonClassName('ghost', 'lg')}>
                 Запросить пилот

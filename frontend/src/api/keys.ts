@@ -11,6 +11,7 @@ export const keys = {
   observation: (siteId: string, date: string) => ['site', siteId, 'observations', date] as const,
   photos: (siteId: string) => ['site', siteId, 'photos'] as const,
   undatedPhotos: (siteId: string) => ['site', siteId, 'photos', 'undated'] as const,
+  photo: (siteId: string, photoId: string) => ['site', siteId, 'photo', photoId] as const,
   stageStatuses: (siteId: string) => ['site', siteId, 'assessment', 'stages'] as const,
   deviations: (siteId: string) => ['site', siteId, 'assessment', 'deviations'] as const,
   deviation: (siteId: string, id: string) =>
@@ -18,4 +19,5 @@ export const keys = {
   summary: (siteId: string) => ['site', siteId, 'assessment', 'summary'] as const,
   assistantStatus: ['assistant', 'status'] as const,
   assistant: (siteId: string) => ['site', siteId, 'assistant'] as const,
+  cameras: (siteId: string) => ['site', siteId, 'cameras'] as const,
 }

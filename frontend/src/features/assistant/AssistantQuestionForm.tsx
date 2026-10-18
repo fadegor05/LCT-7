@@ -11,6 +11,8 @@ interface AssistantQuestionFormProps {
   onCancel(this: void): void
   /** Подсказки-примеры под полем; в чате их прячут, когда переписка уже есть. */
   showExamples?: boolean
+  /** Ассистент не подключён: форма видна, но спросить нельзя. */
+  disabled?: boolean
 }
 
 const EXAMPLES = ['где отставание и на сколько', 'что с этой площадкой']
@@ -22,6 +24,7 @@ export function AssistantQuestionForm({
   onSubmit,
   onCancel,
   showExamples = true,
+  disabled = false,
 }: AssistantQuestionFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [fieldValue, setFieldValue] = useState('')
@@ -33,6 +36,7 @@ export function AssistantQuestionForm({
   const counterErrorText = `${trimmedLength} / ${ASSISTANT_QUESTION_MAX} — слишком длинный вопрос`
 
   const submit = () => {
+    if (disabled) return
     const result = assistantQuestionSchema.safeParse(fieldValue)
     if (!result.success) {
       setFieldError('Вопрос должен быть от 3 до 500 символов')
@@ -49,7 +53,7 @@ export function AssistantQuestionForm({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (pending) {
+    if (pending || disabled) {
       return
     }
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -82,6 +86,7 @@ export function AssistantQuestionForm({
         error={displayError}
         hint={!displayError ? <span className={styles.counter}>{counterText}</span> : undefined}
         readOnly={pending}
+        disabled={disabled}
       />
 
       {showExamples && (
@@ -92,6 +97,7 @@ export function AssistantQuestionForm({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={disabled}
               onClick={() => handleExampleClick(example)}
             >
               {example}
@@ -101,7 +107,7 @@ export function AssistantQuestionForm({
       )}
 
       <div className={styles.actions}>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" disabled={pending || disabled}>
           Спросить
         </Button>
         {pending && (

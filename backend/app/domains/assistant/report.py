@@ -44,6 +44,10 @@ def clean_text(value: str | None, limit: int = MAX_TEXT) -> str | None:
         for c in value
     )
 
+    # Угловые скобки — на похожие: текст из загруженного графика не закроет тег
+    # «</отчёт>» в промпте и не притворится инструкцией
+    cleaned = cleaned.replace("<", "‹").replace(">", "›")
+
     # Сворачиваем множественные пробелы и табы в один пробел
     cleaned = re.sub(r"\s+", " ", cleaned)
 

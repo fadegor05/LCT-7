@@ -14,16 +14,20 @@ export function createTestQueryClient() {
 
 interface RenderRouteOptions {
   authed?: boolean
+  /** location.state стартовой записи, как при переходе через Link. */
+  state?: unknown
 }
 
 /** Рендер всего приложения на нужном URL (интеграционные тесты страниц поверх MSW). */
-export function renderRoute(url: string, { authed = true }: RenderRouteOptions = {}) {
+export function renderRoute(url: string, { authed = true, state }: RenderRouteOptions = {}) {
   // Set token by default so existing tests keep passing
   if (authed) {
     setToken('mock-token')
   }
   const client = createTestQueryClient()
-  const router = createMemoryRouter(routes, { initialEntries: [url] })
+  const router = createMemoryRouter(routes, {
+    initialEntries: [state === undefined ? url : { pathname: url, state }],
+  })
   const user = userEvent.setup()
   const utils = render(
     <QueryClientProvider client={client}>

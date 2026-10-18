@@ -12,7 +12,7 @@ describe('AppLayout', () => {
       'aria-current',
       'page',
     )
-    expect(screen.getByRole('link', { name: 'Веха' })).toHaveAttribute('href', '/sites')
+    expect(screen.getByRole('link', { name: 'Веха' })).toHaveAttribute('href', '/')
     expect(await screen.findByRole('heading', { level: 1, name: 'Стройки' })).toBeInTheDocument()
   })
 
@@ -53,7 +53,7 @@ describe('SiteShell', () => {
       within(tabs)
         .getAllByRole('link')
         .map((l) => l.textContent),
-    ).toEqual(['Обзор', 'Наблюдения', 'Методика'])
+    ).toEqual(['Обзор', 'Наблюдения', 'Методика', 'Камеры'])
     expect(within(tabs).getByRole('link', { name: 'Методика' })).toHaveAttribute(
       'aria-current',
       'page',

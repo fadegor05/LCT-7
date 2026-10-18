@@ -92,3 +92,11 @@ class SlidingWindowRateLimiter:
         ]
         for key in expired_keys:
             del self._hits[key]
+
+    def refund(self, key: str) -> None:
+        """Вернуть последнюю попытку: обращение не состоялось (ресурс недоступен)."""
+        hits = self._hits.get(key)
+        if hits:
+            hits.pop()
+            if not hits:
+                del self._hits[key]

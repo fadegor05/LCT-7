@@ -3,7 +3,7 @@
  * работают в браузере (VITE_USE_MOCKS=true) и в тестах (src/test/setup.ts).
  */
 import { delay, http, HttpResponse } from 'msw'
-import { parseModeSchema } from '@/api/schemas'
+import { parseModeSchema, type Zone } from '@/api/schemas'
 import { env } from '@/lib/env'
 import * as db from './db'
 import { user } from './fixtures'
@@ -66,7 +66,35 @@ function annotated(siteId: string, photoId: string) {
   }
 }
 
+/** Снимок-заглушка без рамок — как `/image` бэкенда: сам кадр для ориентира зоны. */
+function photoImage(siteId: string, photoId: string) {
+  try {
+    db.findPhoto(siteId, photoId)
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#c9d3da"/><rect y="170" width="400" height="130" fill="#a38f74"/></svg>`
+    return new HttpResponse(svg, {
+      headers: { 'Content-Type': 'image/svg+xml', 'X-Content-Type-Options': 'nosniff' },
+    })
+  } catch {
+    return HttpResponse.json({ detail: 'Файл снимка недоступен' }, { status: 404 })
+  }
+}
+
 type SiteParams = { siteId: string }
+
+/** Тело запроса камеры: поля как у CameraIn/CameraUpdate бэкенда; в PATCH отсутствующее поле не меняется. */
+interface CameraBody {
+  name: string
+  stream_url: string | null
+  capture_every_s: number | null
+  zone: Zone | null
+}
+
+const cameraWrite = (body: CameraBody): db.CameraWrite => ({
+  name: body.name,
+  stream_url: body.stream_url ?? null,
+  capture_every_s: body.capture_every_s ?? null,
+  zone: body.zone ?? null,
+})
 
 export const handlers = [
   http.all(api('/*'), latency),
@@ -136,6 +164,13 @@ export const handlers = [
     const mode = parseModeSchema.catch('auto').parse(form.get('mode'))
     return handle(() => db.importSchedule(params.siteId, file.name, mode), 201)
   }),
+  http.post<SiteParams>(
+    api('/sites/:siteId/schedule/stages/merge'),
+    async ({ params, request }) => {
+      const data = await json<{ stage_ids: string[] }>(request)
+      return handle(() => db.mergeStages(params.siteId, data.stage_ids))
+    },
+  ),
   http.patch<{ siteId: string; stageId: string }>(
     api('/sites/:siteId/schedule/stages/:stageId'),
     async ({ params, request }) => {
@@ -210,8 +245,40 @@ export const handlers = [
     return handle(() => db.detectBacklog(params.siteId, statuses))
   }),
   http.get<{ siteId: string; photoId: string }>(
+    api('/sites/:siteId/photos/:photoId'),
+    ({ params }) => handle(() => db.findPhoto(params.siteId, params.photoId)),
+  ),
+  http.get<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/annotated'),
     ({ params }) => annotated(params.siteId, params.photoId),
+  ),
+  http.get<{ siteId: string; photoId: string }>(
+    api('/sites/:siteId/photos/:photoId/image'),
+    ({ params }) => photoImage(params.siteId, params.photoId),
+  ),
+
+  // ---------- Камеры ----------
+  http.get<SiteParams>(api('/sites/:siteId/cameras'), ({ params }) =>
+    handle(() => db.listCameras(params.siteId)),
+  ),
+  http.post<SiteParams>(api('/sites/:siteId/cameras'), async ({ params, request }) => {
+    const body = await json<CameraBody>(request)
+    return handle(() => db.createCamera(params.siteId, cameraWrite(body)), 201)
+  }),
+  http.patch<{ siteId: string; cameraId: string }>(
+    api('/sites/:siteId/cameras/:cameraId'),
+    async ({ params, request }) => {
+      const body = await json<Partial<CameraBody>>(request)
+      return handle(() => db.updateCamera(params.siteId, params.cameraId, body))
+    },
+  ),
+  http.post<{ siteId: string; cameraId: string }>(
+    api('/sites/:siteId/cameras/:cameraId/capture'),
+    ({ params }) => handle(() => db.captureCamera(params.siteId, params.cameraId), 201),
+  ),
+  http.delete<{ siteId: string; cameraId: string }>(
+    api('/sites/:siteId/cameras/:cameraId'),
+    ({ params }) => handle(() => db.deleteCamera(params.siteId, params.cameraId)),
   ),
 
   // ---------- Наблюдения ----------

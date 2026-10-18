@@ -102,16 +102,14 @@ describe('SiteOverviewPage', () => {
   })
 
   describe('AssistantPanel integration', () => {
-    it('hides the assistant heading when no_llm', async () => {
+    it('shows the assistant column when no_llm', async () => {
       db.setAssistantScenario('no_llm')
       renderRoute('/sites/site-berezniki')
       // Ждём загрузки основного контента
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' })
-      // Проверяем, что заголовка ассистента нет
+      // Колонка видна и без языковой модели: спросить нельзя, но видно, почему
       await vi.waitFor(() => {
-        expect(
-          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
-        ).not.toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Ассистент по отчёту' })).toBeInTheDocument()
       })
     })
 
@@ -149,5 +147,17 @@ describe('SiteOverviewPage', () => {
       // DOCUMENT_POSITION_FOLLOWING = 4
       expect(position & 4).not.toBe(0)
     })
+  })
+
+  it('opens a photo of the last observation and closes it with Escape', async () => {
+    const { user } = renderRoute('/sites/site-berezniki')
+    const [open] = await screen.findAllByRole('button', { name: /^Открыть: Снимок IMG_/ })
+    const fileName = open!.getAttribute('aria-label')!.replace('Открыть: Снимок ', '')
+
+    await user.click(open!)
+    expect(await screen.findByRole('dialog', { name: new RegExp(fileName) })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

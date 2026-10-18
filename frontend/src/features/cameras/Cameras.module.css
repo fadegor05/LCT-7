@@ -1,0 +1,123 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Строка — карточка; колонки выровнены между строками */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+/* «Снимать кадр каждые [5] мин» — под ссылкой, в её колонке */
+.every {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: -2 / -1;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: calc(var(--space-2) * -1);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+
+.everyOff {
+  color: var(--ink-muted);
+}
+
+.everyInput {
+  width: 72px;
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font: inherit;
+  color: var(--ink);
+  text-align: center;
+}
+
+.everyInput:disabled {
+  background: var(--surface-card);
+  color: var(--ink-muted);
+}
+
+.everyInvalid {
+  border-color: var(--status-behind);
+}
+
+.everyError {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--status-behind);
+}
+
+.zoneHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.zoneGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.zoneSide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* Причина сбоя стрима: в строке — двумя строками, полностью — в подсказке */
+.streamError {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--caution);
+}
+
+@media (width <= 720px) {
+  .fields,
+  .zoneGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

@@ -18,6 +18,8 @@ from app.adapters.ml.base import (
 )
 from app.adapters.storage.base import FileStorage, StorageError
 from app.core.settings import Settings
+from app.domains.camera.models import Camera
+from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.date_resolver import (
     DateResolver,
@@ -68,7 +70,7 @@ class PhotoService:
         repository: PhotoRepository,
         detections: DetectionRepository,
         session: AsyncSession,
-        guard: SiteAccessGuard,
+        guard: SiteAccessGuard | None,
         storage: FileStorage,
         detector: DetectorClient,
         resolver: DateResolver,
@@ -87,7 +89,18 @@ class PhotoService:
         self._settings = settings
         self._recalculator = recalculator
 
-    async def upload_batch(self, site_id: uuid.UUID, files: Sequence[UploadInput]) -> UploadReport:
+    @property
+    def _site_guard(self) -> SiteAccessGuard:
+        if self._guard is None:
+            raise RuntimeError("PhotoService без SiteAccessGuard: пакет грузит только HTTP-путь")
+        return self._guard
+
+    async def upload_batch(
+        self,
+        site_id: uuid.UUID,
+        files: Sequence[UploadInput],
+        camera_id: uuid.UUID | None = None,
+    ) -> UploadReport:
         """Загрузить пакет фотографий.
 
         Проверяет доступ к сайту, валидирует файлы (размер, формат, целостность).
@@ -98,17 +111,19 @@ class PhotoService:
         Args:
             site_id: ID стройки
             files: Список файлов для загрузки
+            camera_id: Камера, с которой снят пакет; None — загружено вручную
 
         Returns:
             UploadReport с результатами
 
         Raises:
             AppError(404) если сайт не принадлежит пользователю
+            AppError(404) если камера не найдена на этом объекте
             AppError(422) если список пуст
             AppError(413) если файлов больше лимита
         """
         # Проверка доступа
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Валидация списка
         if not files:
@@ -120,12 +135,15 @@ class PhotoService:
                 status_code=413,
             )
 
+        if camera_id is not None:
+            await self._require_camera(site_id, camera_id)
+
         items: list[UploadItem] = []
         batch_photo_ids: list[uuid.UUID] = []
 
         # Обрабатываем файлы в порядке
         for file_input in files:
-            item = await self._process_single_file(site_id, file_input)
+            item = await self._process_single_file(site_id, file_input, camera_id)
             items.append(item)
             if item.photo is not None:
                 batch_photo_ids.append(item.photo.id)
@@ -169,7 +187,47 @@ class PhotoService:
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
-    async def _process_single_file(self, site_id: uuid.UUID, file_input: UploadInput) -> UploadItem:
+    async def add_camera_frame(
+        self,
+        site_id: uuid.UUID,
+        camera_id: uuid.UUID,
+        content: bytes,
+        filename: str,
+        captured_on: date,
+    ) -> UploadItem:
+        """Принять кадр, снятый со стрима камеры: дата — из момента снимка, без штампа.
+
+        Доступ к стройке проверяет вызывающий (HTTP-роут или фоновый планировщик), поэтому
+        здесь гварда нет. Камера обязана принадлежать этой стройке.
+        """
+        await self._require_camera(site_id, camera_id)
+        item = await self._process_single_file(
+            site_id,
+            UploadInput(filename=filename, content=content, content_type="image/jpeg"),
+            camera_id,
+            channel_date=captured_on,
+        )
+        if item.photo is not None:
+            try:
+                await self._recalculator.recompute(site_id, captured_on)
+            except Exception:
+                logger.exception("Ошибка при пересчёте наблюдений после кадра со стрима")
+                await self._session.rollback()
+        return item
+
+    async def _require_camera(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> None:
+        """Камера должна существовать и принадлежать тому же объекту."""
+        camera = await self._session.get(Camera, camera_id)
+        if camera is None or camera.site_id != site_id:
+            raise AppError("Камера не найдена", status_code=404)
+
+    async def _process_single_file(
+        self,
+        site_id: uuid.UUID,
+        file_input: UploadInput,
+        camera_id: uuid.UUID | None = None,
+        channel_date: date | None = None,
+    ) -> UploadItem:
         """Обработать один файл: валидация, загрузка, создание Photo, детекция.
 
         Ошибка на любом этапе становится UploadItem.error.
@@ -178,6 +236,8 @@ class PhotoService:
         Args:
             site_id: ID стройки
             file_input: Входные данные файла
+            camera_id: Камера снимка; None — загружено вручную
+            channel_date: Дата из канала (кадр со стрима); None — дату определяем по файлу
 
         Returns:
             UploadItem с результатом
@@ -220,7 +280,7 @@ class PhotoService:
         # Шаг (c): Разрешение даты
         try:
             resolved_date = await self._resolver.resolve(
-                file_input.content, filename=file_input.filename
+                file_input.content, channel_date=channel_date, filename=file_input.filename
             )
         except InvalidImageError:
             logger.warning("Не удалось определить дату для %s", file_input.filename)
@@ -258,6 +318,7 @@ class PhotoService:
             captured_on=resolved_date.captured_on,
             date_source=resolved_date.source.value if resolved_date.source else None,
             processing_status=ProcessingStatus.PENDING.value,
+            camera_id=camera_id,
         )
 
         self._session.add(photo)
@@ -472,7 +533,7 @@ class PhotoService:
         Raises:
             AppError(404) если сайт не принадлежит пользователю
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
         photos = await self._repository.list_by_site(site_id, undated=undated)
         return [PhotoRead.model_validate(p) for p in photos]
 
@@ -492,7 +553,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(404) если фотография не найдена
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:
@@ -500,6 +561,12 @@ class PhotoService:
 
         # Получаем детекции
         detections_db = await self._detections.list_by_photo(photo_id)
+
+        # Зона камеры снимка (одна выборка на фото); без камеры или зоны — in_zone не считаем
+        zone = None
+        if photo.camera_id is not None:
+            camera = await self._session.get(Camera, photo.camera_id)
+            zone = camera.zone if camera is not None else None
 
         # Обогащаем детекции кодом и названием оборудования
         detections_read = []
@@ -515,6 +582,7 @@ class PhotoService:
                     bbox=det.bbox,
                     score=det.score,
                     model_version=det.model_version,
+                    in_zone=bbox_in_zone(det.bbox, zone),
                 )
             else:
                 det_read = DetectionRead(
@@ -525,6 +593,7 @@ class PhotoService:
                     bbox=det.bbox,
                     score=det.score,
                     model_version=det.model_version,
+                    in_zone=bbox_in_zone(det.bbox, zone),
                 )
             detections_read.append(det_read)
 
@@ -538,6 +607,7 @@ class PhotoService:
             date_source=photo.date_source,
             processing_status=photo.processing_status,
             uploaded_at=photo.uploaded_at,
+            camera_id=photo.camera_id,
             detections=detections_read,
         )
 
@@ -559,7 +629,7 @@ class PhotoService:
             AppError(404) если фотография не найдена
             AppError(422) если дата в будущем
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Проверяем будущую дату
         if captured_on > date.today():
@@ -604,7 +674,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(404) если фотография не найдена или файл недоступен
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:
@@ -723,7 +793,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(409) если детектор не настроен
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Проверяем, что детектор настроен
         if not self._detector.configured:
@@ -832,7 +902,7 @@ class PhotoService:
             AppError(409) если детектор не настроен (вернул None)
             AppError(502) если детектор вернул ошибку
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:

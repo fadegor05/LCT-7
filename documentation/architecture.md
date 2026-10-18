@@ -12,6 +12,7 @@ flowchart LR
   backend --> pg[("PostgreSQL 16")]
   backend --> store[("Хранилище снимков<br/>том storage_data или MinIO")]
   backend -->|"DETECTOR__URL"| ml["ml<br/>FastAPI :8000<br/>YOLO26-m на CPU"]
+  backend -->|"ffmpeg, кадр со стрима"| cams[["Камеры стройки<br/>RTSP, RTSPS, HTTP(S)"]]
   ml --> weights[("Веса mocs_m_best.pt<br/>том lct7_ml_weights")]
   ml -->|"LLM_BASE_URL"| llm[["Внешняя языковая модель<br/>формат chat completions"]]
 ```
@@ -20,7 +21,7 @@ flowchart LR
 |---|---|
 | `traefik` | Единая точка входа. `/api` уходит в backend (приоритет 20), всё остальное во frontend (приоритет 1). Порт 8080 открывает дашборд без пароля, но только на `127.0.0.1` хоста |
 | `frontend` | Одностраничное приложение. В dev вместо nginx работает Vite dev-server на порту 5173 |
-| `backend` | REST API. При старте контейнера выполняет `alembic upgrade head`, затем запускает Granian |
+| `backend` | REST API. При старте контейнера выполняет `alembic upgrade head`, затем запускает Granian. При `STREAM__ENABLED=true` в том же процессе работает планировщик снимков со стрима камер |
 | `ml` | Распознавание техники, чтение штампа, ассистент, разбор графика моделью |
 | `postgres` | Основная база |
 | `minio`, `minio-init` | Поднимаются всегда, но бэкенд обращается к ним только при `S3=true`. По умолчанию снимки лежат в томе `storage_data` |
@@ -92,6 +93,29 @@ sequenceDiagram
 
 Обработка синхронная. Запрос загрузки возвращается, когда все файлы прошли распознавание и пересчёт закончился. Очереди задач и отдельного воркера нет.
 
+### Снимок со стрима камеры
+
+Кадр снимает либо фоновый планировщик, либо кнопка «Снять кадр сейчас». Дальше путь тот же, что у загруженного файла, только дата берётся из момента снимка.
+
+```mermaid
+sequenceDiagram
+  participant Src as Планировщик или кнопка
+  participant G as GuardedGrabber
+  participant FF as ffmpeg
+  participant Ph as PhotoService
+  participant DB as PostgreSQL
+  Src->>G: grab(ссылка камеры)
+  G->>G: адреса после DNS: служебные, петля, частные сети
+  G->>FF: один кадр JPEG в stdout
+  FF-->>G: кадр или причина неудачи
+  G-->>Src: байты или текст без учётных данных
+  Src->>Ph: add_camera_frame, дата по поясу STREAM__TIMEZONE, источник channel
+  Ph->>DB: photo, пересчёт наблюдения и выводов за день
+  Src->>DB: момент попытки, сбои подряд, последняя ошибка камеры
+```
+
+Планировщик раз в `STREAM__TICK_S` секунд выбирает камеры, которым пора, и снимает их не больше `STREAM__CONCURRENCY` сразу. Попытка записывается до снимка, поэтому камеру не берут повторно, пока она отвечает. Выборка идёт с `FOR UPDATE SKIP LOCKED`. Это страховка при нескольких репликах, но рассчитано на один экземпляр бэкенда.
+
 ### Цепочка пересчёта
 
 Домены не импортируют друг друга напрямую. Связь идёт через протоколы-хуки, а настоящую реализацию подставляет контейнер зависимостей.
@@ -106,7 +130,7 @@ flowchart LR
 
 ### Внешние системы через адаптеры
 
-Каждая внешняя система скрыта за `Protocol` с двумя реализациями: настоящей и заглушкой.
+Большинство внешних систем скрыто за `Protocol` с двумя реализациями: настоящей и заглушкой. У снимков со стрима заглушки нет: без `ffmpeg` снимок завершается ошибкой с причиной, а не пустым результатом.
 
 | Протокол | Реальная реализация | Заглушка |
 |---|---|---|
@@ -115,6 +139,7 @@ flowchart LR
 | `AssistantClient` | `HttpAssistantClient` (без повторов, каждый вызов платный) | `NullAssistantClient` |
 | `ScheduleLlmClient` | `HttpScheduleLlmClient` | `NullScheduleLlmClient` |
 | `FileStorage` | `S3FileStorage`, `LocalFileStorage` | нет |
+| `StreamGrabber` | `FfmpegGrabber`, обёрнут в `GuardedGrabber` (проверка адресов) | нет |
 
 
 ## Развёртывание
@@ -124,3 +149,5 @@ flowchart LR
 | Общий | `deploy/docker/common/core.yaml`, `infra.yaml` | Сервисы, метки Traefik, PostgreSQL, MinIO, Traefik |
 | Разработка | `deploy/docker/dev/core.yaml` | Локальная сборка, bind-mount исходников, Granian с `--reload`, Vite вместо nginx, порт PostgreSQL наружу |
 | Прод | `deploy/docker/prod/core.yaml` | TLS Let's Encrypt, лимиты памяти (backend 512 МБ, frontend 64 МБ, ml 1536 МБ), готовые образы |
+
+В образе backend стоят два системных пакета: `ffmpeg` (снимки со стрима камер) и `fonts-dejavu-core` (кириллица в подписях рамок на аннотированных снимках).

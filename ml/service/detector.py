@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -149,11 +150,29 @@ class Detector:
         }
 
 
+# Время, которое знакогенератор камеры впечатал слева сверху (ml/stamp/).
+# Порог — как у бэкенда (FRAMES__STAMP_MIN_CONFIDENCE, см. ml/stamp/eval.py).
+CAMERA_MIN_CONFIDENCE = 0.9
+# Включается переменной окружения STAMP_CAMERA_READER=1 (true/yes). По умолчанию выключено:
+# точность на настоящих кадрах не проверена, а /stamp кормит даты фото в проде.
+
+
+def camera_reader_enabled() -> bool:
+    """Читается при каждом вызове, а не при импорте: тесты могут подменить окружение."""
+    return os.environ.get("STAMP_CAMERA_READER", "").strip().lower() in ("1", "true", "yes")
+
+
 @dataclass
 class StampReader:
-    """Ленивая загрузка RapidOCR: не грузить веса, пока штамп не нужен."""
+    """Ленивая загрузка RapidOCR: не грузить веса, пока штамп не нужен.
+
+    Сначала — эталоны знаков камеры для известных разрешений (мс, без OCR).
+    Если кадр такого разрешения не прочитан уверенно или разрешение неизвестно,
+    работает прежний путь: OCR даты в углах кадра.
+    """
 
     _ocr: Any = field(default=None, init=False, repr=False)
+    _camera: Any = field(default=None, init=False, repr=False)
 
     @property
     def ocr(self):
@@ -162,18 +181,43 @@ class StampReader:
             self._ocr = RapidOCR()
         return self._ocr
 
+    @property
+    def camera_templates(self):
+        if self._camera is None:
+            from stamp.templates import load_all
+            self._camera = load_all()
+        return self._camera
+
     def warmup(self) -> None:
         import numpy as np
         from tools.read_date_stamp import read_stamp_array
         read_stamp_array(np.zeros((200, 200, 3), dtype="uint8"), self.ocr)
+
+    def read_camera(self, img) -> dict | None:
+        """Время камеры по эталонам; None — не прочитано уверенно, решает OCR."""
+        import numpy as np
+        from stamp.reader import read_gray
+        gray = np.asarray(img.convert("L"), dtype=np.float32)
+        out = read_gray(gray, self.camera_templates)
+        if out is None:
+            return None
+        read, profile = out
+        if read.captured_at is None or read.confidence < CAMERA_MIN_CONFIDENCE:
+            return None
+        return {"date": read.captured_at.date().isoformat(),
+                "text": read.text, "roi": "camera", "profile": profile.name}
 
     def read_bytes(self, data: bytes) -> dict:
         from PIL import Image, ImageOps
         from tools.read_date_stamp import read_stamp_for_service
         img = Image.open(io.BytesIO(data))
         img = ImageOps.exif_transpose(img)
-        img = np.asarray(img.convert("RGB"))
-        return read_stamp_for_service(img, self.ocr)
+        if camera_reader_enabled():
+            camera = self.read_camera(img)
+            if camera is not None:
+                return camera
+        arr = np.asarray(img.convert("RGB"))
+        return read_stamp_for_service(arr, self.ocr)
 
 
 def main() -> int:

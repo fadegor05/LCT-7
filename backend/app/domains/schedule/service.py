@@ -1,6 +1,7 @@
 """Бизнес-логика графика выполнения работ."""
 
 import uuid
+from collections.abc import Sequence
 from datetime import date
 
 from sqlalchemy.exc import IntegrityError
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.assistant import AssistantError
 from app.adapters.ml.schedule_llm import LlmScheduleResult, ScheduleLlmClient
+from app.domains.methodology.materializer import NO_KIT_REASON
+from app.domains.methodology.models import MethodologyRule
 from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.schedule.models import (
     DatesSource,
@@ -356,6 +359,133 @@ class ScheduleService:
             await self._session.refresh(stage)
 
         return stage
+
+    async def merge_stages(
+        self, site_id: uuid.UUID, stage_ids: Sequence[uuid.UUID]
+    ) -> ScheduleReport:
+        """Объединить соседние этапы графика в первый из них.
+
+        Название и id остаются у первого этапа, окно — объединение дат всех. Правило
+        методики первого этапа получает наборы техники остальных (одинаковые наборы
+        не дублируются); проверяемым становится, если проверяемым был любой из них.
+        Правила и этапы остальных удаляются, порядок этапов перенумеровывается.
+
+        Args:
+            site_id: ID сайта
+            stage_ids: ID объединяемых этапов (соседних, не меньше двух разных)
+
+        Returns:
+            ScheduleReport после объединения и пересчёта статусов
+
+        Raises:
+            AppError(404) если сайт не принадлежит текущему пользователю, нет графика
+                или этап не найден
+            AppError(422) если этапы не разные или не соседние
+        """
+        await self._guard.require(site_id)
+
+        schedule = await self._repository.get_by_site(site_id)
+        if schedule is None:
+            raise AppError("График не загружен", status_code=404)
+        schedule_id = schedule.id
+
+        distinct = set(stage_ids)
+        if len(distinct) < 2:
+            raise AppError("Выберите хотя бы два разных этапа", status_code=422)
+
+        stages = await self._repository.list_stages(schedule_id)
+        chosen = sorted((s for s in stages if s.id in distinct), key=lambda s: s.position)
+        if len(chosen) != len(distinct):
+            raise AppError("Этап не найден", status_code=404)
+        positions = [s.position for s in chosen]
+        if positions != list(range(positions[0], positions[0] + len(positions))):
+            raise AppError("Объединять можно только соседние этапы", status_code=422)
+
+        target, rest = chosen[0], chosen[1:]
+        rest_ids = [s.id for s in rest]
+
+        # Методика: правило первого этапа (создаём, если его ещё не материализовали)
+        target_rules = await self._repository.list_rules_of_stages([target.id])
+        if target_rules:
+            target_rule = target_rules[0]
+        else:
+            target_rule = await self._repository.add_rule(
+                MethodologyRule(
+                    site_id=site_id,
+                    stage_id=target.id,
+                    is_verifiable=False,
+                    unverifiable_reason=NO_KIT_REASON,
+                )
+            )
+        rest_rules = await self._repository.list_rules_of_stages(rest_ids)
+        stage_position = {s.id: s.position for s in chosen}
+        rest_rules = [
+            r
+            for _, r in sorted(
+                ((stage_position[r.stage_id], r) for r in rest_rules if r.stage_id is not None),
+                key=lambda pair: pair[0],
+            )
+        ]
+        rule_order = {r.id: i for i, r in enumerate(rest_rules)}
+
+        target_sets = await self._repository.list_sets_of_rules([target_rule.id])
+        rest_sets = sorted(
+            await self._repository.list_sets_of_rules([r.id for r in rest_rules]),
+            key=lambda s: (rule_order[s.rule_id], s.position),
+        )
+        requirements = await self._repository.list_requirements_of_sets(
+            [s.id for s in [*target_sets, *rest_sets]]
+        )
+        signature_of: dict[uuid.UUID, set[tuple]] = {}
+        for req in requirements:
+            signature_of.setdefault(req.set_id, set()).add(
+                (
+                    req.equipment_type_id,
+                    req.obligation,
+                    req.min_count,
+                    req.gesn_code,
+                    req.source_note,
+                )
+            )
+
+        seen = {frozenset(signature_of.get(s.id, set())) for s in target_sets}
+        next_position = max((s.position for s in target_sets), default=-1) + 1
+        for equipment_set in rest_sets:
+            key = frozenset(signature_of.get(equipment_set.id, set()))
+            if key in seen:
+                continue
+            seen.add(key)
+            equipment_set.rule_id = target_rule.id
+            equipment_set.position = next_position
+            next_position += 1
+        await self._session.flush()
+        await self._repository.delete_rules([r.id for r in rest_rules])
+
+        rest_verifiable = any(r.is_verifiable for r in rest_rules)
+        if not target_rule.is_verifiable and rest_verifiable:
+            target_rule.is_verifiable = True
+            target_rule.unverifiable_reason = None
+
+        # Этап: окно — объединение дат, «вручную», если хоть один правили вручную
+        target.planned_start = min(
+            (s.planned_start for s in chosen if s.planned_start), default=None
+        )
+        target.planned_end = max((s.planned_end for s in chosen if s.planned_end), default=None)
+        if any(s.dates_source == DatesSource.MANUAL.value for s in chosen):
+            target.dates_source = DatesSource.MANUAL.value
+        for stage in rest:
+            await self._session.delete(stage)
+        for number, stage in enumerate((s for s in stages if s.id not in rest_ids), start=1):
+            stage.position = number
+
+        await self._session.commit()
+        # Пересчёт статусов — тот же триггер, что после правки дат этапа
+        await self._recalculator.recalculate(site_id)
+        # Отчёт строим заново: сбой пересчёта откатывает сессию и протухает ORM-объекты
+        fresh = await self._repository.get_by_site(site_id)
+        if fresh is None:
+            raise AppError("График не загружен", status_code=404)
+        return await self._build_report(fresh)
 
     async def get_stage_window(self, stage_id: uuid.UUID) -> tuple[date | None, date | None]:
         """Получить окно дат этапа (start, end).

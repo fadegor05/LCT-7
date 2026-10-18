@@ -331,6 +331,26 @@ export const assistantStatusSchema = z.object({
   enabled: z.boolean(),
 })
 
+// ---------- Камеры (camera) ----------
+
+/** Вершина зоны — [x, y] в долях кадра от 0 до 1. */
+export const zoneSchema = z.array(z.tuple([z.number(), z.number()]))
+
+export const cameraSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  stream_url: z.string().nullable(),
+  capture_every_s: z.number().nullable(),
+  last_capture_at: isoDateTime.nullable(),
+  last_capture_error: z.string().nullable(),
+  // Поля статуса снимков: бэкенд отдаёт их не во всех ответах, поэтому необязательные
+  last_capture_attempt_at: isoDateTime.nullish(),
+  capture_failures: z.number().int().nullish(),
+  zone: zoneSchema.nullable(),
+  frames_count: z.number(),
+  created_at: isoDateTime,
+})
+
 // ---------- Типы ----------
 
 export type Level = z.infer<typeof levelSchema>
@@ -374,3 +394,5 @@ export type DetectBacklogReport = z.infer<typeof detectBacklogReportSchema>
 export type AssistantStageRef = z.infer<typeof assistantStageRefSchema>
 export type AssistantAnswer = z.infer<typeof assistantAnswerSchema>
 export type AssistantStatus = z.infer<typeof assistantStatusSchema>
+export type Zone = z.infer<typeof zoneSchema>
+export type Camera = z.infer<typeof cameraSchema>

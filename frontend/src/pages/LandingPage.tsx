@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 import { Hero } from '@/features/landing/Hero'
 import {
   Audience,
@@ -19,16 +19,20 @@ import styles from './LandingPage.module.css'
 /**
  * Первая страница для гостя. История: оффер и продукт на настоящем снимке, контекст, закреплённый
  * таймлайн «план против факта», три шага, живой пример на данных p03 без входа, доказательства,
- * сравнение с рынком, ответы на возражения. Вошедшего сразу ведём к стройкам.
+ * сравнение с рынком, ответы на возражения. Вошедшего ведём к стройкам, но не когда он пришёл
+ * с логотипа «Веха» (`state.landing`): тогда вместо входа и регистрации одна ссылка «К стройкам».
  */
 export function LandingPage() {
-  if (getToken()) return <Navigate to="/sites" replace />
+  const location = useLocation()
+  const signedIn = Boolean(getToken())
+  const fromLogo = Boolean((location.state as { landing?: boolean } | null)?.landing)
+  if (signedIn && !fromLogo) return <Navigate to="/sites" replace />
 
   return (
     <div id="top" className={styles.page}>
-      <SiteHeader />
+      <SiteHeader signedIn={signedIn} />
       <main>
-        <Hero />
+        <Hero signedIn={signedIn} />
         <Facts />
         <Timeline />
         <HowItWorks />
@@ -38,7 +42,7 @@ export function LandingPage() {
         <Compare />
         <Audience />
         <Faq />
-        <FinalCta />
+        <FinalCta signedIn={signedIn} />
       </main>
     </div>
   )
