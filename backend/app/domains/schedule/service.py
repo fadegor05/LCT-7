@@ -419,7 +419,13 @@ class ScheduleService:
             )
         rest_rules = await self._repository.list_rules_of_stages(rest_ids)
         stage_position = {s.id: s.position for s in chosen}
-        rest_rules = sorted(rest_rules, key=lambda r: stage_position[r.stage_id])
+        rest_rules = [
+            r
+            for _, r in sorted(
+                ((stage_position[r.stage_id], r) for r in rest_rules if r.stage_id is not None),
+                key=lambda pair: pair[0],
+            )
+        ]
         rule_order = {r.id: i for i, r in enumerate(rest_rules)}
 
         target_sets = await self._repository.list_sets_of_rules([target_rule.id])

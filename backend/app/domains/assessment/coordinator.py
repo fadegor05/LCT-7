@@ -158,7 +158,7 @@ class RecomputeCoordinator:
         day_zone_by_photo = {
             p.id: (p.captured_on, zone_by_camera[p.camera_id])
             for p in zoned
-            if p.camera_id in zone_by_camera
+            if p.camera_id in zone_by_camera and p.captured_on is not None
         }
         if not day_zone_by_photo:
             return {}

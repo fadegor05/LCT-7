@@ -29,4 +29,4 @@ class CameraRepository(BaseRepository[Camera]):
             .where(Photo.camera_id.in_(camera_ids))
             .group_by(Photo.camera_id)
         )
-        return {camera_id: int(n) for camera_id, n in result.all()}
+        return {camera_id: int(n) for camera_id, n in result.all() if camera_id is not None}

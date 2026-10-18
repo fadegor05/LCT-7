@@ -89,6 +89,12 @@ class PhotoService:
         self._settings = settings
         self._recalculator = recalculator
 
+    @property
+    def _site_guard(self) -> SiteAccessGuard:
+        if self._guard is None:
+            raise RuntimeError("PhotoService без SiteAccessGuard: пакет грузит только HTTP-путь")
+        return self._guard
+
     async def upload_batch(
         self,
         site_id: uuid.UUID,
@@ -117,9 +123,7 @@ class PhotoService:
             AppError(413) если файлов больше лимита
         """
         # Проверка доступа
-        if self._guard is None:
-            raise RuntimeError("PhotoService без SiteAccessGuard: пакет грузит только HTTP-путь")
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Валидация списка
         if not files:
@@ -529,7 +533,7 @@ class PhotoService:
         Raises:
             AppError(404) если сайт не принадлежит пользователю
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
         photos = await self._repository.list_by_site(site_id, undated=undated)
         return [PhotoRead.model_validate(p) for p in photos]
 
@@ -549,7 +553,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(404) если фотография не найдена
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:
@@ -625,7 +629,7 @@ class PhotoService:
             AppError(404) если фотография не найдена
             AppError(422) если дата в будущем
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Проверяем будущую дату
         if captured_on > date.today():
@@ -670,7 +674,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(404) если фотография не найдена или файл недоступен
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:
@@ -789,7 +793,7 @@ class PhotoService:
             AppError(404) если сайт не принадлежит пользователю
             AppError(409) если детектор не настроен
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         # Проверяем, что детектор настроен
         if not self._detector.configured:
@@ -898,7 +902,7 @@ class PhotoService:
             AppError(409) если детектор не настроен (вернул None)
             AppError(502) если детектор вернул ошибку
         """
-        await self._guard.require(site_id)
+        await self._site_guard.require(site_id)
 
         photo = await self._repository.get_in_site(site_id, photo_id)
         if photo is None:
