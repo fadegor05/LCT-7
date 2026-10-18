@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.notify.factory import ChannelRegistry, create_channel_registry
 from app.core.settings import Settings
+from app.domains.notification.channels import ChannelLinkService
 from app.domains.notification.dispatcher import (
     BackgroundDispatcher,
     NotificationDispatcher,
@@ -33,6 +34,16 @@ class NotificationProvider(Provider):
         dispatcher: NotificationDispatcher,
     ) -> NotificationService:
         return NotificationService(repository, session, dispatcher)
+
+    @provide(scope=Scope.REQUEST)
+    def link_service(
+        self,
+        channels: UserChannelRepository,
+        tokens: ChannelLinkTokenRepository,
+        session: AsyncSession,
+        settings: Settings,
+    ) -> ChannelLinkService:
+        return ChannelLinkService(channels, tokens, session, settings)
 
 
 class NullDispatcherProvider(Provider):
