@@ -5,7 +5,7 @@ import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { SiteQueryState } from '@/components/layout/SiteQueryState'
 import { SiteShell } from '@/components/layout/SiteShell'
-import { Button } from '@/components/ui/Button'
+import { Button, ButtonLink } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { QueryState } from '@/components/ui/QueryState'
 import { AssistantPanel } from '@/features/assistant/AssistantPanel'
@@ -72,9 +72,18 @@ export function SiteOverviewPage() {
           site={data}
           subtitle={siteSubtitle(data)}
           actions={
-            <Button variant="ghost" onClick={() => window.print()}>
-              Печатная версия
-            </Button>
+            <>
+              <Button variant="ghost" onClick={() => window.print()}>
+                Печатная версия
+              </Button>
+              <ButtonLink
+                to={`/sites/${siteId}/report?print=1`}
+                target="_blank"
+                variant="secondary"
+              >
+                Скачать отчёт PDF
+              </ButtonLink>
+            </>
           }
           aside={<AssistantPanel siteId={siteId} />}
         >

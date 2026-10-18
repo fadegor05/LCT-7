@@ -1,0 +1,152 @@
+/* Отчёт — документ A4: без интерфейса, чёрным по белому, таблицы на всю ширину */
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.doc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.doc h1 {
+  font-size: 28px;
+  line-height: 32px;
+}
+
+.doc h2 {
+  margin-bottom: var(--space-2);
+  font-size: 18px;
+  line-height: 24px;
+  letter-spacing: -0.3px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--ink);
+}
+
+.meta {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.verdict {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 500;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  border-bottom: 1px solid var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
+.table tr {
+  break-inside: avoid;
+}
+
+.sub {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.critical {
+  color: var(--status-behind);
+  font-weight: 500;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-5);
+  list-style: disc;
+}
+
+.limits {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+@media print {
+  @page {
+    size: a4;
+    margin: 14mm 12mm;
+  }
+
+  /* Интерфейс приложения (шапка, навигация) не печатается: правило только пока открыт отчёт */
+  :global(body:has([data-report])) header {
+    display: none;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .doc {
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  .doc h1 {
+    font-size: 18pt;
+  }
+
+  .doc h2 {
+    font-size: 12pt;
+    break-after: avoid;
+  }
+
+  .verdict {
+    font-size: 14pt;
+  }
+
+  /* Короткие блоки не рвём; длинные таблицы рвутся по строкам (`tr` не разрывается) */
+  .summary,
+  .limits {
+    break-inside: avoid;
+  }
+}

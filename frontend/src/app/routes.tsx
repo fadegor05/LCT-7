@@ -6,6 +6,7 @@ import { LandingPage } from '@/pages/LandingPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MethodologyPage } from '@/pages/MethodologyPage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { ReportPage } from '@/pages/ReportPage'
 import { NewSiteMethodologyPage } from '@/pages/NewSiteMethodologyPage'
 import { NewSitePage } from '@/pages/NewSitePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -33,6 +34,7 @@ export const routes: RouteObject[] = [
       { path: 'sites/:siteId/observations', element: <ObservationsPage /> },
       { path: 'sites/:siteId/methodology', element: <MethodologyPage /> },
       { path: 'sites/:siteId/cameras', element: <CamerasPage /> },
+      { path: 'sites/:siteId/report', element: <ReportPage /> },
       { path: 'sites/:siteId/deviations/:deviationId', element: <DeviationPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
