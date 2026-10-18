@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
+import { NotificationBell } from '@/features/notifications/NotificationBell'
 import { useMe } from '@/api/auth'
 import { clearToken } from '@/lib/authStorage'
 import { setUnauthorizedHandler } from '@/api/client'
@@ -47,6 +48,7 @@ export function AppLayout() {
           </span>
         )}
         <div className={styles.userSection}>
+          <NotificationBell />
           {me.data && <span className={styles.userName}>{me.data.full_name}</span>}
           <Button variant="secondary" size="sm" onClick={handleLogout}>
             Выйти
