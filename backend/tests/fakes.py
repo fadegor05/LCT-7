@@ -211,3 +211,37 @@ class FakeScheduleLlmClient:
         if self.error is not None:
             raise self.error
         return self.result
+
+
+def jpeg_bytes(color: tuple[int, int, int] = (120, 120, 120)) -> bytes:
+    """Настоящий JPEG (Pillow), который принимает загрузка фотографий."""
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGB", (160, 120), color=color).save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+class FakeGrabber:
+    """Стрим камеры: по ссылке отдаёт новый JPEG (не дубликат) или заданную ошибку.
+
+    `busy` — имитирует занятую камеру (второй снимок параллельно), `calls` — все запросы.
+    """
+
+    def __init__(self) -> None:
+        self.errors: dict[str, str] = {}
+        self.calls: list[str] = []
+        self.busy = False
+
+    async def grab(self, url: str) -> bytes:
+        from app.adapters.stream.base import StreamBusy, StreamError
+
+        self.calls.append(url)
+        if self.busy:
+            raise StreamBusy("Снимок с этой камеры уже идёт")
+        if url in self.errors:
+            raise StreamError(self.errors[url])
+        shade = len(self.calls) * 37 % 250
+        return jpeg_bytes(color=(shade, 120, 150))

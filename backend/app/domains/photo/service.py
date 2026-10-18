@@ -70,7 +70,7 @@ class PhotoService:
         repository: PhotoRepository,
         detections: DetectionRepository,
         session: AsyncSession,
-        guard: SiteAccessGuard,
+        guard: SiteAccessGuard | None,
         storage: FileStorage,
         detector: DetectorClient,
         resolver: DateResolver,
@@ -117,6 +117,8 @@ class PhotoService:
             AppError(413) если файлов больше лимита
         """
         # Проверка доступа
+        if self._guard is None:
+            raise RuntimeError("PhotoService без SiteAccessGuard: пакет грузит только HTTP-путь")
         await self._guard.require(site_id)
 
         # Валидация списка
@@ -181,6 +183,34 @@ class PhotoService:
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
+    async def add_camera_frame(
+        self,
+        site_id: uuid.UUID,
+        camera_id: uuid.UUID,
+        content: bytes,
+        filename: str,
+        captured_on: date,
+    ) -> UploadItem:
+        """Принять кадр, снятый со стрима камеры: дата — из момента снимка, без штампа.
+
+        Доступ к стройке проверяет вызывающий (HTTP-роут или фоновый планировщик), поэтому
+        здесь гварда нет. Камера обязана принадлежать этой стройке.
+        """
+        await self._require_camera(site_id, camera_id)
+        item = await self._process_single_file(
+            site_id,
+            UploadInput(filename=filename, content=content, content_type="image/jpeg"),
+            camera_id,
+            channel_date=captured_on,
+        )
+        if item.photo is not None:
+            try:
+                await self._recalculator.recompute(site_id, captured_on)
+            except Exception:
+                logger.exception("Ошибка при пересчёте наблюдений после кадра со стрима")
+                await self._session.rollback()
+        return item
+
     async def _require_camera(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> None:
         """Камера должна существовать и принадлежать тому же объекту."""
         camera = await self._session.get(Camera, camera_id)
@@ -188,7 +218,11 @@ class PhotoService:
             raise AppError("Камера не найдена", status_code=404)
 
     async def _process_single_file(
-        self, site_id: uuid.UUID, file_input: UploadInput, camera_id: uuid.UUID | None = None
+        self,
+        site_id: uuid.UUID,
+        file_input: UploadInput,
+        camera_id: uuid.UUID | None = None,
+        channel_date: date | None = None,
     ) -> UploadItem:
         """Обработать один файл: валидация, загрузка, создание Photo, детекция.
 
@@ -199,6 +233,7 @@ class PhotoService:
             site_id: ID стройки
             file_input: Входные данные файла
             camera_id: Камера снимка; None — загружено вручную
+            channel_date: Дата из канала (кадр со стрима); None — дату определяем по файлу
 
         Returns:
             UploadItem с результатом
@@ -241,7 +276,7 @@ class PhotoService:
         # Шаг (c): Разрешение даты
         try:
             resolved_date = await self._resolver.resolve(
-                file_input.content, filename=file_input.filename
+                file_input.content, channel_date=channel_date, filename=file_input.filename
             )
         except InvalidImageError:
             logger.warning("Не удалось определить дату для %s", file_input.filename)

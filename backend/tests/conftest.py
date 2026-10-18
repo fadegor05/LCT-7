@@ -25,11 +25,12 @@ from app.adapters.ml.base import DetectorClient
 from app.adapters.ml.schedule_llm import ScheduleLlmClient
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
+from app.adapters.stream.base import StreamGrabber
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
 from app.domains.assistant.provider import AssistantProvider
-from app.domains.camera.provider import CameraProvider
+from app.domains.camera.provider import CameraProvider, StreamCaptureProvider
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.observation.provider import ObservationProvider
@@ -48,7 +49,7 @@ from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
 from app.plugins.exceptions import AppError
-from tests.fakes import FakeAssistantClient, FakeDetector, FakeScheduleLlmClient
+from tests.fakes import FakeAssistantClient, FakeDetector, FakeGrabber, FakeScheduleLlmClient
 
 
 class TestAppProvider(Provider):
@@ -275,6 +276,14 @@ class TestScheduleLlmClientProvider(Provider):
         return FakeScheduleLlmClient()
 
 
+class TestStreamGrabberProvider(Provider):
+    """Снимки со стрима без сети и ffmpeg: FakeGrabber вместо GuardedGrabber(FfmpegGrabber)."""
+
+    @provide(scope=Scope.APP)
+    def grabber(self) -> StreamGrabber:
+        return FakeGrabber()
+
+
 def _make_container(
     tmp_path: Path, *, foreign_keys: bool = False, user_provider: Provider | None = None
 ) -> AsyncContainer:
@@ -287,6 +296,8 @@ def _make_container(
         user_provider or TestUserProvider(),
         SiteProvider(),
         CameraProvider(),
+        StreamCaptureProvider(),
+        TestStreamGrabberProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
@@ -334,6 +345,8 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         TestUserProvider(),
         SiteProvider(),
         CameraProvider(),
+        StreamCaptureProvider(),
+        TestStreamGrabberProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
@@ -346,6 +359,12 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
     )
     yield container
     await container.close()
+
+
+@pytest.fixture
+async def grabber(container: AsyncContainer) -> FakeGrabber:
+    """Сниматель стрима контейнера: тесты задают ему ошибки и занятость."""
+    return cast(FakeGrabber, await container.get(StreamGrabber))
 
 
 @pytest.fixture

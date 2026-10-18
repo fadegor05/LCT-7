@@ -4,11 +4,13 @@
 двойное подчёркивание, как в Kotlin-бэкенде: POSTGRES__HOST, POSTGRES__PORT и т.д.
 """
 
+import ipaddress
 from datetime import date
 from enum import StrEnum
 from functools import lru_cache
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 DEFAULT_AUTH_SECRET_KEY = "dev-insecure-change-me"
@@ -62,6 +64,61 @@ class DetectorSettings(BaseModel):
     retry_backoff_s: tuple[float, ...] = (2.0, 5.0, 10.0)
     retry_budget_s: float = 20.0
     stamp_enabled: bool = True  # LCT-13; без DETECTOR__URL всё равно NullStampOcr
+
+
+class StreamSettings(BaseModel):
+    """Снимки со стрима камеры (STREAM__*). Выключены по умолчанию: прод не меняется."""
+
+    # Фоновый планировщик и сам захват; «Снять кадр сейчас» работает только при включении
+    enabled: bool = False
+    # Часы съёмки по поясу стройки, конец не включается: «8-20» — с 8:00 до 19:59
+    hours: str = "8-20"
+    timezone: str = "Europe/Moscow"
+    # Сколько ждать один кадр со стрима
+    timeout_s: float = 15.0
+    # Сколько камер снимать одновременно
+    concurrency: int = Field(default=4, ge=1)
+    # Как часто планировщик смотрит, кому пора снимать
+    tick_s: float = 15.0
+    # После сбоев интервал удваивается, но не дальше этого
+    max_backoff_s: int = 3600
+    # Службы compose, с которых снимать нельзя (по именам); петля и метаданные закрыты всегда
+    blocked_hosts: list[str] = ["postgres", "minio", "ml", "backend", "frontend", "web"]
+    # Свои закрытые сети (CIDR) сверх всего перечисленного
+    blocked_networks: list[str] = []
+    # Частные сети с камерами стройки (CIDR), которые разрешаем снимать; по умолчанию никакие
+    allowed_networks: list[str] = []
+
+    @field_validator("hours")
+    @classmethod
+    def _check_hours(cls, value: str) -> str:
+        start, sep, end = value.strip().partition("-")
+        if not (sep and start.isdigit() and end.isdigit() and 0 <= int(start) < int(end) <= 24):
+            raise ValueError(
+                f"STREAM__HOURS — часы «начало-конец» в пределах суток, а не {value!r}"
+            )
+        return value.strip()
+
+    @field_validator("timezone")
+    @classmethod
+    def _check_timezone(cls, value: str) -> str:
+        try:
+            ZoneInfo(value)  # неизвестный пояс падает здесь, а не в фоновой задаче
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError(f"STREAM__TIMEZONE — пояс IANA, а не {value!r}") from e
+        return value
+
+    @field_validator("blocked_networks", "allowed_networks")
+    @classmethod
+    def _check_networks(cls, value: list[str]) -> list[str]:
+        for network in value:
+            ipaddress.ip_network(network, strict=False)  # ValueError — не CIDR
+        return value
+
+    @property
+    def window(self) -> tuple[int, int]:
+        start, end = self.hours.split("-")
+        return int(start), int(end)
 
 
 class ObservationSettings(BaseModel):
@@ -145,6 +202,7 @@ class Settings(BaseSettings):
     s3: bool = False
     storage: StorageSettings = StorageSettings()
     detector: DetectorSettings = DetectorSettings()
+    stream: StreamSettings = StreamSettings()
     observation: ObservationSettings = ObservationSettings()
     assessment: AssessmentSettings = AssessmentSettings()
     assistant: AssistantSettings = AssistantSettings()

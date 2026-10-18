@@ -5,8 +5,10 @@ import uuid
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Response
 
+from app.domains.camera.capture import CameraCaptureService
 from app.domains.camera.schemas import CameraIn, CameraRead, CameraUpdate
 from app.domains.camera.service import CameraService, CameraView
+from app.domains.photo.schemas import PhotoRead
 
 router = APIRouter(prefix="/sites/{site_id}/cameras", tags=["cameras"])
 
@@ -49,6 +51,15 @@ async def update_camera(
     service: FromDishka[CameraService],
 ) -> CameraRead:
     return _read(await service.update(site_id, camera_id, data))
+
+
+@router.post("/{camera_id}/capture", status_code=201)
+@inject
+async def capture_camera(
+    site_id: uuid.UUID, camera_id: uuid.UUID, service: FromDishka[CameraCaptureService]
+) -> PhotoRead:
+    """«Снять кадр сейчас» со стрима камеры: кадр сразу в ленту, либо 422 с причиной."""
+    return await service.capture_now(site_id, camera_id)
 
 
 @router.delete("/{camera_id}", status_code=204)
