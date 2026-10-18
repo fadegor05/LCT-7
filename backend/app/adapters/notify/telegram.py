@@ -38,27 +38,48 @@ class TelegramClient:
     def __init__(self, token: str, timeout_s: float = 35.0) -> None:
         self._token = token
         self._timeout_s = timeout_s
+        # Подменяется в тестах, чтобы не ходить в сеть
+        self._transport: httpx.AsyncBaseTransport | None = None
 
     def _url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self._token}/{method}"
 
+    def redact(self, text: str) -> str:
+        """Убрать токен из текста.
+
+        httpx кладёт URL запроса в текст своих исключений, а URL Bot API содержит
+        токен. Текст уходит в лог дословно, поэтому чистим до того, как он станет
+        NotifyError.
+        """
+        return text.replace(self._token, "***") if self._token else text
+
+    def _client(self) -> httpx.AsyncClient:
+        return httpx.AsyncClient(timeout=self._timeout_s, transport=self._transport)
+
     async def send_message(self, chat_id: str, text: str) -> None:
-        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-            response = await client.post(
-                self._url("sendMessage"),
-                json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
-            )
+        try:
+            async with self._client() as client:
+                response = await client.post(
+                    self._url("sendMessage"),
+                    json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+                )
+        except Exception as error:
+            raise NotifyError(f"Telegram sendMessage: {self.redact(str(error))}") from error
         if response.status_code != 200:
-            # Тело содержит описание ошибки Bot API, но не токен — его нет в ответе
-            raise NotifyError(f"Telegram sendMessage {response.status_code}: {response.text}")
+            raise NotifyError(
+                f"Telegram sendMessage {response.status_code}: {self.redact(response.text)}"
+            )
 
     async def get_updates(self, offset: int | None, timeout_s: int) -> list[dict[str, Any]]:
         """Long polling. Телеграм держит соединение, пока не появится апдейт."""
         params: dict[str, Any] = {"timeout": timeout_s}
         if offset is not None:
             params["offset"] = offset
-        async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-            response = await client.get(self._url("getUpdates"), params=params)
+        try:
+            async with self._client() as client:
+                response = await client.get(self._url("getUpdates"), params=params)
+        except Exception as error:
+            raise NotifyError(f"Telegram getUpdates: {self.redact(str(error))}") from error
         if response.status_code != 200:
             raise NotifyError(f"Telegram getUpdates {response.status_code}")
         payload = response.json()
@@ -80,5 +101,9 @@ class TelegramChannel:
             await self._client.send_message(address, format_message(message))
         except NotifyError:
             raise
-        except Exception as error:  # httpx, таймауты, разбор JSON
-            raise NotifyError(f"Не удалось отправить в телеграм: {error}") from error
+        except Exception as error:
+            # Клиент уже чистит свои ошибки; сюда попадает всё остальное, и его
+            # текст тоже прогоняем через redact — он может прийти откуда угодно
+            raise NotifyError(
+                f"Не удалось отправить в телеграм: {self._client.redact(str(error))}"
+            ) from error

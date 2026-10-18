@@ -59,6 +59,24 @@ class BackgroundDispatcher:
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
+    async def close(self, timeout_s: float = 10.0) -> None:
+        """Дождаться запланированных отправок перед остановкой приложения.
+
+        Без этого обычный деплой теряет сообщение: lifespan закрывает контейнер и
+        диспоузит engine под ещё не начавшейся или выполняющейся задачей.
+        """
+        if not self._tasks:
+            return
+        pending = list(self._tasks)
+        done, still_running = await asyncio.wait(pending, timeout=timeout_s)
+        for task in done:
+            # Исключение в задаче иначе всплыло бы как unretrieved при сборке мусора
+            if not task.cancelled() and task.exception() is not None:
+                logger.warning("Доставка завершилась ошибкой: %s", task.exception())
+        for task in still_running:
+            logger.warning("Доставка не уложилась в %s с при остановке, отменяю", timeout_s)
+            task.cancel()
+
     async def deliver(self, notification_id: uuid.UUID) -> int:
         """Разослать уведомление по включённым каналам; сколько каналов приняли."""
         async with self._maker() as session:

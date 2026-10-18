@@ -23,6 +23,10 @@ class FakeTelegramClient:
             raise self.error
         self.sent.append((chat_id, text))
 
+    def redact(self, text: str) -> str:
+        """Часть контракта клиента: канал чистит им тексты ошибок."""
+        return text
+
 
 def test_format_includes_title_body_and_link() -> None:
     text = format_message(
@@ -70,3 +74,47 @@ async def test_channel_wraps_transport_errors() -> None:
 
 def test_channel_declares_its_kind() -> None:
     assert TelegramChannel.kind == ChannelKind.TELEGRAM
+
+
+async def test_client_redacts_the_token_from_transport_errors() -> None:
+    """Утёкший в лог токен бота — это захват бота целиком.
+
+    httpx кладёт в текст ошибки URL запроса, а URL Bot API содержит токен.
+    Диспетчер пишет текст NotifyError в лог дословно, так что чистить надо здесь.
+    """
+    import httpx
+
+    from app.adapters.notify.telegram import TelegramClient
+
+    token = "7654321:AAHsuperSecretBotToken"  # noqa: S105 — тестовое значение
+
+    class ExplodingTransport(httpx.AsyncBaseTransport):
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError(f"Connection refused to {request.url}")
+
+    client = TelegramClient(token=token)
+    client._transport = ExplodingTransport()
+
+    with pytest.raises(NotifyError) as caught:
+        await client.send_message("1", "текст")
+
+    assert token not in str(caught.value)
+    assert "***" in str(caught.value)
+
+
+async def test_channel_error_from_client_carries_no_token() -> None:
+    """Тот же путь, но через канал: обёртка не должна возвращать токен обратно."""
+    from app.adapters.notify.telegram import TelegramClient
+
+    token = "7654321:AAHsuperSecretBotToken"  # noqa: S105 — тестовое значение
+
+    class Leaky(TelegramClient):
+        async def send_message(self, chat_id: str, text: str) -> None:
+            raise RuntimeError(f"boom at https://api.telegram.org/bot{token}/sendMessage")
+
+    channel = TelegramChannel(Leaky(token=token))
+
+    with pytest.raises(NotifyError) as caught:
+        await channel.send("1", ChannelMessage(title="Т", body="Б", link=None))
+
+    assert token not in str(caught.value)

@@ -65,9 +65,12 @@ class TelegramLinkPoller:
         )
         linked = 0
         for update in updates:
-            self._offset = int(update["update_id"]) + 1
+            # Курсор двигаем только после удачной обработки: иначе сбой БД съел бы
+            # апдейт навсегда, и пользователь, нажавший «Запустить», не получил бы
+            # ни привязки, ни ответа в чат
             if await self._handle(update):
                 linked += 1
+            self._offset = int(update["update_id"]) + 1
         return linked
 
     async def _handle(self, update: dict[str, Any]) -> bool:

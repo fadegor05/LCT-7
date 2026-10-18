@@ -15,6 +15,7 @@ from app.adapters.ml.base import DetectorClient
 from app.core.settings import check_auth_secret, get_settings
 from app.domains.camera.stream import start_stream_capture
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.notification.dispatcher import NotificationDispatcher
 from app.domains.notification.telegram_link import start_telegram_poller
 from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
@@ -57,6 +58,12 @@ async def lifespan(app: FastAPI):
         await stream_capture.stop()
     if telegram_poller is not None:
         await telegram_poller.stop()
+    # Доставка идёт фоновыми задачами: дожидаемся их до того, как закроется
+    # контейнер и вместе с ним engine, иначе деплой теряет уже созданные уведомления
+    dispatcher = await app.state.dishka_container.get(NotificationDispatcher)
+    close = getattr(dispatcher, "close", None)
+    if close is not None:
+        await close()
     await app.state.dishka_container.close()
 
 

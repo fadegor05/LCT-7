@@ -2,6 +2,7 @@
 
 from typing import Any
 
+import pytest
 from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -129,3 +130,46 @@ async def test_offset_advances_past_handled_updates(container: AsyncContainer) -
     second = await poller.run_once()
 
     assert second == 0
+
+
+class ExplodingClient(FakeUpdatesClient):
+    """БД отвалилась: первая обработка падает, вторая проходит."""
+
+    def __init__(self, updates: list[dict[str, Any]]) -> None:
+        super().__init__(updates)
+        self.calls = 0
+
+
+async def test_failed_update_is_retried_not_skipped(container: AsyncContainer) -> None:
+    """Сбой при обработке не должен съедать апдейт: пользователь нажал Start один раз.
+
+    offset нельзя двигать до успешной обработки — иначе следующий getUpdates
+    запросит апдейты после потерянного, и привязка молча не состоится.
+    """
+    token = await issue_token(container)
+    maker = await container.get(async_sessionmaker[AsyncSession])
+    client = ExplodingClient([update(5, 424242, f"/start {token}")])
+    poller = TelegramLinkPoller(maker, client, settings_with_bot())  # type: ignore[arg-type]
+
+    boom = RuntimeError("database is unavailable")
+    original = poller._handle
+
+    async def flaky(upd: dict[str, Any]) -> bool:
+        client.calls += 1
+        if client.calls == 1:
+            raise boom
+        return await original(upd)
+
+    poller._handle = flaky  # type: ignore[method-assign]
+
+    with pytest.raises(RuntimeError):
+        await poller.run_once()
+
+    # Второй проход должен снова увидеть тот же апдейт и привязать чат
+    linked = await poller.run_once()
+
+    assert linked == 1
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        binding = await UserChannelRepository(session).get_for(STAND_USER_ID, ChannelKind.TELEGRAM)
+        assert binding is not None

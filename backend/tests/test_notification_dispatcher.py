@@ -140,3 +140,26 @@ async def test_missing_notification_is_not_an_error(container: AsyncContainer) -
 
     assert delivered == 0
     assert channel.sent == []
+
+
+async def test_close_waits_for_scheduled_deliveries(container: AsyncContainer) -> None:
+    """Деплой не должен терять уже запланированную отправку.
+
+    Без слива задач `lifespan` закрывает контейнер и диспоузит engine под
+    выполняющейся задачей: сообщение не уходит, в логах — «Task was destroyed».
+    """
+    notification_id = await seed(container)
+    maker = await container.get(async_sessionmaker[AsyncSession])
+    channel = SpyChannel()
+    dispatcher = make_dispatcher(maker, channel)
+
+    dispatcher.schedule(notification_id)
+    await dispatcher.close()
+
+    assert channel.sent != [], "close() вернулся до того, как доставка состоялась"
+
+
+async def test_close_is_safe_without_scheduled_tasks(container: AsyncContainer) -> None:
+    maker = await container.get(async_sessionmaker[AsyncSession])
+
+    await make_dispatcher(maker, SpyChannel()).close()
