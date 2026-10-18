@@ -102,16 +102,14 @@ describe('SiteOverviewPage', () => {
   })
 
   describe('AssistantPanel integration', () => {
-    it('hides the assistant heading when no_llm', async () => {
+    it('shows the assistant column when no_llm', async () => {
       db.setAssistantScenario('no_llm')
       renderRoute('/sites/site-berezniki')
       // Ждём загрузки основного контента
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' })
-      // Проверяем, что заголовка ассистента нет
+      // Колонка видна и без языковой модели: спросить нельзя, но видно, почему
       await vi.waitFor(() => {
-        expect(
-          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
-        ).not.toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Ассистент по отчёту' })).toBeInTheDocument()
       })
     })
 

@@ -189,3 +189,31 @@ def test_pruning_10000_keys() -> None:
     # Внутреннее хранилище должно содержать ровно 1 ключ
     assert len(limiter._hits) == 1
     assert "new_key" in limiter._hits
+
+
+def test_refund_возвращает_последнюю_попытку() -> None:
+    """refund возвращает последний хит: при лимите 1 следующая попытка снова проходит."""
+    from app.core.rate_limit import SlidingWindowRateLimiter
+
+    clock = FakeClock(initial_time=0.0)
+    limiter = SlidingWindowRateLimiter(limit=1, window_s=60.0, clock=clock)
+
+    assert limiter.hit("key1") is None
+    assert limiter.hit("key1") is not None
+
+    limiter.refund("key1")
+
+    assert limiter.hit("key1") is None
+
+
+def test_refund_без_хитов_ничего_не_делает() -> None:
+    """refund для ключа без хитов не падает и не ломает лимит."""
+    from app.core.rate_limit import SlidingWindowRateLimiter
+
+    clock = FakeClock(initial_time=0.0)
+    limiter = SlidingWindowRateLimiter(limit=1, window_s=60.0, clock=clock)
+
+    limiter.refund("unknown")
+
+    assert limiter.hit("unknown") is None
+    assert limiter.hit("unknown") is not None

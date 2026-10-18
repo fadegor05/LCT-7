@@ -34,21 +34,17 @@ function formatTime(iso: string): string {
 }
 
 /**
- * Чат с ассистентом по отчёту: колонка справа на экране обзора площадки.
- * Показывается, только если ассистент включён; переписка хранится в localStorage по стройке.
+ * Чат с ассистентом по отчёту: колонка справа на экране обзора площадки. Без языковой модели
+ * колонка та же, но спросить нельзя — видно, что ассистент есть и почему он молчит.
+ * Переписка хранится в localStorage по стройке.
  */
 export function AssistantPanel({ siteId }: AssistantPanelProps) {
   const status = useAssistantStatus()
-
-  // Показываем чат только если ассистент включён
-  if (!status.enabled) {
-    return null
-  }
-
-  return <AssistantChat siteId={siteId} />
+  if (status.isPending) return null
+  return <AssistantChat siteId={siteId} disabled={!status.enabled} />
 }
 
-function AssistantChat({ siteId }: AssistantPanelProps) {
+function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: boolean }) {
   const { send, cancel, isPending } = useAskAssistant(siteId)
   const { messages, append, remove, clear } = useChatHistory(siteId)
   const logRef = useRef<HTMLDivElement>(null)
@@ -85,7 +81,7 @@ function AssistantChat({ siteId }: AssistantPanelProps) {
   }
 
   const handleSubmit = (question: string) => {
-    if (isPending) return
+    if (isPending || disabled) return
     append({ role: 'user', text: question })
     void ask(question)
   }
@@ -113,6 +109,13 @@ function AssistantChat({ siteId }: AssistantPanelProps) {
           )
         }
       />
+
+      {disabled && (
+        <Callout tone="caution" title="Ассистент не подключён">
+          Языковая модель на сервере не настроена или недоступна. Отчёт, отклонения и остальной
+          сервис работают без неё.
+        </Callout>
+      )}
 
       <div
         ref={logRef}
@@ -152,6 +155,7 @@ function AssistantChat({ siteId }: AssistantPanelProps) {
           onSubmit={handleSubmit}
           onCancel={cancel}
           showExamples={messages.length === 0}
+          disabled={disabled}
         />
       </div>
     </section>

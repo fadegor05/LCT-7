@@ -221,4 +221,18 @@ describe('AssistantQuestionForm', () => {
     )
     expect(screen.getByText('Сервер недоступен')).toBeInTheDocument()
   })
+
+  it('при disabled поле, примеры и кнопка недоступны, onSubmit не вызывается', () => {
+    const onSubmit = vi.fn()
+    render(
+      <AssistantQuestionForm pending={false} onSubmit={onSubmit} onCancel={vi.fn()} disabled />,
+    )
+    const textarea = screen.getByLabelText('Вопрос по отчёту')
+    expect(textarea).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'где отставание и на сколько' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Спросить' })).toBeDisabled()
+    fireEvent.change(textarea, { target: { value: 'тест вопрос' } })
+    fireEvent.submit(textarea.closest('form')!)
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
 })

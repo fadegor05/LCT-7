@@ -80,31 +80,51 @@ describe('AssistantPanel', () => {
       expect(screen.queryByRole('heading', { name: 'Ассистент по отчёту' })).not.toBeInTheDocument()
     })
 
-    it('показывает ничего когда статус resolved с no_llm', async () => {
+    it('показывает колонку когда статус resolved с no_llm', async () => {
       db.setAssistantScenario('no_llm')
       renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
       // Ждём, пока статус загрузится
       await vi.waitFor(() => {
-        expect(
-          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
-        ).not.toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Ассистент по отчёту' })).toBeInTheDocument()
       })
       // Проверяем, что console.error не был вызван
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
       expect(spy.mock.calls).toHaveLength(0)
     })
 
-    it('показывает ничего когда статус resolved с unavailable', async () => {
+    it('показывает колонку когда статус resolved с unavailable', async () => {
       db.setAssistantScenario('unavailable')
       renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
       await vi.waitFor(() => {
-        expect(
-          screen.queryByRole('heading', { name: 'Ассистент по отчёту' }),
-        ).not.toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'Ассистент по отчёту' })).toBeInTheDocument()
       })
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
       expect(spy.mock.calls).toHaveLength(0)
     })
+
+    it.each(['no_llm', 'unavailable'] as const)(
+      'без языковой модели (%s) колонка видна, но спросить нельзя',
+      async (scenario) => {
+        const state = countingAsk()
+        db.setAssistantScenario(scenario)
+        const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+        expect(
+          await screen.findByRole('heading', { name: 'Ассистент по отчёту' }),
+        ).toBeInTheDocument()
+        expect(screen.getByText('Ассистент не подключён')).toBeInTheDocument()
+        expect(
+          screen.getByText(/Языковая модель на сервере не настроена или недоступна/),
+        ).toBeInTheDocument()
+        const question = screen.getByRole('textbox', { name: 'Вопрос по отчёту' })
+        expect(question).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Спросить' })).toBeDisabled()
+        const example = screen.getByRole('button', { name: 'где отставание и на сколько' })
+        expect(example).toBeDisabled()
+        await user.click(example)
+        expect(question).toHaveValue('')
+        expect(state.calls).toBe(0)
+      },
+    )
 
     it('не вызывает ask endpoint когда статус disabled', async () => {
       const state = countingAsk()
