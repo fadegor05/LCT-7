@@ -1,9 +1,15 @@
 """DI-провайдеры домена notification."""
 
 from dishka import Provider, Scope, provide
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domains.notification.dispatcher import NotificationDispatcher, NullDispatcher
+from app.adapters.notify.factory import ChannelRegistry, create_channel_registry
+from app.core.settings import Settings
+from app.domains.notification.dispatcher import (
+    BackgroundDispatcher,
+    NotificationDispatcher,
+    NullDispatcher,
+)
 from app.domains.notification.repository import (
     ChannelLinkTokenRepository,
     NotificationRepository,
@@ -37,3 +43,22 @@ class NullDispatcherProvider(Provider):
     @provide
     def dispatcher(self) -> NotificationDispatcher:
         return NullDispatcher()
+
+
+class ChannelsProvider(Provider):
+    """Реестр каналов и доставка. Один на приложение."""
+
+    scope = Scope.APP
+
+    @provide
+    def registry(self, settings: Settings) -> ChannelRegistry:
+        return create_channel_registry(settings)
+
+    @provide
+    def dispatcher(
+        self,
+        maker: async_sessionmaker[AsyncSession],
+        registry: ChannelRegistry,
+        settings: Settings,
+    ) -> NotificationDispatcher:
+        return BackgroundDispatcher(maker=maker, registry=registry, settings=settings)
