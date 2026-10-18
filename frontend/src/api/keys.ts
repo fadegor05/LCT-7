@@ -19,4 +19,6 @@ export const keys = {
   assistantStatus: ['assistant', 'status'] as const,
   assistant: (siteId: string) => ['site', siteId, 'assistant'] as const,
   cameras: (siteId: string) => ['site', siteId, 'cameras'] as const,
+  notifications: ['notifications'] as const,
+  channels: ['me', 'channels'] as const,
 }
