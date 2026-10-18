@@ -81,6 +81,7 @@ interface State {
   cameras: Map<string, Camera[]>
   notifications: Notification[]
   channels: UserChannel[]
+  pendingLink: 'telegram' | null
   fullName: string
   seq: number
   assistantScenario: AssistantScenario
@@ -957,6 +958,7 @@ export function resetDb(): void {
     cameras: new Map(),
     notifications: [],
     channels: [],
+    pendingLink: null,
     fullName: user.full_name,
     seq: 0,
     assistantScenario: initialScenario,
@@ -1024,11 +1026,13 @@ export function listChannels(): UserChannel[] {
 }
 
 /**
- * В моках нет настоящего бота, поэтому ссылка привязки ведёт в никуда, а саму
- * привязку сразу подтверждает confirmLink — экран ведёт себя как после /start.
+ * Выдаёт ссылку привязки и НЕ привязывает канал: в жизни между выдачей ссылки и
+ * нажатием «Запустить» в телеграме проходит время, и экран обязан это пережить.
+ * Подтверждает привязку отдельный confirmLink — его зовёт тест или кнопка в
+ * мок-режиме, изображая пользователя, дошедшего до бота.
  */
 export function linkChannel(channel: 'telegram'): { url: string; expires_at: string } {
-  confirmLink(channel)
+  state.pendingLink = channel
   return {
     url: `https://t.me/lct7_mock_bot?start=mock-${++state.seq}`,
     expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),

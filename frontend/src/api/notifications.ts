@@ -11,6 +11,9 @@ import {
   type ChannelKind,
 } from './schemas'
 
+/** Пока пользователь ушёл в телеграм нажимать «Запустить» */
+const CHANNEL_POLL_MS = 2000
+
 interface TestNotification {
   title?: string
   body?: string
@@ -62,8 +65,19 @@ export function useCreateTestNotification() {
   })
 }
 
-export function useChannels() {
-  return useQuery({ queryKey: keys.channels, queryFn: notificationsApi.listChannels })
+/**
+ * Привязки каналов. `refetchInterval` нужен, пока пользователь ушёл в телеграм
+ * нажимать «Запустить»: привязку создаёт фоновый поллер бота, и без опроса
+ * страница узнает о ней только после перезагрузки.
+ */
+export function useChannels({ pollWhileEmpty = false } = {}) {
+  return useQuery({
+    queryKey: keys.channels,
+    queryFn: notificationsApi.listChannels,
+    // Опрашиваем, только пока ждём привязку, и прекращаем, как только она пришла
+    refetchInterval: (query) =>
+      pollWhileEmpty && !query.state.data?.length ? CHANNEL_POLL_MS : false,
+  })
 }
 
 export function useLinkChannel() {

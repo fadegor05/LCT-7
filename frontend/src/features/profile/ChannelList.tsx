@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { QueryState } from '@/components/ui/QueryState'
@@ -13,18 +14,30 @@ const TELEGRAM_TITLE = 'Телеграм'
 
 /** Привязка каналов доставки. Пока канал один — телеграм. */
 export function ChannelList() {
-  const channels = useChannels()
+  const [awaitingLink, setAwaitingLink] = useState(false)
+  const channels = useChannels({ pollWhileEmpty: awaitingLink })
   const link = useLinkChannel()
   const toggle = useToggleChannel()
   const unlink = useUnlinkChannel()
 
   const handleLink = () => {
+    // Вкладку открываем синхронно, прямо в обработчике клика: после ожидания
+    // ответа сервера браузер перестаёт считать это действием пользователя, и
+    // Safari с Firefox молча блокируют всплывающее окно.
+    const popup = window.open('', '_blank')
+    if (popup) popup.opener = null
+    setAwaitingLink(true)
     link.mutate('telegram', {
       onSuccess: (data) => {
-        // Пользователь уходит в телеграм и жмёт «Запустить»; привязку поймает
-        // следующий опрос списка каналов
-        window.open(data.url, '_blank', 'noopener')
-        void channels.refetch()
+        if (popup) {
+          popup.location.href = data.url
+        } else {
+          window.open(data.url, '_blank', 'noopener')
+        }
+      },
+      onError: () => {
+        popup?.close()
+        setAwaitingLink(false)
       },
     })
   }
