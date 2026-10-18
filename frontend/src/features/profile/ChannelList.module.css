@@ -1,0 +1,25 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.name {
+  font-weight: 600;
+}
+
+.address {
+  color: var(--ink-muted);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.error {
+  margin: var(--space-3) 0 0;
+  color: var(--status-behind);
+}

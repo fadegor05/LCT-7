@@ -81,6 +81,7 @@ interface State {
   cameras: Map<string, Camera[]>
   notifications: Notification[]
   channels: UserChannel[]
+  fullName: string
   seq: number
   assistantScenario: AssistantScenario
 }
@@ -956,6 +957,7 @@ export function resetDb(): void {
     cameras: new Map(),
     notifications: [],
     channels: [],
+    fullName: user.full_name,
     seq: 0,
     assistantScenario: initialScenario,
   }
@@ -964,6 +966,19 @@ export function resetDb(): void {
 }
 
 resetDb()
+
+// ---------- Пользователь ----------
+
+export function getUser(): typeof user {
+  return { ...user, full_name: state.fullName }
+}
+
+export function renameUser(fullName: string): typeof user {
+  const trimmed = fullName.trim()
+  if (!trimmed) throw new MockError(422, 'Проверьте введённые данные')
+  state.fullName = trimmed
+  return getUser()
+}
 
 // ---------- Уведомления ----------
 

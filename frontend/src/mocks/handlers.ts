@@ -136,7 +136,12 @@ export const handlers = [
         throw new db.MockError(401, 'Требуется авторизация')
       })
     }
-    return HttpResponse.json(user)
+    return HttpResponse.json(db.getUser())
+  }),
+
+  http.patch(api('/users/me'), async ({ request }) => {
+    const data = await json<{ full_name: string }>(request)
+    return handle(() => db.renameUser(data.full_name))
   }),
 
   // ---------- Уведомления ----------

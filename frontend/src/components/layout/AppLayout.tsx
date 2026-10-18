@@ -49,7 +49,11 @@ export function AppLayout() {
         )}
         <div className={styles.userSection}>
           <NotificationBell />
-          {me.data && <span className={styles.userName}>{me.data.full_name}</span>}
+          {me.data && (
+            <Link to="/profile" className={styles.userName}>
+              {me.data.full_name}
+            </Link>
+          )}
           <Button variant="secondary" size="sm" onClick={handleLogout}>
             Выйти
           </Button>
