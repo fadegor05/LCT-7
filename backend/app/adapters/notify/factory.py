@@ -2,6 +2,7 @@
 
 from app.adapters.notify.base import NotificationChannel
 from app.adapters.notify.log import LogChannel
+from app.adapters.notify.telegram import TelegramChannel, TelegramClient
 from app.core.settings import Settings
 from app.domains.notification.models import ChannelKind
 
@@ -18,5 +19,13 @@ class ChannelRegistry:
 
 def create_channel_registry(settings: Settings) -> ChannelRegistry:
     """Собрать реестр: настоящий телеграм при заданном токене, иначе лог."""
-    channels: dict[ChannelKind, NotificationChannel] = {ChannelKind.TELEGRAM: LogChannel()}
+    telegram: NotificationChannel = LogChannel()
+    if settings.notify.telegram.token:
+        telegram = TelegramChannel(
+            TelegramClient(
+                token=settings.notify.telegram.token,
+                timeout_s=settings.notify.telegram.request_timeout_s,
+            )
+        )
+    channels: dict[ChannelKind, NotificationChannel] = {ChannelKind.TELEGRAM: telegram}
     return ChannelRegistry(channels)

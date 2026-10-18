@@ -44,3 +44,14 @@ def test_registry_returns_none_for_unknown_channel() -> None:
     registry = create_channel_registry(settings)
 
     assert registry.get("smoke-signals") is None  # type: ignore[arg-type]
+
+
+async def test_registry_with_token_uses_real_telegram() -> None:
+    from app.adapters.notify.telegram import TelegramChannel
+
+    settings = Settings()
+    settings.notify.telegram.token = "123:abc"
+
+    registry = create_channel_registry(settings)
+
+    assert isinstance(registry.get(ChannelKind.TELEGRAM), TelegramChannel)
