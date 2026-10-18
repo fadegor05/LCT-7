@@ -1,5 +1,5 @@
 import type { Ctx } from './ctx'
-import { D, W, iso, type Pt } from './geometry'
+import { D, W, iso, pts, type Pt } from './geometry'
 import { el, isoBox, line, poly, text } from './svg'
 
 /** Детерминированный генератор: щебень на плите всегда ложится одинаково. */
@@ -77,33 +77,131 @@ export function drawGround({ layers, ref }: Ctx) {
   })
 }
 
+/** Бытовка стоит за плитой и не наезжает на неё; её левый задний угол. */
+const CABIN_X = -94
+const CABIN_Y = 80
+const PIPE_R = 4.6
+
+/** Пакет труб на подкладках: торцы с отверстием смотрят на зрителя, сверху блик. */
+function drawPipes(parent: Element) {
+  const g = el('g', {}, parent)
+  for (const y of [162, 184]) isoBox(g, [114, y, 0], [46, 5, 3], '#9b6a43')
+  // три слоя по порядку наложения: тела труб, лента поверх них, торцы ближе всего к зрителю
+  const bodies = el('g', {}, g)
+  const straps = el('g', {}, g)
+  const ends = el('g', {}, g)
+  ;[4, 3, 2].forEach((count, row) => {
+    for (let c = 0; c < count; c++) {
+      const x = 121 + c * 10.6 + row * 5.3
+      const z = 3 + PIPE_R + row * 8.6
+      const back = iso(x, 156, z)
+      const front = iso(x, 192, z)
+      line(bodies, back, front, '#6f7d88', PIPE_R * 2, { 'stroke-linecap': 'round' })
+      line(
+        bodies,
+        [back[0], back[1] - PIPE_R * 0.55],
+        [front[0], front[1] - PIPE_R * 0.55],
+        '#b4c0c8',
+        1.1,
+        { opacity: 0.8 },
+      )
+      el(
+        'circle',
+        {
+          cx: front[0],
+          cy: front[1],
+          r: PIPE_R,
+          fill: '#8f9da8',
+          stroke: '#4f5b64',
+          'stroke-width': 0.8,
+        },
+        ends,
+      )
+      el('circle', { cx: front[0], cy: front[1], r: PIPE_R * 0.52, fill: '#38434b' }, ends)
+    }
+  })
+  // монтажная лента обхватывает пакет: видны верх и правый бок
+  const top = 3 + PIPE_R + 2 * 8.6 + PIPE_R
+  for (const y of [166, 180]) {
+    el(
+      'polyline',
+      {
+        points: pts([
+          iso(116.4, y, 3 + PIPE_R),
+          iso(127, y, top),
+          iso(147, y, top),
+          iso(157.4, y, 3 + PIPE_R),
+          iso(157.4, y, 3),
+        ]),
+        fill: 'none',
+        stroke: '#d9a400',
+        'stroke-width': 1.4,
+        'stroke-linejoin': 'round',
+      },
+      straps,
+    )
+  }
+}
+
+/** Связка арматуры на подкладках: рифлёные прутки в два слоя, две проволочные скрутки. */
+function drawRebar(parent: Element) {
+  const g = el('g', {}, parent)
+  for (const x of [148, 182]) isoBox(g, [x, 132, 0], [5, 20, 3], '#9b6a43')
+  for (let i = 0; i < 10; i++) {
+    const layer = Math.floor(i / 5)
+    const y = 135 + (i % 5) * 3 + layer * 1.5
+    const z = 4.2 + layer * 2.4
+    const a = iso(138, y, z)
+    const b = iso(198, y, z)
+    line(g, a, b, i % 2 ? '#7a4a2e' : '#8f5a37', 1.7, { 'stroke-linecap': 'round' })
+    line(g, [a[0], a[1] - 0.5], [b[0], b[1] - 0.5], '#c48a5c', 0.7, {
+      'stroke-dasharray': '1 1.6',
+      opacity: 0.9,
+    })
+  }
+  for (const x of [156, 188]) line(g, iso(x, 133, 7.6), iso(x, 152, 7.6), '#2f2f2f', 1.1)
+}
+
 /** Бытовка за башней и материалы на переднем плане: трубы, арматура, кирпич, бункер. */
 export function drawProps({ layers }: Ctx) {
   const cabin = el('g', {}, layers.props)
-  isoBox(cabin, [-78, 96, 0], [64, 34, 34], '#e4e1da')
-  poly(cabin, [iso(-78, 130, 0), iso(-14, 130, 0), iso(-14, 130, 5), iso(-78, 130, 5)], '#bdb8ae')
-  for (const x of [-74, -56]) {
+  const front = CABIN_Y + 34
+  isoBox(cabin, [CABIN_X, CABIN_Y, 0], [64, 34, 34], '#e4e1da')
+  poly(
+    cabin,
+    [
+      iso(CABIN_X, front, 0),
+      iso(CABIN_X + 64, front, 0),
+      iso(CABIN_X + 64, front, 5),
+      iso(CABIN_X, front, 5),
+    ],
+    '#bdb8ae',
+  )
+  for (const dx of [4, 22]) {
+    const x = CABIN_X + dx
     poly(
       cabin,
-      [iso(x, 130, 12), iso(x + 12, 130, 12), iso(x + 12, 130, 26), iso(x, 130, 26)],
+      [iso(x, front, 12), iso(x + 12, front, 12), iso(x + 12, front, 26), iso(x, front, 26)],
       '#8fb0c4',
     )
   }
-  poly(cabin, [iso(-32, 130, 3), iso(-20, 130, 3), iso(-20, 130, 28), iso(-32, 130, 28)], '#cc3608')
-  line(cabin, iso(-78, 96, 34), iso(-14, 96, 34), '#fff', 1, { opacity: 0.6 })
+  poly(
+    cabin,
+    [
+      iso(CABIN_X + 46, front, 3),
+      iso(CABIN_X + 58, front, 3),
+      iso(CABIN_X + 58, front, 28),
+      iso(CABIN_X + 46, front, 28),
+    ],
+    '#cc3608',
+  )
+  line(cabin, iso(CABIN_X, CABIN_Y, 34), iso(CABIN_X + 64, CABIN_Y, 34), '#fff', 1, {
+    opacity: 0.6,
+  })
 
   // Материалы лежат у камеры: тот же слой глубины, что у рабочих, — они смещаются сильнее площадки.
-  const pipes = el('g', {}, layers.front)
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 4 - r; c++) {
-      const [cx, cy] = iso(120 + c * 9 + r * 4.5, 168, r * 7)
-      el(
-        'circle',
-        { cx, cy: cy - 5, r: 4.4, fill: '#7c8a95', stroke: '#4f5b64', 'stroke-width': 0.8 },
-        pipes,
-      )
-    }
-  }
+  drawRebar(layers.front)
+  drawPipes(layers.front)
   // поддон кирпича и бункер для мусора: площадка не обрывается на трубах
   const bricks = el('g', {}, layers.front)
   isoBox(bricks, [95, 225, 0], [46, 26, 5], '#9b7a52')
@@ -115,21 +213,6 @@ export function drawProps({ layers }: Ctx) {
   const skip = el('g', {}, layers.front)
   isoBox(skip, [205, 140, 0], [52, 32, 18], '#c9a227')
   line(skip, iso(205, 172, 18), iso(257, 172, 18), '#fff', 1, { opacity: 0.5 })
-  const [bx, by] = iso(154, 150, 0)
-  poly(
-    pipes,
-    [
-      [bx - 26, by],
-      [bx + 26, by - 12],
-      [bx + 26, by - 4],
-      [bx - 26, by + 8],
-    ],
-    '#9b6a43',
-  )
-  for (let i = 0; i < 5; i++) {
-    const [ax, ay] = iso(154 + i * 5, 150, 5)
-    line(pipes, [ax - 26, ay + 3], [ax + 26, ay - 9], '#6e4a2d', 1.2)
-  }
 }
 
 export interface Worker {

@@ -1,0 +1,161 @@
+/* Мини-экраны для шагов и ролей: собраны из тех же бейджей и кадров, что и продукт. */
+.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  height: 100%;
+  min-height: 232px;
+  padding: var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(20 20 20 / 7%);
+}
+
+.file {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.file b {
+  font-weight: 600;
+}
+
+.file span {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.sched {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sched li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px var(--space-3);
+  font-size: 12.5px;
+  line-height: 17px;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dates {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.track {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--status-notstarted-soft);
+}
+
+.track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: var(--ink-muted);
+}
+
+.photos {
+  position: relative;
+  display: block;
+  padding: 0;
+  background: var(--surface-card);
+}
+
+.photos figure {
+  position: absolute;
+  width: 62%;
+  margin: 0;
+  overflow: hidden;
+  border: 3px solid var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgb(20 20 20 / 18%);
+}
+
+.photos figure:nth-child(1) {
+  top: 18px;
+  left: 14px;
+}
+
+.photos figure:nth-child(2) {
+  top: 54px;
+  left: 30%;
+  z-index: 1;
+}
+
+.photos figure:nth-child(3) {
+  top: 96px;
+  left: 14px;
+  z-index: 2;
+}
+
+.photos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+
+.photos figcaption {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgb(20 20 20 / 72%);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.verdict {
+  display: grid;
+  gap: 2px;
+}
+
+.verdict small {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.verdict strong {
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--status-behind);
+}
+
+.stat {
+  display: grid;
+}
+
+.stat li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 18px;
+}
