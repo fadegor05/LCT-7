@@ -14,6 +14,11 @@ ENV UV_COMPILE_BYTECODE=1 \
 
 WORKDIR /app
 
+# Шрифт с кириллицей для подписей аннотированных снимков (photo/render.py)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 # Слой зависимостей кешируется отдельно от исходников
 COPY pyproject.toml ./
 RUN uv sync --no-dev
