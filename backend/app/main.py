@@ -15,6 +15,7 @@ from app.adapters.ml.base import DetectorClient
 from app.core.settings import check_auth_secret, get_settings
 from app.domains.camera.stream import start_stream_capture
 from app.domains.methodology.catalog import EquipmentCatalog
+from app.domains.notification.telegram_link import start_telegram_poller
 from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
 from app.plugins.di import create_container
@@ -48,9 +49,14 @@ async def lifespan(app: FastAPI):
     # Фоновые снимки со стрима — только при STREAM__ENABLED=true (по умолчанию выключены)
     stream_capture = await start_stream_capture(app.state.dishka_container, settings)
 
+    # Привязка телеграма — только при настроенном боте (NOTIFY__TELEGRAM__*)
+    telegram_poller = await start_telegram_poller(app.state.dishka_container, settings)
+
     yield
     if stream_capture is not None:
         await stream_capture.stop()
+    if telegram_poller is not None:
+        await telegram_poller.stop()
     await app.state.dishka_container.close()
 
 

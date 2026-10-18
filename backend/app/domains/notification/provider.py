@@ -4,6 +4,7 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.notify.factory import ChannelRegistry, create_channel_registry
+from app.adapters.notify.telegram import TelegramClient
 from app.core.settings import Settings
 from app.domains.notification.channels import ChannelLinkService
 from app.domains.notification.dispatcher import (
@@ -17,6 +18,7 @@ from app.domains.notification.repository import (
     UserChannelRepository,
 )
 from app.domains.notification.service import NotificationService
+from app.domains.notification.telegram_link import TelegramLinkPoller
 
 
 class NotificationProvider(Provider):
@@ -73,3 +75,25 @@ class ChannelsProvider(Provider):
         settings: Settings,
     ) -> NotificationDispatcher:
         return BackgroundDispatcher(maker=maker, registry=registry, settings=settings)
+
+
+class TelegramPollerProvider(Provider):
+    """Поллер бота. Запускается, только если бот настроен (см. main.py)."""
+
+    scope = Scope.APP
+
+    @provide
+    def client(self, settings: Settings) -> TelegramClient:
+        return TelegramClient(
+            token=settings.notify.telegram.token or "",
+            timeout_s=settings.notify.telegram.request_timeout_s,
+        )
+
+    @provide
+    def poller(
+        self,
+        maker: async_sessionmaker[AsyncSession],
+        client: TelegramClient,
+        settings: Settings,
+    ) -> TelegramLinkPoller:
+        return TelegramLinkPoller(maker, client, settings)
