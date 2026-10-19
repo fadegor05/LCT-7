@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
-import { createCamera } from '@/mocks/db'
+import { createCamera, uploadPhotos } from '@/mocks/db'
 import { server } from '@/mocks/server'
 import { renderRoute } from '@/test/render'
 
@@ -161,6 +161,45 @@ describe('ObservationsPage', () => {
     expect(await within(dialog).findByText('Слишком много файлов')).toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: 'Отмена' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('shows photos in a strip per camera', async () => {
+    const gate = addCamera('К-1 · въезд')
+    const pit = addCamera('К-2 · котлован')
+    const jpeg = (name: string) => ({ name, type: 'image/jpeg' })
+    uploadPhotos('site-berezniki', [jpeg('2026-09-18-a.jpg'), jpeg('2026-09-18-b.jpg')], gate.id)
+    uploadPhotos('site-berezniki', [jpeg('2026-09-18-c.jpg')], pit.id)
+
+    renderRoute('/sites/site-berezniki/observations')
+
+    const gateStrip = await screen.findByRole('region', { name: 'Снимки: К-1 · въезд' })
+    expect(within(gateStrip).getAllByRole('img', { name: /Снимок 2026-09-18/ })).toHaveLength(2)
+    expect(within(gateStrip).getByText('· 2 снимка')).toBeInTheDocument()
+    const pitStrip = screen.getByRole('region', { name: 'Снимки: К-2 · котлован' })
+    expect(within(pitStrip).getAllByRole('img', { name: /Снимок/ })).toHaveLength(1)
+    // Снимки фикстуры загружены без камеры — своей лентой
+    expect(screen.getByRole('region', { name: 'Снимки: Без камеры' })).toBeInTheDocument()
+  })
+
+  it('opens all days when the latest day has fewer than three photos', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/observations', () =>
+        HttpResponse.json([
+          {
+            id: 'obs-1',
+            site_id: 'site-berezniki',
+            observed_on: '2026-09-18',
+            photo_count: 1,
+            observability: 'low',
+            observability_notes: null,
+            recomputed_at: '2026-09-18T12:00:00Z',
+            equipment: [],
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/observations')
+    expect(await screen.findByRole('heading', { name: 'Все снимки с датой' })).toBeInTheDocument()
   })
 
   it('asks to add a camera first when the site has none', async () => {

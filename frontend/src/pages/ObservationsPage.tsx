@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { useCameras } from '@/api/cameras'
 import { useObservation, useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
@@ -8,15 +9,18 @@ import { SiteShell } from '@/components/layout/SiteShell'
 import { Button } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
 import { AddFramesDialog } from '@/features/observations/AddFramesDialog'
+import { CameraStrips } from '@/features/observations/CameraStrips'
 import { DayPicker } from '@/features/observations/DayPicker'
 import { DetectBacklogSection } from '@/features/observations/DetectBacklogSection'
 import { EquipmentList } from '@/features/observations/EquipmentList'
 import { NeedsReviewSection } from '@/features/observations/NeedsReviewSection'
-import { PhotoStrip } from '@/features/observations/PhotoStrip'
 import { formatDate, latestObservation } from '@/lib/format'
 import { useRequiredParam } from '@/lib/useParam'
 
 const column = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
+
+/** Сколько снимков в последнем дне, чтобы открыть его, а не «Все дни». */
+const MIN_PHOTOS_FOR_DAY = 3
 
 /** Экран 6 · Наблюдения (UC-7, UC-3, UC-8): что система увидела на снимках, по дням. */
 export function ObservationsPage() {
@@ -27,8 +31,12 @@ export function ObservationsPage() {
   const days = useObservations(siteId)
   const photos = usePhotos(siteId)
   const undated = useUndatedPhotos(siteId)
+  const cameras = useCameras(siteId)
 
-  const lastDay = latestObservation(days.data)?.observed_on ?? null
+  // В последнем дне меньше трёх снимков (фотоотчёт раз в месяц) — сразу «Все дни»: иначе
+  // объект с 15 снимками открывался на одном и казался пустым (как в clean-mvp)
+  const last = latestObservation(days.data)
+  const lastDay = last && last.photo_count >= MIN_PHOTOS_FOR_DAY ? last.observed_on : null
   const param = params.get('date')
   const date = param === 'all' ? null : (param ?? lastDay)
   const observation = useObservation(siteId, date)
@@ -64,12 +72,13 @@ export function ObservationsPage() {
           <section style={column}>
             <SectionHeader
               title={date ? `Снимки за ${formatDate(date)}` : 'Все снимки с датой'}
-              description="Рамки: найденная техника. Источник даты показан у каждого снимка."
+              description="По камерам. Рамки: найденная техника. Источник даты показан у каждого снимка."
             />
             <QueryState query={photos}>
               {(list) => (
-                <PhotoStrip
+                <CameraStrips
                   siteId={siteId}
+                  cameras={cameras.data ?? []}
                   withDate={!date}
                   photos={list
                     .filter((p) => p.captured_on && (!date || p.captured_on === date))
