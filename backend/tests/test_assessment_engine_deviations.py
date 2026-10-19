@@ -6,6 +6,7 @@ from datetime import date
 from app.domains.assessment.engine import (
     EngineConfig,
     EquipmentRequirementInput,
+    KitInput,
     ObservationInput,
     ObservedEquipmentInput,
     RuleEngine,
@@ -755,297 +756,161 @@ class TestNotCheckedStageProducesNoDeviations:
         assert len(stage_deviations) == 0
 
 
-class TestDeviationMissingLogicalEquipment:
-    """Тесты отклонения missing_logical_equipment (LCT-15)."""
+class TestIncompleteKit:
+    """«Неполный комплект» (clean-mvp) вместо прежней гипотезы «Нет ожидаемой техники»."""
 
-    def test_missing_logical_equipment_high_observability_absent(self):
-        """Высокая наблюдаемость, logical-техника отсутствует -> предупреждение."""
-        config = EngineConfig(
-            tolerance_days=5,
-            stale_data_days=30,
-            no_progress_window_days=7,
-            min_confirming_observations=2,
+    @staticmethod
+    def _pit():
+        excavator, bulldozer, truck = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        stage = StageInput(uuid.uuid4(), "Котлован", 1, date(2024, 1, 8), date(2024, 2, 28))
+        rule = RuleInput(
+            stage_id=stage.stage_id,
+            rule_id=uuid.uuid4(),
+            is_verifiable=True,
+            unverifiable_reason=None,
+            requirements=[],
+            kits=[
+                KitInput(
+                    position=0,
+                    requirements=[
+                        EquipmentRequirementInput(excavator, "normative", 1),
+                        EquipmentRequirementInput(truck, "logical", 1),
+                    ],
+                ),
+                KitInput(
+                    position=1,
+                    requirements=[
+                        EquipmentRequirementInput(bulldozer, "normative", 1),
+                        EquipmentRequirementInput(truck, "logical", 1),
+                    ],
+                ),
+            ],
         )
-        engine = RuleEngine(config)
+        return stage, rule, excavator, bulldozer, truck
 
-        today = date(2024, 1, 20)
-        stage_id = uuid.uuid4()
-        rule_id = uuid.uuid4()
-        marker_id = uuid.uuid4()
-        logical_id = uuid.uuid4()
+    def test_missing_normative_and_logical_are_separate_rows(self):
+        """Пример из ТЗ: экскаватор в котловане есть, бульдозера и самосвалов нет."""
+        stage, rule, excavator, bulldozer, truck = self._pit()
+        names = {excavator: "Экскаватор", bulldozer: "Бульдозер", truck: "Самосвал"}
 
-        stages = [
-            StageInput(
-                stage_id=stage_id,
-                name="Foundation",
-                position=1,
-                planned_start=date(2024, 1, 10),
-                planned_end=date(2024, 1, 25),
-            )
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            [_obs(day, excavator) for day in _days(16, 17, 18)],
+            date(2024, 1, 19),
+            names,
+        )
+
+        rows = [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
+        assert [d.expected for d in rows] == [
+            "Бульдозер — нормативная техника этапа «Котлован».",
+            "Самосвал — логическая техника этапа «Котлован».",
+        ]
+        assert rows[1].observed.endswith("Без этой техники возможно снижение темпа работ.")
+        assert all(d.severity == Severity.ATTENTION and not d.is_hypothesis for d in rows)
+        assert not [
+            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
         ]
 
-        rules = {
-            stage_id: RuleInput(
-                stage_id=stage_id,
-                rule_id=rule_id,
-                is_verifiable=True,
-                unverifiable_reason=None,
-                requirements=[
-                    EquipmentRequirementInput(
-                        equipment_type_id=marker_id,
-                        obligation="normative",
-                        min_count=1,
-                    ),
-                    EquipmentRequirementInput(
-                        equipment_type_id=logical_id,
-                        obligation="logical",
-                        min_count=1,
-                    ),
-                ],
-            )
-        }
-
-        observations = [
+    def test_machine_seen_on_one_of_the_dates_is_not_missing(self):
+        stage, rule, excavator, bulldozer, truck = self._pit()
+        observations = [_obs(day, excavator) for day in _days(16, 17)]
+        observations.append(
             ObservationInput(
                 observed_on=date(2024, 1, 18),
-                photo_count=10,
+                photo_count=5,
                 observability="high",
                 equipment=[
-                    ObservedEquipmentInput(
-                        equipment_type_id=marker_id,
-                        count_min=1,
-                        activity="works",
-                        confidence="high",
-                    )
-                    # logical_id отсутствует
+                    ObservedEquipmentInput(excavator, 1, "works", "high"),
+                    ObservedEquipmentInput(truck, 1, "works", "high"),
                 ],
             )
-        ]
-
-        equipment_names = {marker_id: "Экскаватор", logical_id: "Самосвал"}
-
-        result = engine.compute_site(stages, rules, observations, today, equipment_names)
-
-        warnings = [
-            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
-        ]
-        assert len(warnings) == 1
-        warning = warnings[0]
-        assert warning.severity == Severity.ATTENTION
-        assert warning.is_hypothesis is True
-        assert "Самосвал" in warning.observed
-        assert len(warning.limits_text) > 0
-
-    def test_no_warning_when_logical_equipment_present(self):
-        """Logical-техника присутствует -> предупреждения нет."""
-        config = EngineConfig(
-            tolerance_days=5,
-            stale_data_days=30,
-            no_progress_window_days=7,
-            min_confirming_observations=2,
         )
-        engine = RuleEngine(config)
 
-        today = date(2024, 1, 20)
-        stage_id = uuid.uuid4()
-        rule_id = uuid.uuid4()
-        marker_id = uuid.uuid4()
-        logical_id = uuid.uuid4()
+        result = _engine().compute_site(
+            [stage], {stage.stage_id: rule}, observations, date(2024, 1, 19)
+        )
 
-        stages = [
-            StageInput(
-                stage_id=stage_id,
-                name="Foundation",
-                position=1,
-                planned_start=date(2024, 1, 10),
-                planned_end=date(2024, 1, 25),
-            )
-        ]
+        rows = [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
+        assert len(rows) == 1  # только бульдозер: самосвал был 18.01
 
-        rules = {
-            stage_id: RuleInput(
-                stage_id=stage_id,
-                rule_id=rule_id,
-                is_verifiable=True,
-                unverifiable_reason=None,
-                requirements=[
-                    EquipmentRequirementInput(
-                        equipment_type_id=marker_id,
-                        obligation="normative",
-                        min_count=1,
-                    ),
-                    EquipmentRequirementInput(
-                        equipment_type_id=logical_id,
-                        obligation="logical",
-                        min_count=1,
-                    ),
-                ],
-            )
-        }
-
+    def test_coarse_class_closes_the_kit_gap(self):
+        """«Экскаватор (тип не определён)» закрывает экскаватор комплекта (clean, covering)."""
+        stage, rule, excavator, bulldozer, truck = self._pit()
+        unknown = uuid.uuid4()
         observations = [
             ObservationInput(
-                observed_on=date(2024, 1, 18),
-                photo_count=10,
+                observed_on=day,
+                photo_count=5,
                 observability="high",
                 equipment=[
-                    ObservedEquipmentInput(
-                        equipment_type_id=marker_id,
-                        count_min=1,
-                        activity="works",
-                        confidence="high",
-                    ),
-                    ObservedEquipmentInput(
-                        equipment_type_id=logical_id,
-                        count_min=1,
-                        activity="works",
-                        confidence="high",
-                    ),
+                    ObservedEquipmentInput(bulldozer, 1, "works", "high"),
+                    ObservedEquipmentInput(unknown, 1, "works", "high"),
+                    ObservedEquipmentInput(truck, 1, "works", "high"),
                 ],
             )
+            for day in _days(16, 17, 18)
         ]
 
-        result = engine.compute_site(stages, rules, observations, today)
-
-        warnings = [
-            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
-        ]
-        assert len(warnings) == 0
-
-    def test_no_warning_without_logical_requirements(self):
-        """У правила нет logical-требований -> предупреждения не бывает."""
-        config = EngineConfig(
-            tolerance_days=5,
-            stale_data_days=30,
-            no_progress_window_days=7,
-            min_confirming_observations=2,
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            observations,
+            date(2024, 1, 19),
+            coarse={unknown: frozenset({excavator})},
         )
-        engine = RuleEngine(config)
 
-        today = date(2024, 1, 20)
-        stage_id = uuid.uuid4()
-        rule_id = uuid.uuid4()
-        marker_id = uuid.uuid4()
+        assert not [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
 
-        stages = [
-            StageInput(
-                stage_id=stage_id,
-                name="Foundation",
-                position=1,
-                planned_start=date(2024, 1, 10),
-                planned_end=date(2024, 1, 25),
-            )
-        ]
-
-        rules = {
-            stage_id: RuleInput(
-                stage_id=stage_id,
-                rule_id=rule_id,
-                is_verifiable=True,
-                unverifiable_reason=None,
-                requirements=[
-                    EquipmentRequirementInput(
-                        equipment_type_id=marker_id,
-                        obligation="normative",
-                        min_count=1,
-                    ),
-                ],
-            )
-        }
-
-        observations = [
-            ObservationInput(
-                observed_on=date(2024, 1, 18),
-                photo_count=10,
-                observability="high",
-                equipment=[
-                    ObservedEquipmentInput(
-                        equipment_type_id=marker_id,
-                        count_min=1,
-                        activity="works",
-                        confidence="high",
-                    ),
-                ],
-            )
-        ]
-
-        result = engine.compute_site(stages, rules, observations, today)
-
-        warnings = [
-            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
-        ]
-        assert len(warnings) == 0
-
-    def test_no_warning_low_observability(self):
-        """Низкая наблюдаемость -> предупреждения по отсутствию не бывает
-        (как и у missing_equipment — нельзя быть уверенным в отсутствии)."""
-        config = EngineConfig(
-            tolerance_days=5,
-            stale_data_days=30,
-            no_progress_window_days=7,
-            min_confirming_observations=2,
+    def test_any_machine_of_a_group_closes_the_gap(self):
+        """Сваи: буровая, копёр или грейфер — одна группа, нехватки нет при любой из них."""
+        drill, driver = uuid.uuid4(), uuid.uuid4()
+        stage = StageInput(uuid.uuid4(), "Сваи", 1, date(2024, 1, 8), date(2024, 2, 28))
+        rule = RuleInput(
+            stage_id=stage.stage_id,
+            rule_id=uuid.uuid4(),
+            is_verifiable=True,
+            unverifiable_reason=None,
+            requirements=[],
+            kits=[
+                KitInput(0, [EquipmentRequirementInput(drill, "normative", 1, group="piling")]),
+                KitInput(1, [EquipmentRequirementInput(driver, "normative", 1, group="piling")]),
+            ],
         )
-        engine = RuleEngine(config)
 
-        today = date(2024, 1, 20)
-        stage_id = uuid.uuid4()
-        rule_id = uuid.uuid4()
-        marker_id = uuid.uuid4()
-        logical_id = uuid.uuid4()
+        result = _engine().compute_site(
+            [stage],
+            {stage.stage_id: rule},
+            [_obs(day, drill) for day in _days(16, 17, 18)],
+            date(2024, 1, 19),
+        )
 
-        stages = [
-            StageInput(
-                stage_id=stage_id,
-                name="Foundation",
-                position=1,
-                planned_start=date(2024, 1, 10),
-                planned_end=date(2024, 1, 25),
-            )
+        assert not [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
+
+    def test_finished_stage_gets_no_row(self):
+        stage, rule, excavator, _, _ = self._pit()
+        finished = StageInput(stage.stage_id, stage.name, 1, date(2023, 12, 1), date(2024, 1, 10))
+
+        result = _engine().compute_site(
+            [finished],
+            {stage.stage_id: rule},
+            [_obs(day, excavator) for day in _days(16, 17, 18)],
+            date(2024, 1, 19),
+        )
+
+        assert not [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
+
+    def test_low_observability_day_gives_no_row(self):
+        stage, rule, excavator, _, _ = self._pit()
+        observations = [_obs(day, excavator) for day in _days(16, 17)] + [
+            _obs(date(2024, 1, 18), excavator, observability="medium")
         ]
 
-        rules = {
-            stage_id: RuleInput(
-                stage_id=stage_id,
-                rule_id=rule_id,
-                is_verifiable=True,
-                unverifiable_reason=None,
-                requirements=[
-                    EquipmentRequirementInput(
-                        equipment_type_id=marker_id,
-                        obligation="normative",
-                        min_count=1,
-                    ),
-                    EquipmentRequirementInput(
-                        equipment_type_id=logical_id,
-                        obligation="logical",
-                        min_count=1,
-                    ),
-                ],
-            )
-        }
+        result = _engine().compute_site(
+            [stage], {stage.stage_id: rule}, observations, date(2024, 1, 19)
+        )
 
-        observations = [
-            ObservationInput(
-                observed_on=date(2024, 1, 18),
-                photo_count=10,
-                observability="low",
-                equipment=[
-                    ObservedEquipmentInput(
-                        equipment_type_id=marker_id,
-                        count_min=1,
-                        activity="works",
-                        confidence="high",
-                    ),
-                ],
-            )
-        ]
-
-        result = engine.compute_site(stages, rules, observations, today)
-
-        warnings = [
-            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
-        ]
-        assert len(warnings) == 0
+        assert not [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
 
 
 def _engine() -> RuleEngine:
@@ -1118,7 +983,8 @@ class TestBehindSchedule:
         behind = [d for d in result.deviations if d.type == DeviationType.BEHIND_SCHEDULE]
         assert len(behind) == 1
         assert behind[0].stage_id == stage.stage_id
-        assert behind[0].severity == Severity.ATTENTION
+        # Как в clean-mvp: 8 доказанных дней при высокой наблюдаемости — «Критично»
+        assert behind[0].severity == Severity.CRITICAL
         assert "10.01.2024" in behind[0].expected
         assert "10 дн." in behind[0].observed
 

@@ -534,6 +534,7 @@ class MethodologyService:
                         obligation=default_req.obligation,
                         gesn_code=default_req.gesn_code,
                         source_note=source_note,
+                        group_code=default_req.group_code,
                     )
                     requirements.append(req)
 

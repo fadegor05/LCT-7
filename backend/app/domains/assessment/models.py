@@ -44,6 +44,8 @@ class DeviationType(StrEnum):
     OUT_OF_ZONE = "out_of_zone"
     NO_PROGRESS = "no_progress"
     BEHIND_SCHEDULE = "behind_schedule"
+    # Маркер этапа виден, а машины его комплекта нет на последних датах (clean-mvp)
+    INCOMPLETE_KIT = "incomplete_kit"
 
 
 class Severity(StrEnum):

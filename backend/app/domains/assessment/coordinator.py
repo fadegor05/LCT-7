@@ -319,6 +319,7 @@ class RecomputeCoordinator:
                             obligation=req.obligation,
                             min_count=req.min_count,
                             is_specific=is_specific,
+                            group=req.group_code,
                         )
 
                         # Добавить в kit и flat список

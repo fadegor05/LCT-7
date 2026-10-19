@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from enum import StrEnum
 
@@ -22,6 +22,8 @@ class EquipmentRequirementInput:
     obligation: str  # "normative" | "logical" | "auxiliary"
     min_count: int
     is_specific: bool = False
+    # Группа взаимозаменяемой техники: для «Неполного комплекта» хватает любой её машины
+    group: str | None = None
 
 
 @dataclass(frozen=True)
@@ -167,6 +169,8 @@ class _Plan:
     stationary: frozenset[uuid.UUID]
     tolerance_days: int
     lookback_days: int
+    # «Тип не определён» → конкретные классы, которые он закрывает в комплекте
+    coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]] = field(default_factory=dict)
 
     @staticmethod
     def normative(rule: RuleInput) -> frozenset[uuid.UUID]:
@@ -268,6 +272,7 @@ class RuleEngine:
             stationary=stationary,
             tolerance_days=self.config.tolerance_days,
             lookback_days=self.config.lookback_days,
+            coarse=coarse or {},
         )
 
         # Расчёт статусов этапов
@@ -828,7 +833,9 @@ class RuleEngine:
                 stage_id=stage.stage_id,
                 type=DeviationType.BEHIND_SCHEDULE,
                 is_hypothesis=False,
-                severity=Severity.ATTENTION,
+                # Как в clean-mvp (severity_for): «Критично» от critical_days доказанной
+                # задержки при уверенности не ниже средней и высокой наблюдаемости
+                severity=self._severity(status.delay_min or 0, status.confidence, observations[-1]),
                 confidence=status.confidence,
                 period_start=period_start,
                 period_end=max(period_start, period_end),
@@ -918,14 +925,10 @@ class RuleEngine:
         # 2. missing_equipment — по окну последних дат, а не по одному дню
         deviations.extend(self._check_missing_equipment(stage, observations, rule, plan))
 
-        # 2b. missing_logical_equipment (LCT-15) — мягкое предупреждение по
-        # "логической" технике методики: ожидаемой на этапе, но не
-        # обязательной для подтверждения его начала (в отличие от
-        # нормативных маркеров выше).
+        # 2b. Неполный комплект (clean-mvp) вместо прежней гипотезы «Нет ожидаемой
+        # техники»: маркер этапа виден, а машины комплекта нет на последних датах
         deviations.extend(
-            self._check_missing_logical_equipment(
-                stage, latest_obs, latest_obs_on, rule, equipment_names
-            )
+            self._check_incomplete_kit(stage, rule, observations, equipment_names, plan)
         )
 
         # 4. idle
@@ -1239,61 +1242,108 @@ class RuleEngine:
                 )
         return out
 
-    def _check_missing_logical_equipment(
+    def _check_incomplete_kit(
         self,
         stage: StageInput,
-        latest_obs: ObservationInput,
-        latest_obs_on: date,
         rule: RuleInput,
-        equipment_names: Mapping[uuid.UUID, str],
+        observations: Sequence[ObservationInput],
+        names: Mapping[uuid.UUID, str],
+        plan: _Plan,
     ) -> list[DeviationResult]:
-        """Проверить отклонение missing_logical_equipment (LCT-15).
+        """«Неполный комплект» (clean-mvp, _incomplete_kit).
 
-        В отличие от missing_equipment (нормативные маркеры, CRITICAL,
-        подтверждает/опровергает сам факт активности этапа) — это мягкое
-        предупреждение по "логической" технике методики: ожидаемой на
-        этапе, но не обязательной для подтверждения его начала.
+        Последние `window_dates` дат — все с высокой наблюдаемостью, в одну из них виден
+        маркер этапа, а нормативной (или логической) машины его комплекта нет ни в одну.
+        Нормативная и логическая нехватка — разные строки; логическая — пример из ТЗ:
+        экскаватор в котловане есть, самосвалов нет — темп работ может упасть.
         """
-        if latest_obs.observability != "high":
+        tail = observations[-self.config.window_dates :]
+        if len(tail) < self.config.window_dates or any(
+            o.observability != Observability.HIGH.value for o in tail
+        ):
             return []
-
-        logical_ids = {r.equipment_type_id for r in rule.requirements if r.obligation == "logical"}
-        if not logical_ids:
+        # Только этап, идущий по плану в последний день: у закончившегося нехватка машин —
+        # не отклонение (clean-mvp, ctx.expected)
+        if not plan.in_window(stage, tail[-1].observed_on, self.config.tolerance_days):
             return []
-
-        # В отличие от _check_missing_equipment (булев факт «маркер есть/нет»),
-        # здесь нужно перечислить КАКИЕ именно logical-типы отсутствуют —
-        # поэтому разница множеств, а не any().
-        present_ids = {eq.equipment_type_id for eq in latest_obs.equipment if eq.count_min >= 1}
-        missing_ids = logical_ids - present_ids
-        if not missing_ids:
-            return []
-
-        return [
-            DeviationResult(
-                stage_id=stage.stage_id,
-                type=DeviationType.MISSING_LOGICAL_EQUIPMENT,
-                is_hypothesis=True,
-                severity=Severity.ATTENTION,
-                confidence=Confidence.MEDIUM,
-                period_start=latest_obs_on,
-                period_end=latest_obs_on,
-                expected=(
-                    f"Техника из логического набора этапа: "
-                    f"{self._format_equipment_names(logical_ids, equipment_names)}"
-                ),
-                observed=(
-                    f"Не обнаружена: {self._format_equipment_names(missing_ids, equipment_names)}"
-                ),
-                limits_text=(
-                    "Гипотеза — логическая техника не обязательна для подтверждения "
-                    "этапа, могла быть вне зоны обзора камер или не понадобиться на "
-                    "этой стадии."
-                ),
-                rule_id=rule.rule_id,
-                evidence_dates=(latest_obs_on,),
-            )
+        kits = [
+            kit
+            for kit in rule.effective_kits
+            if any(r.obligation == "normative" for r in kit.requirements)
         ]
+        if not kits or not any(
+            plan.markers_on(stage, o.observed_on) and self._is_marker_day(stage, kits, o, plan)
+            for o in tail
+        ):
+            return []
+
+        def ids(*obligations: str) -> frozenset[uuid.UUID]:
+            return frozenset(
+                r.equipment_type_id
+                for kit in kits
+                for r in kit.requirements
+                if r.obligation in obligations
+            )
+
+        normative = ids("normative") - plan.stationary
+        logical = ids("logical") - normative - plan.stationary
+        groups: dict[str, frozenset[uuid.UUID]] = {}
+        for kit in kits:
+            for r in kit.requirements:
+                if r.group:
+                    groups[r.group] = groups.get(r.group, frozenset()) | {r.equipment_type_id}
+
+        def present(o: ObservationInput) -> set[uuid.UUID]:
+            # «Экскаватор (тип не определён)» закрывает гусеничный экскаватор комплекта
+            # (clean-mvp, covering): нехватки такой машины нет
+            seen = {eq.equipment_type_id for eq in o.equipment if eq.count_min >= 1}
+            return seen.union(*(plan.coarse.get(code, frozenset()) for code in seen))
+
+        out: list[DeviationResult] = []
+        tail_dates = tuple(o.observed_on for o in tail)
+        for needed, kind, pace in (
+            (normative, "нормативная", ""),
+            (logical, "логическая", " Без этой техники возможно снижение темпа работ."),
+        ):
+            missing = frozenset(needed).difference(*(present(o) for o in tail))
+            # Группа взаимозаменяемой техники (сваебойная) не нехватка, пока в каждый день
+            # есть хоть одна её машина (clean-mvp: требование на группу)
+            for members in groups.values():
+                if any(members & present(o) for o in tail):
+                    missing -= members
+            if not missing:
+                continue
+            listed = self._format_equipment_names(missing, names)
+            lowered = ", ".join(n[:1].lower() + n[1:] for n in listed.split(", "))
+
+            def holds(o: ObservationInput, missing: frozenset[uuid.UUID] = missing) -> bool:
+                return self._is_marker_day(stage, kits, o, plan) and not (missing & present(o))
+
+            out.append(
+                DeviationResult(
+                    stage_id=stage.stage_id,
+                    type=DeviationType.INCOMPLETE_KIT,
+                    is_hypothesis=False,
+                    severity=Severity.ATTENTION,
+                    confidence=Confidence.HIGH,
+                    period_start=self._streak_start(observations, holds),
+                    period_end=tail_dates[-1],
+                    expected=f"{listed} — {kind} техника этапа «{stage.name}».",
+                    observed=(
+                        f"Маркер этапа виден, а {lowered} — нет ни на одном снимке за "
+                        f"{len(tail)} {_dates_word(len(tail))}: "
+                        + ", ".join(f"{d:%d.%m}" for d in tail_dates)
+                        + f".{pace}"
+                    ),
+                    limits_text=(
+                        "Не доказывает, что техники нет на площадке: она могла работать вне "
+                        "кадра или между съёмками."
+                    ),
+                    rule_id=rule.rule_id,
+                    evidence_dates=tail_dates,
+                )
+            )
+        return out
 
     def _format_equipment_names(
         self, equipment_type_ids: Iterable[uuid.UUID], equipment_names: Mapping[uuid.UUID, str]

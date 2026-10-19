@@ -12,7 +12,7 @@
 
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from app.domains.methodology.models import Obligation
 
@@ -34,6 +34,8 @@ class DefaultRequirement:
     obligation: Obligation = Obligation.NORMATIVE
     gesn_code: str | None = None
     source_note: str | None = None
+    # Группа взаимозаменяемой техники: этапу хватает любой её машины
+    group_code: str | None = None
 
 
 @dataclass(frozen=True)
@@ -149,8 +151,11 @@ DEFAULT_RULES: tuple[DefaultStageRule, ...] = (
         "Устройство свай",
         r"сва[ий]|свайн|буронабивн|буров|бурени",
         *(
-            _n(code, "ГЭСН 05-01-028-01, 05-01-001-01", "Бурение или погружение свай")
-            for code in PILING
+            ("n", replace(req, group_code="piling"))
+            for _, req in (
+                _n(code, "ГЭСН 05-01-028-01, 05-01-001-01", "Бурение или погружение свай")
+                for code in PILING
+            )
         ),
         _a("crawler_crane", "Установка арматурных каркасов гусеничным краном"),
         _l("concrete_mixer", "Подача бетона в скважину"),

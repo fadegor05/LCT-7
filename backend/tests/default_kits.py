@@ -67,6 +67,7 @@ async def materialize_with_default_kits(
                         obligation=req.obligation,
                         gesn_code=req.gesn_code,
                         source_note=req.source_note,
+                        group_code=req.group_code,
                     )
                 )
             await repository.add_requirements(equipment_set.id, requirements)
