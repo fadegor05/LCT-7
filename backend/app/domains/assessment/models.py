@@ -81,6 +81,8 @@ class StageStatus(Base):
     # Факт по маркеру и маркеры этапа (названия техники) — для «Этапов» на обзоре
     start_fact: Mapped[date | None] = mapped_column(Date(), nullable=True)
     marker_names: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    # Периоды маркеров: [{"equipment_type_id", "name", "start", "end"}] — для методики
+    marker_periods: Mapped[list[dict[str, str]] | None] = mapped_column(JSON, nullable=True)
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
     confidence_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(

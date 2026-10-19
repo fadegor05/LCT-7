@@ -298,6 +298,12 @@ export const stageStatusSchema = z.object({
   delay_days: z.number().nullable(),
   /** delay_days — нижняя граница («от N дней»): этап не начат. */
   delay_open: z.boolean().optional(),
+  /** Когда машина — маркер этапа (методика): «маркер 07.04–11.05». */
+  marker_periods: z
+    .array(
+      z.object({ equipment_type_id: z.string(), name: z.string(), start: isoDate, end: isoDate }),
+    )
+    .optional(),
   /** Сдвиг интервалом: null — граница неизвестна («до N», «от N»). */
   delay_min: z.number().nullable().optional(),
   delay_max: z.number().nullable().optional(),
@@ -436,6 +442,7 @@ export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
 export type ObjectType = z.infer<typeof objectTypeSchema>
 export type Decision = z.infer<typeof decisionSchema>
+export type MarkerPeriod = NonNullable<StageStatus['marker_periods']>[number]
 export type Stage = z.infer<typeof stageSchema>
 export type ImportIssue = z.infer<typeof importIssueSchema>
 export type ParseMode = z.infer<typeof parseModeSchema>

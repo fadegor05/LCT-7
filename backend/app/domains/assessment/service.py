@@ -24,6 +24,7 @@ from app.domains.assessment.schemas import (
     DeviationDetailRead,
     DeviationEvidenceRead,
     DeviationRead,
+    MarkerPeriodRead,
     SiteSummaryRead,
     StageStatusRead,
 )
@@ -125,6 +126,11 @@ class AssessmentService:
                 delay_max=status.delay_max if status else None,
                 start_fact=status.start_fact if status else None,
                 marker_names=(status.marker_names or []) if status else [],
+                marker_periods=[
+                    MarkerPeriodRead.model_validate(p) for p in (status.marker_periods or [])
+                ]
+                if status
+                else [],
                 confidence=status.confidence if status else None,
                 confidence_reason=status.confidence_reason if status else None,
                 computed_at=status.computed_at if status else None,

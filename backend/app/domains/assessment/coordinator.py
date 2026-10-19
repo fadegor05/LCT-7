@@ -61,6 +61,21 @@ from app.domains.site.models import Site
 from app.plugins.exceptions import AppError
 
 
+def _periods(
+    periods: tuple[tuple[uuid.UUID, date, date], ...], names: dict[uuid.UUID, str]
+) -> list[dict[str, str]]:
+    """Периоды маркеров для методики: машина, название, с, по (ISO-даты)."""
+    return [
+        {
+            "equipment_type_id": str(kind),
+            "name": names.get(kind, str(kind)),
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+        }
+        for kind, start, end in periods
+    ]
+
+
 def _names(ids: frozenset[uuid.UUID], names: dict[uuid.UUID, str]) -> list[str]:
     """Маркеры этапа — названиями техники по алфавиту."""
     return sorted(names.get(i, str(i)) for i in ids)
@@ -425,6 +440,7 @@ class RecomputeCoordinator:
                     existing.delay_max = result.delay_max
                     existing.start_fact = result.start_fact
                     existing.marker_names = _names(result.markers, equipment_names)
+                    existing.marker_periods = _periods(result.marker_periods, equipment_names)
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -439,6 +455,7 @@ class RecomputeCoordinator:
                         delay_max=result.delay_max,
                         start_fact=result.start_fact,
                         marker_names=_names(result.markers, equipment_names),
+                        marker_periods=_periods(result.marker_periods, equipment_names),
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )

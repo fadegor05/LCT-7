@@ -125,6 +125,8 @@ class StageStatusResult:
     start_fact: date | None = None
     # Маркеры этапа: техника, которая хоть когда-то в его окне отличает его от соседних
     markers: frozenset[uuid.UUID] = frozenset()
+    # Когда машина — маркер этапа: (машина, с, по), подряд идущие дни окна (clean-mvp)
+    marker_periods: tuple[tuple[uuid.UUID, date, date], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -227,6 +229,30 @@ class _Plan:
                 shared |= self.classes(other_rule)
         return self.normative(rule) - shared - self.stationary
 
+    def marker_periods(self, stage: StageInput) -> tuple[tuple[uuid.UUID, date, date], ...]:
+        """Периоды, когда машина — маркер этапа: подряд идущие дни окна (план ± допуск).
+
+        Методика показывает их инженеру («маркер 07.04–11.05»): вне периода машину делят
+        соседние этапы, и по ней этап не отличить.
+        """
+        if stage.planned_start is None or stage.planned_end is None:
+            return ()
+        t = timedelta(days=self.tolerance_days)
+        day, end = stage.planned_start - t, stage.planned_end + t
+        open_: dict[uuid.UUID, tuple[date, date]] = {}
+        periods: list[tuple[uuid.UUID, date, date]] = []
+        while day <= end:
+            today = self.markers_on(stage, day)
+            for kind in [k for k in open_ if k not in today]:
+                start, last = open_.pop(kind)
+                periods.append((kind, start, last))
+            for kind in today:
+                start, _ = open_.get(kind, (day, day))
+                open_[kind] = (start, day)
+            day += timedelta(days=1)
+        periods.extend((kind, start, last) for kind, (start, last) in open_.items())
+        return tuple(sorted(periods, key=lambda p: (p[1], str(p[0]))))
+
     def markers_for(self, stage: StageInput) -> frozenset[uuid.UUID]:
         """Объединение маркеров по дням окна этапа (clean-mvp, markers_for)."""
         if stage.planned_start is None or stage.planned_end is None:
@@ -307,7 +333,11 @@ class RuleEngine:
             )
             if status is not None:
                 if status.status != StageStatusValue.NOT_CHECKED:
-                    status = replace(status, markers=plan.markers_for(stage))
+                    status = replace(
+                        status,
+                        markers=plan.markers_for(stage),
+                        marker_periods=plan.marker_periods(stage),
+                    )
                 statuses.append(status)
 
         # Устаревшие данные — единственное отклонение: выводы по старым кадрам о сегодняшнем

@@ -7,6 +7,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class MarkerPeriodRead(BaseModel):
+    """Период, когда машина отличает этап от идущих одновременно."""
+
+    equipment_type_id: uuid.UUID
+    name: str
+    start: date
+    end: date
+
+
 class StageStatusRead(BaseModel):
     """Статус этапа для чтения.
 
@@ -27,6 +36,8 @@ class StageStatusRead(BaseModel):
     # Факт по маркеру и маркеры этапа
     start_fact: date | None = None
     marker_names: list[str] = []
+    # Когда машина — маркер этапа (методика): «маркер 07.04–11.05»
+    marker_periods: list[MarkerPeriodRead] = []
     confidence: str | None
     confidence_reason: str | None
     computed_at: datetime | None
