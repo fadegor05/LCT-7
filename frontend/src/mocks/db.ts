@@ -912,6 +912,23 @@ export function updateCamera(siteId: string, cameraId: string, data: Partial<Cam
  * источником «channel», итог попытки — у камеры. В моках сбой даёт ссылка с «offline», занятый
  * стрим — ссылка с «busy» (это не попытка, поэтому статус камеры не меняется).
  */
+// 1×1 PNG: пробный кадр моков — содержимое не важно, важны размеры для пропорций зоны
+const PREVIEW_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+
+/** Как CameraCaptureService.preview: кадр по ссылке, ничего не пишет. */
+export function previewFrame(
+  siteId: string,
+  streamUrl: string,
+): { image: string; width: number; height: number } {
+  getSite(siteId)
+  const url = checkStreamUrl(streamUrl)
+  if (!url) throw new MockError(422, 'Укажите ссылку на стрим')
+  if (url.includes('busy')) throw new MockError(409, 'Снимок уже идёт, подождите')
+  if (url.includes('offline')) throw new MockError(422, 'Камера не ответила за 15 с')
+  return { image: PREVIEW_PIXEL, width: 1920, height: 1080 }
+}
+
 export function captureCamera(siteId: string, cameraId: string): Photo {
   const camera = findCamera(siteId, cameraId)
   if (!camera.stream_url) throw new MockError(422, 'У камеры нет ссылки на стрим')

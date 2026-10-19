@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { useCaptureNow, useDeleteCamera, useSaveCamera } from '@/api/cameras'
+import {
+  type StreamPreview,
+  useCaptureNow,
+  useDeleteCamera,
+  usePreviewFrame,
+  useSaveCamera,
+} from '@/api/cameras'
 import { photoImageUrl, usePhotos } from '@/api/frames'
 import type { Camera, Zone } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
@@ -48,15 +54,35 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
   const save = useSaveCamera(siteId)
   const remove = useDeleteCamera(siteId)
   const capture = useCaptureNow(siteId, camera?.id ?? null)
-  // Снять можно только по сохранённой ссылке: сервер снимает по ссылке камеры, а не из поля
-  const canCapture = Boolean(camera?.stream_url) && stream.trim() === camera?.stream_url
+  const preview = usePreviewFrame(siteId)
+  // Пробный кадр по ссылке из поля — фон для зоны, пока камеру не сохранили (clean-mvp)
+  const [shot, setShot] = useState<StreamPreview | null>(null)
+  // В ленту снимает только сохранённая ссылка: сервер снимает по ссылке камеры, а не из поля.
+  // Ссылку ещё не сохранили — «Снять кадр сейчас» берёт пробный кадр для зоны
+  const saved = Boolean(camera?.stream_url) && stream.trim() === camera?.stream_url
+  const takeShot = () => {
+    if (saved) {
+      capture.mutate()
+      return
+    }
+    preview.mutate(
+      { streamUrl: stream.trim(), cameraId: camera?.id ?? null },
+      { onSuccess: (result) => setShot(result) },
+    )
+  }
+  const shooting = capture.isPending || preview.isPending
+  const shotError = saved ? capture.error : preview.error
   // Подложка — последний снимок стройки: пока у камеры нет своих кадров, это ориентир для зоны
   const photos = usePhotos(siteId)
   const frame = newestPhoto(photos.data)
   const frameSrc = useAuthorizedImage(
     frame && !frameFailed ? photoImageUrl(siteId, frame.id) : null,
   )
-  const aspect = frame && frame.width > 0 && frame.height > 0 ? frame.width / frame.height : 4 / 3
+  const aspect = shot
+    ? shot.width / shot.height
+    : frame && frame.width > 0 && frame.height > 0
+      ? frame.width / frame.height
+      : 4 / 3
 
   /** `?seconds=` из ссылки — в поле интервала (при уходе из поля и при сохранении). */
   const splitLink = (value: string) => {
@@ -205,7 +231,7 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
         <div className={styles.zoneGrid}>
           <ZoneEditor
             key={editorKey}
-            imageUrl={frameSrc}
+            imageUrl={shot?.image ?? frameSrc}
             aspect={aspect}
             value={zone}
             onChange={setZone}
@@ -217,29 +243,36 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
           />
           <div className={styles.zoneSide}>
             <p className="sm muted">
-              {frame
-                ? 'Ориентир — последний снимок стройки. Кликайте по нему, чтобы ставить вершины; замкните контур на первой точке.'
-                : 'Снимков стройки пока нет: зона рисуется на пустом поле. Загрузите снимки, чтобы видеть ориентир.'}
+              {shot
+                ? 'Ориентир — пробный кадр со стрима. Кликайте по нему, чтобы ставить вершины; замкните контур на первой точке.'
+                : frame
+                  ? 'Ориентир — последний снимок стройки. Кликайте по нему, чтобы ставить вершины; замкните контур на первой точке.'
+                  : 'Снимков стройки пока нет: зона рисуется на пустом поле. Снимите кадр со стрима или загрузите снимки, чтобы видеть ориентир.'}
             </p>
             <Button
               variant="secondary"
               size="sm"
-              disabled={!canCapture || capture.isPending}
-              onClick={() => capture.mutate()}
+              disabled={!stream.trim() || shooting}
+              onClick={takeShot}
             >
-              {capture.isPending ? 'Снимаем кадр…' : 'Снять кадр сейчас'}
+              {shooting ? 'Снимаем кадр…' : 'Снять кадр сейчас'}
             </Button>
-            {!canCapture && (
-              <p className="sm muted">Сохраните камеру со ссылкой, чтобы снять кадр</p>
+            {!stream.trim() && (
+              <p className="sm muted">Укажите ссылку на стрим, чтобы снять кадр</p>
             )}
-            {capture.isSuccess && (
+            {saved && capture.isSuccess && (
               <p className="sm" role="status">
                 Кадр со стрима снят и добавлен в ленту камеры
               </p>
             )}
-            {capture.error && (
+            {!saved && shot && preview.isSuccess && (
+              <p className="sm" role="status">
+                Пробный кадр снят: он только ориентир для зоны, в ленту не попадает
+              </p>
+            )}
+            {shotError && (
               <Callout tone="caution" title="Кадр со стрима не снят">
-                {capture.error.message}
+                {shotError.message}
               </Callout>
             )}
             <Button

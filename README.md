@@ -59,7 +59,7 @@ LLM_MODEL=<имя модели>
 
 | Переменная | Назначение |
 |---|---|
-| `STREAM__ENABLED=true` | Снимки со стрима камер. Камеры в локальной сети требуют `STREAM__ALLOWED_NETWORKS`; остальные `STREAM__*` в [documentation/configuration.md](documentation/configuration.md) |
+| `STREAM__ENABLED=false` | Выключить снимки со стрима по расписанию (включены по умолчанию). Камеры в локальной сети требуют `STREAM__ALLOWED_NETWORKS`; остальные `STREAM__*` в [documentation/configuration.md](documentation/configuration.md) |
 | `STAMP_CAMERA_READER=0` | Выключить чтение штампа камеры по эталонам (сервис `ml`, включено по умолчанию) |
 
 Полный список переменных: [documentation/configuration.md](documentation/configuration.md).

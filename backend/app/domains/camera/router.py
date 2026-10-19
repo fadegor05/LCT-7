@@ -1,5 +1,6 @@
 """HTTP-роуты камер стройки."""
 
+import base64
 import uuid
 
 from dishka.integrations.fastapi import FromDishka, inject
@@ -7,7 +8,13 @@ from fastapi import APIRouter, Response
 
 from app.adapters.stream.base import mask_credentials
 from app.domains.camera.capture import CameraCaptureService
-from app.domains.camera.schemas import CameraIn, CameraRead, CameraUpdate
+from app.domains.camera.schemas import (
+    CameraIn,
+    CameraRead,
+    CameraUpdate,
+    StreamPreviewIn,
+    StreamPreviewOut,
+)
 from app.domains.camera.service import CameraService, CameraView
 from app.domains.photo.schemas import PhotoRead
 
@@ -47,6 +54,17 @@ async def create_camera(
     site_id: uuid.UUID, data: CameraIn, service: FromDishka[CameraService]
 ) -> CameraRead:
     return _read(await service.create(site_id, data))
+
+
+@router.post("/preview")
+@inject
+async def preview_stream(
+    site_id: uuid.UUID, data: StreamPreviewIn, service: FromDishka[CameraCaptureService]
+) -> StreamPreviewOut:
+    """Пробный кадр по ссылке до сохранения камеры — фон для зоны; в ленту не попадает."""
+    content, width, height = await service.preview(site_id, data.stream_url, data.camera_id)
+    image = "data:image/jpeg;base64," + base64.b64encode(content).decode()
+    return StreamPreviewOut(image=image, width=width, height=height)
 
 
 @router.patch("/{camera_id}")

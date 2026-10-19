@@ -35,6 +35,24 @@ def _check_zone(value: list[list[float]] | None) -> list[list[float]] | None:
     return [[float(x), float(y)] for x, y in value]
 
 
+class StreamPreviewIn(BaseModel):
+    """Пробный кадр по ссылке — ориентир для зоны до сохранения камеры, в ленту не попадает.
+
+    `camera_id` — камера, ссылку которой правят: из ответа API ссылка приходит с `***`
+    вместо пароля, и сервер подставляет сохранённые учётные данные.
+    """
+
+    # Ссылка проверяется в сервисе: pydantic-ошибка вернула бы её саму (с учётными данными)
+    stream_url: str = Field(min_length=1, max_length=500)
+    camera_id: uuid.UUID | None = None
+
+
+class StreamPreviewOut(BaseModel):
+    image: str  # data:image/jpeg;base64,…
+    width: int
+    height: int
+
+
 class CameraIn(BaseModel):
     """Создание камеры."""
 

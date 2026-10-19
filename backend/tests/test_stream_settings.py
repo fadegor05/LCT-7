@@ -6,22 +6,23 @@ from pydantic import ValidationError
 from app.core.settings import Settings, StreamSettings
 
 
-def test_stream_capture_is_off_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_stream_capture_is_on_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Как в clean-mvp: камера со ссылкой снимает по расписанию без отдельного флага
     monkeypatch.delenv("STREAM__ENABLED", raising=False)
     settings = Settings()
-    assert settings.stream.enabled is False
+    assert settings.stream.enabled is True
     assert settings.stream.window == (8, 20)
     assert settings.stream.timezone == "Europe/Moscow"
     assert settings.stream.allowed_networks == []
 
 
 def test_stream_settings_come_from_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("STREAM__ENABLED", "true")
+    monkeypatch.setenv("STREAM__ENABLED", "false")
     monkeypatch.setenv("STREAM__HOURS", "9-18")
     monkeypatch.setenv("STREAM__CONCURRENCY", "2")
     monkeypatch.setenv("STREAM__ALLOWED_NETWORKS", '["192.168.1.0/24"]')
     settings = Settings()
-    assert settings.stream.enabled is True
+    assert settings.stream.enabled is False
     assert settings.stream.window == (9, 18)
     assert settings.stream.concurrency == 2
     assert settings.stream.allowed_networks == ["192.168.1.0/24"]

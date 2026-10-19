@@ -277,6 +277,10 @@ export const handlers = [
       return handle(() => db.updateCamera(params.siteId, params.cameraId, body))
     },
   ),
+  http.post<SiteParams>(api('/sites/:siteId/cameras/preview'), async ({ params, request }) => {
+    const body = await json<{ stream_url: string }>(request)
+    return handle(() => db.previewFrame(params.siteId, body.stream_url))
+  }),
   http.post<{ siteId: string; cameraId: string }>(
     api('/sites/:siteId/cameras/:cameraId/capture'),
     ({ params }) => handle(() => db.captureCamera(params.siteId, params.cameraId), 201),
