@@ -1,0 +1,99 @@
+"""DI-провайдеры домена notification."""
+
+from dishka import Provider, Scope, provide
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.adapters.notify.factory import ChannelRegistry, create_channel_registry
+from app.adapters.notify.telegram import TelegramClient
+from app.core.settings import Settings
+from app.domains.notification.channels import ChannelLinkService
+from app.domains.notification.dispatcher import (
+    BackgroundDispatcher,
+    NotificationDispatcher,
+    NullDispatcher,
+)
+from app.domains.notification.repository import (
+    ChannelLinkTokenRepository,
+    NotificationRepository,
+    UserChannelRepository,
+)
+from app.domains.notification.service import NotificationService
+from app.domains.notification.telegram_link import TelegramLinkPoller
+
+
+class NotificationProvider(Provider):
+    scope = Scope.REQUEST
+
+    notifications = provide(NotificationRepository)
+    channels = provide(UserChannelRepository)
+    tokens = provide(ChannelLinkTokenRepository)
+
+    @provide(scope=Scope.REQUEST)
+    def service(
+        self,
+        repository: NotificationRepository,
+        session: AsyncSession,
+        dispatcher: NotificationDispatcher,
+    ) -> NotificationService:
+        return NotificationService(repository, session, dispatcher)
+
+    @provide(scope=Scope.REQUEST)
+    def link_service(
+        self,
+        channels: UserChannelRepository,
+        tokens: ChannelLinkTokenRepository,
+        session: AsyncSession,
+        settings: Settings,
+    ) -> ChannelLinkService:
+        return ChannelLinkService(channels, tokens, session, settings)
+
+
+class NullDispatcherProvider(Provider):
+    """Доставки нет. Переопределяется провайдером каналов, когда они настроены."""
+
+    scope = Scope.APP
+
+    @provide
+    def dispatcher(self) -> NotificationDispatcher:
+        return NullDispatcher()
+
+
+class ChannelsProvider(Provider):
+    """Реестр каналов и доставка. Один на приложение."""
+
+    scope = Scope.APP
+
+    @provide
+    def registry(self, settings: Settings) -> ChannelRegistry:
+        return create_channel_registry(settings)
+
+    @provide
+    def dispatcher(
+        self,
+        maker: async_sessionmaker[AsyncSession],
+        registry: ChannelRegistry,
+        settings: Settings,
+    ) -> NotificationDispatcher:
+        return BackgroundDispatcher(maker=maker, registry=registry, settings=settings)
+
+
+class TelegramPollerProvider(Provider):
+    """Поллер бота. Запускается, только если бот настроен (см. main.py)."""
+
+    scope = Scope.APP
+
+    @provide
+    def client(self, settings: Settings) -> TelegramClient:
+        return TelegramClient(
+            token=settings.notify.telegram.token or "",
+            timeout_s=settings.notify.telegram.request_timeout_s,
+        )
+
+    @provide
+    def poller(
+        self,
+        maker: async_sessionmaker[AsyncSession],
+        client: TelegramClient,
+        settings: Settings,
+    ) -> TelegramLinkPoller:
+        return TelegramLinkPoller(maker, client, settings)

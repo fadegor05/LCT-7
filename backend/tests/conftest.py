@@ -33,6 +33,7 @@ from app.domains.assistant.provider import AssistantProvider
 from app.domains.camera.provider import CameraProvider, StreamCaptureProvider
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.provider import MethodologyProvider
+from app.domains.notification.provider import NotificationProvider, NullDispatcherProvider
 from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
 from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
@@ -301,6 +302,8 @@ def _make_container(
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
+        NotificationProvider(),
+        NullDispatcherProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),
@@ -350,6 +353,8 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
+        NotificationProvider(),
+        NullDispatcherProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),

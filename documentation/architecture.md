@@ -140,7 +140,18 @@ flowchart LR
 | `ScheduleLlmClient` | `HttpScheduleLlmClient` | `NullScheduleLlmClient` |
 | `FileStorage` | `S3FileStorage`, `LocalFileStorage` | нет |
 | `StreamGrabber` | `FfmpegGrabber`, обёрнут в `GuardedGrabber` (проверка адресов) | нет |
+| `NotificationChannel` | `TelegramChannel` поверх `TelegramClient` | `LogChannel` |
 
+
+### Уведомления
+
+Домен `notification` хранит ленту и привязки каналов. Доменам-источникам доступен один метод, `NotificationService.notify(user_id, type, title, body, link)`: про каналы и телеграм они ничего не знают. Источников событий пока нет — отклонения и сбои камер к этому шву не подключены, лента наполняется только служебным `POST /api/notifications/test`.
+
+Доставка идёт через реестр каналов (`ChannelRegistry`, `Scope.APP`). Реализован один канал, телеграм; без `NOTIFY__TELEGRAM__TOKEN` на его месте `LogChannel`, который только пишет в лог приложения. Почта и СМС не реализованы: интерфейс `NotificationChannel` на них рассчитан, файлов нет.
+
+Отправкой занимается `BackgroundDispatcher`. Сервис создаёт уведомление, коммитит транзакцию и только после этого планирует доставку через `asyncio.create_task`; задача берёт собственную сессию из `async_sessionmaker`, потому что сессия запроса к этому моменту уже закрыта. Ошибка канала пишется в лог и не влияет на HTTP-ответ. Таблицы доставок и повторов нет — следствия описаны в `limitations.md`.
+
+Привязка телеграма устроена так же, как фоновые снимки со стрима: `TelegramLinkPoller` поднимается в `lifespan` и живёт, только если бот настроен. Он опрашивает Bot API методом `getUpdates` (long polling) и на `/start <токен>` гасит одноразовый токен из `channel_link_tokens`, сохраняя `chat_id`. Webhook не используется: ему нужен публичный HTTPS, которого нет при локальной разработке. Курсор апдейтов живёт в памяти задачи — телеграм хранит их сутки, а повторный `/start` по погашенному токену безвреден.
 
 ## Развёртывание
 

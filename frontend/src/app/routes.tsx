@@ -11,6 +11,7 @@ import { NewSiteMethodologyPage } from '@/pages/NewSiteMethodologyPage'
 import { NewSitePage } from '@/pages/NewSitePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { ObservationsPage } from '@/pages/ObservationsPage'
+import { ProfilePage } from '@/pages/ProfilePage'
 import { SiteOverviewPage } from '@/pages/SiteOverviewPage'
 import { SitesPage } from '@/pages/SitesPage'
 
@@ -40,6 +41,7 @@ export const routes: RouteObject[] = [
       { path: 'sites/:siteId/methodology', element: <MethodologyPage /> },
       { path: 'sites/:siteId/cameras', element: <CamerasPage /> },
       { path: 'sites/:siteId/deviations/:deviationId', element: <DeviationPage /> },
+      { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

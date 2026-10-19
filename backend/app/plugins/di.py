@@ -19,6 +19,11 @@ from app.domains.assessment.provider import AssessmentProvider
 from app.domains.assistant.provider import AssistantClientProvider, AssistantProvider
 from app.domains.camera.provider import CameraProvider, StreamCaptureProvider, StreamGrabberProvider
 from app.domains.methodology.provider import MethodologyProvider
+from app.domains.notification.provider import (
+    ChannelsProvider,
+    NotificationProvider,
+    TelegramPollerProvider,
+)
 from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.provider import PhotoProvider
 from app.domains.schedule.provider import ScheduleLlmClientProvider, ScheduleProvider
@@ -66,6 +71,9 @@ def create_container() -> AsyncContainer:
         ScheduleProvider(),
         ScheduleLlmClientProvider(),
         MethodologyProvider(),
+        NotificationProvider(),
+        ChannelsProvider(),
+        TelegramPollerProvider(),
         PhotoProvider(),
         ObservationProvider(),
         AssessmentProvider(),

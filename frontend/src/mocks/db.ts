@@ -10,6 +10,7 @@ import type {
   DeviationDetail,
   EquipmentSet,
   Level,
+  Notification,
   Observation,
   ParseMode,
   Photo,
@@ -23,6 +24,7 @@ import type {
   StageStatus,
   SiteSummary,
   UploadReport,
+  UserChannel,
   AssistantAnswer,
   Zone,
 } from '@/api/schemas'
@@ -77,6 +79,10 @@ interface State {
   statuses: Map<string, Map<string, Omit<StageStatus, 'stage_id' | 'stage_name' | 'position'>>>
   deviations: Map<string, DeviationDetail[]>
   cameras: Map<string, Camera[]>
+  notifications: Notification[]
+  channels: UserChannel[]
+  pendingLink: 'telegram' | null
+  fullName: string
   seq: number
   assistantScenario: AssistantScenario
 }
@@ -1007,6 +1013,10 @@ export function resetDb(): void {
     statuses: new Map(),
     deviations: new Map(),
     cameras: new Map(),
+    notifications: [],
+    channels: [],
+    pendingLink: null,
+    fullName: user.full_name,
     seq: 0,
     assistantScenario: initialScenario,
   }
@@ -1015,3 +1025,102 @@ export function resetDb(): void {
 }
 
 resetDb()
+
+// ---------- Пользователь ----------
+
+export function getUser(): typeof user {
+  return { ...user, full_name: state.fullName }
+}
+
+export function renameUser(fullName: string): typeof user {
+  const trimmed = fullName.trim()
+  if (!trimmed) throw new MockError(422, 'Проверьте введённые данные')
+  state.fullName = trimmed
+  return getUser()
+}
+
+// ---------- Уведомления ----------
+
+export function listNotifications(): { items: Notification[]; unread_count: number } {
+  const items = [...state.notifications].reverse()
+  return { items, unread_count: items.filter((n) => n.read_at === null).length }
+}
+
+export function createTestNotification(body: {
+  title?: string
+  body?: string
+  link?: string | null
+}): Notification {
+  const created: Notification = {
+    id: `notification-${++state.seq}`,
+    type: 'system',
+    title: body.title ?? 'Тестовое уведомление',
+    body: body.body ?? 'Проверка системы уведомлений',
+    link: body.link ?? null,
+    read_at: null,
+    created_at: new Date().toISOString(),
+  }
+  state.notifications.push(created)
+  return created
+}
+
+export function markAllRead(): { marked: number } {
+  const now = new Date().toISOString()
+  let marked = 0
+  for (const notification of state.notifications) {
+    if (notification.read_at === null) {
+      notification.read_at = now
+      marked += 1
+    }
+  }
+  return { marked }
+}
+
+// ---------- Каналы доставки ----------
+
+export function listChannels(): UserChannel[] {
+  return state.channels.map((channel) => ({ ...channel }))
+}
+
+/**
+ * Выдаёт ссылку привязки и НЕ привязывает канал: в жизни между выдачей ссылки и
+ * нажатием «Запустить» в телеграме проходит время, и экран обязан это пережить.
+ * Подтверждает привязку отдельный confirmLink — его зовёт тест или кнопка в
+ * мок-режиме, изображая пользователя, дошедшего до бота.
+ */
+export function linkChannel(channel: 'telegram'): { url: string; expires_at: string } {
+  state.pendingLink = channel
+  return {
+    url: `https://t.me/lct7_mock_bot?start=mock-${++state.seq}`,
+    expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+  }
+}
+
+export function confirmLink(channel: 'telegram'): UserChannel {
+  const existing = state.channels.find((c) => c.channel === channel)
+  if (existing) {
+    existing.enabled = true
+    return existing
+  }
+  const created: UserChannel = {
+    channel,
+    address_masked: '…6789',
+    enabled: true,
+    linked_at: new Date().toISOString(),
+  }
+  state.channels.push(created)
+  return created
+}
+
+export function toggleChannel(channel: 'telegram', enabled: boolean): UserChannel {
+  const existing = state.channels.find((c) => c.channel === channel)
+  if (!existing) throw new MockError(404, 'Канал не привязан')
+  existing.enabled = enabled
+  return existing
+}
+
+export function unlinkChannel(channel: 'telegram'): void {
+  const index = state.channels.findIndex((c) => c.channel === channel)
+  if (index < 0) throw new MockError(404, 'Канал не привязан')
+  state.channels.splice(index, 1)
+}
