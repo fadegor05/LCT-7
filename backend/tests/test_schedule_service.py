@@ -141,8 +141,10 @@ class TestScheduleServiceImport:
             report = await service.import_schedule(site_id, "schedule.csv", csv_content)
 
         assert report.rows_total == 3
-        assert report.rows_parsed == 1  # Только успешная
-        assert len(report.stages) == 1
+        # Строка с неразобранной датой — этап без дат, его даты задаёт инженер
+        assert report.rows_parsed == 2
+        assert len(report.stages) == 2
+        assert report.stages_without_dates == 1
         assert len(report.issues) == 2
 
     @pytest.mark.asyncio
