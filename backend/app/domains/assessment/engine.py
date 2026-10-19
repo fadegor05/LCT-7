@@ -1426,6 +1426,9 @@ class RuleEngine:
                         f"Неполный комплект: {'не виден' if len(missing) == 1 else 'не видны'} "
                         f"{lowered}"
                     ),
+                    # Недостающая машина (первая по названию) — для устойчивого ключа
+                    # отклонения: два «Неполных комплекта» этапа иначе делили бы id и решение
+                    equipment_type_id=min(missing, key=lambda i: (names.get(i, ""), str(i))),
                 )
             )
         return out

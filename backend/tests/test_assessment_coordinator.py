@@ -681,6 +681,21 @@ class TestRecomputeCoordinator:
             evidence = await evidence_repo.list_by_deviation(missing_dev.id)
             # Снимки всех трёх дат окна
             assert len(evidence) == 3
+            first_id = missing_dev.id
+
+        # Повторный пересчёт пересоздаёт строки, но id отклонения тот же: ссылки на карточку
+        # (открытая вкладка, уведомление) не ломаются
+        async with container() as request_container:
+            coordinator = await create_coordinator(
+                container, engine_config, AsOfConfig(mode=AsOfMode.FIXED, fixed_date=days[-1])
+            )
+            await coordinator.recompute_site(site_id)
+        async with container() as request_container:
+            dev_repo = DeviationRepository(await request_container.get(AsyncSession))
+            again = await dev_repo.list_by_site(site_id)
+            assert first_id in {d.id for d in again}
+            evidence_repo = DeviationEvidenceRepository(await request_container.get(AsyncSession))
+            assert len(await evidence_repo.list_by_deviation(first_id)) == 3
 
     @pytest.mark.asyncio
     async def test_detector_never_called(self, container) -> None:

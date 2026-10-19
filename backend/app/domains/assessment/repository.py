@@ -14,6 +14,7 @@ from app.domains.assessment.models import (
     SiteSummary,
     StageStatus,
     StatusBasis,
+    deviation_key,
 )
 from app.domains.schedule.models import Schedule, ScheduleStage
 
@@ -124,6 +125,16 @@ class DeviationRepository(BaseRepository[Deviation]):
             )
         )
         return result.scalars().all()
+
+    async def ids_by_key(self, site_id: uuid.UUID) -> dict[str, uuid.UUID]:
+        """id отклонений объекта по устойчивому ключу «тип:этап:машина» — без загрузки
+        сущностей, чтобы новые строки с теми же id не столкнулись с ними в сессии."""
+        result = await self._session.execute(
+            select(
+                self.model.id, self.model.type, self.model.stage_id, self.model.equipment_type_id
+            ).where(self.model.site_id == site_id)
+        )
+        return {deviation_key(t, s, e): i for i, t, s, e in result.all()}
 
     async def delete_by_site(self, site_id: uuid.UUID) -> None:
         """Удалить все отклонения для сайта.

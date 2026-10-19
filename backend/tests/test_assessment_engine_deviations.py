@@ -808,6 +808,8 @@ class TestIncompleteKit:
         ]
         assert rows[1].observed.endswith("Без этой техники возможно снижение темпа работ.")
         assert all(d.severity == Severity.ATTENTION and not d.is_hypothesis for d in rows)
+        # Машина отклонения — недостающая: у двух строк этапа разные ключи (id, решение)
+        assert [d.equipment_type_id for d in rows] == [bulldozer, truck]
         assert not [
             d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
         ]

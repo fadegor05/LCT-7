@@ -33,6 +33,7 @@ from app.domains.assessment.models import (
     SiteSummary,
     StageStatus,
     StatusBasis,
+    deviation_key,
 )
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
@@ -500,14 +501,25 @@ class RecomputeCoordinator:
                 if basis_rows:
                     await self._status_basis_repo.add_many(basis_rows)
 
-            # Шаг 8: Персистировать Deviation (full replace)
+            # Шаг 8: Персистировать Deviation (full replace). id то же, что у отклонения с тем
+            # же ключом до пересчёта: открытая карточка, ссылка из уведомления или закладка
+            # не ломаются, когда пересчёт пересоздаёт строки
+            previous = await self._deviation_repo.ids_by_key(site_id)
             await self._deviation_repo.delete_by_site(site_id)
+            used: set[uuid.UUID] = set()
 
             # Создать Deviation объекты в том же порядке, что и computation.deviations
             deviations: list[Deviation] = []
             for dev_result in cast(list[DeviationResult], computation.deviations):
+                key = deviation_key(
+                    dev_result.type.value, dev_result.stage_id, dev_result.equipment_type_id
+                )
+                dev_id = previous.get(key)
+                if dev_id is None or dev_id in used:
+                    dev_id = uuid.uuid4()
+                used.add(dev_id)
                 dev = Deviation(
-                    id=uuid.uuid4(),
+                    id=dev_id,
                     site_id=site_id,
                     stage_id=dev_result.stage_id,
                     type=dev_result.type.value,
