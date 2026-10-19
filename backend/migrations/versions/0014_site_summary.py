@@ -1,7 +1,7 @@
 """site_summaries: итог по объекту из пересчёта; stage_statuses.delay_open
 
-Revision ID: 0013
-Revises: 0012
+Revision ID: 0014
+Revises: 0013
 Create Date: 2026-10-19
 
 Итог по объекту считается вместе со статусами этапов и хранится в site_summaries.
@@ -14,8 +14,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0013"
-down_revision: str | None = "0012"
+revision: str = "0014"
+down_revision: str | None = "0013"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

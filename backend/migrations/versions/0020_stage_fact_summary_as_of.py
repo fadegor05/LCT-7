@@ -1,7 +1,7 @@
 """stage_statuses.start_fact, marker_names; site_summaries.as_of
 
-Revision ID: 0019
-Revises: 0018
+Revision ID: 0020
+Revises: 0019
 Create Date: 2026-10-19
 
 Для «Этапов» на обзоре, как в clean-mvp: факт по маркеру («с 09.09, идёт») и маркеры этапа
@@ -14,8 +14,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0019"
-down_revision: str | None = "0018"
+revision: str = "0020"
+down_revision: str | None = "0019"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

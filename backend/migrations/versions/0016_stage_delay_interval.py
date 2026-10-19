@@ -1,7 +1,7 @@
 """stage_statuses.delay_min, delay_max: сдвиг этапа интервалом
 
-Revision ID: 0015
-Revises: 0014
+Revision ID: 0016
+Revises: 0015
 Create Date: 2026-10-19
 
 Сдвиг этапа — интервал, как в clean-mvp: затянувшийся конец «14–74 дня» (от последнего дня
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0015"
-down_revision: str | None = "0014"
+revision: str = "0016"
+down_revision: str | None = "0015"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
