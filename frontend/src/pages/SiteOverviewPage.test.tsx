@@ -19,7 +19,10 @@ describe('SiteOverviewPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Березники, [адрес объекта]')).toBeInTheDocument()
+    // Адрес и дата данных — последнее наблюдение (моки считают as_of как last_observation)
+    expect(
+      await screen.findByText('Березники, [адрес объекта] · данные на 18.09.2026'),
+    ).toBeInTheDocument()
     expect(await screen.findByText('Отставание 4 дней')).toBeInTheDocument()
     // Пояснение итога — про тот же этап, что интервал
     expect(
