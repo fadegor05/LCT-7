@@ -7,6 +7,8 @@ import { formatWindow, stageDelayText } from '@/lib/format'
 import { deviationTypeLabels, levelLabels } from '@/lib/labels'
 import styles from './Overview.module.css'
 
+const NBSP = '\u00a0'
+
 const lowerFirst = (name: string) => name.charAt(0).toLowerCase() + name.slice(1)
 
 function meta(row: StageStatus): string | null {
@@ -75,7 +77,12 @@ export function StageStatusTable({
                   </div>
                 </th>
                 <td className="data">
-                  {formatWindow(stage?.planned_start ?? null, stage?.planned_end ?? null, '–')}
+                  {/* Неразрывные пробелы: окно переносится только после тире, дата целиком */}
+                  {formatWindow(
+                    stage?.planned_start ?? null,
+                    stage?.planned_end ?? null,
+                    '–',
+                  ).replace(/ /g, NBSP)}
                 </td>
                 <td className="data">
                   {row.start_fact

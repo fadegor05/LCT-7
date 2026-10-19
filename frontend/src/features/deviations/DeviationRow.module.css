@@ -58,5 +58,6 @@
 
   .chevron {
     grid-area: 1 / 2;
+    justify-self: end;
   }
 }

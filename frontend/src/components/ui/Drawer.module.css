@@ -4,10 +4,19 @@
   z-index: 100;
   display: flex;
   justify-content: flex-end;
+}
+
+/* Затемнение отдельным слоем: прозрачность анимируется на композиторе, без перерисовки */
+.scrim::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: var(--scrim);
+  animation: fade-in var(--duration-enter) var(--ease-out) both;
 }
 
 .sheet {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: min(420px, 100%);
@@ -16,11 +25,58 @@
   gap: var(--space-4);
   background: var(--surface);
   box-shadow: var(--shadow-pop);
+  animation: sheet-in var(--duration-enter) var(--ease-out) both;
+}
+
+/* Уход: быстрее входа и с разгоном. Клики уже проходят к странице */
+.scrim[data-closing] {
+  pointer-events: none;
+}
+
+.scrim[data-closing]::before {
+  animation: fade-out var(--duration-exit) var(--ease-in) both;
+}
+
+.scrim[data-closing] .sheet {
+  animation: sheet-out var(--duration-exit) var(--ease-in) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim::before,
+  .sheet,
+  .scrim[data-closing]::before,
+  .scrim[data-closing] .sheet {
+    animation: none;
+  }
 }
 
 .head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-4);
 }
 

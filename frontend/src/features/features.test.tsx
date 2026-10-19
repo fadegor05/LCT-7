@@ -68,6 +68,21 @@ describe('verdict', () => {
     expect(verdictText({ verdict: 'behind', delay_days_min: 4, delay_days_max: 6 })).toBe(
       'Отставание 4–6 дней',
     )
+    expect(verdictText({ verdict: 'behind', delay_days_min: 4, delay_days_max: 4 })).toBe(
+      'Отставание 4 дня',
+    )
+    expect(verdictText({ verdict: 'behind', delay_days_min: 1, delay_days_max: 1 })).toBe(
+      'Отставание 1 день',
+    )
+    expect(verdictText({ verdict: 'behind', delay_days_min: 14, delay_days_max: 43 })).toBe(
+      'Отставание 14–43 дня',
+    )
+    expect(verdictText({ verdict: 'behind', delay_days_min: 21, delay_days_max: null })).toBe(
+      'Отставание от 21 дня',
+    )
+    expect(verdictText({ verdict: 'behind', delay_days_min: null, delay_days_max: 5 })).toBe(
+      'Отставание до 5 дней',
+    )
     expect(verdictText({ verdict: 'behind', delay_days_min: null, delay_days_max: null })).toBe(
       'Отставание',
     )
