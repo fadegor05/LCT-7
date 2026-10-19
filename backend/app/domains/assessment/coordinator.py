@@ -60,6 +60,11 @@ from app.domains.schedule.repository import ScheduleRepository
 from app.plugins.exceptions import AppError
 
 
+def _names(ids: frozenset[uuid.UUID], names: dict[uuid.UUID, str]) -> list[str]:
+    """Маркеры этапа — названиями техники по алфавиту."""
+    return sorted(names.get(i, str(i)) for i in ids)
+
+
 class Clock(Protocol):
     """Протокол для callable, возвращающего текущую дату.
 
@@ -412,6 +417,8 @@ class RecomputeCoordinator:
                     existing.delay_open = result.delay_open
                     existing.delay_min = result.delay_min
                     existing.delay_max = result.delay_max
+                    existing.start_fact = result.start_fact
+                    existing.marker_names = _names(result.markers, equipment_names)
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -424,6 +431,8 @@ class RecomputeCoordinator:
                         delay_open=result.delay_open,
                         delay_min=result.delay_min,
                         delay_max=result.delay_max,
+                        start_fact=result.start_fact,
+                        marker_names=_names(result.markers, equipment_names),
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )
@@ -551,6 +560,7 @@ class RecomputeCoordinator:
             row.delay_days_max = summary.delay_days_max
             row.stage_id = summary.stage_id
             row.reason = summary.reason
+            row.as_of = summary.as_of
 
             # Шаг 10: Коммитить
             await self._session.commit()

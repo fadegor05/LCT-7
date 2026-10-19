@@ -5,6 +5,7 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -77,6 +78,9 @@ class StageStatus(Base):
     # Сдвиг интервалом («14–74 дня», «до 63»): None — граница неизвестна
     delay_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     delay_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Факт по маркеру и маркеры этапа (названия техники) — для «Этапов» на обзоре
+    start_fact: Mapped[date | None] = mapped_column(Date(), nullable=True)
+    marker_names: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
     confidence_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(
@@ -103,6 +107,8 @@ class SiteSummary(Base):
         Uuid, ForeignKey("schedule_stages.id", ondelete="SET NULL"), nullable=True
     )
     reason: Mapped[str] = mapped_column(Text, nullable=False)
+    # Опорная дата расчёта: «данные на» на экранах
+    as_of: Mapped[date | None] = mapped_column(Date(), nullable=True)
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

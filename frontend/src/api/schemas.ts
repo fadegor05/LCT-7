@@ -281,6 +281,10 @@ export const stageStatusSchema = z.object({
   /** Сдвиг интервалом: null — граница неизвестна («до N», «от N»). */
   delay_min: z.number().nullable().optional(),
   delay_max: z.number().nullable().optional(),
+  /** Факт по маркеру: первая подтверждённая маркерная дата. */
+  start_fact: isoDate.nullable().optional(),
+  /** Маркеры этапа: техника, которая отличает его от идущих одновременно. */
+  marker_names: z.array(z.string()).optional(),
   confidence: levelSchema.nullable(),
   confidence_reason: z.string().nullable(),
   computed_at: isoDateTime.nullable(),
@@ -326,6 +330,8 @@ export const siteSummarySchema = z.object({
   /** Почему такой итог: этап с наибольшим отставанием или причина «Недостаточно данных». */
   reason: z.string().nullable().optional(),
   stage_id: z.string().nullable().optional(),
+  /** Опорная дата расчёта: «данные на». */
+  as_of: isoDate.nullable().optional(),
 })
 
 // ---------- Ассистент (assistant) ----------

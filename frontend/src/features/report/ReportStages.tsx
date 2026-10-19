@@ -19,6 +19,7 @@ export function ReportStages({ rows, stages }: ReportStagesProps) {
         <tr>
           <th scope="col">Этап</th>
           <th scope="col">План</th>
+          <th scope="col">Факт по маркеру</th>
           <th scope="col">Статус</th>
           <th scope="col">Основание</th>
         </tr>
@@ -36,6 +37,11 @@ export function ReportStages({ rows, stages }: ReportStagesProps) {
               </td>
               <td className={styles.nowrap}>
                 {formatWindow(stage?.planned_start ?? null, stage?.planned_end ?? null, '–')}
+              </td>
+              <td className={styles.nowrap}>
+                {row.start_fact
+                  ? `с ${row.start_fact.slice(8, 10)}.${row.start_fact.slice(5, 7)}`
+                  : '—'}
               </td>
               <td>
                 <StatusBadge

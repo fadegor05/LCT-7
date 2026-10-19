@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, timedelta
 from enum import StrEnum
 
@@ -121,6 +121,10 @@ class StageStatusResult:
     # delay_days — одно число для прежних экранов: верхняя граница, а если её нет — нижняя
     delay_min: int | None = None
     delay_max: int | None = None
+    # Факт по маркеру: первая подтверждённая маркерная дата (clean-mvp, start_fact)
+    start_fact: date | None = None
+    # Маркеры этапа: техника, которая хоть когда-то в его окне отличает его от соседних
+    markers: frozenset[uuid.UUID] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -165,6 +169,8 @@ class SummaryResult:
     delay_days_max: int | None
     stage_id: uuid.UUID | None
     reason: str
+    # Опорная дата расчёта — «данные на» на экранах
+    as_of: date | None = None
 
 
 @dataclass(frozen=True)
@@ -220,6 +226,18 @@ class _Plan:
             if self.in_window(other, day, margin):
                 shared |= self.classes(other_rule)
         return self.normative(rule) - shared - self.stationary
+
+    def markers_for(self, stage: StageInput) -> frozenset[uuid.UUID]:
+        """Объединение маркеров по дням окна этапа (clean-mvp, markers_for)."""
+        if stage.planned_start is None or stage.planned_end is None:
+            return frozenset()
+        t = timedelta(days=self.tolerance_days)
+        day, end = stage.planned_start - t, stage.planned_end + t
+        found: set[uuid.UUID] = set()
+        while day <= end:
+            found |= self.markers_on(stage, day)
+            day += timedelta(days=1)
+        return frozenset(found)
 
 
 @dataclass(frozen=True)
@@ -288,13 +306,17 @@ class RuleEngine:
                 stage, rules_by_stage.get(stage.stage_id), sorted_observations, today, plan
             )
             if status is not None:
+                if status.status != StageStatusValue.NOT_CHECKED:
+                    status = replace(status, markers=plan.markers_for(stage))
                 statuses.append(status)
 
         # Устаревшие данные — единственное отклонение: выводы по старым кадрам о сегодняшнем
         # дне ничего не говорят (как в clean-mvp)
         stale = self._check_stale_data(sorted_observations, today)
         if stale:
-            summary = summarize(stages, statuses, sorted_observations, today, self.config)
+            summary = replace(
+                summarize(stages, statuses, sorted_observations, today, self.config), as_of=today
+            )
             return SiteComputation(statuses=statuses, deviations=stale, summary=summary)
 
         # Отклонения по этапам
@@ -336,7 +358,9 @@ class RuleEngine:
             )
         )
 
-        summary = summarize(stages, statuses, sorted_observations, today, self.config)
+        summary = replace(
+            summarize(stages, statuses, sorted_observations, today, self.config), as_of=today
+        )
         return SiteComputation(statuses=statuses, deviations=deviations, summary=summary)
 
     def _compute_stage_status(
@@ -502,6 +526,7 @@ class RuleEngine:
             basis_dates=tuple(marker_dates),
             delay_min=delay_min,
             delay_max=delay_max,
+            start_fact=first_marker,
         )
 
     @staticmethod

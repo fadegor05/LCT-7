@@ -23,6 +23,9 @@ class StageStatusRead(BaseModel):
     # Сдвиг интервалом: None — граница неизвестна («до N», «от N»)
     delay_min: int | None = None
     delay_max: int | None = None
+    # Факт по маркеру и маркеры этапа
+    start_fact: date | None = None
+    marker_names: list[str] = []
     confidence: str | None
     confidence_reason: str | None
     computed_at: datetime | None
@@ -84,3 +87,5 @@ class SiteSummaryRead(BaseModel):
     # None — объект ещё не пересчитывался
     reason: str | None = None
     stage_id: uuid.UUID | None = None
+    # Опорная дата расчёта: «данные на»
+    as_of: date | None = None

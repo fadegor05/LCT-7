@@ -90,6 +90,8 @@ class AssessmentService:
                 delay_open=status.delay_open if status else False,
                 delay_min=status.delay_min if status else None,
                 delay_max=status.delay_max if status else None,
+                start_fact=status.start_fact if status else None,
+                marker_names=(status.marker_names or []) if status else [],
                 confidence=status.confidence if status else None,
                 confidence_reason=status.confidence_reason if status else None,
                 computed_at=status.computed_at if status else None,
@@ -190,4 +192,5 @@ class AssessmentService:
             attention_count=attention_count,
             reason=summary.reason,
             stage_id=summary.stage_id,
+            as_of=summary.as_of,
         )

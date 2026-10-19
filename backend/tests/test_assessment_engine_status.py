@@ -946,6 +946,10 @@ class TestMarkersAgainstConcurrentStages:
         status = next(s for s in result.statuses if s.stage_id == pit.stage_id)
         assert status.status == StageStatusValue.ON_TRACK
         assert status.basis_dates == (date(2023, 8, 16), date(2023, 9, 14))
+        # Факт по маркеру и маркеры этапа — для «Этапов» на обзоре
+        assert status.start_fact == date(2023, 8, 16)
+        assert status.markers == frozenset({excavator})
+        assert result.summary.as_of == date(2023, 9, 15)
 
     def test_tower_crane_is_never_a_marker(self):
         crane, excavator = uuid.uuid4(), uuid.uuid4()
