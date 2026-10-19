@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
-import { useDeviations, useStageStatuses } from '@/api/deviations'
+import { useDeviations, useStageStatuses, useSummary } from '@/api/deviations'
+import { useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
 import { useSchedule } from '@/api/schedule'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
@@ -16,6 +17,7 @@ import { SummaryCards } from '@/features/overview/SummaryCards'
 import { siteSubtitle } from '@/features/overview/siteSubtitle'
 import { sortDeviations, withStages, type DeviationItem } from '@/lib/deviations'
 import { plural } from '@/lib/labels'
+import { settled } from '@/lib/settled'
 import { useRequiredParam } from '@/lib/useParam'
 
 const section = { display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' } as const
@@ -61,6 +63,16 @@ export function SiteOverviewPage() {
   const site = useSite(siteId)
   const deviations = useDeviations(siteId)
   const schedule = useSchedule(siteId)
+  // Блоки обзора приходят своими запросами; показываем их разом, когда готово всё
+  const ready = settled(
+    useSummary(siteId),
+    deviations,
+    schedule,
+    useStageStatuses(siteId, Boolean(schedule.data)),
+    useObservations(siteId),
+    usePhotos(siteId),
+    useUndatedPhotos(siteId),
+  )
   const items = sortDeviations(
     withStages(siteId, deviations.data ?? [], schedule.data?.stages ?? []),
   )
@@ -87,31 +99,39 @@ export function SiteOverviewPage() {
           }
           aside={<AssistantPanel siteId={siteId} />}
         >
-          <SummaryCards siteId={siteId} />
+          {!ready ? (
+            <p className="muted" role="status">
+              Загрузка…
+            </p>
+          ) : (
+            <>
+              <SummaryCards siteId={siteId} />
 
-          <section style={section}>
-            <QueryState query={deviations}>
-              {() => (
-                <>
-                  <SectionHeader
-                    title={`Отклонения: ${items.length}`}
-                    description={deviationsDescription(items)}
-                  />
-                  <DeviationList items={items} />
-                </>
-              )}
-            </QueryState>
-          </section>
+              <section style={section}>
+                <QueryState query={deviations}>
+                  {() => (
+                    <>
+                      <SectionHeader
+                        title={`Отклонения: ${items.length}`}
+                        description={deviationsDescription(items)}
+                      />
+                      <DeviationList items={items} />
+                    </>
+                  )}
+                </QueryState>
+              </section>
 
-          <section style={section}>
-            <SectionHeader
-              title="Этапы"
-              description="Статус выводится по датам наблюдений маркерной (нормативной) техники. «Не начата» ставится только при высокой наблюдаемости или если этап ещё не по плану."
-            />
-            <Stages siteId={siteId} deviations={items} />
-          </section>
+              <section style={section}>
+                <SectionHeader
+                  title="Этапы"
+                  description="Статус выводится по датам наблюдений маркерной (нормативной) техники. «Не начата» ставится только при высокой наблюдаемости или если этап ещё не по плану."
+                />
+                <Stages siteId={siteId} deviations={items} />
+              </section>
 
-          <LastObservation siteId={siteId} />
+              <LastObservation siteId={siteId} />
+            </>
+          )}
         </SiteShell>
       )}
     </SiteQueryState>

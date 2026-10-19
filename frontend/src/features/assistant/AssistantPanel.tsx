@@ -40,7 +40,9 @@ function formatTime(iso: string): string {
  */
 export function AssistantPanel({ siteId }: AssistantPanelProps) {
   const status = useAssistantStatus()
-  if (status.isPending) return null
+  // Пока статус в пути — пустой блок, а не ничего: колонка справа сразу занимает своё место,
+  // и обзор не сужается рывком, когда чат появится (как в clean-mvp)
+  if (status.isPending) return <div aria-hidden="true" />
   return <AssistantChat siteId={siteId} disabled={!status.enabled} />
 }
 

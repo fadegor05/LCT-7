@@ -136,7 +136,8 @@ describe('SiteOverviewPage', () => {
     )
     renderRoute('/sites/site-synthetic')
     expect(await screen.findByText('График не загружен')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Загрузить график' })).toHaveAttribute(
+    // Загрузить график предлагают и итог, и раздел «Этапы»
+    expect(screen.getAllByRole('link', { name: 'Загрузить график' })[0]).toHaveAttribute(
       'href',
       '/sites/site-synthetic/setup',
     )
