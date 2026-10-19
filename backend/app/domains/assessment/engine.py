@@ -310,7 +310,13 @@ class RuleEngine:
         # Чужая техника — одна строка на машину, а не на каждый идущий этап
         deviations.extend(
             self._check_mismatch_and_extra(
-                stages, rules_by_stage, statuses, sorted_observations, names, coarse or {}
+                stages,
+                rules_by_stage,
+                statuses,
+                sorted_observations,
+                names,
+                coarse or {},
+                stationary,
             )
         )
 
@@ -1086,6 +1092,7 @@ class RuleEngine:
         observations: Sequence[ObservationInput],
         names: Mapping[uuid.UUID, str],
         coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]],
+        stationary: frozenset[uuid.UUID] = frozenset(),
     ) -> list[DeviationResult]:
         """«Несоответствие этапу» и «Лишняя техника» по машинам последнего дня.
 
@@ -1133,6 +1140,10 @@ class RuleEngine:
         out: list[DeviationResult] = []
         for eq in sorted(latest.equipment, key=lambda e: names.get(e.equipment_type_id, "")):
             code = eq.equipment_type_id
+            # Неподвижная техника (башенный кран) стоит весь срок и о том, какой этап
+            # идёт, не говорит ничего: ни «несоответствия», ни «лишней техники» (clean-mvp)
+            if code in stationary:
+                continue
             if eq.in_zone is False or any(
                 self._fits(code, classes[s.stage_id], coarse) for s in expected
             ):

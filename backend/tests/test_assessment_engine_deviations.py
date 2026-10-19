@@ -1171,3 +1171,29 @@ class TestStageMismatchScope:
         assert mismatch.expected == "Техника этапов, идущих по плану на 18.01: «Котлован»."
         assert "Самосвал" in mismatch.observed
         assert "«Засыпка»" in mismatch.observed
+
+
+class TestStationaryMachines:
+    """Башенный кран стоит весь срок: ни «несоответствия», ни «лишней техники»."""
+
+    def test_tower_crane_never_mismatches_a_running_stage(self):
+        crane, excavator = uuid.uuid4(), uuid.uuid4()
+        pit, pit_rule = _stage_and_rule(date(2024, 1, 10), date(2024, 1, 31), excavator)
+        frame, frame_rule = _stage_and_rule(
+            date(2024, 3, 1), date(2024, 6, 1), crane, name="Каркас", position=2
+        )
+        observations = [_obs(day, crane) for day in _days(16, 17, 18)]
+
+        result = _engine().compute_site(
+            [pit, frame],
+            {pit.stage_id: pit_rule, frame.stage_id: frame_rule},
+            observations,
+            date(2024, 1, 19),
+            stationary=frozenset({crane}),
+        )
+
+        assert not [
+            d
+            for d in result.deviations
+            if d.type in (DeviationType.STAGE_MISMATCH, DeviationType.EXTRA_EQUIPMENT)
+        ]

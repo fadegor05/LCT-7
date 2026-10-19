@@ -46,7 +46,8 @@ async def materialize_with_default_kits(
             site_id=site_id,
             stage_id=stage.id,
             stage_key=default_rule.stage_key,
-            is_verifiable=True,
+            is_verifiable=default_rule.unchecked_reason is None,
+            unverifiable_reason=default_rule.unchecked_reason,
         )
         await repository.add(rule)
         for idx, default_set in enumerate(default_rule.sets, start=1):

@@ -222,6 +222,7 @@ class ScheduleService:
                 position=idx + 1,
                 planned_start=group.start,
                 planned_end=group.end,
+                work_names=[w.name for w in group.works],
                 dates_source=DatesSource.FILE.value,
             )
             for idx, group in enumerate(group_works(parse_result.rows))
@@ -475,6 +476,7 @@ class ScheduleService:
         target.planned_end = max((s.planned_end for s in chosen if s.planned_end), default=None)
         if any(s.dates_source == DatesSource.MANUAL.value for s in chosen):
             target.dates_source = DatesSource.MANUAL.value
+        target.work_names = [name for s in chosen for name in (s.work_names or [s.name])]
         for stage in rest:
             await self._session.delete(stage)
         for number, stage in enumerate((s for s in stages if s.id not in rest_ids), start=1):

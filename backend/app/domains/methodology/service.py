@@ -466,7 +466,9 @@ class MethodologyService:
                 continue
 
             # Попытаться найти совпадение по имени stage
-            default_rule = self._default_rules.match_stage(found_stage.name)
+            default_rule = self._default_rules.match_stage_or_works(
+                found_stage.name, found_stage.work_names
+            )
             if default_rule is None:
                 # Совпадения нет — оставляем правило как есть
                 continue
@@ -489,6 +491,14 @@ class MethodologyService:
             rule_sets = await self._repository.list_sets([locked_rule.id])
             if len(rule_sets) > 0:
                 # Rule already has sets
+                continue
+
+            # Семейство, которое по технике не проверяется (кровля, фасад): причина вместо
+            # наборов — этап честно «не проверяется», а не «комплект не задан»
+            if default_rule.unchecked_reason:
+                locked_rule.unverifiable_reason = default_rule.unchecked_reason
+                locked_rule.updated_at = datetime.now(UTC)
+                applied += 1
                 continue
 
             # Создаём наборы в порядке из default_rule.sets

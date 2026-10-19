@@ -79,7 +79,7 @@ async def create_site_with_schedule(
         "name,start,end\n"
         "Устройство свай,2024-01-01,2024-01-10\n"
         "Разработка котлована,2024-01-11,2024-01-20\n"
-        "Отделка фасада,2024-01-21,2024-01-31\n"
+        "Внутренние отделочные работы,2024-01-21,2024-01-31\n"
     ).encode()
 
     import_resp = await client.post(
@@ -147,28 +147,30 @@ async def test_get_methodology_returns_200_with_rules(
     # Проверяем структуру правила
     rules_by_stage_name = {r.get("stage_name"): r for r in data}
 
-    # Устройство свай должно быть проверяемым с 2 наборами
+    # Устройство свай должно быть проверяемым с 3 наборами: буровая, копёр, грейфер СВГ
     piles_rule = rules_by_stage_name.get("Устройство свай")
     assert piles_rule is not None
     assert piles_rule["is_verifiable"] is True
     assert piles_rule["unverifiable_reason"] is None
-    assert len(piles_rule["sets"]) == 2
+    assert len(piles_rule["sets"]) == 3
 
     # Первый набор (буровая установка) должен содержать ГЭСН
     first_set = piles_rule["sets"][0]
     assert len(first_set["requirements"]) > 0
 
-    # Ищем требование с ГЭСН кодом 05-01-079-01
-    has_gesn = any(req.get("gesn_code") == "05-01-079-01" for req in first_set["requirements"])
-    assert has_gesn, "Первый набор должен содержать требование с ГЭСН 05-01-079-01"
+    # Буровая установка — по ГЭСН бурения и погружения свай (как в clean-mvp)
+    has_gesn = any(
+        req.get("gesn_code") == "05-01-028-01, 05-01-001-01" for req in first_set["requirements"]
+    )
+    assert has_gesn, "Первый набор должен содержать требование с ГЭСН свай"
 
     # Разработка котлована должна быть проверяемой
     excavation_rule = rules_by_stage_name.get("Разработка котлована")
     assert excavation_rule is not None
     assert excavation_rule["is_verifiable"] is True
 
-    # Отделка фасада не должна быть проверяемой (нет совпадения в defaults)
-    facade_rule = rules_by_stage_name.get("Отделка фасада")
+    # Внутренние отделочные работы не должна быть проверяемой (нет совпадения в defaults)
+    facade_rule = rules_by_stage_name.get("Внутренние отделочные работы")
     assert facade_rule is not None
     assert facade_rule["is_verifiable"] is False
     assert facade_rule["unverifiable_reason"] is not None
@@ -266,7 +268,7 @@ async def test_patch_rule_to_verifiable_clears_reason(
     # Получаем правила
     get_resp = await client.get(f"/sites/{site_id}/methodology")
     rules = get_resp.json()
-    rule_id = rules[2]["id"]  # Возьмём правило "Отделка фасада" (unverifiable)
+    rule_id = rules[2]["id"]  # Возьмём правило "Внутренние отделочные работы" (unverifiable)
 
     # Обновляем на verifiable
     response = await client.patch(
@@ -310,7 +312,7 @@ async def test_post_set_with_normative_and_logical_returns_201(
     # Получаем правила
     get_resp = await client.get(f"/sites/{site_id}/methodology")
     rules = get_resp.json()
-    rule_id = rules[2]["id"]  # Берём "Отделка фасада" (unverifiable)
+    rule_id = rules[2]["id"]  # Берём "Внутренние отделочные работы" (unverifiable)
 
     # Получаем ID типа оборудования для экскаватора
     eq_resp = await client.get("/equipment-types")
@@ -656,10 +658,10 @@ async def test_delete_last_set_of_verifiable_rule_returns_422(
         # Если нет правила с одним набором, создаём новое
         rule_with_multiple = next(r for r in rules if len(r["sets"]) > 1)
         rule_id = rule_with_multiple["id"]
-        set_id = rule_with_multiple["sets"][1]["id"]
 
-        # Удаляем один набор, оставляя один
-        await client.delete(f"/sites/{site_id}/methodology/sets/{set_id}")
+        # Удаляем наборы, оставляя один
+        for extra in rule_with_multiple["sets"][1:]:
+            await client.delete(f"/sites/{site_id}/methodology/sets/{extra['id']}")
 
         # Получаем обновленные правила
         get_resp = await client.get(f"/sites/{site_id}/methodology")
@@ -846,7 +848,7 @@ async def test_status_recalculator_called_on_mutation() -> None:
             rules = get_resp.json()
             assert len(recording_recalculator.calls) == 0, "GET должен не вызывать рекалькулятор"
 
-            rule_id = rules[2]["id"]  # Берём "Отделка фасада"
+            rule_id = rules[2]["id"]  # Берём "Внутренние отделочные работы"
 
             # PATCH правила -> ровно 1 вызов
             patch_resp = await client.patch(
@@ -919,22 +921,22 @@ async def test_post_apply_defaults_fills_empty_rules_and_is_idempotent(
     response = await client.post(f"/sites/{site_id}/methodology/apply-defaults")
 
     assert response.status_code == 200
-    # Свайные работы и котлован совпали с правилами, «Отделка фасада» — нет
+    # Свайные работы и котлован совпали с правилами, «Внутренние отделочные работы» — нет
     assert response.json() == {"applied": 2, "eligible": 3, "unmatched": 1}
 
     rules = {r["stage_name"]: r for r in (await client.get(f"/sites/{site_id}/methodology")).json()}
     piles = rules["Устройство свай"]
     assert piles["is_verifiable"] is True
     assert piles["unverifiable_reason"] is None
-    assert len(piles["sets"]) == 2
+    assert len(piles["sets"]) == 3
     assert all(
         req["source_note"].startswith("базовая методика")
         for equipment_set in piles["sets"]
         for req in equipment_set["requirements"]
         if req["source_note"] is not None
     )
-    assert rules["Отделка фасада"]["is_verifiable"] is False
-    assert rules["Отделка фасада"]["sets"] == []
+    assert rules["Внутренние отделочные работы"]["is_verifiable"] is False
+    assert rules["Внутренние отделочные работы"]["sets"] == []
 
     # Повторное нажатие: подставлять уже нечего, наборы не дублируются
     repeat = await client.post(f"/sites/{site_id}/methodology/apply-defaults")
@@ -943,7 +945,32 @@ async def test_post_apply_defaults_fills_empty_rules_and_is_idempotent(
     rules_after = {
         r["stage_name"]: r for r in (await client.get(f"/sites/{site_id}/methodology")).json()
     }
-    assert len(rules_after["Устройство свай"]["sets"]) == 2
+    assert len(rules_after["Устройство свай"]["sets"]) == 3
+
+
+async def test_apply_defaults_marks_facade_as_not_checked(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Фасад по технике не проверяется: базовая методика ставит причину, а не наборы."""
+    await seed_stand_user(container)
+    await seed_equipment_types(container)
+    site_resp = await client.post("/sites", json={"name": "Фасадный объект"})
+    site_id = site_resp.json()["id"]
+    csv = "Название,Начало,Окончание\nОтделка фасада,2024-01-01,2024-01-31\n".encode()
+    await client.post(
+        f"/sites/{site_id}/schedule/import",
+        files={"file": ("schedule.csv", csv, "text/csv")},
+        data={"mode": "builtin"},
+    )
+    await client.get(f"/sites/{site_id}/methodology")
+
+    result = (await client.post(f"/sites/{site_id}/methodology/apply-defaults")).json()
+
+    assert result == {"applied": 1, "eligible": 1, "unmatched": 0}
+    rule = (await client.get(f"/sites/{site_id}/methodology")).json()[0]
+    assert rule["is_verifiable"] is False
+    assert rule["sets"] == []
+    assert rule["unverifiable_reason"] == "фасадных подъёмников и люлек нет в классах детектора"
 
 
 async def test_post_apply_defaults_for_nonexistent_site_returns_404(
