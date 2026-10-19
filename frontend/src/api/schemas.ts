@@ -396,3 +396,41 @@ export type AssistantAnswer = z.infer<typeof assistantAnswerSchema>
 export type AssistantStatus = z.infer<typeof assistantStatusSchema>
 export type Zone = z.infer<typeof zoneSchema>
 export type Camera = z.infer<typeof cameraSchema>
+
+/** Уведомление. Тип — свободная строка: бэкенд пополняет список без миграций. */
+export const notificationSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  body: z.string(),
+  link: z.string().nullable(),
+  read_at: z.string().nullable(),
+  created_at: z.string(),
+})
+export type Notification = z.infer<typeof notificationSchema>
+
+export const notificationListSchema = z.object({
+  items: z.array(notificationSchema),
+  unread_count: z.number(),
+})
+export type NotificationList = z.infer<typeof notificationListSchema>
+
+export const markReadSchema = z.object({ marked: z.number() })
+
+export const channelKindSchema = z.enum(['telegram'])
+export type ChannelKind = z.infer<typeof channelKindSchema>
+
+/** Привязка канала. Полного адреса фронт не видит. */
+export const userChannelSchema = z.object({
+  channel: channelKindSchema,
+  address_masked: z.string(),
+  enabled: z.boolean(),
+  linked_at: z.string(),
+})
+export type UserChannel = z.infer<typeof userChannelSchema>
+
+export const channelLinkSchema = z.object({
+  url: z.string(),
+  expires_at: z.string(),
+})
+export type ChannelLink = z.infer<typeof channelLinkSchema>

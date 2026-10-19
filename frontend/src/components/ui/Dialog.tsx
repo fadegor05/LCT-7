@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button } from './Button'
+import { useDismissable } from './useDismissable'
 import styles from './Dialog.module.css'
 
 interface DialogProps {
@@ -16,18 +17,7 @@ export function Dialog({ title, onClose, children, footer, wide }: DialogProps) 
   const titleId = useId()
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    ref.current?.focus()
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      previous?.focus()
-    }
-  }, [onClose])
+  useDismissable(onClose, ref)
 
   return createPortal(
     <div

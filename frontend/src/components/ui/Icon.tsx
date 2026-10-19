@@ -66,6 +66,12 @@ const ICONS = {
       <circle cx="16.5" cy="17.5" r="1.6" />
     </>
   ),
+  bell: (
+    <>
+      <path d="M18 15V10a6 6 0 10-12 0v5l-2 3h16l-2-3z" />
+      <path d="M10 21h4" />
+    </>
+  ),
   upload: (
     <>
       <path d="M12 16V4" />

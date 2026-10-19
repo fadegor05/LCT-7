@@ -1,5 +1,7 @@
 dist
 coverage
 node_modules
+# кэш pnpm внутри контейнера фронта (bind-mount ./frontend)
+.pnpm-store
 pnpm-lock.yaml
 public/mockServiceWorker.js

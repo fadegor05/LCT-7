@@ -136,8 +136,40 @@ export const handlers = [
         throw new db.MockError(401, 'Требуется авторизация')
       })
     }
-    return HttpResponse.json(user)
+    return HttpResponse.json(db.getUser())
   }),
+
+  http.patch(api('/users/me'), async ({ request }) => {
+    const data = await json<{ full_name: string }>(request)
+    return handle(() => db.renameUser(data.full_name))
+  }),
+
+  // ---------- Уведомления ----------
+  http.get(api('/notifications'), () => handle(db.listNotifications)),
+  http.post(api('/notifications/read'), () => handle(db.markAllRead)),
+  http.post(api('/notifications/test'), async ({ request }) => {
+    const data = await json<{ title?: string; body?: string; link?: string | null }>(request)
+    return handle(() => db.createTestNotification(data), 201)
+  }),
+
+  // ---------- Каналы доставки ----------
+  http.get(api('/users/me/channels'), () => handle(db.listChannels)),
+  http.post<{ channel: 'telegram' }>(api('/users/me/channels/:channel/link'), ({ params }) =>
+    handle(() => db.linkChannel(params.channel)),
+  ),
+  http.patch<{ channel: 'telegram' }>(
+    api('/users/me/channels/:channel'),
+    async ({ params, request }) => {
+      const data = await json<{ enabled: boolean }>(request)
+      return handle(() => db.toggleChannel(params.channel, data.enabled))
+    },
+  ),
+  http.delete<{ channel: 'telegram' }>(api('/users/me/channels/:channel'), ({ params }) =>
+    handle(() => {
+      db.unlinkChannel(params.channel)
+      return undefined
+    }),
+  ),
 
   // ---------- Стройки ----------
   http.get(api('/sites'), () => handle(db.listSites)),

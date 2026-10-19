@@ -183,6 +183,34 @@ class AuthSettings(BaseModel):
     seed_password: str | None = None
 
 
+class TelegramSettings(BaseModel):
+    """Параметры телеграм-бота. Без токена канал деградирует в запись в лог."""
+
+    token: str | None = None
+    # Имя бота без @ — из него собирается ссылка привязки t.me/<bot>?start=<token>
+    bot_username: str | None = None
+    # Таймаут long polling; телеграм держит соединение до появления апдейта
+    poll_timeout_s: int = 25
+    request_timeout_s: float = 35.0
+
+
+class NotifySettings(BaseModel):
+    """Доставка уведомлений по каналам."""
+
+    telegram: TelegramSettings = TelegramSettings()
+    # База для абсолютных ссылок в сообщениях: во внешнем канале относительный путь бесполезен
+    public_url: str = "http://localhost"
+
+    @field_validator("public_url")
+    @classmethod
+    def _strip_slash(cls, value: str) -> str:
+        return value.rstrip("/")
+
+    @property
+    def telegram_configured(self) -> bool:
+        return bool(self.telegram.token and self.telegram.bot_username)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -207,6 +235,7 @@ class Settings(BaseSettings):
     assessment: AssessmentSettings = AssessmentSettings()
     assistant: AssistantSettings = AssistantSettings()
     auth: AuthSettings = AuthSettings()
+    notify: NotifySettings = NotifySettings()
 
 
 @lru_cache
