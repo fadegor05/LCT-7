@@ -50,6 +50,13 @@
   border-bottom: 1px solid var(--line);
 }
 
+/* Основание активности — под строкой во всю ширину */
+.basis {
+  grid-column: 1 / -1;
+  margin: 0;
+  white-space: pre-line;
+}
+
 .equipmentRow:last-child {
   border-bottom: 0;
 }

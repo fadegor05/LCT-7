@@ -276,6 +276,7 @@ describe('observations', () => {
       equipment_title: 'Гусеничный экскаватор',
       count_min: 2,
       activity: 'works',
+      activity_basis: 'Движение: машина сместилась между 10:05 и 10:15\nЗона: внутри зоны',
       confidence: 'high',
     },
     {
@@ -312,6 +313,8 @@ describe('observations', () => {
     expect(screen.getByText('Простаивает')).toBeInTheDocument()
     expect(screen.getByText('Неизвестно')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Уверенность: низкая' })).toBeInTheDocument()
+    // Основание активности — под строкой машины
+    expect(screen.getByText(/машина сместилась между 10:05 и 10:15/)).toBeInTheDocument()
   })
 
   it('EquipmentList has an empty state', () => {

@@ -473,6 +473,10 @@ function recompute(siteId: string, date: string): void {
           equipment_title: type.title,
           count_min: count,
           activity: code === 'excavator_crawler' ? 'works' : 'unknown',
+          activity_basis:
+            code === 'excavator_crawler'
+              ? 'Движение: машина сместилась между 10:05 и 10:15\nЗона: внутри зоны'
+              : 'Движение: пары кадров для сравнения нет (один кадр)\nЗона: внутри зоны',
           confidence: photos.some((p) => p.date_source === 'manual') ? 'medium' : 'high',
         }
       }),

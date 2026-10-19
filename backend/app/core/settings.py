@@ -129,7 +129,12 @@ class ObservationSettings(BaseModel):
     min_photos_high: int = 3
     min_score_high: float = 0.7
     min_score_medium: float = 0.4
-    movement_threshold: float = 0.05
+    # Активность по серии кадров одной камеры (clean-mvp, D-018): сдвиг центра рамки в
+    # долях её размера между соседними кадрами не дальше pair_max_gap_min минут
+    pair_max_gap_min: float = 10.0
+    still_shift: float = 0.15
+    moved_shift: float = 0.35
+    idle_min_pairs: int = 3
 
 
 class AsOfMode(StrEnum):

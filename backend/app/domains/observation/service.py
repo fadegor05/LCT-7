@@ -2,16 +2,21 @@
 
 import logging
 import uuid
+from collections.abc import Iterable
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.camera.models import Camera
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.recalculator import StatusRecalculator
+from app.domains.observation.activity import Box, Shot
 from app.domains.observation.models import Observation, ObservedEquipment
 from app.domains.observation.policies import (
     ActivityPolicy,
     AggregationPolicy,
+    CameraSeries,
     FrameEquipment,
     ObservabilityPolicy,
 )
@@ -82,8 +87,7 @@ class ObservationService:
         3. Собрать детекции для кадров со статусом "done".
         4. Оценить наблюдаемость по числу фото.
         5. Агрегировать детекции.
-        6. Получить предыдущее наблюдение и его bbox'ы.
-        7. Собрать текущие bbox'ы.
+        6. Оценить активность по сериям кадров каждой камеры.
         8. Создать или обновить Observation.
         9. Создать ObservedEquipment для каждого типа техники.
         10. Заменить все обслуживаемые ряды техники.
@@ -119,9 +123,9 @@ class ObservationService:
         # Шаг 3: Собрать детекции для кадров со статусом "done"
         # Накапливаем две структуры одновременно:
         # - frames: list[list[FrameEquipment]] для агрегации
-        # - current_bboxes: dict[equipment_type_id, list[list[float]]] для активности
+        # - shots_by_camera: кадры со временем каждой камеры для активности (clean-mvp)
         frames: list[list[FrameEquipment]] = []
-        current_bboxes: dict[uuid.UUID, list[list[float]]] = {}
+        shots_by_camera: dict[uuid.UUID, list[Shot]] = {}
         date_sources = [p.date_source for p in day_photos]
         done_photo_count = 0
 
@@ -131,12 +135,14 @@ class ObservationService:
                 dets = await self._detections.list_by_photo(p.id)
                 frame_equipment = [FrameEquipment(d.equipment_type_id, d.score) for d in dets]
                 frames.append(frame_equipment)
-
-                # Накапливаем bbox'ы по типам техники
-                for d in dets:
-                    if d.equipment_type_id not in current_bboxes:
-                        current_bboxes[d.equipment_type_id] = []
-                    current_bboxes[d.equipment_type_id].append(d.bbox)
+                # Серия возможна только у кадра камеры со временем
+                if p.camera_id is not None and p.captured_at is not None:
+                    shots_by_camera.setdefault(p.camera_id, []).append(
+                        Shot(
+                            p.captured_at,
+                            tuple(Box(d.equipment_type_id, d.bbox) for d in dets),
+                        )
+                    )
             else:
                 # Фото не готово - не добавляем в frames, но учитываем в фото_count
                 frames.append([])
@@ -148,22 +154,15 @@ class ObservationService:
         # Шаг 5: Агрегировать детекции
         aggregated = self._aggregation.aggregate(frames, date_sources)
 
-        # Шаг 6: Получить предыдущее наблюдение и его bbox'ы
-        previous_obs = await self._repository.get_previous(site_id, observed_on)
-        previous_bboxes: dict[uuid.UUID, list[list[float]]] = {}
-
-        if previous_obs:
-            # Перечитать фото/детекции для предыдущей даты
-            previous_day_photos = [
-                p for p in all_photos if p.captured_on == previous_obs.observed_on
-            ]
-            for p in previous_day_photos:
-                if p.processing_status == "done":
-                    dets = await self._detections.list_by_photo(p.id)
-                    for d in dets:
-                        if d.equipment_type_id not in previous_bboxes:
-                            previous_bboxes[d.equipment_type_id] = []
-                        previous_bboxes[d.equipment_type_id].append(d.bbox)
+        # Шаг 6: Активность по сериям кадров каждой камеры за день
+        cameras = await self._cameras(shots_by_camera)
+        activity = self._activity.assess_day(
+            [
+                CameraSeries(*cameras.get(cid, ("без имени", None)), shots)
+                for cid, shots in shots_by_camera.items()
+            ],
+            aggregated.keys(),
+        )
 
         # Шаг 8: Создать или обновить Observation
         observation = await self._repository.get_by_site_and_date(site_id, observed_on)
@@ -179,15 +178,13 @@ class ObservationService:
         # Шаг 9: Создать ObservedEquipment для каждого типа техники
         rows: list[ObservedEquipment] = []
         for equipment_type_id, agg in aggregated.items():
-            act = self._activity.assess(
-                current_bboxes.get(equipment_type_id, []),
-                previous_bboxes.get(equipment_type_id),
-            )
+            act = activity[equipment_type_id]
             row = ObservedEquipment(
                 observation_id=observation.id,
                 equipment_type_id=equipment_type_id,
                 count_min=agg.count_min,
-                activity=act.value,
+                activity=act.activity.value,
+                activity_basis=act.basis,
                 confidence=agg.confidence.value,
             )
             rows.append(row)
@@ -200,6 +197,18 @@ class ObservationService:
         # Триггер пересчёта статусов этапов и отклонений
         await self._recalculator.recalculate(site_id)
         return observation
+
+    async def _cameras(
+        self, ids: Iterable[uuid.UUID]
+    ) -> dict[uuid.UUID, tuple[str, list[list[float]] | None]]:
+        """Имя и зона камер серий — для основания активности."""
+        ids = set(ids)
+        if not ids:
+            return {}
+        result = await self._session.execute(
+            select(Camera.id, Camera.name, Camera.zone).where(Camera.id.in_(ids))
+        )
+        return {cid: (name, zone) for cid, name, zone in result.all()}
 
     async def list_observations(self, site_id: uuid.UUID) -> list[ObservationRead]:
         """Получить список наблюдений по сайту.
@@ -290,6 +299,7 @@ class ObservationService:
                 equipment_title=info.title,
                 count_min=row.count_min,
                 activity=row.activity,
+                activity_basis=row.activity_basis,
                 confidence=row.confidence,
             )
             result.append(equipment_read)

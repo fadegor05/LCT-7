@@ -10,6 +10,7 @@ from app.core.settings import Settings
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import EquipmentType
 from app.domains.methodology.recalculator import NoopStatusRecalculator
+from app.domains.observation.activity import ActivityParams
 from app.domains.observation.models import ObservedEquipment
 from app.domains.observation.policies import (
     ActivityPolicy,
@@ -674,7 +675,7 @@ class TestObservationServiceRecompute:
             min_photos_medium=settings.observation.min_photos_medium,
             min_photos_high=settings.observation.min_photos_high,
         )
-        act_policy = ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+        act_policy = ActivityPolicy(ActivityParams())
 
         return ObservationService(
             repository=obs_repo,
@@ -808,7 +809,7 @@ class TestObservationServiceGetObservation:
             min_photos_medium=settings.observation.min_photos_medium,
             min_photos_high=settings.observation.min_photos_high,
         )
-        act_policy = ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+        act_policy = ActivityPolicy(ActivityParams())
 
         return ObservationService(
             repository=obs_repo,
@@ -910,7 +911,7 @@ class TestObservationServiceListObservations:
             min_photos_medium=settings.observation.min_photos_medium,
             min_photos_high=settings.observation.min_photos_high,
         )
-        act_policy = ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+        act_policy = ActivityPolicy(ActivityParams())
 
         return ObservationService(
             repository=obs_repo,

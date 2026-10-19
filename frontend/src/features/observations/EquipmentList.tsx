@@ -57,14 +57,18 @@ export function EquipmentList({ observation }: { observation: Observation }) {
                 <ActivityBadge item={item} />
               </span>
               <ConfidenceMeter level={item.confidence} />
+              {item.activity_basis && (
+                <p className={`sm muted ${styles.basis}`}>{item.activity_basis}</p>
+              )}
             </li>
           ))}
         </ul>
       )}
       <p className="sm muted">
         Число берётся как максимум по снимкам, а не сумма: одна машина, снятая с нескольких
-        ракурсов, остаётся одной. Активность по снимкам без камер определяется только как «работает»
-        или «неизвестно».
+        ракурсов, остаётся одной. По одному снимку работа не видна: «работает» — машина сместилась
+        между соседними кадрами одной камеры, «простаивает» — гипотеза для неподвижной машины вне
+        зоны камеры.
       </p>
     </Card>
   )

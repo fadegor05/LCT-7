@@ -253,6 +253,8 @@ export const observedEquipmentSchema = z.object({
   equipment_title: z.string(),
   count_min: z.number(),
   activity: activitySchema,
+  // Основание активности: движение по серии кадров камеры и зона (clean-mvp)
+  activity_basis: z.string().nullish(),
   confidence: levelSchema,
 })
 

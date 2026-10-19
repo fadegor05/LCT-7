@@ -1,11 +1,18 @@
 """Чистые функции сведения наблюдений: агрегация, наблюдаемость, активность."""
 
-import math
 import uuid
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from app.domains.observation.activity import (
+    NO_SERIES,
+    ActivityParams,
+    MachineActivity,
+    Shot,
+    camera_activity,
+    class_activity,
+)
 from app.domains.observation.models import Activity, Confidence, Observability
 
 
@@ -154,75 +161,49 @@ class ObservabilityPolicy:
             return (Observability.LOW, msg)
 
 
+@dataclass(frozen=True)
+class CameraSeries:
+    """Кадры одной камеры за день: имя и зона — для основания."""
+
+    name: str
+    zone: Sequence[Sequence[float]] | None
+    shots: Sequence[Shot]
+
+
 class ActivityPolicy:
-    """Активность по сдвигу среднего центра bbox между соседними датами (без зон камер)."""
+    """Активность техники за день по сериям кадров каждой камеры (clean-mvp, D-018).
 
-    def __init__(self, movement_threshold: float) -> None:
-        self._movement_threshold = movement_threshold
+    По одному снимку работа не видна: «работает» ставится только по сдвигу машины между
+    соседними кадрами одной камеры, «простаивает» — гипотеза для неподвижной машины вне
+    зоны. Снимки без камеры или без времени серии не дают — по ним «неизвестно».
+    """
 
-    def assess(
+    def __init__(self, params: ActivityParams) -> None:
+        self._params = params
+
+    def assess_day(
         self,
-        current_bboxes: Sequence[Sequence[float]],
-        previous_bboxes: Sequence[Sequence[float]] | None,
-    ) -> Activity:
-        """Оценить активность техники по смещению центра bbox.
+        series: Sequence[CameraSeries],
+        present: Iterable[uuid.UUID],
+    ) -> dict[uuid.UUID, MachineActivity]:
+        """Итог по каждому типу техники за день.
 
         Args:
-            current_bboxes: Текущие bbox'ы в формате [x1, y1, x2, y2] в долях кадра.
-            previous_bboxes: Предыдущие bbox'ы (None, пусто или список).
-
-        Returns:
-            Activity.WORKS если смещение >= movement_threshold,
-            Activity.UNKNOWN иначе.
-
-        Логика:
-            - Нет previous_bboxes (None или пусто) или current_bboxes пуст -> UNKNOWN.
-            - Иначе: center(bboxes) = среднее ((x1+x2)/2, (y1+y2)/2) по всем bbox в списке.
-            - euclidean(center(current), center(previous)) >= movement_threshold -> WORKS,
-              иначе UNKNOWN.
-            - Activity.IDLE на источнике "фото" не выводится вообще.
+            series: кадры со временем каждой камеры за день.
+            present: все типы техники, найденные за день (в том числе на снимках без серии).
         """
-        # Проверяем граничные условия
-        if previous_bboxes is None or len(previous_bboxes) == 0 or len(current_bboxes) == 0:
-            return Activity.UNKNOWN
-
-        # Вычисляем центры
-        current_center = self._compute_center(current_bboxes)
-        previous_center = self._compute_center(previous_bboxes)
-
-        # Вычисляем евклидово расстояние
-        distance = math.sqrt(
-            (current_center[0] - previous_center[0]) ** 2
-            + (current_center[1] - previous_center[1]) ** 2
-        )
-
-        # Сравниваем с порогом
-        if distance >= self._movement_threshold:
-            return Activity.WORKS
-        else:
-            return Activity.UNKNOWN
-
-    @staticmethod
-    def _compute_center(bboxes: Sequence[Sequence[float]]) -> tuple[float, float]:
-        """Вычислить средний центр всех bbox'ов.
-
-        Args:
-            bboxes: Список [x1, y1, x2, y2] в долях кадра.
-
-        Returns:
-            Кортеж (cx, cy) среднего центра.
-        """
-        centers = []
-        for bbox in bboxes:
-            x1, y1, x2, y2 = bbox
-            cx = (x1 + x2) / 2.0
-            cy = (y1 + y2) / 2.0
-            centers.append((cx, cy))
-
-        if not centers:
-            return (0.0, 0.0)
-
-        avg_cx = sum(c[0] for c in centers) / len(centers)
-        avg_cy = sum(c[1] for c in centers) / len(centers)
-
-        return (avg_cx, avg_cy)
+        machines: dict[uuid.UUID, list[MachineActivity]] = {}
+        for cam in series:
+            for m in camera_activity(
+                cam.shots, zone=cam.zone, camera=cam.name, params=self._params
+            ):
+                machines.setdefault(m.equipment_type_id, []).append(m)
+        result: dict[uuid.UUID, MachineActivity] = {}
+        for kind in present:
+            found = machines.get(kind)
+            result[kind] = (
+                class_activity(found)
+                if found
+                else MachineActivity(kind, Activity.UNKNOWN, NO_SERIES, None)
+            )
+        return result
