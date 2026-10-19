@@ -532,7 +532,11 @@ export function queueProgress(siteId: string) {
 export function listPhotos(siteId: string, undated: boolean): Photo[] {
   getSite(siteId)
   return state.photos
-    .filter((p) => p.site_id === siteId && (!undated || p.captured_on === null))
+    .filter(
+      (p) =>
+        p.site_id === siteId &&
+        (!undated || p.captured_on === null || p.time_check === 'series_outlier'),
+    )
     .map(toPhoto)
 }
 
@@ -589,6 +593,38 @@ export function setPhotoDate(siteId: string, photoId: string, capturedOn: string
   if (previous) recompute(siteId, previous)
   recompute(siteId, capturedOn)
   return toPhoto(photo)
+}
+
+/** Как PhotoService.set_time: дата и время вручную, проверка серии снята. */
+export function setPhotoTime(siteId: string, photoId: string, capturedAt: string): Photo {
+  const photo = findPhoto(siteId, photoId)
+  if (capturedAt.slice(0, 10) > TODAY)
+    throw new MockError(422, 'Время съёмки не может быть в будущем')
+  const previous = photo.captured_on
+  Object.assign(photo, {
+    captured_on: capturedAt.slice(0, 10),
+    captured_at: capturedAt,
+    date_source: 'manual',
+    date_hint: null,
+    uncertain_at: null,
+    time_check: null,
+  })
+  if (previous) recompute(siteId, previous)
+  recompute(siteId, photo.captured_on!)
+  return toPhoto(photo)
+}
+
+/** Как PhotoService.set_times_batch: первый кадр и шаг в минутах. */
+export function setTimesBatch(
+  siteId: string,
+  photoIds: string[],
+  first: string,
+  stepMinutes: number,
+): Photo[] {
+  const start = new Date(`${first}Z`).getTime()
+  return photoIds.map((id, i) =>
+    setPhotoTime(siteId, id, new Date(start + i * stepMinutes * 60_000).toISOString().slice(0, 19)),
+  )
 }
 
 export function redetect(siteId: string, photoId: string): StoredPhoto {

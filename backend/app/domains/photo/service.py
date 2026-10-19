@@ -8,6 +8,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -870,6 +871,81 @@ class PhotoService:
             camera_id=photo.camera_id,
             detections=detections_read,
         )
+
+    def _now_local(self) -> datetime:
+        """Сейчас по местному времени стройки (время кадров хранится без пояса)."""
+        return datetime.now(ZoneInfo(self._settings.stream.timezone)).replace(tzinfo=None)
+
+    async def set_time(
+        self, site_id: uuid.UUID, photo_id: uuid.UUID, captured_at: datetime
+    ) -> PhotoRead:
+        """Подтвердить дату и время кадра вручную (clean-mvp: «Без даты или времени»).
+
+        Кадр без даты или с временем, выбившимся из серии камеры, после этого идёт в расчёт.
+        """
+        await self._site_guard.require(site_id)
+        at = captured_at.replace(tzinfo=None, microsecond=0)
+        if at > self._now_local():
+            raise AppError("Время съёмки не может быть в будущем", status_code=422)
+        photo = await self._repository.get_in_site(site_id, photo_id)
+        if photo is None:
+            raise AppError("Снимок не найден", status_code=404)
+        dates = await self._apply_manual_time([photo], [at])
+        await self._session.commit()
+        read = PhotoRead.model_validate(photo)
+        await self._recompute_dates(site_id, dates)
+        return read
+
+    async def set_times_batch(
+        self,
+        site_id: uuid.UUID,
+        photo_ids: Sequence[uuid.UUID],
+        first: datetime,
+        step_minutes: float,
+    ) -> list[PhotoRead]:
+        """Пакетный ввод времени: первый кадр и шаг, в порядке `photo_ids` (clean-mvp)."""
+        await self._site_guard.require(site_id)
+        start = first.replace(tzinfo=None, microsecond=0)
+        times = [start + timedelta(minutes=step_minutes * i) for i in range(len(photo_ids))]
+        if times[-1] > self._now_local():
+            raise AppError("Время съёмки не может быть в будущем", status_code=422)
+        photos = []
+        for photo_id in photo_ids:
+            photo = await self._repository.get_in_site(site_id, photo_id)
+            if photo is None:
+                raise AppError("Снимок не найден", status_code=404)
+            photos.append(photo)
+        dates = await self._apply_manual_time(photos, times)
+        await self._session.commit()
+        reads = [PhotoRead.model_validate(p) for p in photos]
+        await self._recompute_dates(site_id, dates)
+        return reads
+
+    async def _apply_manual_time(
+        self, photos: Sequence[Photo], times: Sequence[datetime]
+    ) -> set[date]:
+        """Ручное время: дата и время кадра, проверка серии снята. Даты до и после — для
+        пересчёта наблюдений."""
+        dates: set[date] = set()
+        for photo, at in zip(photos, times, strict=True):
+            if photo.captured_on is not None:
+                dates.add(photo.captured_on)
+            photo.captured_on = at.date()
+            photo.captured_at = at
+            photo.date_source = DateSource.MANUAL.value
+            photo.date_hint = None
+            photo.uncertain_at = None
+            photo.time_check = None
+            dates.add(at.date())
+        await self._session.flush()
+        return dates
+
+    async def _recompute_dates(self, site_id: uuid.UUID, dates: set[date]) -> None:
+        try:
+            await self._recalculator.recompute_many(site_id, dates)
+        except Exception:
+            logger.exception("Ошибка при пересчёте наблюдений после ручного времени кадра")
+            await self._session.rollback()
 
     async def set_date(
         self, site_id: uuid.UUID, photo_id: uuid.UUID, captured_on: date

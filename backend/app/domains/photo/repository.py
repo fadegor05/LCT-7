@@ -4,10 +4,11 @@ import uuid
 from collections.abc import Sequence
 from typing import cast
 
-from sqlalchemy import CursorResult, delete, desc, func, select, update
+from sqlalchemy import CursorResult, delete, desc, func, or_, select, update
 
 from app.core.repository import BaseRepository
 from app.domains.photo.models import IN_QUEUE, Detection, Photo, ProcessingStatus
+from app.domains.photo.series import SERIES_OUTLIER
 
 
 class PhotoRepository(BaseRepository[Photo]):
@@ -29,8 +30,14 @@ class PhotoRepository(BaseRepository[Photo]):
         query = select(self.model).where(self.model.site_id == site_id)
         if undated:
             # Кадр в очереди ещё не получил дату — он не «без даты», его рано разбирать
+            # «Без даты или времени» (clean-mvp): нет даты или время выбилось из серии
+            # камеры — такой кадр ждёт подтверждения и в расчёт не идёт
             query = query.where(
-                self.model.captured_on.is_(None), self.model.processing_status.not_in(IN_QUEUE)
+                or_(
+                    self.model.captured_on.is_(None),
+                    self.model.time_check == SERIES_OUTLIER,
+                ),
+                self.model.processing_status.not_in(IN_QUEUE),
             )
         query = query.order_by(self.model.uploaded_at, self.model.id)
         result = await self._session.execute(query)

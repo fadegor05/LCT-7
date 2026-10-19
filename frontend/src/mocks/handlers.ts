@@ -271,10 +271,20 @@ export const handlers = [
   http.patch<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/date'),
     async ({ params, request }) => {
-      const { captured_on } = await json<{ captured_on: string }>(request)
-      return handle(() => db.setPhotoDate(params.siteId, params.photoId, captured_on))
+      const body = await json<{ captured_on?: string; captured_at?: string }>(request)
+      return handle(() =>
+        body.captured_at
+          ? db.setPhotoTime(params.siteId, params.photoId, body.captured_at)
+          : db.setPhotoDate(params.siteId, params.photoId, body.captured_on!),
+      )
     },
   ),
+  http.post<SiteParams>(api('/sites/:siteId/photos/time-batch'), async ({ params, request }) => {
+    const body = await json<{ photo_ids: string[]; first: string; step_minutes: number }>(request)
+    return handle(() =>
+      db.setTimesBatch(params.siteId, body.photo_ids, body.first, body.step_minutes),
+    )
+  }),
   http.post<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/detect'),
     ({ params }) => handle(() => db.redetect(params.siteId, params.photoId)),

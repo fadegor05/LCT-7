@@ -55,6 +55,20 @@ export const framesApi = {
       body: { captured_on: capturedOn },
       schema: photoSchema,
     }),
+  /** Подтвердить дату и время кадра (местное время стройки, «2026-08-05T10:30:00»). */
+  setTime: (siteId: string, photoId: string, capturedAt: string) =>
+    request(`/sites/${siteId}/photos/${photoId}/date`, {
+      method: 'PATCH',
+      body: { captured_at: capturedAt },
+      schema: photoSchema,
+    }),
+  /** Пакетный ввод: первый кадр и шаг в минутах, в порядке photoIds. */
+  setTimesBatch: (siteId: string, photoIds: string[], first: string, stepMinutes: number) =>
+    request(`/sites/${siteId}/photos/time-batch`, {
+      method: 'POST',
+      body: { photo_ids: photoIds, first, step_minutes: stepMinutes },
+      schema: z.array(photoSchema),
+    }),
   redetect: (siteId: string, photoId: string) =>
     request(`/sites/${siteId}/photos/${photoId}/detect`, {
       method: 'POST',
@@ -223,6 +237,29 @@ export function useSetPhotoDate(siteId: string) {
     siteId,
     ({ photoId, capturedOn }: { photoId: string; capturedOn: string }) =>
       framesApi.setDate(siteId, photoId, capturedOn),
+  )
+}
+
+export function useSetPhotoTime(siteId: string) {
+  return useSiteMutation(
+    siteId,
+    ({ photoId, capturedAt }: { photoId: string; capturedAt: string }) =>
+      framesApi.setTime(siteId, photoId, capturedAt),
+  )
+}
+
+export function useSetTimesBatch(siteId: string) {
+  return useSiteMutation(
+    siteId,
+    ({
+      photoIds,
+      first,
+      stepMinutes,
+    }: {
+      photoIds: string[]
+      first: string
+      stepMinutes: number
+    }) => framesApi.setTimesBatch(siteId, photoIds, first, stepMinutes),
   )
 }
 

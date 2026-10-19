@@ -59,23 +59,24 @@ describe('ObservationsPage', () => {
     const list = await screen.findByRole('list', { name: 'Снимки без даты' })
     expect(within(list).getAllByRole('listitem')).toHaveLength(2)
 
-    await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
-    expect(within(list).getByRole('alert')).toHaveTextContent('Формат: дд.мм.гггг')
+    // Как в clean-mvp: дата и время, «Подтвердить»
+    await user.click(within(list).getAllByRole('button', { name: 'Подтвердить' })[0]!)
+    expect(within(list).getByRole('alert')).toHaveTextContent('Время в формате дд.мм.гггг чч:мм')
 
     // Длинное имя обрезается многоточием — полное остаётся в title (bug-reports/001).
-    expect(within(list).getByText('IMG_0013.jpg')).toHaveAttribute('title', 'IMG_0013.jpg')
+    expect(within(list).getByTitle('IMG_0013.jpg')).toBeInTheDocument()
 
-    const input = within(list).getByLabelText('Дата съёмки IMG_0013.jpg')
-    // Дату из будущего форма отсекает сама, не дожидаясь 422 (bug-reports/003).
-    await user.type(input, '01.01.2999')
-    await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
+    const input = within(list).getByLabelText('Время кадра IMG_0013.jpg')
+    // Время из будущего форма отсекает сама, не дожидаясь 422 (bug-reports/003).
+    await user.type(input, '01.01.2999 10:00')
+    await user.click(within(list).getAllByRole('button', { name: 'Подтвердить' })[0]!)
     expect(within(list).getByRole('alert')).toHaveTextContent(
-      'Дата не может быть позже сегодняшней',
+      'Время съёмки не может быть в будущем',
     )
 
     await user.clear(input)
-    await user.type(input, '18.09.2026')
-    await user.click(within(list).getAllByRole('button', { name: 'Задать дату' })[0]!)
+    await user.type(input, '18.09.2026 10:00')
+    await user.click(within(list).getAllByRole('button', { name: 'Подтвердить' })[0]!)
     await vi.waitFor(() =>
       expect(
         within(screen.getByRole('list', { name: 'Снимки без даты' })).getAllByRole('listitem'),
@@ -112,7 +113,7 @@ describe('ObservationsPage', () => {
     expect(screen.getByText('Вручную')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Обработать ещё раз' }))
     expect(await screen.findByText('Детектор недоступен')).toBeInTheDocument()
-    expect(screen.getByText('У всех снимков известна дата.')).toBeInTheDocument()
+    expect(screen.getByText('У всех снимков известны дата и время.')).toBeInTheDocument()
   })
 
   it('uploads photos and reports files that failed', async () => {
@@ -242,10 +243,11 @@ describe('ObservationsPage', () => {
     )
     renderRoute('/sites/site-berezniki/observations')
     const list = await screen.findByRole('list', { name: 'Снимки без даты' })
-    expect(within(list).getByLabelText('Дата съёмки 202609270106411790460401577.jpg')).toHaveValue(
-      '03.08.2026',
+    // Подсказка даты — в поле, время дописывает инженер
+    expect(within(list).getByLabelText('Время кадра 202609270106411790460401577.jpg')).toHaveValue(
+      '03.08.2026 ',
     )
-    expect(within(list).getByText(/проверьте подсказку по снимку/)).toBeInTheDocument()
+    expect(within(list).getByText('Штамп читается неуверенно')).toBeInTheDocument()
   })
 
   it('asks to add a camera first when the site has none', async () => {
@@ -338,5 +340,83 @@ describe('ObservationsPage', () => {
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+describe('ObservationsPage: без даты или времени', () => {
+  const frame = (id: string, extra: object) => ({
+    id,
+    site_id: 'site-berezniki',
+    original_name: `${id}.jpg`,
+    width: 2592,
+    height: 1944,
+    captured_on: null,
+    date_source: null,
+    processing_status: 'done',
+    uploaded_at: '2026-09-27T01:06:41Z',
+    camera_id: 'cam-k1',
+    captured_at: null,
+    date_hint: null,
+    time_check: null,
+    ...extra,
+  })
+
+  it('shows series outliers with their time and applies first + step to a camera', async () => {
+    let batch: unknown = null
+    server.use(
+      http.get('/api/sites/:siteId/photos', ({ request }) =>
+        new URL(request.url).searchParams.get('undated')
+          ? HttpResponse.json([
+              frame('a-odd', {
+                captured_on: '2026-08-05',
+                date_source: 'stamp',
+                captured_at: '2026-08-05T12:30:13',
+                time_check: 'series_outlier',
+              }),
+              frame('b-none', {}),
+            ])
+          : HttpResponse.json([]),
+      ),
+      http.get('/api/sites/:siteId/cameras', () =>
+        HttpResponse.json([
+          {
+            id: 'cam-k1',
+            site_id: 'site-berezniki',
+            name: 'К-1 · вход и здание',
+            stream_url: null,
+            capture_every_s: null,
+            last_capture_at: null,
+            last_capture_error: null,
+            zone: null,
+            frames_count: 2,
+            created_at: '2026-08-01T00:00:00Z',
+          },
+        ]),
+      ),
+      http.post('/api/sites/:siteId/photos/time-batch', async ({ request }) => {
+        batch = await request.json()
+        return HttpResponse.json([])
+      }),
+    )
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    const group = await screen.findByRole('region', { name: 'Без даты: К-1 · вход и здание' })
+    expect(within(group).getByText('Время выбивается из серии')).toBeInTheDocument()
+    expect(within(group).getByText('Штамп не распознан, метаданных нет')).toBeInTheDocument()
+    // Выбившееся время — подсказкой в поле: подтвердить или поправить
+    expect(within(group).getByLabelText('Время кадра a-odd.jpg')).toHaveValue('05.08.2026 12:30')
+
+    const batchForm = within(group).getByRole('group', {
+      name: 'Пакетный ввод: К-1 · вход и здание',
+    })
+    await user.clear(within(batchForm).getByLabelText('Шаг, мин'))
+    await user.type(within(batchForm).getByLabelText('Шаг, мин'), '30')
+    await user.click(within(batchForm).getByRole('button', { name: 'Применить к 2 кадрам' }))
+    await vi.waitFor(() =>
+      expect(batch).toEqual({
+        photo_ids: ['a-odd', 'b-none'],
+        first: '2026-08-05T12:30:00',
+        step_minutes: 30,
+      }),
+    )
   })
 })

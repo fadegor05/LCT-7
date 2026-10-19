@@ -228,6 +228,8 @@ export const photoSchema = z.object({
   date_hint: isoDate.nullable().optional(),
   /** Проверка серии штампов камеры: ok | series_outlier. */
   time_check: z.string().nullable().optional(),
+  /** Неуверенно прочитанное время штампа — подсказка для ввода. */
+  uncertain_at: z.string().nullable().optional(),
   /** Сводка для подписи в ленте: техника на кадре, машина вне зоны, снимок-доказательство. */
   machines: z.array(z.string()).optional(),
   out_of_zone: z.boolean().optional(),

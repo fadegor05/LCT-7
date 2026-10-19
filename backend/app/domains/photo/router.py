@@ -16,6 +16,7 @@ from app.domains.photo.schemas import (
     PhotoDetail,
     PhotoRead,
     QueueProgress,
+    TimeBatch,
     UploadReport,
 )
 from app.domains.photo.service import PhotoService, UploadInput
@@ -230,8 +231,20 @@ async def update_photo_date(
         404: Сайт не найден, не принадлежит пользователю или фотография не найдена
         422: Дата в будущем или другая ошибка валидации
     """
-    photo = await service.set_date(site_id, photo_id, data.captured_on)
-    return photo
+    # Дата и время — подтверждение времени кадра; только дата — как раньше
+    if data.captured_at is not None:
+        return await service.set_time(site_id, photo_id, data.captured_at)
+    assert data.captured_on is not None
+    return await service.set_date(site_id, photo_id, data.captured_on)
+
+
+@router.post("/time-batch")
+@inject
+async def set_times_batch(
+    site_id: uuid.UUID, data: TimeBatch, service: FromDishka[PhotoService]
+) -> list[PhotoRead]:
+    """Пакетный ввод времени кадров: первый кадр + шаг в минутах, в порядке photo_ids."""
+    return await service.set_times_batch(site_id, data.photo_ids, data.first, data.step_minutes)
 
 
 @router.get("/{photo_id}/image")

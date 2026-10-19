@@ -196,3 +196,92 @@
   stroke-width: 4;
   stroke-dasharray: none;
 }
+
+/* «Без даты или времени» (clean-mvp): пока есть кадры без времени — карточка в жёлтой рамке */
+.needsCheck {
+  border-color: var(--caution);
+}
+
+.undatedGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.undated {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.undatedRow {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.undatedThumb {
+  width: 120px;
+}
+
+.undatedText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.undatedText > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+.timeForm .input {
+  width: 170px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.batch {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--caution-soft);
+}
+
+.batch .field:nth-child(2) .input {
+  width: 72px;
+}
+
+.error {
+  color: var(--status-behind);
+}
+
+@media (width <= 720px) {
+  .undatedRow {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .undatedRow > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .undatedThumb {
+    width: 96px;
+  }
+}

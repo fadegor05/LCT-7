@@ -116,7 +116,13 @@ export function ObservationsPage() {
                       cameras={cameras.data ?? []}
                       withDate={!date}
                       photos={list
-                        .filter((p) => p.captured_on && (!date || p.captured_on === date))
+                        .filter(
+                          (p) =>
+                            p.captured_on &&
+                            // Выбившееся из серии время ждёт подтверждения ниже
+                            p.time_check !== 'series_outlier' &&
+                            (!date || p.captured_on === date),
+                        )
                         .sort((a, b) => a.captured_on!.localeCompare(b.captured_on!))}
                     />
                   )}
