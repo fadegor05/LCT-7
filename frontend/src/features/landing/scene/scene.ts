@@ -153,7 +153,8 @@ export function createScene(ctx: Ctx, roofClip: SVGPolygonElement): Scene {
       y + SHADOW_Y * towerShadowZ,
     ])
     stackShadow.setAttribute('points', pts(hull([...base, ...shifted])))
-    stackShadow.setAttribute('opacity', (0.27 * fade).toFixed(2))
+    // пока башни нет, тени нет: иначе на пустой плите лежит тёмное пятно
+    stackShadow.setAttribute('opacity', (0.27 * fade * smoothstep(0, H, towerShadowZ)).toFixed(3))
 
     // тень груза: на земле или на кровле башни — смотря над чем он сейчас
     const active = live as { i: number; dx: number; dy: number } | null

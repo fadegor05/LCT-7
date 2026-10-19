@@ -1,0 +1,54 @@
+/* Фото роли с подсказкой поверх */
+.role {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+}
+
+.role > img,
+.role > div:first-child {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.role > img {
+  object-fit: cover;
+}
+
+.glass {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  left: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgb(255 255 255 / 60%);
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / 84%);
+  backdrop-filter: blur(var(--blur-md));
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.glass b {
+  font-weight: 600;
+}
+
+.glass ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.glass code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.glass span {
+  color: var(--ink-muted);
+}

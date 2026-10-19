@@ -44,11 +44,50 @@ describe('GanttBackdrop', () => {
     expect(container.textContent).toMatch(/сегодня · \d+ \S+/)
   })
 
-  it('marks stages that are ahead of the plan with a blue bar and a plus chip', () => {
+  it('marks stages that are ahead of the plan with a blue bar and a worded chip', () => {
     const { container } = render(<GanttBackdrop />)
     expect(container.querySelector('.ahead')).toBeInTheDocument()
-    expect(container.querySelector('.chipAhead')?.textContent).toMatch(/\+\d+ дн\./)
+    expect(container.querySelector('.chipAhead')?.textContent).toMatch(/опережает на \d+ дн\./)
     expect(container.querySelector('.behind')).toBeInTheDocument()
+  })
+
+  it('can drop the stage labels for a short block', () => {
+    const { container } = render(<GanttBackdrop labels={false} />)
+    expect(container.textContent).not.toContain(STAGES[0]!.name)
+    expect(container.querySelectorAll('.plan')).toHaveLength(STAGES.length)
+  })
+
+  it('stops the today line while the schedule is off screen', () => {
+    vi.useFakeTimers()
+    stubMedia(() => false)
+    let notify: (entries: Partial<IntersectionObserverEntry>[]) => void = () => {}
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(cb: typeof notify) {
+          notify = cb
+        }
+        observe() {}
+        disconnect() {}
+      },
+    )
+    const { container } = render(<GanttBackdrop />)
+    const first = container.textContent
+    act(() => {
+      vi.advanceTimersByTime(6000)
+    })
+    expect(container.textContent).toBe(first)
+    act(() => notify([{ isIntersecting: true }]))
+    act(() => {
+      vi.advanceTimersByTime(6000)
+    })
+    expect(container.textContent).not.toBe(first)
+    act(() => notify([{ isIntersecting: false }]))
+    const stopped = container.textContent
+    act(() => {
+      vi.advanceTimersByTime(6000)
+    })
+    expect(container.textContent).toBe(stopped)
   })
 
   it('moves the today line over time', () => {

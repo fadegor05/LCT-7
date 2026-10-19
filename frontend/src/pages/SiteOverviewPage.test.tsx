@@ -148,4 +148,16 @@ describe('SiteOverviewPage', () => {
       expect(position & 4).not.toBe(0)
     })
   })
+
+  it('opens a photo of the last observation and closes it with Escape', async () => {
+    const { user } = renderRoute('/sites/site-berezniki')
+    const [open] = await screen.findAllByRole('button', { name: /^Открыть: Снимок IMG_/ })
+    const fileName = open!.getAttribute('aria-label')!.replace('Открыть: Снимок ', '')
+
+    await user.click(open!)
+    expect(await screen.findByRole('dialog', { name: new RegExp(fileName) })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })

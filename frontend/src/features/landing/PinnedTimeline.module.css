@@ -1,0 +1,308 @@
+/* Дорожка высотой в несколько экранов: пока по ней листаем, сцена внутри неподвижна. */
+.track {
+  position: relative;
+  height: 420vh;
+  margin: 0 calc(var(--space-10) * -1);
+}
+
+.stage {
+  position: sticky;
+  top: 64px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: var(--space-6);
+  height: calc(100vh - 64px);
+  padding: var(--space-8) var(--space-10) var(--space-8);
+}
+
+.caption {
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  gap: var(--space-10);
+  align-items: end;
+  min-height: 150px;
+}
+
+.when {
+  display: grid;
+  gap: var(--space-3);
+  align-content: end;
+}
+
+.stepNo {
+  font-size: 16px;
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+
+.date {
+  font-size: clamp(40px, 4.8vw, 72px);
+  line-height: 1;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  animation: rise 0.45s ease both;
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  max-width: 280px;
+}
+
+.bars i {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  transition: background 0.3s ease;
+}
+
+.bars .barOn {
+  background: var(--accent);
+}
+
+.say {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 640px;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.stepTitle {
+  font-size: clamp(22px, 2.2vw, 30px);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  animation: rise 0.45s ease both;
+}
+
+.stepText {
+  font-size: 17px;
+  line-height: 26px;
+  color: var(--ink-muted);
+  animation: rise 0.45s ease 0.05s both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Ось времени */
+.chart {
+  position: relative;
+  height: 196px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.month {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--line);
+}
+
+.month i {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.row {
+  position: absolute;
+  inset-inline: 0;
+  height: 28px;
+}
+
+.plan {
+  position: absolute;
+  top: 0;
+  height: 28px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-sm);
+  background: var(--status-notstarted-soft);
+}
+
+.rowTitle {
+  position: absolute;
+  top: 34px;
+  padding-left: 2px;
+  font-size: 13px;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
+.lag {
+  position: absolute;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--status-behind);
+}
+
+.badge {
+  position: absolute;
+  z-index: 2;
+}
+
+.badgeIn {
+  animation: rise 0.4s ease both;
+}
+
+.tick {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 22px;
+  background: var(--line-control);
+  transition:
+    background 0.3s ease,
+    height 0.3s ease;
+}
+
+.tick i {
+  position: absolute;
+  bottom: 28px;
+  left: -16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  color: var(--ink-muted);
+}
+
+.tickOn {
+  height: 40px;
+  background: var(--accent);
+}
+
+.tickOn i {
+  color: var(--ink);
+}
+
+.cursor {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  z-index: 3;
+  width: 2px;
+  background: var(--accent);
+}
+
+.cursor i {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 14px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* Снимки */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  min-height: 0;
+}
+
+.card,
+.cardOn {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-height: 0;
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+
+.card {
+  opacity: 0.08;
+  transform: translateY(16px);
+}
+
+.cardOn {
+  opacity: 1;
+  transform: none;
+}
+
+.cardCap {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+
+.cardCap b {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* Без закрепления */
+.flat {
+  display: block;
+}
+
+.story {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.story li {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.story h3 {
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.story p {
+  font-size: 16px;
+  line-height: 25px;
+  color: var(--ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .date,
+  .stepTitle,
+  .stepText,
+  .badgeIn {
+    animation: none;
+  }
+
+  .card,
+  .cardOn {
+    transition: none;
+  }
+}

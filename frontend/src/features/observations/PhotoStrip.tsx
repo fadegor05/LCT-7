@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { annotatedImageUrl, useRedetectPhoto } from '@/api/frames'
 import type { Photo } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
@@ -7,6 +8,7 @@ import { FrameView } from '@/components/ui/FrameView'
 import { formatDate } from '@/lib/format'
 import { processingStatusLabels } from '@/lib/labels'
 import styles from './Observations.module.css'
+import { PhotoViewer } from './PhotoViewer'
 
 interface PhotoStripProps {
   siteId: string
@@ -18,6 +20,7 @@ interface PhotoStripProps {
 /** Снимки с рамками найденной техники; необработанные можно отправить детектору ещё раз. */
 export function PhotoStrip({ siteId, photos, withDate }: PhotoStripProps) {
   const redetect = useRedetectPhoto(siteId)
+  const [open, setOpen] = useState<Photo | null>(null)
   if (photos.length === 0) return <p className="muted">Снимков за этот период нет.</p>
   return (
     <>
@@ -27,6 +30,7 @@ export function PhotoStrip({ siteId, photos, withDate }: PhotoStripProps) {
             key={p.id}
             imageUrl={annotatedImageUrl(siteId, p.id)}
             alt={`Снимок ${p.original_name}`}
+            onClick={() => setOpen(p)}
             caption={
               <>
                 <span className="sm">{p.original_name}</span>
@@ -50,6 +54,7 @@ export function PhotoStrip({ siteId, photos, withDate }: PhotoStripProps) {
           />
         ))}
       </div>
+      {open && <PhotoViewer siteId={siteId} photo={open} onClose={() => setOpen(null)} />}
       {redetect.error && (
         <Callout tone="behind" title="Снимок не обработан">
           {redetect.error.message}

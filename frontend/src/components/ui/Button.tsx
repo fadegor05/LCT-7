@@ -1,22 +1,15 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router'
+import { buttonClassName as classes, type ButtonSize, type ButtonVariant } from './buttonClass'
 import { Icon, type IconName } from './Icon'
-import styles from './Button.module.css'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost'
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'
+export type { ButtonSize, ButtonVariant } from './buttonClass'
 
 interface StyleProps {
   variant?: ButtonVariant
   size?: ButtonSize
   icon?: IconName
   children?: ReactNode
-}
-
-function classes(variant: ButtonVariant, size: ButtonSize, extra?: string) {
-  return [styles.btn, styles[variant], size !== 'md' && styles[size], extra]
-    .filter(Boolean)
-    .join(' ')
 }
 
 type ButtonProps = StyleProps & ButtonHTMLAttributes<HTMLButtonElement>

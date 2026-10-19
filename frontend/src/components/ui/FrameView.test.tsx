@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { setToken } from '@/lib/authStorage'
 import { server } from '@/mocks/server'
@@ -57,5 +58,24 @@ describe('FrameView', () => {
     )
     unmount()
     expect(revoke).toHaveBeenCalledWith('blob:test')
+  })
+
+  it('без onClick кнопки нет', () => {
+    render(<FrameView imageUrl={null} alt="Снимок IMG_0002" />)
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('с onClick снимок открывается мышью и с клавиатуры', async () => {
+    const onClick = vi.fn()
+    const user = userEvent.setup()
+    render(<FrameView imageUrl={null} alt="Снимок IMG_0003" onClick={onClick} />)
+    const open = screen.getByRole('button', { name: 'Открыть: Снимок IMG_0003' })
+
+    await user.click(open)
+    expect(onClick).toHaveBeenCalledTimes(1)
+
+    open.focus()
+    await user.keyboard('{Enter}')
+    expect(onClick).toHaveBeenCalledTimes(2)
   })
 })

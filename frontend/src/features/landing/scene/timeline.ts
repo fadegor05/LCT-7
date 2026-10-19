@@ -19,12 +19,12 @@ export interface TowerStage {
 
 /** Этапы снизу вверх: каждый блок башни — этап графика, цвет — статус отклонения. */
 export const TOWER_STAGES: readonly TowerStage[] = [
-  { name: 'Котлован и основание', status: '+1 дн', color: STATUS.ahead, kind: 'base' },
+  { name: 'Котлован и основание', status: 'опережает на 1 дн.', color: STATUS.ahead, kind: 'base' },
   { name: 'Фундаментная плита', status: 'по плану', color: STATUS.ontrack, kind: 'slab' },
   { name: 'Каркас, этажи 1–3', status: 'по плану', color: STATUS.ontrack, kind: 'frame' },
-  { name: 'Каркас, этажи 4–6', status: '−4 дн', color: STATUS.behind, kind: 'frame' },
-  { name: 'Фасад и остекление', status: '−2 дн', color: STATUS.behind, kind: 'glass' },
-  { name: 'Кровля', status: 'не начато', color: STATUS.idle, kind: 'roof' },
+  { name: 'Каркас, этажи 4–6', status: 'отстаёт на 4 дн.', color: STATUS.behind, kind: 'frame' },
+  { name: 'Фасад и остекление', status: 'отстаёт на 2 дн.', color: STATUS.behind, kind: 'glass' },
+  { name: 'Кровля', status: 'не начат', color: STATUS.idle, kind: 'roof' },
 ]
 
 type Ease = 'io' | 'out' | 'lin'

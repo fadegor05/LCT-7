@@ -277,6 +277,10 @@ export const handlers = [
     return handle(() => db.detectBacklog(params.siteId, statuses))
   }),
   http.get<{ siteId: string; photoId: string }>(
+    api('/sites/:siteId/photos/:photoId'),
+    ({ params }) => handle(() => db.findPhoto(params.siteId, params.photoId)),
+  ),
+  http.get<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/annotated'),
     ({ params }) => annotated(params.siteId, params.photoId),
   ),
