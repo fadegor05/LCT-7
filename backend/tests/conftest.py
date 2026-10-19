@@ -36,6 +36,7 @@ from app.domains.methodology.provider import MethodologyProvider
 from app.domains.notification.provider import NotificationProvider, NullDispatcherProvider
 from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.date_resolver import DateResolver, NullStampOcr, StampOcr
+from app.domains.photo.queue import PhotoQueueProvider
 from app.domains.photo.recalculator import NoopObservationRecalculator, ObservationRecalculator
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.service import PhotoService
@@ -60,6 +61,8 @@ class TestAppProvider(Provider):
     def settings(self) -> Settings:
         settings = get_settings()
         settings.auth.secret_key = "test-secret-key-at-least-32-bytes!!"
+        # Тесты загрузки проверяют результат сразу; фоновую очередь — test_photo_queue.py
+        settings.upload.background = False
         return settings
 
 
@@ -298,6 +301,7 @@ def _make_container(
         SiteProvider(),
         CameraProvider(),
         StreamCaptureProvider(),
+        PhotoQueueProvider(),
         TestStreamGrabberProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
@@ -349,6 +353,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         SiteProvider(),
         CameraProvider(),
         StreamCaptureProvider(),
+        PhotoQueueProvider(),
         TestStreamGrabberProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),

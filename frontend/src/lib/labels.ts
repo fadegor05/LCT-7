@@ -20,6 +20,8 @@ export const dateSourceLabels: Record<DateSource, string> = {
 
 export const processingStatusLabels: Record<ProcessingStatus, string> = {
   pending: 'Не обработан',
+  queued: 'В очереди',
+  processing: 'Обрабатывается',
   done: 'Обработан',
   failed: 'Ошибка детектора',
 }

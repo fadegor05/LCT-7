@@ -79,7 +79,19 @@ class ObservationService:
         self._activity = activity
         self._recalculator = recalculator
 
-    async def recompute(self, site_id: uuid.UUID, observed_on: date) -> Observation | None:
+    async def recompute_many(self, site_id: uuid.UUID, dates: Iterable[date]) -> None:
+        """Пересчитать несколько дат, статусы объекта — один раз в конце.
+
+        Очередь загрузки закрывает сотни кадров за десятки дат: пересчёт статусов после
+        каждой даты повторял бы одну и ту же работу.
+        """
+        for day in sorted(set(dates)):
+            await self.recompute(site_id, day, recalculate=False)
+        await self._recalculator.recalculate(site_id)
+
+    async def recompute(
+        self, site_id: uuid.UUID, observed_on: date, *, recalculate: bool = True
+    ) -> Observation | None:
         """Пересчитать наблюдение за дату.
 
         Алгоритм:
@@ -118,7 +130,8 @@ class ObservationService:
                 await self._repository.delete(existing)
                 await self._session.commit()
                 # Триггер пересчёта статусов этапов и отклонений (только если было удаление)
-                await self._recalculator.recalculate(site_id)
+                if recalculate:
+                    await self._recalculator.recalculate(site_id)
             return None
 
         # Шаг 3: Собрать детекции для кадров со статусом "done"
@@ -196,7 +209,8 @@ class ObservationService:
         # Шаг 11: Коммитить и вернуть
         await self._session.commit()
         # Триггер пересчёта статусов этапов и отклонений
-        await self._recalculator.recalculate(site_id)
+        if recalculate:
+            await self._recalculator.recalculate(site_id)
         return observation
 
     async def _require(self, site_id: uuid.UUID) -> None:

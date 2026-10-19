@@ -3,6 +3,7 @@ import { NavLink } from 'react-router'
 import { type SiteTab, usePrefetchSite } from '@/api/prefetch'
 import type { Site } from '@/api/schemas'
 import { Breadcrumbs, type Crumb } from '@/components/ui/Breadcrumbs'
+import { QueueBanner } from '@/features/observations/QueueBanner'
 import { PageHeader } from './PageHeader'
 import styles from './SiteShell.module.css'
 
@@ -62,6 +63,7 @@ export function SiteShell({
           </NavLink>
         ))}
       </nav>
+      <QueueBanner siteId={site.id} />
       {aside ? (
         <div className={styles.withAside} data-layout="with-aside">
           <div className={styles.main}>{children}</div>

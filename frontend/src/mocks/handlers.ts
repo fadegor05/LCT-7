@@ -250,6 +250,10 @@ export const handlers = [
     const undated = new URL(request.url).searchParams.get('undated') === 'true'
     return handle(() => db.listPhotos(params.siteId, undated))
   }),
+  // Моки обрабатывают снимки сразу: фоновой очереди нет
+  http.get<SiteParams>(api('/sites/:siteId/photos/progress'), ({ params }) =>
+    handle(() => db.queueProgress(params.siteId)),
+  ),
   http.post<SiteParams>(api('/sites/:siteId/photos'), async ({ params, request }) => {
     const form = await request.formData()
     const files = form.getAll('files').filter(isFile)

@@ -2,11 +2,12 @@
 
 import uuid
 from collections.abc import Sequence
+from typing import cast
 
-from sqlalchemy import delete, desc, select
+from sqlalchemy import CursorResult, delete, desc, func, select, update
 
 from app.core.repository import BaseRepository
-from app.domains.photo.models import Detection, Photo
+from app.domains.photo.models import IN_QUEUE, Detection, Photo, ProcessingStatus
 
 
 class PhotoRepository(BaseRepository[Photo]):
@@ -27,7 +28,10 @@ class PhotoRepository(BaseRepository[Photo]):
         """
         query = select(self.model).where(self.model.site_id == site_id)
         if undated:
-            query = query.where(self.model.captured_on.is_(None))
+            # Кадр в очереди ещё не получил дату — он не «без даты», его рано разбирать
+            query = query.where(
+                self.model.captured_on.is_(None), self.model.processing_status.not_in(IN_QUEUE)
+            )
         query = query.order_by(self.model.uploaded_at, self.model.id)
         result = await self._session.execute(query)
         return result.scalars().all()
@@ -63,6 +67,71 @@ class PhotoRepository(BaseRepository[Photo]):
         query = query.order_by(self.model.uploaded_at, self.model.id)
         result = await self._session.execute(query)
         return result.scalars().all()
+
+    async def count_in_queue(self, site_id: uuid.UUID) -> int:
+        """Сколько кадров объекта ещё в очереди или в обработке."""
+        result = await self._session.execute(
+            select(func.count())
+            .select_from(self.model)
+            .where(self.model.site_id == site_id, self.model.processing_status.in_(IN_QUEUE))
+        )
+        return int(result.scalar_one())
+
+    async def queue_counts(self, site_id: uuid.UUID) -> tuple[int, int]:
+        """(ждут, обрабатываются) по объекту."""
+        result = await self._session.execute(
+            select(self.model.processing_status, func.count())
+            .where(self.model.site_id == site_id, self.model.processing_status.in_(IN_QUEUE))
+            .group_by(self.model.processing_status)
+        )
+        counts = {status: count for status, count in result.all()}
+        return (
+            int(counts.get(ProcessingStatus.QUEUED.value, 0)),
+            int(counts.get(ProcessingStatus.PROCESSING.value, 0)),
+        )
+
+    async def list_in_batches(self, site_id: uuid.UUID) -> Sequence[Photo]:
+        """Кадры объекта из незакрытых пачек загрузки."""
+        result = await self._session.execute(
+            select(self.model)
+            .where(self.model.site_id == site_id, self.model.upload_batch_id.is_not(None))
+            .order_by(self.model.upload_batch_id, self.model.upload_batch_pos)
+        )
+        return result.scalars().all()
+
+    async def claim_queued(self, limit: int) -> list[tuple[uuid.UUID, uuid.UUID]]:
+        """Взять до `limit` кадров из очереди в обработку: (кадр, объект), старые первыми.
+
+        `FOR UPDATE SKIP LOCKED`: при нескольких экземплярах кадр берёт один. Коммитит
+        вызывающий — до этого кадры заблокированы.
+        """
+        result = await self._session.execute(
+            select(self.model)
+            .where(self.model.processing_status == ProcessingStatus.QUEUED.value)
+            .order_by(self.model.uploaded_at, self.model.upload_batch_pos, self.model.id)
+            .limit(limit)
+            .with_for_update(skip_locked=True)
+        )
+        photos = result.scalars().all()
+        for photo in photos:
+            photo.processing_status = ProcessingStatus.PROCESSING.value
+        return [(p.id, p.site_id) for p in photos]
+
+    async def requeue_processing(self) -> int:
+        """После перезапуска: кадры, оборванные посреди обработки, — снова в очередь."""
+        result = await self._session.execute(
+            update(self.model)
+            .where(self.model.processing_status == ProcessingStatus.PROCESSING.value)
+            .values(processing_status=ProcessingStatus.QUEUED.value)
+        )
+        return int(cast(CursorResult, result).rowcount or 0)
+
+    async def sites_with_open_batches(self) -> list[uuid.UUID]:
+        """Объекты с незакрытыми пачками — закрыть их, если очередь уже пуста."""
+        result = await self._session.execute(
+            select(self.model.site_id).where(self.model.upload_batch_id.is_not(None)).distinct()
+        )
+        return list(result.scalars().all())
 
 
 class DetectionRepository(BaseRepository[Detection]):

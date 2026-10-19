@@ -26,6 +26,7 @@ from app.domains.notification.provider import (
 )
 from app.domains.observation.provider import ObservationProvider
 from app.domains.photo.provider import PhotoProvider
+from app.domains.photo.queue import PhotoQueueProvider
 from app.domains.schedule.provider import ScheduleLlmClientProvider, ScheduleProvider
 from app.domains.site.provider import SiteProvider
 from app.domains.user.provider import UserProvider
@@ -68,6 +69,7 @@ def create_container() -> AsyncContainer:
         CameraProvider(),
         StreamGrabberProvider(),
         StreamCaptureProvider(),
+        PhotoQueueProvider(),
         ScheduleProvider(),
         ScheduleLlmClientProvider(),
         MethodologyProvider(),

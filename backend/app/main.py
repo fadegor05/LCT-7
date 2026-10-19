@@ -17,6 +17,7 @@ from app.domains.camera.stream import start_stream_capture
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.notification.dispatcher import NotificationDispatcher
 from app.domains.notification.telegram_link import start_telegram_poller
+from app.domains.photo.queue import start_photo_queue
 from app.domains.photo.startup import check_detector_classes
 from app.domains.user.service import UserService
 from app.plugins.di import create_container
@@ -50,12 +51,17 @@ async def lifespan(app: FastAPI):
     # Фоновые снимки со стрима — только при STREAM__ENABLED=true (по умолчанию выключены)
     stream_capture = await start_stream_capture(app.state.dishka_container, settings)
 
+    # Фоновая обработка загруженных снимков — при UPLOAD__BACKGROUND=true (по умолчанию)
+    photo_queue = await start_photo_queue(app.state.dishka_container, settings)
+
     # Привязка телеграма — только при настроенном боте (NOTIFY__TELEGRAM__*)
     telegram_poller = await start_telegram_poller(app.state.dishka_container, settings)
 
     yield
     if stream_capture is not None:
         await stream_capture.stop()
+    if photo_queue is not None:
+        await photo_queue.stop()
     if telegram_poller is not None:
         await telegram_poller.stop()
     # Доставка идёт фоновыми задачами: дожидаемся их до того, как закроется

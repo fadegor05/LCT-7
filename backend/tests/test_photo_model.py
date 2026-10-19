@@ -51,6 +51,8 @@ async def test_photo_columns(engine: AsyncEngine) -> None:
             "date_source",
             "processing_status",
             "camera_id",
+            "upload_batch_id",
+            "upload_batch_pos",
             "uploaded_at",
             "captured_at",
             "date_hint",

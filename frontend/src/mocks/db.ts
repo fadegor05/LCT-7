@@ -512,6 +512,12 @@ export function getObservation(siteId: string, date: string): Observation {
   return observation
 }
 
+/** Как PhotoService.queue_progress; моки обрабатывают снимки при загрузке. */
+export function queueProgress(siteId: string) {
+  getSite(siteId)
+  return { queued: 0, processing: 0 }
+}
+
 export function listPhotos(siteId: string, undated: boolean): Photo[] {
   getSite(siteId)
   return state.photos

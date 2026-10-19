@@ -48,6 +48,13 @@ class PhotoRead(BaseModel):
     evidence: bool = False
 
 
+class QueueProgress(BaseModel):
+    """Фоновая обработка снимков объекта: сколько ждут и сколько обрабатываются."""
+
+    queued: int
+    processing: int
+
+
 class PhotoDetail(PhotoRead):
     """Чтение фотографии с детекциями."""
 

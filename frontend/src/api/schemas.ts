@@ -36,7 +36,7 @@ export const dateSourceSchema = z.enum([
   'manual',
 ])
 /** photo.models.ProcessingStatus */
-export const processingStatusSchema = z.enum(['pending', 'done', 'failed'])
+export const processingStatusSchema = z.enum(['pending', 'queued', 'processing', 'done', 'failed'])
 /** observation.models.Activity */
 export const activitySchema = z.enum(['works', 'idle', 'unknown'])
 /** assessment.models.DeviationType */
@@ -240,6 +240,12 @@ export const uploadReportSchema = z.object({
   ),
   uploaded: z.number(),
   failed: z.number(),
+})
+
+/** Фоновая обработка снимков объекта (`GET /photos/progress`). */
+export const queueProgressSchema = z.object({
+  queued: z.number().int(),
+  processing: z.number().int(),
 })
 
 export const detectBacklogReportSchema = z.object({
