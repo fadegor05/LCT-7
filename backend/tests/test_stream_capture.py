@@ -181,6 +181,8 @@ async def test_scheduler_captures_due_cameras_with_a_link(
     async with maker() as session:
         photos = (await session.execute(select(Photo))).scalars().all()
     assert [(str(p.camera_id), p.captured_on) for p in photos] == [(live, date(2026, 9, 18))]
+    # Момент снимка — местное время стройки: без него не сложится серия кадров камеры
+    assert photos[0].captured_at == FRIDAY_10.astimezone(MSK).replace(tzinfo=None, microsecond=0)
     assert (await _stored(maker, failing)).capture_failures == 1
 
     # Через минуту никому не пора; через 5 минут — снова обеим

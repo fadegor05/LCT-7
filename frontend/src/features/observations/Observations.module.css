@@ -1,7 +1,10 @@
+/* Дни — одной строкой с прокруткой (clean-mvp): десятки дней не съедают экран */
 .days {
   display: flex;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
 }
 
 .day {
@@ -10,6 +13,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  flex-shrink: 0;
   min-width: 112px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);

@@ -99,7 +99,7 @@ class CameraFrameIngest:
             camera.id,
             content,
             filename=f"stream-{local:%Y%m%d-%H%M%S}.jpg",
-            captured_on=local.date(),
+            captured_at=local,
         )
 
 

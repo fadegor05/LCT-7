@@ -22,6 +22,19 @@ describe('ObservationsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Все снимки с датой' })).toBeInTheDocument()
     expect(router.state.location.search).toBe('?date=all')
     expect(screen.queryByRole('heading', { name: 'Техника на площадке' })).not.toBeInTheDocument()
+    // Дни одной строкой слева направо по времени
+    const dayButtons = within(screen.getByRole('group', { name: 'Дни наблюдений' }))
+      .getAllByRole('button')
+      .slice(1)
+      .map((b) => b.textContent ?? '')
+    const dates = dayButtons.map((t) =>
+      t
+        .match(/(\d\d)\.(\d\d)\.(\d{4})/)!
+        .slice(1)
+        .reverse()
+        .join(''),
+    )
+    expect(dates).toEqual([...dates].sort())
     expect(await photos()).toHaveLength(12)
     // «Все дни»: у кадра день недели и дата, время — если источник его знает
     expect(screen.getAllByText('ПН 14.09', { selector: 'figcaption span' })).toHaveLength(2)

@@ -356,7 +356,15 @@ class DateResolver:
             InvalidImageError: Если байты не являются валидным изображением.
         """
         # 1. channel_date
+        # Кадр со стрима приходит с моментом снимка (datetime): время известно точно, и без
+        # него серия кадров камеры не сложится — «работает» по стриму не появится
         if channel_date is not None:
+            if isinstance(channel_date, datetime):
+                return ResolvedDate(
+                    captured_on=channel_date.date(),
+                    source=DateSource.CHANNEL,
+                    captured_at=channel_date.replace(tzinfo=None, microsecond=0),
+                )
             return ResolvedDate(captured_on=channel_date, source=DateSource.CHANNEL)
 
         # Открываем изображение для последующих проверок (EXIF, OCR)

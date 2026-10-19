@@ -8,6 +8,7 @@ import { PageHeader, SectionHeader } from '@/components/layout/PageHeader'
 import { ButtonLink } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
 import { DeviationList } from '@/features/deviations/DeviationList'
+import { stampDate } from '@/features/report/reportText'
 import { SiteTable } from '@/features/sites/SiteTable'
 import { sortDeviations } from '@/lib/deviations'
 import { plural } from '@/lib/labels'
@@ -42,9 +43,17 @@ export function SitesPage() {
       { queryKey: keys.summary(site.id), queryFn: () => deviationsApi.summary(site.id) },
       { queryKey: keys.observations(site.id), queryFn: () => framesApi.observations(site.id) },
     ]),
-    combine: (results) => settled(...results),
+    combine: (results) => ({
+      ready: settled(...results),
+      // «данные на» — самая поздняя опорная дата расчёта среди объектов (clean-mvp)
+      asOf: results
+        .map((r) => (r.data && 'as_of' in r.data ? r.data.as_of : null))
+        .filter((d): d is string => !!d)
+        .sort()
+        .at(-1),
+    }),
   })
-  const ready = rows
+  const ready = rows.ready
 
   return (
     <>
@@ -52,7 +61,12 @@ export function SitesPage() {
         title="Стройки"
         subtitle={
           sites.data &&
-          `${sites.data.length} ${plural(sites.data.length, ['объект', 'объекта', 'объектов'])}`
+          [
+            `${sites.data.length} ${plural(sites.data.length, ['объект', 'объекта', 'объектов'])}`,
+            rows.asOf && `данные на ${stampDate(rows.asOf)}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')
         }
         actions={
           <ButtonLink to="/sites/new" icon="plus">

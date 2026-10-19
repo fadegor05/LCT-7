@@ -206,9 +206,10 @@ class PhotoService:
         camera_id: uuid.UUID,
         content: bytes,
         filename: str,
-        captured_on: date,
+        captured_at: datetime,
     ) -> UploadItem:
-        """Принять кадр, снятый со стрима камеры: дата — из момента снимка, без штампа.
+        """Принять кадр, снятый со стрима камеры: дата и время — момент снимка (местное время
+        стройки), без штампа.
 
         Доступ к стройке проверяет вызывающий (HTTP-роут или фоновый планировщик), поэтому
         здесь гварда нет. Камера обязана принадлежать этой стройке.
@@ -218,11 +219,11 @@ class PhotoService:
             site_id,
             UploadInput(filename=filename, content=content, content_type="image/jpeg"),
             camera_id,
-            channel_date=captured_on,
+            channel_date=captured_at,
         )
         if item.photo is not None:
             try:
-                await self._recalculator.recompute(site_id, captured_on)
+                await self._recalculator.recompute(site_id, captured_at.date())
             except Exception:
                 logger.exception("Ошибка при пересчёте наблюдений после кадра со стрима")
                 await self._session.rollback()

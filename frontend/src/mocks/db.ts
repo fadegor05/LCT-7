@@ -642,8 +642,17 @@ export function getDeviation(siteId: string, id: string): DeviationDetail {
   return deviation
 }
 
-/** Как AssessmentService.get_summary. */
+/** Как AssessmentService.get_summary; as_of — дата последнего наблюдения (last_observation). */
 export function getSummary(siteId: string): SiteSummary {
+  const as_of =
+    listObservations(siteId)
+      .map((o) => o.observed_on)
+      .sort()
+      .at(-1) ?? null
+  return { ...summaryOf(siteId), as_of }
+}
+
+function summaryOf(siteId: string): SiteSummary {
   const deviations = listDeviations(siteId)
   const counts = {
     critical_count: deviations.filter((d) => d.severity === 'critical').length,
