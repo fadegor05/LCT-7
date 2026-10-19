@@ -35,14 +35,29 @@ def format_message(message: ChannelMessage) -> str:
 class TelegramClient:
     """Обёртка над Bot API. Создаётся один раз на приложение."""
 
-    def __init__(self, token: str, timeout_s: float = 35.0) -> None:
+    def __init__(self, token: str, timeout_s: float = 35.0, proxy_url: str | None = None) -> None:
         self._token = token
         self._timeout_s = timeout_s
+        # Прокси для Bot API: там, где телеграм заблокирован, прямой запрос
+        # не дойдёт. None — идём напрямую.
+        self._proxy_url = proxy_url
         # Подменяется в тестах, чтобы не ходить в сеть
         self._transport: httpx.AsyncBaseTransport | None = None
 
     def _url(self, method: str) -> str:
         return f"https://api.telegram.org/bot{self._token}/{method}"
+
+    def _describe(self, error: Exception) -> str:
+        """Тип исключения плюс текст, если он есть.
+
+        У httpx.ConnectTimeout текст пустой, и без имени класса в логе остаётся
+        «Telegram getUpdates:» — по такой строке нельзя отличить блокировку от
+        неподнятого прокси (ConnectError «All connection attempts failed») или
+        сбоя DNS. Тот же приём уже применён в adapters/stream/ffmpeg.py.
+        """
+        detail = self.redact(str(error)).strip()
+        name = type(error).__name__
+        return f"{name}: {detail}" if detail else name
 
     def redact(self, text: str) -> str:
         """Убрать токен из текста.
@@ -54,7 +69,9 @@ class TelegramClient:
         return text.replace(self._token, "***") if self._token else text
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(timeout=self._timeout_s, transport=self._transport)
+        return httpx.AsyncClient(
+            timeout=self._timeout_s, transport=self._transport, proxy=self._proxy_url
+        )
 
     async def send_message(self, chat_id: str, text: str) -> None:
         try:
@@ -64,7 +81,7 @@ class TelegramClient:
                     json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
                 )
         except Exception as error:
-            raise NotifyError(f"Telegram sendMessage: {self.redact(str(error))}") from error
+            raise NotifyError(f"Telegram sendMessage: {self._describe(error)}") from error
         if response.status_code != 200:
             raise NotifyError(
                 f"Telegram sendMessage {response.status_code}: {self.redact(response.text)}"
@@ -79,7 +96,7 @@ class TelegramClient:
             async with self._client() as client:
                 response = await client.get(self._url("getUpdates"), params=params)
         except Exception as error:
-            raise NotifyError(f"Telegram getUpdates: {self.redact(str(error))}") from error
+            raise NotifyError(f"Telegram getUpdates: {self._describe(error)}") from error
         if response.status_code != 200:
             raise NotifyError(f"Telegram getUpdates {response.status_code}")
         payload = response.json()
@@ -104,6 +121,5 @@ class TelegramChannel:
         except Exception as error:
             # Клиент уже чистит свои ошибки; сюда попадает всё остальное, и его
             # текст тоже прогоняем через redact — он может прийти откуда угодно
-            raise NotifyError(
-                f"Не удалось отправить в телеграм: {self._client.redact(str(error))}"
-            ) from error
+            detail = self._client.redact(str(error)) or type(error).__name__
+            raise NotifyError(f"Не удалось отправить в телеграм: {detail}") from error

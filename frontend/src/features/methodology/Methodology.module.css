@@ -17,6 +17,20 @@
   gap: var(--space-4);
 }
 
+/* Кнопка уходит под заголовок, когда колонке тесно, а не сжимает его в две строки */
+.asideHead {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.asideHead h3 {
+  white-space: nowrap;
+}
+
 .stageList {
   display: flex;
   flex-direction: column;

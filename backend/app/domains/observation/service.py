@@ -59,8 +59,8 @@ class ObservationService:
             photos: PhotoRepository для получения фотографий.
             detections: DetectionRepository для получения детекций.
             session: AsyncSession для DB операций.
-            guard: SiteAccessGuard для проверки доступа; None — только для пересчёта
-                (системный путь без пользователя), чтение без гварда запрещено.
+            guard: SiteAccessGuard для проверки доступа; None — только пересчёт (фон без
+                HTTP-запроса и CurrentUser), чтение наблюдений тогда недоступно.
             catalog: EquipmentCatalog для обогащения типов техники.
             aggregation: AggregationPolicy для агрегации детекций.
             observability: ObservabilityPolicy для оценки наблюдаемости.
@@ -78,6 +78,12 @@ class ObservationService:
         self._observability = observability
         self._activity = activity
         self._recalculator = recalculator
+
+    @property
+    def _site_guard(self) -> SiteAccessGuard:
+        if self._guard is None:
+            raise RuntimeError("ObservationService без SiteAccessGuard: только для пересчёта")
+        return self._guard
 
     async def recompute_many(self, site_id: uuid.UUID, dates: Iterable[date]) -> None:
         """Пересчитать несколько дат, статусы объекта — один раз в конце.
@@ -213,11 +219,6 @@ class ObservationService:
             await self._recalculator.recalculate(site_id)
         return observation
 
-    async def _require(self, site_id: uuid.UUID) -> None:
-        if self._guard is None:
-            raise RuntimeError("чтение наблюдений без гварда доступа")
-        await self._guard.require(site_id)
-
     async def _cameras(
         self, ids: Iterable[uuid.UUID]
     ) -> dict[uuid.UUID, tuple[str, list[list[float]] | None]]:
@@ -242,7 +243,7 @@ class ObservationService:
         Raises:
             AppError(404) если сайт не найден или не принадлежит пользователю.
         """
-        await self._require(site_id)
+        await self._site_guard.require(site_id)
         observations = await self._repository.list_by_site(site_id)
 
         result: list[ObservationRead] = []
@@ -275,7 +276,7 @@ class ObservationService:
         Raises:
             AppError(404) если сайт не найден или наблюдение не найдено.
         """
-        await self._require(site_id)
+        await self._site_guard.require(site_id)
         observation = await self._repository.get_by_site_and_date(site_id, observed_on)
 
         if observation is None:

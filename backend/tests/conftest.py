@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import (
 from app.adapters.ml.assistant import AssistantClient
 from app.adapters.ml.base import DetectorClient
 from app.adapters.ml.schedule_llm import ScheduleLlmClient
+from app.adapters.notify.factory import ChannelRegistry
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
 from app.adapters.stream.base import StreamGrabber
@@ -64,6 +65,16 @@ class TestAppProvider(Provider):
         # Тесты загрузки проверяют результат сразу; фоновую очередь — test_photo_queue.py
         settings.upload.background = False
         return settings
+
+
+class TestChannelRegistryProvider(Provider):
+    """Реестр без каналов: письма и сообщения в тестах никуда не уходят."""
+
+    scope = Scope.APP
+
+    @provide
+    def registry(self) -> ChannelRegistry:
+        return ChannelRegistry({})
 
 
 class TestUserProvider(Provider):
@@ -308,6 +319,7 @@ def _make_container(
         MethodologyProvider(),
         NotificationProvider(),
         NullDispatcherProvider(),
+        TestChannelRegistryProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),
@@ -360,6 +372,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         MethodologyProvider(),
         NotificationProvider(),
         NullDispatcherProvider(),
+        TestChannelRegistryProvider(),
         TestPhotoProvider(storage_root=storage_root),
         ObservationProvider(),
         AssessmentProvider(),

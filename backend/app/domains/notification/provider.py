@@ -44,8 +44,9 @@ class NotificationProvider(Provider):
         tokens: ChannelLinkTokenRepository,
         session: AsyncSession,
         settings: Settings,
+        registry: ChannelRegistry,
     ) -> ChannelLinkService:
-        return ChannelLinkService(channels, tokens, session, settings)
+        return ChannelLinkService(channels, tokens, session, settings, registry)
 
 
 class NullDispatcherProvider(Provider):
@@ -87,6 +88,7 @@ class TelegramPollerProvider(Provider):
         return TelegramClient(
             token=settings.notify.telegram.token or "",
             timeout_s=settings.notify.telegram.request_timeout_s,
+            proxy_url=settings.notify.telegram.proxy_url,
         )
 
     @provide

@@ -5,24 +5,29 @@
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
 from dishka import AsyncContainer
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.adapters.ml.base import DetectorClient
+from app.cli import create_user
 from app.core.settings import Settings, get_settings
 from app.domains.camera.models import Camera
 from app.domains.camera.stream import StreamCapture
 from app.domains.photo.models import Photo
+from app.domains.user.provider import UserProvider
 from app.domains.user.service import UserService
 from app.main import create_app
+from tests.conftest import _make_container
 from tests.fakes import FakeDetector, FakeGrabber
 
 STREAM = "rtsp://admin:secret@10.0.0.5/live"
+PASSWORD = "correct horse battery"
 # Пятница 18.09.2026, 10:00 по Москве
 FRIDAY_10 = datetime(2026, 9, 18, 7, 0, tzinfo=UTC)
 MSK = ZoneInfo("Europe/Moscow")
@@ -218,6 +223,41 @@ async def test_backoff_after_failures_postpones_the_next_try(
     assert (await _stored(maker, camera)).capture_failures == 4
     assert await capture.run_once(FRIDAY_10 + timedelta(minutes=10)) == 0
     assert await capture.run_once(FRIDAY_10 + timedelta(minutes=20)) == 1
+
+
+async def test_scheduler_records_the_frame_with_the_real_user_provider(tmp_path: Path) -> None:
+    """У фона нет HTTP-запроса: запись кадра не должна тянуть CurrentUser из заголовка.
+
+    Остальные тесты идут на TestUserProvider, который отдаёт стендового пользователя без
+    Request, и эту поломку не видят — в проде каждый плановый снимок падал на записи.
+    """
+    container = _make_container(tmp_path, user_provider=UserProvider())
+    try:
+        maker = await container.get(async_sessionmaker[AsyncSession])
+        await create_user(maker, "anna", None, PASSWORD)
+        app = create_app(container)
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test/api"
+        ) as client:
+            r = await client.post("/auth/login", json={"login": "anna", "password": PASSWORD})
+            headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
+            site = (await client.post("/sites", json={"name": "Анны"}, headers=headers)).json()
+            r = await client.post(
+                f"/sites/{site['id']}/cameras",
+                json={"name": "К-1", "stream_url": STREAM},
+                headers=headers,
+            )
+            assert r.status_code == 201, r.text
+            camera = r.json()["id"]
+
+        capture = await container.get(StreamCapture)
+        assert await capture.run_once(FRIDAY_10) == 1
+        async with maker() as session:
+            photos = (await session.execute(select(Photo))).scalars().all()
+        assert [str(p.camera_id) for p in photos] == [camera]
+        assert (await _stored(maker, camera)).capture_failures == 0
+    finally:
+        await container.close()
 
 
 async def test_lifespan_does_not_capture_unless_enabled(

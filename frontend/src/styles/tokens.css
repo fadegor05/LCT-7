@@ -51,6 +51,12 @@
   --icon: 24px;
   --blur-md: 16px;
   --shadow-pop: 0 8px 24px rgb(20 20 20 / 12%);
+
+  /* Движение (в макете нет): появление дольше и с торможением, уход короче и с разгоном */
+  --duration-enter: 320ms;
+  --duration-exit: 200ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
   --font-sans:
     'Onest', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', helvetica, arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', menlo, consolas, monospace;

@@ -1,7 +1,7 @@
 """photos: фоновая обработка загрузки — пачка и место в ней, индекс по статусу
 
-Revision ID: 0022
-Revises: 0021
+Revision ID: 0023
+Revises: 0022
 Create Date: 2026-10-19
 
 Загрузка больше не ждёт штамп и детектор: кадр принимается со статусом queued, фоновый
@@ -14,8 +14,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0022"
-down_revision: str | None = "0021"
+revision: str = "0023"
+down_revision: str | None = "0022"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

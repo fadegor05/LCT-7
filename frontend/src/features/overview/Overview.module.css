@@ -63,7 +63,6 @@
   background: var(--surface-card);
   color: var(--ink-muted);
   font-weight: 500;
-  white-space: nowrap;
 }
 
 .table tbody tr:last-child > * {
@@ -84,7 +83,7 @@
   flex-direction: column;
   gap: 2px;
   font-weight: 400;
-  min-width: 220px;
+  min-width: 200px;
 }
 
 .statusCell {

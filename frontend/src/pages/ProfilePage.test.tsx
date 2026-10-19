@@ -136,4 +136,56 @@ describe('Личный кабинет', () => {
     expect(await screen.findByRole('button', { name: 'Привязать' })).toBeInTheDocument()
     open.mockRestore()
   })
+
+  describe('почта', () => {
+    it('показывает поле адреса и блокирует кнопку, пока оно пустое', async () => {
+      renderRoute('/profile')
+
+      expect(await screen.findByLabelText('Адрес почты')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Привязать почту' })).toBeDisabled()
+    })
+
+    it('после отправки просит перейти по ссылке из письма', async () => {
+      const { user } = renderRoute('/profile')
+      await user.type(await screen.findByLabelText('Адрес почты'), 'ivan@example.com')
+
+      await user.click(screen.getByRole('button', { name: 'Привязать почту' }))
+
+      expect(await screen.findByText(/Письмо отправлено/)).toBeInTheDocument()
+      // Адрес привязывается только после подтверждения
+      expect(screen.queryByText('i***@example.com')).not.toBeInTheDocument()
+    })
+
+    it('подтверждённая почта показывается с тумблером и отвязкой', async () => {
+      const { user } = renderRoute('/profile')
+      await user.type(await screen.findByLabelText('Адрес почты'), 'ivan@example.com')
+      await user.click(screen.getByRole('button', { name: 'Привязать почту' }))
+      await screen.findByText(/Письмо отправлено/)
+
+      confirmLink('email')
+      renderRoute('/profile?email=confirmed')
+
+      expect(await screen.findByText('i***@example.com')).toBeInTheDocument()
+    })
+
+    it('ошибку сервера показывает под строкой', async () => {
+      server.use(
+        http.post('/api/users/me/channels/email/link', () =>
+          HttpResponse.json({ detail: 'Канал «почта» не настроен на сервере' }, { status: 409 }),
+        ),
+      )
+      const { user } = renderRoute('/profile')
+      await user.type(await screen.findByLabelText('Адрес почты'), 'ivan@example.com')
+
+      await user.click(screen.getByRole('button', { name: 'Привязать почту' }))
+
+      expect(await screen.findByText('Канал «почта» не настроен на сервере')).toBeInTheDocument()
+    })
+
+    it('сообщает о недействительной ссылке из письма', async () => {
+      renderRoute('/profile?email=invalid')
+
+      expect(await screen.findByText(/недействительна или устарела/)).toBeInTheDocument()
+    })
+  })
 })

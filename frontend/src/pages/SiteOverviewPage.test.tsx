@@ -23,7 +23,7 @@ describe('SiteOverviewPage', () => {
     expect(
       await screen.findByText('Березники, [адрес объекта] · данные на 18.09.2026'),
     ).toBeInTheDocument()
-    expect(await screen.findByText('Отставание 4 дней')).toBeInTheDocument()
+    expect(await screen.findByText('Отставание 4 дня')).toBeInTheDocument()
     // Пояснение итога — про тот же этап, что интервал
     expect(
       screen.getByText(

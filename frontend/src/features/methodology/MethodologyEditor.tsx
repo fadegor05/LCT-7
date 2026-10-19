@@ -66,14 +66,7 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
           <div className={styles.layout}>
             <div className={styles.aside}>
               <Card>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 'var(--space-2)',
-                  }}
-                >
+                <div className={styles.asideHead}>
                   <h3>Этапы графика</h3>
                   <Button
                     variant="secondary"

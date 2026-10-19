@@ -32,9 +32,10 @@ class NotificationType(StrEnum):
 
 
 class ChannelKind(StrEnum):
-    """Канал доставки. Почта и СМС появятся отдельными адаптерами."""
+    """Канал доставки. СМС появится отдельным адаптером."""
 
     TELEGRAM = "telegram"
+    EMAIL = "email"
 
 
 class Notification(Base):
@@ -106,6 +107,9 @@ class ChannelLinkToken(Base):
         Uuid, ForeignKey("app_user.id", ondelete="CASCADE"), nullable=False, index=True
     )
     channel: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Адрес, который подтверждается токеном. Для почты его вводит пользователь до
+    # подтверждения; у телеграма адрес приходит от бота при погашении, тут NULL
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

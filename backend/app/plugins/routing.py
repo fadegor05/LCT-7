@@ -12,7 +12,7 @@ from app.domains.assistant.router import router as assistant_router
 from app.domains.camera.router import router as camera_router
 from app.domains.methodology.router import equipment_router
 from app.domains.methodology.router import router as methodology_router
-from app.domains.notification.router import channels_router
+from app.domains.notification.router import channels_router, email_confirm_router
 from app.domains.notification.router import router as notification_router
 from app.domains.observation.router import router as observation_router
 from app.domains.photo.router import router as photo_router
@@ -39,6 +39,7 @@ api_router = APIRouter()
 # Публичные роуты: аутентификация и служебные
 api_router.include_router(auth_router)
 api_router.include_router(utility_router)
+api_router.include_router(email_confirm_router)
 
 # Защищённые роуты: требуют авторизации
 api_router.include_router(user_router, dependencies=[Depends(require_auth)])

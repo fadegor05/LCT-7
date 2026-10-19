@@ -81,7 +81,7 @@ class ObservationProvider(Provider):
         activity: ActivityPolicy,
         recalculator: StatusRecalculator,
     ) -> ObservationService:
-        """Сервис для HTTP-роутов: с гвардом доступа к стройке."""
+        """Сервис для роутера: чтение наблюдений проверяет доступ к стройке."""
         return ObservationService(
             repository=repository,
             equipment_repo=equipment_repo,
@@ -112,23 +112,20 @@ class ObservationProvider(Provider):
     ) -> ObservationRecalculator:
         """Перекрывает NoopObservationRecalculator из PhotoProvider (регистрация после него).
 
-        Пересчёт — системное действие после загрузки, кадра со стрима или очереди обработки:
-        доступ к стройке уже проверил вызывающий. Поэтому сервис собирается без гварда — гвард
-        требует текущего пользователя, а его нет вне HTTP-запроса (фоновые задачи падали
-        с NoContextValueError).
+        Без гварда: пересчёт зовут и из фона (снимки со стрима), где нет HTTP-запроса,
+        а значит и CurrentUser. Доступ к стройке проверяет тот, кто меняет её снимки.
         """
-        return LiveObservationRecalculator(
-            ObservationService(
-                repository=repository,
-                equipment_repo=equipment_repo,
-                photos=photos,
-                detections=detections,
-                session=session,
-                guard=None,
-                catalog=catalog,
-                aggregation=aggregation,
-                observability=observability,
-                activity=activity,
-                recalculator=recalculator,
-            )
+        service = ObservationService(
+            repository=repository,
+            equipment_repo=equipment_repo,
+            photos=photos,
+            detections=detections,
+            session=session,
+            guard=None,
+            catalog=catalog,
+            aggregation=aggregation,
+            observability=observability,
+            activity=activity,
+            recalculator=recalculator,
         )
+        return LiveObservationRecalculator(service)

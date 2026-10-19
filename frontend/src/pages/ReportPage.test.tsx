@@ -29,7 +29,7 @@ describe('ReportPage', () => {
     expect(screen.getByText('Березники, [адрес объекта]', { exact: false })).toBeInTheDocument()
 
     const summary = screen.getByRole('region', { name: 'Итог по объекту' })
-    expect(summary).toHaveTextContent('Отставание 4 дней')
+    expect(summary).toHaveTextContent('Отставание 4 дня')
 
     const deviations = await waitFor(() => rowsOf('Отклонения'))
     expect(deviations).toHaveLength(3)

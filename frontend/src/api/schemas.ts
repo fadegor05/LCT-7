@@ -492,7 +492,7 @@ export type NotificationList = z.infer<typeof notificationListSchema>
 
 export const markReadSchema = z.object({ marked: z.number() })
 
-export const channelKindSchema = z.enum(['telegram'])
+export const channelKindSchema = z.enum(['telegram', 'email'])
 export type ChannelKind = z.infer<typeof channelKindSchema>
 
 /** Привязка канала. Полного адреса фронт не видит. */
@@ -504,8 +504,9 @@ export const userChannelSchema = z.object({
 })
 export type UserChannel = z.infer<typeof userChannelSchema>
 
+/** У почты ссылки нет: она уходит в письме, и `url` пуст. */
 export const channelLinkSchema = z.object({
-  url: z.string(),
+  url: z.string().nullable(),
   expires_at: z.string(),
 })
 export type ChannelLink = z.infer<typeof channelLinkSchema>
