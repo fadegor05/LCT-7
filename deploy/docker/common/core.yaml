@@ -10,6 +10,8 @@ services:
       LLM_BASE_URL: ""
       LLM_API_KEY: ""
       LLM_MODEL: ""
+      # Там же лежат учётные данные VLESS — приложению они незачем, их читает xray-init
+      XRAY__LINKS: ""
     networks:
       - web
     labels:

@@ -35,9 +35,12 @@ def format_message(message: ChannelMessage) -> str:
 class TelegramClient:
     """Обёртка над Bot API. Создаётся один раз на приложение."""
 
-    def __init__(self, token: str, timeout_s: float = 35.0) -> None:
+    def __init__(self, token: str, timeout_s: float = 35.0, proxy_url: str | None = None) -> None:
         self._token = token
         self._timeout_s = timeout_s
+        # Прокси для Bot API: там, где телеграм заблокирован, прямой запрос
+        # не дойдёт. None — идём напрямую.
+        self._proxy_url = proxy_url
         # Подменяется в тестах, чтобы не ходить в сеть
         self._transport: httpx.AsyncBaseTransport | None = None
 
@@ -54,7 +57,9 @@ class TelegramClient:
         return text.replace(self._token, "***") if self._token else text
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(timeout=self._timeout_s, transport=self._transport)
+        return httpx.AsyncClient(
+            timeout=self._timeout_s, transport=self._transport, proxy=self._proxy_url
+        )
 
     async def send_message(self, chat_id: str, text: str) -> None:
         try:

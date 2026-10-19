@@ -25,6 +25,28 @@ dev:
 		-f $(DOCKER_FILES)/dev/core.yaml \
 		up --build -d
 
+# Локальная разработка с прокси для телеграма (профиль proxy).
+# Нужен XRAY__LINKS в .env — одна или несколько ссылок vless://.
+dev-proxy:
+	$(COMPOSE) \
+		-f $(DOCKER_FILES)/common/proxy.yaml \
+		-f $(DOCKER_FILES)/dev/core.yaml \
+		--profile proxy \
+		up --build -d
+
+# Прод с прокси для телеграма (профиль proxy), без сборки
+up-proxy:
+	$(PROD) \
+		-f $(DOCKER_FILES)/common/proxy.yaml \
+		--profile proxy \
+		up -d --no-build
+
+# Проверить, что из XRAY__LINKS собирается конфиг, который принимает сам Xray
+xray-check:
+	$(COMPOSE) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy run --rm --no-deps xray-init
+	docker run --rm -v lct-7_xray_config:/cfg:ro ghcr.io/xtls/xray-core:26.3.27 \
+		run -test -c /cfg/config.json
+
 # Локальная разработка с ML-детектором (включает профиль ml)
 dev-ml:
 	$(COMPOSE) \
@@ -75,4 +97,4 @@ front-check:
 front-test:
 	cd frontend && pnpm run test:coverage
 
-.PHONY: ml-weights dev dev-ml up deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test
+.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test

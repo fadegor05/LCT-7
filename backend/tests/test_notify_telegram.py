@@ -118,3 +118,46 @@ async def test_channel_error_from_client_carries_no_token() -> None:
         await channel.send("1", ChannelMessage(title="Т", body="Б", link=None))
 
     assert token not in str(caught.value)
+
+
+async def test_client_sends_through_the_proxy_when_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """В России api.telegram.org заблокирован — запросы должны идти через Xray."""
+    import httpx as httpx_module
+
+    from app.adapters.notify.telegram import TelegramClient
+
+    captured: dict[str, object] = {}
+    real = httpx_module.AsyncClient
+
+    def spy(**kwargs: object) -> httpx_module.AsyncClient:
+        captured.update(kwargs)
+        return real(transport=httpx_module.MockTransport(lambda _: httpx_module.Response(200)))
+
+    monkeypatch.setattr("app.adapters.notify.telegram.httpx.AsyncClient", spy)
+
+    client = TelegramClient(token="1:abc", proxy_url="http://xray:8080")
+    await client.send_message("1", "текст")
+
+    assert captured["proxy"] == "http://xray:8080"
+
+
+async def test_client_goes_direct_without_a_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Пустая настройка — поведение как раньше, без прокси."""
+    import httpx as httpx_module
+
+    from app.adapters.notify.telegram import TelegramClient
+
+    captured: dict[str, object] = {}
+    real = httpx_module.AsyncClient
+
+    def spy(**kwargs: object) -> httpx_module.AsyncClient:
+        captured.update(kwargs)
+        return real(transport=httpx_module.MockTransport(lambda _: httpx_module.Response(200)))
+
+    monkeypatch.setattr("app.adapters.notify.telegram.httpx.AsyncClient", spy)
+
+    await TelegramClient(token="1:abc").send_message("1", "текст")
+
+    assert captured.get("proxy") is None

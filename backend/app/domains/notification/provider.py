@@ -87,6 +87,7 @@ class TelegramPollerProvider(Provider):
         return TelegramClient(
             token=settings.notify.telegram.token or "",
             timeout_s=settings.notify.telegram.request_timeout_s,
+            proxy_url=settings.notify.telegram.proxy_url,
         )
 
     @provide
