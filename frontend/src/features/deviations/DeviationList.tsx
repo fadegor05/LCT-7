@@ -37,14 +37,17 @@ export function DeviationList({ items, showSite }: DeviationListProps) {
               </span>
               <span className="sm muted">
                 {d.stage_name === undefined
-                  ? formatWindow(d.period_start, d.period_end)
+                  ? (d.title ?? formatWindow(d.period_start, d.period_end))
                   : (d.stage_name ?? 'Все этапы')}
               </span>
             </span>
+            {/* Что именно: машина и этап (clean-mvp), а не только тип — иначе три
+                «Несоответствия этапу» подряд не отличить */}
             <span className="sm">
-              {showSite ? d.site_name : formatWindow(d.period_start, d.period_end)}
+              {showSite ? d.site_name : (d.title ?? formatWindow(d.period_start, d.period_end))}
             </span>
-            <span className="data">{formatDate(d.created_at)}</span>
+            {/* Дата наблюдения, а не пересчёта: «ПН 19.10» у всех строк ничего не говорил */}
+            <span className="data">{formatDate(d.period_end)}</span>
             <ConfidenceMeter level={d.confidence} />
             <span className={styles.chevron}>
               <Icon name="chevronRight" />

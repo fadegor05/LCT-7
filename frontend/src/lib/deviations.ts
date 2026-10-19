@@ -2,12 +2,13 @@ import type { Deviation, Stage } from '@/api/schemas'
 import { deviationTypeLabels } from './labels'
 
 /** Порядок списков отклонений (architecture §7.7): сначала критичные, внутри уровня свежие. */
-export function sortDeviations<T extends Pick<Deviation, 'severity' | 'created_at'>>(
-  items: readonly T[],
-): T[] {
+export function sortDeviations<
+  T extends Pick<Deviation, 'severity' | 'created_at'> & { period_end?: string },
+>(items: readonly T[]): T[] {
   return [...items].sort((a, b) => {
     if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1
-    return b.created_at.localeCompare(a.created_at)
+    // Свежее — по дате наблюдения: все строки одного пересчёта созданы в одну секунду
+    return (b.period_end ?? b.created_at).localeCompare(a.period_end ?? a.created_at)
   })
 }
 

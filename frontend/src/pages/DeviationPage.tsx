@@ -33,7 +33,11 @@ export function DeviationPage() {
         <QueryState query={deviation}>
           {(d) => {
             const stageName = schedule.data?.stages.find((s) => s.id === d.stage_id)?.name ?? null
-            const title = deviationTitle(d, stageName)
+            // Заголовок по машине (clean-mvp); у прежних строк — тип и этап
+            const title = d.title ?? deviationTitle(d, stageName)
+            const causeName = d.cause_stage_id
+              ? (schedule.data?.stages.find((s) => s.id === d.cause_stage_id)?.name ?? null)
+              : null
             return (
               <SiteShell
                 site={siteData}
@@ -72,7 +76,12 @@ export function DeviationPage() {
                 }
               >
                 <div className={styles.layout}>
-                  <DeviationBody siteId={siteId} deviation={d} stageName={stageName} />
+                  <DeviationBody
+                    siteId={siteId}
+                    deviation={d}
+                    stageName={stageName}
+                    causeName={causeName}
+                  />
                   <div className={styles.aside}>
                     <SeverityCard siteId={siteId} deviation={d} />
                   </div>

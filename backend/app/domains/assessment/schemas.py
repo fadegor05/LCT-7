@@ -35,6 +35,8 @@ class DeviationEvidenceRead(BaseModel):
 
     photo_id: uuid.UUID
     detection_id: uuid.UUID | None
+    # Подпись под снимком: «К-2 · свайное поле: Буровая установка»
+    caption: str | None = None
 
 
 class DeviationRead(BaseModel):
@@ -55,6 +57,10 @@ class DeviationRead(BaseModel):
     limits_text: str
     rule_id: uuid.UUID | None
     created_at: datetime
+    # Заголовок строки, машина отклонения и возможная причина (отстающий этап)
+    title: str | None = None
+    equipment_type_id: uuid.UUID | None = None
+    cause_stage_id: uuid.UUID | None = None
 
 
 class DeviationDetailRead(DeviationRead):

@@ -85,3 +85,50 @@ describe('DeviationPage', () => {
     expect(await screen.findByText('Отклонение не найдено')).toBeInTheDocument()
   })
 })
+
+describe('DeviationPage: заголовок по машине и причина', () => {
+  it('shows the machine title, captions, duration and the possible cause', async () => {
+    const { server } = await import('@/mocks/server')
+    const { http, HttpResponse } = await import('msw')
+    server.use(
+      http.get('/api/sites/:siteId/assessment/deviations/:id', () =>
+        HttpResponse.json({
+          id: 'dev-drill',
+          stage_id: 'site-berezniki-stage-2',
+          type: 'stage_mismatch',
+          is_hypothesis: false,
+          severity: 'critical',
+          confidence: 'high',
+          period_start: '2026-09-16',
+          period_end: '2026-09-18',
+          expected: 'Техника этапов, идущих по плану на 18.09: «Разработка котлована».',
+          observed: 'Буровая установка (не менее 2) — техника этапа «Свайные работы».',
+          limits_text: 'Не доказывает завершённость этапа.',
+          rule_id: null,
+          created_at: '2026-09-18T12:00:00Z',
+          title: 'Буровая установка: техника этапа «Свайные работы»',
+          equipment_type_id: 'eq-drill',
+          cause_stage_id: 'site-berezniki-stage-1',
+          evidence: [
+            {
+              photo_id: 'ph-1',
+              detection_id: 'det-1',
+              caption: 'К-2 · свайное поле: Буровая установка',
+            },
+          ],
+        }),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/deviations/dev-drill')
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Буровая установка: техника этапа «Свайные работы»',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('К-2 · свайное поле: Буровая установка')).toBeInTheDocument()
+    expect(await screen.findByText('Возможная причина')).toBeInTheDocument()
+    const importance = screen.getByRole('complementary', { name: 'Важность' })
+    expect(within(importance).getByText('до 2 дн.')).toBeInTheDocument()
+  })
+})

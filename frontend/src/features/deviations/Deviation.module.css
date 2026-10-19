@@ -111,3 +111,11 @@
   flex-direction: column;
   gap: var(--space-2);
 }
+
+.lasting {
+  margin: 0;
+  font-size: 36px;
+  line-height: 40px;
+  font-weight: 600;
+  color: var(--status-behind);
+}

@@ -139,6 +139,13 @@ class DeviationResult:
     limits_text: str
     rule_id: uuid.UUID | None
     evidence_dates: tuple[date, ...]
+    # Короткий заголовок строки списка, как в clean-mvp («Буровая установка: техника этапа
+    # «Сваи»», «Неполный комплект: не виден бульдозер»)
+    title: str = ""
+    # Машина отклонения: доказательства — кадры с её рамкой
+    equipment_type_id: uuid.UUID | None = None
+    # Возможная причина: отстающий этап, чья техника ещё на площадке
+    cause_stage_id: uuid.UUID | None = None
 
 
 class Verdict(StrEnum):
@@ -846,7 +853,8 @@ class RuleEngine:
                     "поэтому срок отставания приблизителен."
                 ),
                 rule_id=rule.rule_id if rule else None,
-                evidence_dates=status.basis_dates,
+                evidence_dates=status.basis_dates[-self.config.window_dates :],
+                title=f"Отставание: {stage.name}",
             )
         ]
 
@@ -882,6 +890,7 @@ class RuleEngine:
                     ),
                     rule_id=None,
                     evidence_dates=(),
+                    title="Данные устарели",
                 )
             ]
 
@@ -956,6 +965,8 @@ class RuleEngine:
                     ),
                     rule_id=rule.rule_id,
                     evidence_dates=(latest_obs_on,),
+                    title=f"Простой: {idle_names}",
+                    equipment_type_id=idle_eq[0].equipment_type_id,
                 )
             )
 
@@ -984,6 +995,8 @@ class RuleEngine:
                     ),
                     rule_id=rule.rule_id,
                     evidence_dates=(latest_obs_on,),
+                    title=f"Вне зоны: {out_zone_names}",
+                    equipment_type_id=out_zone_eq[0].equipment_type_id,
                 )
             )
 
@@ -1064,6 +1077,7 @@ class RuleEngine:
                 ),
                 rule_id=rule.rule_id,
                 evidence_dates=tail_dates,
+                title="Маркерная техника не найдена",
             )
         ]
 
@@ -1176,8 +1190,15 @@ class RuleEngine:
             name = names.get(code, str(code))
 
             def seen(o: ObservationInput, code: uuid.UUID = code) -> bool:
+                """Машина в зоне, и в этот день её не объясняет ни один идущий этап (clean-mvp,
+                _sees_unexplained): 09–10.09 буровая своя у свай, серия — с 16.09."""
                 return any(
                     e.equipment_type_id == code and e.in_zone is not False for e in o.equipment
+                ) and not any(
+                    self._fits(code, classes[s.stage_id], coarse)
+                    for s in checked
+                    if (s.planned_start is None or o.observed_on >= s.planned_start - tolerance)
+                    and (s.planned_end is None or o.observed_on <= s.planned_end + tolerance)
                 )
 
             start = self._streak_start(observations, seen)
@@ -1203,6 +1224,8 @@ class RuleEngine:
                         ),
                         rule_id=None,
                         evidence_dates=streak,
+                        title=f"{name}: нет в графике",
+                        equipment_type_id=code,
                     )
                 )
                 continue
@@ -1238,6 +1261,9 @@ class RuleEngine:
                         ),
                         rule_id=rule.rule_id,
                         evidence_dates=streak,
+                        title=f"{name}: техника этапа «{owner.name}»",
+                        equipment_type_id=code,
+                        cause_stage_id=owner.stage_id if owner.stage_id in lagging else None,
                     )
                 )
         return out
@@ -1341,6 +1367,10 @@ class RuleEngine:
                     ),
                     rule_id=rule.rule_id,
                     evidence_dates=tail_dates,
+                    title=(
+                        f"Неполный комплект: {'не виден' if len(missing) == 1 else 'не видны'} "
+                        f"{lowered}"
+                    ),
                 )
             )
         return out
@@ -1409,6 +1439,7 @@ class RuleEngine:
                                 earlier_obs.observed_on,
                                 later_obs.observed_on,
                             ),
+                            title="Нет прогресса",
                         )
                     ]
 

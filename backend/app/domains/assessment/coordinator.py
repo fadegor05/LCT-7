@@ -21,6 +21,12 @@ from app.domains.assessment.engine import (
     RuleInput,
     StageInput,
 )
+from app.domains.assessment.evidence import (
+    CameraFacts,
+    DetectionFacts,
+    PhotoFacts,
+    select_evidence,
+)
 from app.domains.assessment.models import (
     Deviation,
     DeviationEvidence,
@@ -482,34 +488,54 @@ class RecomputeCoordinator:
                     observed=dev_result.observed,
                     limits_text=dev_result.limits_text,
                     rule_id=dev_result.rule_id,
+                    title=dev_result.title or None,
+                    equipment_type_id=dev_result.equipment_type_id,
+                    cause_stage_id=dev_result.cause_stage_id,
                 )
                 await self._deviation_repo.add(dev)
                 deviations.append(dev)
 
-            # Шаг 9: Персистировать DeviationEvidence
-            # Построить dict фото по captured_on (all_photos загружены на шаге 4)
-            photos_by_date: dict[date, list] = {}
-            for photo in all_photos:
-                if photo.captured_on is not None:
-                    if photo.captured_on not in photos_by_date:
-                        photos_by_date[photo.captured_on] = []
-                    photos_by_date[photo.captured_on].append(photo)
+            # Шаг 9: Персистировать DeviationEvidence — до трёх снимков с подписями
+            # (clean-mvp, assessment/evidence.py), а не все снимки дат отклонения
+            done = [
+                p
+                for p in all_photos
+                if p.captured_on is not None and p.processing_status == ProcessingStatus.DONE.value
+            ]
+            dets_by_photo: dict[uuid.UUID, list[DetectionFacts]] = {}
+            for det in await self._detection_repo.list_by_photos([p.id for p in done]):
+                dets_by_photo.setdefault(det.photo_id, []).append(
+                    DetectionFacts(det.id, det.equipment_type_id, det.bbox, det.score)
+                )
+            facts = [
+                PhotoFacts(
+                    id=p.id,
+                    camera_id=p.camera_id,
+                    day=p.captured_on,
+                    at=p.captured_at,
+                    name=p.original_name,
+                    detections=dets_by_photo.get(p.id, []),
+                )
+                for p in done
+                if p.captured_on is not None
+            ]
+            camera_rows = await self._session.execute(
+                select(Camera.id, Camera.name, Camera.zone).where(Camera.site_id == site_id)
+            )
+            cameras = {cid: CameraFacts(name, zone) for cid, name, zone in camera_rows.all()}
 
             evidence_rows: list[DeviationEvidence] = []
             for dev, dev_result in zip(deviations, computation.deviations, strict=True):
-                # Найти фото, которые подходят по дате и статусу обработки
-                for evidence_date in dev_result.evidence_dates:
-                    matching_photos = photos_by_date.get(evidence_date, [])
-                    for photo in matching_photos:
-                        if photo.processing_status == ProcessingStatus.DONE.value:
-                            evidence_rows.append(
-                                DeviationEvidence(
-                                    id=uuid.uuid4(),
-                                    deviation_id=dev.id,
-                                    photo_id=photo.id,
-                                    detection_id=None,
-                                )
-                            )
+                for shot in select_evidence(dev_result, facts, cameras, equipment_names):
+                    evidence_rows.append(
+                        DeviationEvidence(
+                            id=uuid.uuid4(),
+                            deviation_id=dev.id,
+                            photo_id=shot.photo_id,
+                            detection_id=shot.detection_id,
+                            caption=shot.caption,
+                        )
+                    )
 
             if evidence_rows:
                 await self._deviation_evidence_repo.add_many(evidence_rows)

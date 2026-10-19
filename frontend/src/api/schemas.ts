@@ -300,10 +300,21 @@ export const deviationSchema = z.object({
   limits_text: z.string(),
   rule_id: z.string().nullable(),
   created_at: isoDateTime,
+  /** Заголовок по машине («Буровая установка: техника этапа «Сваи»»). */
+  title: z.string().nullable().optional(),
+  equipment_type_id: z.string().nullable().optional(),
+  /** Возможная причина: отстающий этап, чья техника ещё на площадке. */
+  cause_stage_id: z.string().nullable().optional(),
 })
 
 export const deviationDetailSchema = deviationSchema.extend({
-  evidence: z.array(z.object({ photo_id: z.string(), detection_id: z.string().nullable() })),
+  evidence: z.array(
+    z.object({
+      photo_id: z.string(),
+      detection_id: z.string().nullable(),
+      caption: z.string().nullable().optional(),
+    }),
+  ),
 })
 
 export const siteSummarySchema = z.object({

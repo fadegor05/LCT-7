@@ -5,6 +5,11 @@ import { formatDate } from '@/lib/format'
 import { SeverityBadge } from './SeverityBadge'
 import styles from './Deviation.module.css'
 
+/** Сколько дней длится отклонение: от начала серии до последнего наблюдения. */
+function lasting(d: Pick<DeviationDetail, 'period_start' | 'period_end'>): number {
+  return Math.round((Date.parse(d.period_end) - Date.parse(d.period_start)) / 86_400_000)
+}
+
 /** Боковая панель: важность с объяснением и ссылки «Проверить». */
 export function SeverityCard({
   siteId,
@@ -21,6 +26,8 @@ export function SeverityCard({
         <div>
           <SeverityBadge severity={d.severity} />
         </div>
+        {/* Сколько длится — крупно, как в clean-mvp: «до 2 дн.» */}
+        {lasting(d) > 0 && <p className={styles.lasting}>до {lasting(d)} дн.</p>}
         <p className="sm">
           {d.is_hypothesis
             ? 'Гипотеза: есть косвенный признак, но нет доказательства. Проверьте снимки.'

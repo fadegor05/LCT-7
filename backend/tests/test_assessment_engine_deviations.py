@@ -1063,3 +1063,30 @@ class TestStationaryMachines:
             for d in result.deviations
             if d.type in (DeviationType.STAGE_MISMATCH, DeviationType.EXTRA_EQUIPMENT)
         ]
+
+
+class TestMismatchStreak:
+    """Серия «Несоответствия» — только дни, когда машину не объясняет идущий этап."""
+
+    def test_streak_starts_after_the_owner_stage_window(self):
+        """Буровая видна с 09.01, сваи до 11.01 (+5 допуска) — серия с 17.01, а не с 09.01."""
+        drill, excavator = uuid.uuid4(), uuid.uuid4()
+        piles, piles_rule = _stage_and_rule(date(2024, 1, 1), date(2024, 1, 11), drill, name="Сваи")
+        pit, pit_rule = _stage_and_rule(
+            date(2024, 1, 7), date(2024, 1, 25), excavator, name="Котлован", position=2
+        )
+        observations = [_obs(day, drill) for day in [*_days(9, 10, 11, 12), *_days(15, 16, 17)]]
+
+        result = _engine().compute_site(
+            [piles, pit],
+            {piles.stage_id: piles_rule, pit.stage_id: pit_rule},
+            observations,
+            date(2024, 1, 18),
+            {drill: "Буровая установка"},
+        )
+
+        mismatch = next(d for d in result.deviations if d.type == DeviationType.STAGE_MISMATCH)
+        assert mismatch.period_start == date(2024, 1, 17)
+        assert mismatch.title == "Буровая установка: техника этапа «Сваи»"
+        assert mismatch.equipment_type_id == drill
+        assert mismatch.cause_stage_id == piles.stage_id  # сваи затянулись

@@ -13,10 +13,12 @@ interface DeviationBodyProps {
   siteId: string
   deviation: DeviationDetail
   stageName: string | null
+  /** Отстающий этап, чья техника ещё на площадке: возможная причина отклонения. */
+  causeName?: string | null
 }
 
 /** Карточка отклонения (UC-5): ожидание против наблюдения, доказательства, правило, границы вывода. */
-export function DeviationBody({ siteId, deviation: d, stageName }: DeviationBodyProps) {
+export function DeviationBody({ siteId, deviation: d, stageName, causeName }: DeviationBodyProps) {
   const siteUrl = `/sites/${siteId}`
   const period = [d.period_start, d.period_end].map(formatDate).join(' — ')
 
@@ -51,6 +53,14 @@ export function DeviationBody({ siteId, deviation: d, stageName }: DeviationBody
         </section>
       </div>
 
+      {causeName && (
+        <Callout tone="caution" title="Возможная причина">
+          Этап «{causeName}» ещё не закончен: его техника всё ещё на площадке
+          {stageName ? `, поэтому «${stageName}» мог не начаться` : ''}.{' '}
+          <Link to={siteUrl}>К этапам на обзоре</Link>
+        </Callout>
+      )}
+
       {d.evidence.length > 0 && (
         <section>
           <h4 className={styles.colTitle}>Снимки-доказательства</h4>
@@ -60,6 +70,7 @@ export function DeviationBody({ siteId, deviation: d, stageName }: DeviationBody
                 key={`${e.photo_id}-${e.detection_id ?? i}`}
                 imageUrl={annotatedImageUrl(siteId, e.photo_id)}
                 alt={`Снимок-доказательство ${i + 1}`}
+                caption={e.caption ? <span className="sm">{e.caption}</span> : undefined}
               />
             ))}
           </div>
