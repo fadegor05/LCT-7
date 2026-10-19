@@ -1,7 +1,8 @@
 import { Link } from 'react-router'
+import { useStageStatuses } from '@/api/deviations'
 import type { DeviationDetail } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatDelay } from '@/lib/format'
 import { SeverityBadge } from './SeverityBadge'
 import styles from './Deviation.module.css'
 
@@ -19,6 +20,17 @@ export function SeverityCard({
   deviation: DeviationDetail
 }) {
   const base = `/sites/${siteId}`
+  const statuses = useStageStatuses(siteId, d.type === 'behind_schedule')
+  // Отставание — интервалом этапа, как в итоге («7 дн.», «14–74 дн.»); остальные — сколько длится
+  const stage = statuses.data?.find((s) => s.stage_id === d.stage_id)
+  const delay =
+    d.type === 'behind_schedule' && stage
+      ? formatDelay(
+          stage.delay_min ?? stage.delay_days,
+          stage.delay_open ? null : (stage.delay_max ?? stage.delay_days),
+        )
+      : null
+  const big = delay ?? (lasting(d) > 0 ? `до ${lasting(d)} дн.` : null)
   return (
     <>
       <Card as="aside" aria-label="Важность">
@@ -26,8 +38,8 @@ export function SeverityCard({
         <div>
           <SeverityBadge severity={d.severity} />
         </div>
-        {/* Сколько длится — крупно, как в clean-mvp: «до 2 дн.» */}
-        {lasting(d) > 0 && <p className={styles.lasting}>до {lasting(d)} дн.</p>}
+        {/* Крупно, как в clean-mvp: отставание «7 дн.» или длительность «до 2 дн.» */}
+        {big && <p className={styles.lasting}>{big}</p>}
         <p className="sm">
           {d.is_hypothesis
             ? 'Гипотеза: есть косвенный признак, но нет доказательства. Проверьте снимки.'

@@ -29,7 +29,7 @@ describe('ObservationsPage', () => {
       .map((b) => b.textContent ?? '')
     const dates = dayButtons.map((t) =>
       t
-        .match(/(\d\d)\.(\d\d)\.(\d{4})/)!
+        .match(/(\d\d)\.(\d\d)/)!
         .slice(1)
         .reverse()
         .join(''),
@@ -79,9 +79,7 @@ describe('ObservationsPage', () => {
         within(screen.getByRole('list', { name: 'Снимки без даты' })).getAllByRole('listitem'),
       ).toHaveLength(1),
     )
-    expect(
-      await screen.findByRole('button', { name: /18\.09\.2026\s*5 снимков/ }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /18\.09\s*5 снимков/ })).toBeInTheDocument()
   })
 
   it('reprocesses a photo the detector has not handled', async () => {

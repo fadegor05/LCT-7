@@ -13,6 +13,15 @@ interface DeviationListProps {
   showSite?: boolean
 }
 
+/** Заголовок без повтора типа: «Неполный комплект: не виден самосвал» под «Неполный комплект». */
+function detail(d: DeviationItem): string {
+  const title = d.title ?? formatWindow(d.period_start, d.period_end)
+  // «Отставание: …» под «Отставание от графика», «Простой: …» под «Простой техники»
+  const cut = title.indexOf(': ')
+  const head = cut > 0 ? title.slice(0, cut) : ''
+  return head && deviationTypeLabels[d.type].startsWith(head) ? title.slice(cut + 2) : title
+}
+
 /** Список отклонений; порядок задаёт вызывающий (sortDeviations). */
 export function DeviationList({ items, showSite }: DeviationListProps) {
   if (items.length === 0) {
@@ -36,16 +45,12 @@ export function DeviationList({ items, showSite }: DeviationListProps) {
                 {d.is_hypothesis && ' (гипотеза)'}
               </span>
               <span className="sm muted">
-                {d.stage_name === undefined
-                  ? (d.title ?? formatWindow(d.period_start, d.period_end))
-                  : (d.stage_name ?? 'Все этапы')}
+                {d.stage_name === undefined ? detail(d) : (d.stage_name ?? 'Все этапы')}
               </span>
             </span>
             {/* Что именно: машина и этап (clean-mvp), а не только тип — иначе три
                 «Несоответствия этапу» подряд не отличить */}
-            <span className="sm">
-              {showSite ? d.site_name : (d.title ?? formatWindow(d.period_start, d.period_end))}
-            </span>
+            <span className="sm">{showSite ? d.site_name : detail(d)}</span>
             {/* Дата наблюдения, а не пересчёта: «ПН 19.10» у всех строк ничего не говорил */}
             <span className="data">{formatDate(d.period_end)}</span>
             <ConfidenceMeter level={d.confidence} />

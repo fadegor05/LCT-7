@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { Stage, StageStatus } from '@/api/schemas'
-import { formatWindow } from '@/lib/format'
+import { factText, formatPeriod } from '@/lib/format'
 import { stageBasis } from './reportText'
 import styles from './Report.module.css'
 
@@ -36,13 +36,9 @@ export function ReportStages({ rows, stages }: ReportStagesProps) {
                 )}
               </td>
               <td className={styles.nowrap}>
-                {formatWindow(stage?.planned_start ?? null, stage?.planned_end ?? null, '–')}
+                {formatPeriod(stage?.planned_start ?? null, stage?.planned_end ?? null)}
               </td>
-              <td className={styles.nowrap}>
-                {row.start_fact
-                  ? `с ${row.start_fact.slice(8, 10)}.${row.start_fact.slice(5, 7)}`
-                  : '—'}
-              </td>
+              <td className={styles.nowrap}>{factText(row.start_fact, row.status)}</td>
               <td>
                 <StatusBadge
                   status={row.status}

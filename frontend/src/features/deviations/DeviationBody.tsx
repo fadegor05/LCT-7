@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { annotatedImageUrl } from '@/api/frames'
+import { annotatedThumbUrl } from '@/api/frames'
 import type { DeviationDetail } from '@/api/schemas'
 import { Callout } from '@/components/ui/Callout'
 import { ConfidenceMeter } from '@/components/ui/ConfidenceMeter'
@@ -68,7 +68,7 @@ export function DeviationBody({ siteId, deviation: d, stageName, causeName }: De
             {d.evidence.map((e, i) => (
               <FrameView
                 key={`${e.photo_id}-${e.detection_id ?? i}`}
-                imageUrl={annotatedImageUrl(siteId, e.photo_id)}
+                imageUrl={annotatedThumbUrl(siteId, e.photo_id)}
                 alt={`Снимок-доказательство ${i + 1}`}
                 caption={e.caption ? <span className="sm">{e.caption}</span> : undefined}
               />
