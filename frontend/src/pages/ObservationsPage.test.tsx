@@ -16,6 +16,8 @@ describe('ObservationsPage', () => {
     ).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Техника на площадке' })).toBeInTheDocument()
     expect(screen.getByText('не менее 2')).toBeInTheDocument()
+    // Какие этапы идут по плану в этот день (clean-mvp)
+    expect(screen.getByText(/^Этапы? по плану: /)).toBeInTheDocument()
     expect(await photos()).toHaveLength(4)
 
     await user.click(screen.getByRole('button', { name: /Все дни/ }))

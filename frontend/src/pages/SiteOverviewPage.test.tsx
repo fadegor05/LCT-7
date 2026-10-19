@@ -251,3 +251,18 @@ describe('SiteOverviewPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
+
+describe('SiteOverviewPage: состояние данных', () => {
+  it('shows how many cameras sent frames on the last day', async () => {
+    db.createCamera('site-berezniki', {
+      name: 'К-9 · тест',
+      stream_url: null,
+      capture_every_s: null,
+      zone: null,
+    })
+    renderRoute('/sites/site-berezniki')
+    const card = await screen.findByLabelText('Состояние данных')
+    // Новая камера без кадров: «0 из N присылают кадры», как в clean-mvp
+    expect(await within(card).findByText(/^\d+ из \d+ присыла(ет|ют) кадры$/)).toBeInTheDocument()
+  })
+})

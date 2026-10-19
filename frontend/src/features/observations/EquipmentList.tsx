@@ -1,4 +1,4 @@
-import type { Observation, ObservedEquipment } from '@/api/schemas'
+import type { Observation, ObservedEquipment, Stage } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
 import { ConfidenceMeter } from '@/components/ui/ConfidenceMeter'
 import { Icon } from '@/components/ui/Icon'
@@ -29,7 +29,18 @@ function ActivityBadge({ item }: { item: ObservedEquipment }) {
 }
 
 /** «Техника на площадке» за дату: не менее N (максимум по снимкам), активность и уверенность. */
-export function EquipmentList({ observation }: { observation: Observation }) {
+export function EquipmentList({
+  observation,
+  stages = [],
+}: {
+  observation: Observation
+  /** Этапы графика: строка «Этап: …» — какие идут по плану в этот день (clean-mvp). */
+  stages?: readonly Stage[]
+}) {
+  const day = observation.observed_on
+  const running = stages.filter(
+    (s) => s.planned_start && s.planned_end && s.planned_start <= day && day <= s.planned_end,
+  )
   const items = observation.equipment
   // Одно основание на всех (например, нет серий кадров) — один раз под списком, а не в каждой строке
   const bases = new Set(items.map((i) => i.activity_basis ?? ''))
@@ -42,6 +53,12 @@ export function EquipmentList({ observation }: { observation: Observation }) {
           Наблюдаемость {levelLabels[observation.observability].toLowerCase()}
           {observation.observability_notes && ` · ${observation.observability_notes}`}
         </p>
+        {running.length > 0 && (
+          <p className="sm muted">
+            {running.length === 1 ? 'Этап' : 'Этапы'} по плану:{' '}
+            {running.map((s) => s.name).join(', ')}
+          </p>
+        )}
       </div>
       {items.length === 0 ? (
         <p className="muted">

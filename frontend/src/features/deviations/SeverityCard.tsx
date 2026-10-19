@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
-import { useStageStatuses } from '@/api/deviations'
+import { useStageStatuses, useSummary } from '@/api/deviations'
+import { useSchedule } from '@/api/schedule'
 import type { DeviationDetail } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
 import { formatDate, formatDelay } from '@/lib/format'
@@ -31,6 +32,16 @@ export function SeverityCard({
         )
       : null
   const big = delay ?? (lasting(d) > 0 ? `до ${lasting(d)} дн.` : null)
+  // Смысл числа (clean-mvp): нижняя граница на опорную дату, измерение, а не прогноз
+  const asOf = useSummary(siteId).data?.as_of
+  const planned = useSchedule(siteId).data?.stages.find((s) => s.id === d.stage_id)
+  const dm = (v: string | null | undefined) => (v ? `${v.slice(8, 10)}.${v.slice(5, 7)}` : '—')
+  const meaning =
+    delay && asOf && planned
+      ? stage?.status === 'not_started'
+        ? `Нижняя граница: этап не начат к ${dm(asOf)}, плановое начало ${dm(planned.planned_start)}.`
+        : `Нижняя граница: этап не закончен к ${dm(asOf)}, плановый конец ${dm(planned.planned_end)}.`
+      : null
   return (
     <>
       <Card as="aside" aria-label="Важность">
@@ -40,6 +51,9 @@ export function SeverityCard({
         </div>
         {/* Крупно, как в clean-mvp: отставание «7 дн.» или длительность «до 2 дн.» */}
         {big && <p className={styles.lasting}>{big}</p>}
+        {meaning && (
+          <p className="sm">{meaning} Измерение, не прогноз; точность не выше частоты съёмки.</p>
+        )}
         <p className="sm">
           {d.is_hypothesis
             ? 'Гипотеза: есть косвенный признак, но нет доказательства. Проверьте снимки.'
