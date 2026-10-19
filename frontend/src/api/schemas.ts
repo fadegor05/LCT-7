@@ -310,7 +310,18 @@ export const stageStatusSchema = z.object({
   computed_at: isoDateTime.nullable(),
 })
 
+/** Решение инженера по гипотезе (clean-mvp, §8.8). */
+export const decisionSchema = z.object({
+  decision: z.enum(['confirmed', 'rejected']),
+  comment: z.string().nullable(),
+  decided_by_name: z.string(),
+  decided_at: isoDateTime,
+})
+
 export const deviationSchema = z.object({
+  /** Устойчивый ключ «тип:этап:машина»: решение переживает пересчёт. */
+  key: z.string().optional(),
+  decision: decisionSchema.nullable().optional(),
   id: z.string(),
   stage_id: z.string().nullable(),
   type: deviationTypeSchema,
@@ -342,6 +353,8 @@ export const deviationDetailSchema = deviationSchema.extend({
 })
 
 export const siteSummarySchema = z.object({
+  /** Гипотезы без решения инженера. */
+  awaiting_decision: z.number().int().optional(),
   verdict: verdictSchema,
   delay_days_min: z.number().nullable(),
   delay_days_max: z.number().nullable(),
@@ -422,6 +435,7 @@ export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
 export type ObjectType = z.infer<typeof objectTypeSchema>
+export type Decision = z.infer<typeof decisionSchema>
 export type Stage = z.infer<typeof stageSchema>
 export type ImportIssue = z.infer<typeof importIssueSchema>
 export type ParseMode = z.infer<typeof parseModeSchema>

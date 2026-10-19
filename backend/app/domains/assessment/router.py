@@ -6,12 +6,14 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter
 
 from app.domains.assessment.schemas import (
+    DecisionIn,
     DeviationDetailRead,
     DeviationRead,
     SiteSummaryRead,
     StageStatusRead,
 )
 from app.domains.assessment.service import AssessmentService
+from app.domains.user.provider import CurrentUser
 
 router = APIRouter(prefix="/sites/{site_id}/assessment", tags=["assessment"])
 
@@ -75,6 +77,23 @@ async def get_deviation(
         404: Сайт не найден, не принадлежит пользователю или отклонение не найдено
     """
     return await service.get_deviation(site_id, deviation_id)
+
+
+@router.put("/deviations/{deviation_id}/decision")
+@inject
+async def decide(
+    site_id: uuid.UUID,
+    deviation_id: uuid.UUID,
+    data: DecisionIn,
+    service: FromDishka[AssessmentService],
+    user: FromDishka[CurrentUser],
+) -> DeviationDetailRead:
+    """Решение инженера по гипотезе: подтвердить, отклонить или снять (`decision: null`).
+
+    Подписывает вошедший пользователь. Отклонённая гипотеза уходит в архив: её нет в списках
+    и в отчёте. Решение переживает пересчёт — оно хранится по ключу «тип:этап:машина».
+    """
+    return await service.decide(site_id, deviation_id, data, user)
 
 
 @router.get("/summary")

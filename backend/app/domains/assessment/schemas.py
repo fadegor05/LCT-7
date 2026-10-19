@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class StageStatusRead(BaseModel):
@@ -42,6 +43,26 @@ class DeviationEvidenceRead(BaseModel):
     caption: str | None = None
 
 
+class DecisionRead(BaseModel):
+    """Решение инженера по гипотезе."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    decision: Literal["confirmed", "rejected"]
+    comment: str | None
+    decided_by_name: str
+    decided_at: datetime
+
+
+class DecisionIn(BaseModel):
+    """Подтвердить или отклонить гипотезу; `decision: null` — снять решение («Изменить»)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    decision: Literal["confirmed", "rejected"] | None
+    comment: str | None = Field(default=None, max_length=2000)
+
+
 class DeviationRead(BaseModel):
     """Отклонение для чтения."""
 
@@ -64,6 +85,9 @@ class DeviationRead(BaseModel):
     title: str | None = None
     equipment_type_id: uuid.UUID | None = None
     cause_stage_id: uuid.UUID | None = None
+    # Устойчивый ключ «тип:этап:машина» и решение инженера по гипотезе (clean-mvp)
+    key: str = ""
+    decision: DecisionRead | None = None
 
 
 class DeviationDetailRead(DeviationRead):
@@ -89,3 +113,5 @@ class SiteSummaryRead(BaseModel):
     stage_id: uuid.UUID | None = None
     # Опорная дата расчёта: «данные на»
     as_of: date | None = None
+    # Гипотезы без решения инженера: «2 гипотезы ждут вашего решения»
+    awaiting_decision: int = 0

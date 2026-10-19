@@ -37,7 +37,7 @@ describe('SiteOverviewPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Отклонения: 3' })).toBeInTheDocument()
     expect(
-      screen.getByText('1 критичное, 1 гипотеза: проверьте снимки. Сначала самые важные.'),
+      screen.getByText('1 критичное, 1 гипотеза ждёт вашего решения. Сначала самые важные.'),
     ).toBeInTheDocument()
 
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })

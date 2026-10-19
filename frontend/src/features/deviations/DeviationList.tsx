@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { ConfidenceMeter } from '@/components/ui/ConfidenceMeter'
 import { Icon } from '@/components/ui/Icon'
+import { Pill } from '@/components/ui/Pill'
 import type { DeviationItem } from '@/lib/deviations'
 import { formatDate, formatWindow } from '@/lib/format'
 import { deviationTypeLabels } from '@/lib/labels'
@@ -38,6 +39,17 @@ export function DeviationList({ items, showSite }: DeviationListProps) {
           <Link to={`/sites/${d.site_id}/deviations/${d.id}`} className={styles.row}>
             <span className={styles.tags}>
               <SeverityBadge severity={d.severity} />
+              {/* Гипотеза ждёт решения инженера или уже проверена им (clean-mvp) */}
+              {d.is_hypothesis && !d.decision && (
+                <Pill tone="cautionDashed" size="sm">
+                  Ждёт решения
+                </Pill>
+              )}
+              {d.decision?.decision === 'confirmed' && (
+                <Pill tone="ontrack" icon="check" size="sm">
+                  Проверено
+                </Pill>
+              )}
             </span>
             <span className={styles.what}>
               <span className="lab">

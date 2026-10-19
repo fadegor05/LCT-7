@@ -195,3 +195,36 @@ class StatusBasis(Base):
     __table_args__ = (
         UniqueConstraint("status_id", "observation_id", name="uq_status_basis_status_observation"),
     )
+
+
+class Decision(StrEnum):
+    """Решение инженера по гипотезе (clean-mvp, §8.8)."""
+
+    CONFIRMED = "confirmed"  # остаётся в списке и в отчёте с пометкой «Проверено инженером»
+    REJECTED = "rejected"  # уходит в архив, в списки и отчёт не попадает
+
+
+def deviation_key(
+    type_: str, stage_id: uuid.UUID | None, equipment_type_id: uuid.UUID | None
+) -> str:
+    """Устойчивый ключ отклонения: пересчёт пересоздаёт строки deviations, а решение
+    инженера должно пережить его — оно хранится по ключу «тип:этап:машина»."""
+    return f"{type_}:{stage_id or '-'}:{equipment_type_id or '-'}"
+
+
+class HypothesisDecision(Base):
+    """Решение инженера по гипотезе (таблица hypothesis_decisions)."""
+
+    __tablename__ = "hypothesis_decisions"
+
+    site_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("sites.id", ondelete="CASCADE"), primary_key=True
+    )
+    deviation_key: Mapped[str] = mapped_column(String(120), primary_key=True)
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True
+    )
+    decided_by_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

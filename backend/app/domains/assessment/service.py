@@ -1,14 +1,26 @@
 """Бизнес-логика чтения статусов этапов и отклонений."""
 
 import uuid
+from datetime import UTC, datetime
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.domains.assessment.models import (
+    Decision,
+    Deviation,
+    HypothesisDecision,
+    deviation_key,
+)
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
     DeviationRepository,
+    HypothesisDecisionRepository,
     SiteSummaryRepository,
     StageStatusRepository,
 )
 from app.domains.assessment.schemas import (
+    DecisionIn,
+    DecisionRead,
     DeviationDetailRead,
     DeviationEvidenceRead,
     DeviationRead,
@@ -17,6 +29,7 @@ from app.domains.assessment.schemas import (
 )
 from app.domains.schedule.repository import ScheduleRepository
 from app.domains.site.guard import SiteAccessGuard
+from app.domains.user.models import User
 from app.plugins.exceptions import AppError
 
 
@@ -31,6 +44,8 @@ class AssessmentService:
         schedule_repo: ScheduleRepository,
         guard: SiteAccessGuard,
         summary_repo: SiteSummaryRepository,
+        decision_repo: HypothesisDecisionRepository,
+        session: AsyncSession,
     ) -> None:
         """Инициализировать AssessmentService.
 
@@ -48,6 +63,24 @@ class AssessmentService:
         self._schedule_repo = schedule_repo
         self._guard = guard
         self._summary_repo = summary_repo
+        self._decision_repo = decision_repo
+        self._session = session
+
+    def _read(self, d: Deviation, decisions: dict[str, HypothesisDecision]) -> DeviationRead:
+        """Отклонение с устойчивым ключом и решением инженера (только у гипотез)."""
+        read = DeviationRead.model_validate(d)
+        read.key = deviation_key(d.type, d.stage_id, d.equipment_type_id)
+        found = decisions.get(read.key) if d.is_hypothesis else None
+        read.decision = DecisionRead.model_validate(found) if found else None
+        return read
+
+    async def _visible(self, site_id: uuid.UUID) -> list[DeviationRead]:
+        """Отклонения объекта без отклонённых инженером гипотез — те в архиве."""
+        decisions = await self._decision_repo.by_site(site_id)
+        rows = [self._read(d, decisions) for d in await self._deviation_repo.list_by_site(site_id)]
+        return [
+            r for r in rows if r.decision is None or r.decision.decision != Decision.REJECTED.value
+        ]
 
     async def list_stage_statuses(self, site_id: uuid.UUID) -> list[StageStatusRead]:
         """Получить список статусов этапов для сайта.
@@ -115,8 +148,7 @@ class AssessmentService:
             AppError(404) если сайт не найден.
         """
         await self._guard.require(site_id)
-        deviations = await self._deviation_repo.list_by_site(site_id)
-        return [DeviationRead.model_validate(d) for d in deviations]
+        return await self._visible(site_id)
 
     async def get_deviation(
         self, site_id: uuid.UUID, deviation_id: uuid.UUID
@@ -145,7 +177,7 @@ class AssessmentService:
         evidence = [DeviationEvidenceRead.model_validate(e) for e in evidence_rows]
 
         # Собрать результат
-        deviation_read = DeviationRead.model_validate(deviation)
+        deviation_read = self._read(deviation, await self._decision_repo.by_site(site_id))
         return DeviationDetailRead(
             **deviation_read.model_dump(),
             evidence=evidence,
@@ -165,8 +197,9 @@ class AssessmentService:
         """
         await self._guard.require(site_id)
 
-        # Получить все отклонения
-        deviations = await self._deviation_repo.list_by_site(site_id)
+        # Отклонения без архива: отклонённая инженером гипотеза в счёт не идёт
+        deviations = await self._visible(site_id)
+        awaiting = sum(1 for d in deviations if d.is_hypothesis and d.decision is None)
 
         # Считать отклонения по severity
         critical_count = sum(1 for d in deviations if d.severity == "critical")
@@ -183,6 +216,7 @@ class AssessmentService:
                 critical_count=critical_count,
                 attention_count=attention_count,
                 reason=None if schedule else "График не загружен.",
+                awaiting_decision=awaiting,
             )
         return SiteSummaryRead(
             verdict=summary.verdict,
@@ -193,4 +227,33 @@ class AssessmentService:
             reason=summary.reason,
             stage_id=summary.stage_id,
             as_of=summary.as_of,
+            awaiting_decision=awaiting,
         )
+
+    async def decide(
+        self, site_id: uuid.UUID, deviation_id: uuid.UUID, data: DecisionIn, user: User
+    ) -> DeviationDetailRead:
+        """Решение инженера по гипотезе (clean-mvp, §8.8). Пересчёт не нужен: итог объекта от
+        решения не зависит, гипотезы и так не бывают критичными. `decision: None` — снять."""
+        await self._guard.require(site_id)
+        deviation = await self._deviation_repo.get(deviation_id)
+        if deviation is None or deviation.site_id != site_id:
+            raise AppError("Отклонение не найдено", status_code=404)
+        if not deviation.is_hypothesis:
+            raise AppError("Решение принимается только по гипотезе", status_code=422)
+        key = deviation_key(deviation.type, deviation.stage_id, deviation.equipment_type_id)
+        row = await self._decision_repo.find(site_id, key)
+        if data.decision is None:
+            if row is not None:
+                await self._session.delete(row)
+        else:
+            if row is None:
+                row = HypothesisDecision(site_id=site_id, deviation_key=key)
+                self._session.add(row)
+            row.decision = data.decision
+            row.comment = data.comment or None
+            row.decided_by = user.id
+            row.decided_by_name = user.full_name
+            row.decided_at = datetime.now(UTC)
+        await self._session.commit()
+        return await self.get_deviation(site_id, deviation_id)

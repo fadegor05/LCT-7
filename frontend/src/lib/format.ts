@@ -64,7 +64,8 @@ export function formatPeriod(start: string | null, end: string | null): string {
   const dm = (v: string) => `${v.slice(8, 10)}.${v.slice(5, 7)}`
   const year = todayIso().slice(0, 4)
   const withYear = start.slice(0, 4) !== end.slice(0, 4) || end.slice(0, 4) !== year
-  return `${dm(start)}–${dm(end)}${withYear ? `.${end.slice(0, 4)}` : ''}`
+  const span = start === end ? dm(start) : `${dm(start)}–${dm(end)}`
+  return `${span}${withYear ? `.${end.slice(0, 4)}` : ''}`
 }
 
 /** Факт по маркеру: «с 03.08», у идущего этапа — «с 03.08, идёт». */

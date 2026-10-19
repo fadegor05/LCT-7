@@ -6,6 +6,7 @@ import { SiteShell } from '@/components/layout/SiteShell'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { QueryState } from '@/components/ui/QueryState'
+import { DecisionPanel } from '@/features/deviations/DecisionPanel'
 import { DeviationBody } from '@/features/deviations/DeviationBody'
 import { SeverityCard } from '@/features/deviations/SeverityCard'
 import styles from '@/features/deviations/Deviation.module.css'
@@ -84,6 +85,7 @@ export function DeviationPage() {
                   />
                   <div className={styles.aside}>
                     <SeverityCard siteId={siteId} deviation={d} />
+                    {d.is_hypothesis && <DecisionPanel siteId={siteId} deviation={d} />}
                   </div>
                 </div>
               </SiteShell>

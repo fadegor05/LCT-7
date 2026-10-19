@@ -1,4 +1,4 @@
-import { formatWindow } from '@/lib/format'
+import { formatPeriod } from '@/lib/format'
 import type { DeviationItem } from '@/lib/deviations'
 import { deviationTypeLabels, levelLabels, severityLabels } from '@/lib/labels'
 import styles from './Report.module.css'
@@ -16,6 +16,7 @@ export function ReportDeviations({ items }: { items: readonly DeviationItem[] })
           <th scope="col">Этап</th>
           <th scope="col">Период</th>
           <th scope="col">Уверенность</th>
+          <th scope="col">Решение инженера</th>
         </tr>
       </thead>
       <tbody>
@@ -35,8 +36,15 @@ export function ReportDeviations({ items }: { items: readonly DeviationItem[] })
               </span>
             </td>
             <td>{d.stage_name ?? 'Все этапы'}</td>
-            <td className={styles.nowrap}>{formatWindow(d.period_start, d.period_end, '–')}</td>
+            <td className={styles.nowrap}>{formatPeriod(d.period_start, d.period_end)}</td>
             <td>{levelLabels[d.confidence]}</td>
+            <td>
+              {!d.is_hypothesis
+                ? '—'
+                : d.decision?.decision === 'confirmed'
+                  ? 'Проверено инженером'
+                  : 'Ждёт решения'}
+            </td>
           </tr>
         ))}
       </tbody>

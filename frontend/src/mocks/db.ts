@@ -653,7 +653,29 @@ export function listStageStatuses(siteId: string): StageStatus[] {
 
 export function listDeviations(siteId: string): Omit<DeviationDetail, 'evidence'>[] {
   getSite(siteId)
-  return (state.deviations.get(siteId) ?? []).map(({ evidence: _, ...d }) => d)
+  // Отклонённая инженером гипотеза — в архиве (AssessmentService._visible)
+  return (state.deviations.get(siteId) ?? [])
+    .filter((d) => d.decision?.decision !== 'rejected')
+    .map(({ evidence: _, ...d }) => d)
+}
+
+/** Как AssessmentService.decide: только гипотезы; `null` снимает решение. */
+export function decideDeviation(
+  siteId: string,
+  id: string,
+  body: { decision: 'confirmed' | 'rejected' | null; comment?: string | null },
+): DeviationDetail {
+  const deviation = getDeviation(siteId, id)
+  if (!deviation.is_hypothesis) throw new MockError(422, 'Решение принимается только по гипотезе')
+  deviation.decision = body.decision
+    ? {
+        decision: body.decision,
+        comment: body.comment?.trim() || null,
+        decided_by_name: user.full_name,
+        decided_at: now(),
+      }
+    : null
+  return deviation
 }
 
 export function getDeviation(siteId: string, id: string): DeviationDetail {
@@ -670,7 +692,10 @@ export function getSummary(siteId: string): SiteSummary {
       .map((o) => o.observed_on)
       .sort()
       .at(-1) ?? null
-  return { ...summaryOf(siteId), as_of }
+  const awaiting_decision = listDeviations(siteId).filter(
+    (d) => d.is_hypothesis && !d.decision,
+  ).length
+  return { ...summaryOf(siteId), as_of, awaiting_decision }
 }
 
 function summaryOf(siteId: string): SiteSummary {

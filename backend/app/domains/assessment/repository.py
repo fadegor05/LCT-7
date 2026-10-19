@@ -9,6 +9,7 @@ from app.core.repository import BaseRepository
 from app.domains.assessment.models import (
     Deviation,
     DeviationEvidence,
+    HypothesisDecision,
     Severity,
     SiteSummary,
     StageStatus,
@@ -211,3 +212,18 @@ class StatusBasisRepository(BaseRepository[StatusBasis]):
         """
         await self._session.execute(delete(self.model).where(self.model.status_id == status_id))
         await self._session.flush()
+
+
+class HypothesisDecisionRepository(BaseRepository[HypothesisDecision]):
+    """Решения инженера по гипотезам: по объекту и устойчивому ключу отклонения."""
+
+    model = HypothesisDecision
+
+    async def by_site(self, site_id: uuid.UUID) -> dict[str, HypothesisDecision]:
+        result = await self._session.execute(
+            select(self.model).where(self.model.site_id == site_id)
+        )
+        return {d.deviation_key: d for d in result.scalars().all()}
+
+    async def find(self, site_id: uuid.UUID, key: str) -> HypothesisDecision | None:
+        return await self._session.get(self.model, (site_id, key))

@@ -1,5 +1,5 @@
 /** Выводы по стройке (домен assessment): статусы этапов, отклонения, итог. Только чтение. */
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { request } from './client'
 import { keys } from './keys'
@@ -22,6 +22,27 @@ export const deviationsApi = {
   get: (siteId: string, id: string) =>
     request(`${base(siteId)}/deviations/${id}`, { schema: deviationDetailSchema }),
   summary: (siteId: string) => request(`${base(siteId)}/summary`, { schema: siteSummarySchema }),
+  /** Решение по гипотезе; `decision: null` — снять («Изменить решение»). */
+  decide: (siteId: string, id: string, body: DecisionInput) =>
+    request(`${base(siteId)}/deviations/${id}/decision`, {
+      method: 'PUT',
+      body,
+      schema: deviationDetailSchema,
+    }),
+}
+
+export interface DecisionInput {
+  decision: 'confirmed' | 'rejected' | null
+  comment?: string | null
+}
+
+/** Решение инженера: обновляет списки, счётчики и карточку объекта. */
+export function useDecision(siteId: string, id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DecisionInput) => deviationsApi.decide(siteId, id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.site(siteId) }),
+  })
 }
 
 export function useStageStatuses(siteId: string, enabled = true) {

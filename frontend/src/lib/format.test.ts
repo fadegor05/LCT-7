@@ -52,6 +52,7 @@ describe('format', () => {
     expect(formatPeriod('2026-04-10', '2026-08-30')).toBe('10.04–30.08')
     expect(formatPeriod('2026-08-15', '2027-03-30')).toBe('15.08–30.03.2027')
     expect(formatPeriod('2023-05-15', '2023-07-31')).toBe('15.05–31.07.2023')
+    expect(formatPeriod('2026-08-14', '2026-08-14')).toBe('14.08')
     expect(formatPeriod(null, '2026-08-30')).toBe('—')
     vi.useRealTimers()
   })

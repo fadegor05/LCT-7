@@ -181,3 +181,30 @@ describe('DeviationPage: отставание', () => {
     expect(await within(importance).findByText('7 дн.')).toBeInTheDocument()
   })
 })
+
+describe('DeviationPage: решение инженера', () => {
+  it('confirms, rejects into the archive and changes the decision', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/deviations/dev-idle-truck')
+    const panel = await screen.findByRole('region', { name: 'Решение инженера' })
+    await user.type(within(panel).getByLabelText('Комментарий (необязательно)'), 'видно по кадрам')
+    await user.click(within(panel).getByRole('button', { name: 'Подтвердить простой' }))
+
+    const done = await screen.findByRole('region', { name: 'Решение инженера' })
+    expect(await within(done).findByText('Простой подтверждён')).toBeInTheDocument()
+    expect(done).toHaveTextContent('Комментарий: видно по кадрам')
+
+    await user.click(within(done).getByRole('button', { name: 'Изменить решение' }))
+    const again = await screen.findByRole('button', { name: 'Простоя не было' })
+    await user.click(again)
+    expect(
+      await screen.findByText('Ушло в архив, в списках и отчёте его нет', { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it('marks hypotheses awaiting a decision in the list', async () => {
+    renderRoute('/sites/site-berezniki')
+    const list = await screen.findByRole('list', { name: 'Отклонения' })
+    expect(await within(list).findAllByText('Ждёт решения')).not.toHaveLength(0)
+    expect(screen.getByText(/(ждёт|ждут) вашего решения/)).toBeInTheDocument()
+  })
+})

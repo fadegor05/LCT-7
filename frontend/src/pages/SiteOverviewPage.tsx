@@ -27,11 +27,12 @@ function deviationsDescription(items: readonly DeviationItem[]): string | undefi
   // Пустой список сам пишет «Отклонений не выявлено» — не повторяем это в подзаголовке.
   if (items.length === 0) return undefined
   const critical = items.filter((d) => d.severity === 'critical').length
-  const hypotheses = items.filter((d) => d.is_hypothesis).length
+  // Гипотезы без решения инженера (clean-mvp): «2 гипотезы ждут вашего решения»
+  const hypotheses = items.filter((d) => d.is_hypothesis && !d.decision).length
   const parts = [
     critical > 0 && `${critical} ${plural(critical, ['критичное', 'критичных', 'критичных'])}`,
     hypotheses > 0 &&
-      `${hypotheses} ${plural(hypotheses, ['гипотеза', 'гипотезы', 'гипотез'])}: проверьте снимки`,
+      `${hypotheses} ${plural(hypotheses, ['гипотеза ждёт', 'гипотезы ждут', 'гипотез ждут'])} вашего решения`,
   ].filter(Boolean)
   return `${parts.length ? `${parts.join(', ')}. ` : ''}Сначала самые важные.`
 }

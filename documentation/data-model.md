@@ -235,6 +235,16 @@ erDiagram
 | `upload_batch_id`, `upload_batch_pos` | uuid, integer | может быть пусто | Пачка загрузки и место кадра в ней — пока пачка в обработке; по ним ставится дата по соседям. После обработки пусто |
 | `uploaded_at` | timestamptz | | |
 
+`hypothesis_decisions` — решение инженера по гипотезе (подтвердить или отклонить). Строки `deviations` пересоздаёт каждый пересчёт, поэтому решение хранится по устойчивому ключу отклонения «тип:этап:машина» и переживает пересчёт. Отклонённая гипотеза уходит в архив: её нет в списках, отчёте и счётчиках; на итог по объекту решения не влияют.
+
+| Столбец | Тип | Ограничения | Смысл |
+|---|---|---|---|
+| `site_id` | uuid | PK, FK `sites.id` CASCADE | |
+| `deviation_key` | varchar(120) | PK | `{type}:{stage_id или -}:{equipment_type_id или -}` |
+| `decision` | varchar(16) | | `confirmed`, `rejected` |
+| `comment` | text | может быть пусто | |
+| `decided_by`, `decided_by_name`, `decided_at` | uuid, varchar, timestamptz | | Кто и когда решил |
+
 `detections`.
 
 | Столбец | Тип | Ограничения | Смысл |

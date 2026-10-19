@@ -346,6 +346,13 @@ export const handlers = [
     api('/sites/:siteId/assessment/deviations/:id'),
     ({ params }) => handle(() => db.getDeviation(params.siteId, params.id)),
   ),
+  http.put<{ siteId: string; id: string }>(
+    api('/sites/:siteId/assessment/deviations/:id/decision'),
+    async ({ params, request }) => {
+      const body = (await request.json()) as Parameters<typeof db.decideDeviation>[2]
+      return handle(() => db.decideDeviation(params.siteId, params.id, body))
+    },
+  ),
   http.get<SiteParams>(api('/sites/:siteId/assessment/summary'), ({ params }) =>
     handle(() => db.getSummary(params.siteId)),
   ),
