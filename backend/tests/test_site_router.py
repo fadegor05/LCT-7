@@ -25,7 +25,16 @@ async def test_post_creates_site_with_201(client: AsyncClient, container: AsyncC
 
     assert response.status_code == 201
     data = response.json()
-    assert set(data.keys()) == {"id", "name", "address", "owner_id", "created_at", "updated_at"}
+    assert set(data.keys()) == {
+        "id",
+        "name",
+        "address",
+        "object_type",
+        "workdays",
+        "owner_id",
+        "created_at",
+        "updated_at",
+    }
     assert data["name"] == "Строка 1"
     assert data["address"] == "Москва, ул. Тверская, 1"
     assert data["owner_id"] == str(STAND_USER_ID)

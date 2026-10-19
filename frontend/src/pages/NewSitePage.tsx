@@ -23,10 +23,22 @@ import { formatDateTime } from '@/lib/format'
 const ACCEPT =
   '.csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
-const defaults: SiteCreate = { name: '', address: '' }
+const defaults: SiteCreate = {
+  name: '',
+  address: '',
+  object_type: 'other',
+  workdays: [0, 1, 2, 3, 4],
+}
 
 function toForm(site: Site | undefined): SiteCreate | undefined {
-  return site && { name: site.name, address: site.address ?? '' }
+  return (
+    site && {
+      name: site.name,
+      address: site.address ?? '',
+      object_type: site.object_type,
+      workdays: site.workdays,
+    }
+  )
 }
 
 /**
@@ -78,7 +90,7 @@ export function NewSitePage() {
       <h1>Новая стройка</h1>
       <Stepper steps={CREATE_STEPS} current={0} />
 
-      <ObjectForm register={form.register} errors={form.formState.errors} />
+      <ObjectForm register={form.register} control={form.control} errors={form.formState.errors} />
 
       <Card>
         <h3>График работ</h3>

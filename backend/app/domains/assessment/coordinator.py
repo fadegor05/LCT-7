@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Protocol, cast
 
@@ -57,6 +57,7 @@ from app.domains.observation.repository import (
 from app.domains.photo.models import Photo, ProcessingStatus
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
+from app.domains.site.models import Site
 from app.plugins.exceptions import AppError
 
 
@@ -397,7 +398,12 @@ class RecomputeCoordinator:
             stationary = frozenset(
                 id_by_code[c] for c in STATIONARY_EQUIPMENT_CODES if c in id_by_code
             )
-            computation = self._engine.compute_site(
+            # Рабочие дни — свои у каждого объекта (clean-mvp); движок без состояния
+            site = await self._session.get(Site, site_id)
+            engine = self._engine
+            if site is not None and tuple(site.workdays) != engine.config.workdays:
+                engine = RuleEngine(replace(engine.config, workdays=tuple(site.workdays)))
+            computation = engine.compute_site(
                 stages,
                 rules_by_stage,
                 observations,

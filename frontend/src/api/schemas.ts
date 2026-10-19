@@ -76,10 +76,16 @@ export const loginResponseSchema = z.object({
 
 // ---------- Стройка (site) ----------
 
+/** site.schemas.ObjectType */
+export const objectTypeSchema = z.enum(['housing', 'education', 'health', 'other'])
+
 export const siteSchema = z.object({
   id: z.string(),
   name: z.string(),
   address: z.string().nullable(),
+  object_type: objectTypeSchema.default('other'),
+  /** Рабочие дни, date.weekday(): пн=0…вс=6 — вход движка. */
+  workdays: z.array(z.number().int()).default([0, 1, 2, 3, 4]),
   owner_id: z.string(),
   created_at: isoDateTime,
   updated_at: isoDateTime,
@@ -89,6 +95,8 @@ export const siteSchema = z.object({
 export const siteCreateSchema = z.object({
   name: z.string().trim().min(1, 'Укажите название').max(255),
   address: z.string().trim().max(500),
+  object_type: objectTypeSchema,
+  workdays: z.array(z.number().int().min(0).max(6)).min(1, 'Выберите рабочие дни'),
 })
 
 // ---------- График (schedule) ----------
@@ -413,6 +421,7 @@ export type User = z.infer<typeof userSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
+export type ObjectType = z.infer<typeof objectTypeSchema>
 export type Stage = z.infer<typeof stageSchema>
 export type ImportIssue = z.infer<typeof importIssueSchema>
 export type ParseMode = z.infer<typeof parseModeSchema>

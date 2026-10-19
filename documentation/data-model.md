@@ -65,6 +65,8 @@ erDiagram
 | `id` | uuid | PK | |
 | `name` | varchar(255) | не пусто | Название |
 | `address` | varchar(500) | может быть пусто | Адрес или условное обозначение |
+| `object_type` | varchar(16) | по умолчанию `other` | `housing`, `education`, `health`, `other` |
+| `workdays` | json | по умолчанию `[0, 1, 2, 3, 4]` | Рабочие дни, пн=0…вс=6. Вход движка: в нерабочий день отсутствие техники — не отклонение. Правка сразу пересчитывает статусы |
 | `owner_id` | uuid | FK `app_user.id`, индекс | Владелец. Доступ к стройке проверяется по нему |
 | `created_at`, `updated_at` | timestamptz | по умолчанию `now()` | |
 
@@ -229,7 +231,8 @@ erDiagram
 | `width`, `height` | integer | | Размеры после применения EXIF-ориентации |
 | `captured_on` | date | может быть пусто | Дата съёмки. Пусто, пока дата не определена |
 | `date_source` | varchar(16) | | `channel`, `metadata`, `stamp`, `filename`, `neighbours`, `manual`. Пусто вместе с датой |
-| `processing_status` | varchar(16) | по умолчанию `pending` | `pending`, `done`, `failed` |
+| `processing_status` | varchar(16) | по умолчанию `pending`, индекс | `queued` — принят, ждёт фоновой обработки; `processing` — обрабатывается; `pending` — детектор выключен или не ответил; `done`, `failed` |
+| `upload_batch_id`, `upload_batch_pos` | uuid, integer | может быть пусто | Пачка загрузки и место кадра в ней — пока пачка в обработке; по ним ставится дата по соседям. После обработки пусто |
 | `uploaded_at` | timestamptz | | |
 
 `detections`.

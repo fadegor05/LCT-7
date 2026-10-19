@@ -186,6 +186,12 @@ def _hhmm(moment: datetime) -> str:
     return moment.strftime("%H:%M")
 
 
+def _span(start: datetime, end: datetime) -> str:
+    """«между 10:05 и 10:15»; кадры одной минуты — с секундами, иначе «между 19:00 и 19:00»."""
+    fmt = "%H:%M:%S" if start.strftime("%H:%M") == end.strftime("%H:%M") else "%H:%M"
+    return f"между {start.strftime(fmt)} и {end.strftime(fmt)}"
+
+
 def _still_run(steps: Sequence[Step]) -> list[Step]:
     best: list[Step] = []
     run: list[Step] = []
@@ -210,7 +216,7 @@ def _judge(
     kind = track.equipment_type_id
     moved = next((s for s in track.steps if s.verdict is Verdict.MOVED), None)
     if moved is not None:
-        motion = f"Движение: машина сместилась между {_hhmm(moved.start)} и {_hhmm(moved.end)}"
+        motion = f"Движение: машина сместилась {_span(moved.start, moved.end)}"
         return MachineActivity(kind, Activity.WORKS, f"{motion}\n{zone_text}", in_zone)
     run = _still_run(track.steps)
     if len(run) >= p.idle_min_pairs:

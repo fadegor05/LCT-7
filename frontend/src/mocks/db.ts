@@ -104,11 +104,18 @@ export function getSite(siteId: string): Site {
   return site
 }
 
-export function createSite(data: { name: string; address?: string | null }): Site {
+type SiteInput = Partial<Pick<Site, 'object_type' | 'workdays'>> & {
+  name?: string
+  address?: string | null
+}
+
+export function createSite(data: SiteInput & { name: string }): Site {
   const site: Site = {
     id: nextId('site'),
     name: data.name,
     address: data.address ?? null,
+    object_type: data.object_type ?? 'other',
+    workdays: data.workdays ?? [0, 1, 2, 3, 4],
     owner_id: user.id,
     created_at: now(),
     updated_at: now(),
@@ -117,10 +124,12 @@ export function createSite(data: { name: string; address?: string | null }): Sit
   return site
 }
 
-export function updateSite(siteId: string, data: { name?: string; address?: string | null }): Site {
+export function updateSite(siteId: string, data: SiteInput): Site {
   const site = getSite(siteId)
   if (data.name !== undefined) site.name = data.name
   if (data.address !== undefined) site.address = data.address
+  if (data.object_type !== undefined) site.object_type = data.object_type
+  if (data.workdays !== undefined) site.workdays = data.workdays
   site.updated_at = now()
   return site
 }

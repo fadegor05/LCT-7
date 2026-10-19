@@ -31,7 +31,16 @@ async def test_site_columns(engine: AsyncEngine) -> None:
             __import__("sqlalchemy", fromlist=["text"]).text("PRAGMA table_info(sites)")
         )
         columns = {row[1] for row in result.all()}
-        assert columns == {"id", "name", "address", "owner_id", "created_at", "updated_at"}
+        assert columns == {
+            "id",
+            "name",
+            "address",
+            "object_type",
+            "workdays",
+            "owner_id",
+            "created_at",
+            "updated_at",
+        }
 
 
 @pytest.mark.asyncio
