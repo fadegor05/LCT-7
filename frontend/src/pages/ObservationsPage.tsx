@@ -1,7 +1,14 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router'
 import { useCameras } from '@/api/cameras'
-import { useObservation, useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
+import {
+  observationQuery,
+  useObservation,
+  useObservations,
+  usePhotos,
+  useUndatedPhotos,
+} from '@/api/frames'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { SiteQueryState } from '@/components/layout/SiteQueryState'
@@ -41,6 +48,10 @@ export function ObservationsPage() {
   const date = param === 'all' ? null : (param ?? lastDay)
   const observation = useObservation(siteId, date)
 
+  // День под указателем грузится до клика: техника за день сменяется сразу
+  const client = useQueryClient()
+  const previewDay = (day: string) => void client.prefetchQuery(observationQuery(siteId, day))
+
   const selectDay = (value: string | null) => setParams({ date: value ?? 'all' }, { replace: true })
 
   return (
@@ -62,12 +73,24 @@ export function ObservationsPage() {
                 days={list}
                 value={date}
                 onChange={selectDay}
+                onPreview={previewDay}
                 undated={undated.data?.length ?? 0}
               />
             )}
           </QueryState>
 
-          {date && observation.data && <EquipmentList observation={observation.data} />}
+          {date && observation.data && (
+            // Прежний день приглушён, пока грузится новый: без пустого места и прыжка
+            <div
+              style={{
+                opacity: observation.isPlaceholderData ? 0.55 : 1,
+                transition: 'opacity 0.15s ease',
+              }}
+              aria-busy={observation.isPlaceholderData}
+            >
+              <EquipmentList observation={observation.data} />
+            </div>
+          )}
 
           <section style={column}>
             <SectionHeader

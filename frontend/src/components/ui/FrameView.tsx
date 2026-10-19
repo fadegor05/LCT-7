@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuthorizedImage } from '@/api/images'
 import { Icon } from './Icon'
 import styles from './FrameView.module.css'
@@ -15,11 +15,15 @@ interface FrameViewProps {
 /** Снимок с подписью; без изображения — заглушка, пока снимок грузится — пустая подложка. */
 export function FrameView({ imageUrl, caption, alt = 'Снимок', onClick }: FrameViewProps) {
   const src = useAuthorizedImage(imageUrl)
+  // Уже виденный снимок (из памяти) показывается сразу; загрузившийся — проявляется поверх
+  // штриховки, а не возникает рывком (как в clean-mvp)
+  const [cachedAtMount] = useState(() => src !== null)
   const picture = (
     <span
       className={styles.img}
       role="img"
       aria-label={alt}
+      data-fresh={src !== null && !cachedAtMount}
       style={src ? { backgroundImage: `url(${src})` } : undefined}
     >
       {!imageUrl && (

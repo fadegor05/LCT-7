@@ -1,3 +1,4 @@
+import { clearImageCache } from '@/api/images'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -47,8 +48,14 @@ describe('FrameView', () => {
     expect(revoke).not.toHaveBeenCalled()
   })
 
-  it('releases the image when the frame goes away', async () => {
-    server.use(http.get(imageUrl, () => new HttpResponse(new Blob(['png']))))
+  it('shows a seen image at once on the next mount and frees it on sign-out', async () => {
+    let fetched = 0
+    server.use(
+      http.get(imageUrl, () => {
+        fetched += 1
+        return new HttpResponse(new Blob(['png']))
+      }),
+    )
     const revoke = vi.spyOn(URL, 'revokeObjectURL')
     const { unmount } = render(<FrameView imageUrl={imageUrl} />)
     await waitFor(() =>
@@ -57,6 +64,16 @@ describe('FrameView', () => {
       }),
     )
     unmount()
+    expect(revoke).not.toHaveBeenCalled()
+
+    // Уже виденный снимок — сразу, без запроса и без проявления
+    render(<FrameView imageUrl={imageUrl} />)
+    const img = screen.getByRole('img', { name: 'Снимок' })
+    expect(img).toHaveStyle({ backgroundImage: 'url(blob:test)' })
+    expect(img).toHaveAttribute('data-fresh', 'false')
+    expect(fetched).toBe(1)
+
+    clearImageCache()
     expect(revoke).toHaveBeenCalledWith('blob:test')
   })
 

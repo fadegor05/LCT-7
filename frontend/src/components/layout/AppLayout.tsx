@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
 import { useMe } from '@/api/auth'
 import { clearToken } from '@/lib/authStorage'
 import { setUnauthorizedHandler } from '@/api/client'
+import { clearImageCache } from '@/api/images'
 import { env } from '@/lib/env'
 import { useQueryClient } from '@tanstack/react-query'
 import styles from './AppLayout.module.css'
@@ -13,11 +14,20 @@ export function AppLayout() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const me = useMe()
+  // Новый раздел открывается сверху: иначе вкладка наследует прокрутку прошлой и прыгает,
+  // когда подгружается. Смена `?date=` прокрутку не трогает; к `#якорю` страницы
+  // прокручивают сами (как в clean-mvp)
+  const { pathname, hash } = useLocation()
+  useEffect(() => {
+    if (!hash) window.scrollTo(0, 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- только при смене раздела
+  }, [pathname])
 
   // Initialize unauthorized handler once when AppLayout mounts
   useEffect(() => {
     setUnauthorizedHandler(() => {
       void qc.clear()
+      clearImageCache()
       void navigate('/login', { replace: true })
     })
   }, [navigate, qc])
@@ -25,6 +35,7 @@ export function AppLayout() {
   const handleLogout = () => {
     clearToken()
     void qc.clear()
+    clearImageCache()
     // Вышли сами — возвращаем на лендинг, а не на форму входа.
     void navigate('/', { replace: true })
   }

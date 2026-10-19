@@ -8,10 +8,12 @@ interface DayPickerProps {
   /** null — «Все дни». */
   value: string | null
   onChange: (date: string | null) => void
+  /** День под указателем: его данные грузятся до клика. */
+  onPreview?: (date: string) => void
   undated: number
 }
 
-export function DayPicker({ days, value, onChange, undated }: DayPickerProps) {
+export function DayPicker({ days, value, onChange, onPreview, undated }: DayPickerProps) {
   const total = days.reduce((sum, d) => sum + d.photo_count, 0)
   return (
     <div className={styles.days} role="group" aria-label="Дни наблюдений">
@@ -31,6 +33,8 @@ export function DayPicker({ days, value, onChange, undated }: DayPickerProps) {
           className={styles.day}
           aria-pressed={value === d.observed_on}
           onClick={() => onChange(d.observed_on)}
+          onMouseEnter={() => onPreview?.(d.observed_on)}
+          onFocus={() => onPreview?.(d.observed_on)}
         >
           <span className="lab data">{formatDate(d.observed_on)}</span>
           <span className="sm muted">{pluralPhotos(d.photo_count)}</span>

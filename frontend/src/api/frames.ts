@@ -1,5 +1,11 @@
 /** Снимки (домен photo) и наблюдения за дату (домен observation). */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { z } from 'zod'
 import { env } from '@/lib/env'
 import { request } from './client'
@@ -80,11 +86,17 @@ export function useObservations(siteId: string) {
   })
 }
 
+/** Наблюдение за день; пока грузится другой день, виден прежний (приглушённым на экране). */
 export function useObservation(siteId: string, date: string | null) {
-  return useQuery({
+  return useQuery(observationQuery(siteId, date))
+}
+
+export function observationQuery(siteId: string, date: string | null) {
+  return queryOptions({
     queryKey: keys.observation(siteId, date ?? ''),
     queryFn: () => framesApi.observation(siteId, date!),
     enabled: Boolean(date),
+    placeholderData: keepPreviousData,
   })
 }
 

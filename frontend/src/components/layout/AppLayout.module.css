@@ -80,8 +80,10 @@
   padding: var(--space-10) var(--space-12) var(--space-16);
 }
 
+/* Ширина одна на всех экранах, с запасом под колонку ассистента на обзоре: иначе при
+   переходе на обзор и обратно вся страница сдвигалась вбок (как в clean-mvp) */
 .content {
-  max-width: var(--content-width);
+  max-width: calc(var(--content-width) + 440px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -100,10 +102,4 @@
     padding-left: var(--space-4);
     padding-right: var(--space-4);
   }
-}
-
-/* Экран с боковой колонкой (чат ассистента) шире обычного: основной колонке остаётся
-   прежняя ширина содержимого. */
-.content:has(> [data-layout='with-aside'] > aside:not(:empty)) {
-  max-width: calc(var(--content-width) + 440px);
 }

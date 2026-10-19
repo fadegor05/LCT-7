@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { usePrefetchSite } from '@/api/prefetch'
 import { useSummary } from '@/api/deviations'
 import { useObservations } from '@/api/frames'
 import type { Site } from '@/api/schemas'
@@ -10,8 +11,14 @@ import styles from './SiteTable.module.css'
 function SiteRow({ site }: { site: Site }) {
   const summary = useSummary(site.id).data
   const last = latestObservation(useObservations(site.id).data)
+  // Обзор стройки грузится по наведению на строку: переход открывает готовый экран
+  const prefetch = usePrefetchSite()
   return (
-    <Link to={`/sites/${site.id}`} className={`${styles.grid} ${styles.row}`}>
+    <Link
+      to={`/sites/${site.id}`}
+      className={`${styles.grid} ${styles.row}`}
+      {...prefetch(site.id)}
+    >
       <span className={styles.name}>
         <span className={styles.title}>{site.name}</span>
         {site.address && <span className="sm muted">{site.address}</span>}
