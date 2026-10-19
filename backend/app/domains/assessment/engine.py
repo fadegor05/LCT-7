@@ -1,7 +1,7 @@
 """Двигатель расчёта статусов этапов и отклонений от плана."""
 
 import uuid
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -95,6 +95,9 @@ class EngineConfig:
     # «Не начат» — только по стольким рабочим дням окна с высокой наблюдаемостью:
     # один день с кадрами не доказывает, что этап не начался
     window_dates: int = 3
+    # «Критично» — не раньше стольких дней от начала этапа и, у отклонений по замеченной
+    # машине, только когда она видна столько дат подряд: один случайный день — «Внимание»
+    critical_days: int = 3
 
 
 @dataclass(frozen=True)
@@ -171,6 +174,7 @@ class RuleEngine:
         observations: Sequence[ObservationInput],
         today: date,
         equipment_names: Mapping[uuid.UUID, str] | None = None,
+        coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]] | None = None,
     ) -> SiteComputation:
         """Рассчитать статусы и отклонения для объекта.
 
@@ -183,6 +187,9 @@ class RuleEngine:
                 читаемого текста в отклонениях вместо сырых UUID. Движок не
                 знает о БД/каталоге — словарь строит вызывающий код
                 (RecomputeCoordinator, через EquipmentCatalog).
+            coarse: Класс «тип не определён» → конкретные классы, с которыми он
+                совместим («Экскаватор (тип не определён)» подходит этапу с
+                гусеничным экскаватором).
 
         Returns:
             SiteComputation с статусами и отклонениями.
@@ -202,8 +209,12 @@ class RuleEngine:
             if status is not None:
                 statuses.append(status)
 
-        # Отклонение stale_data проверяется один раз для всего объекта (даже без наблюдений)
-        deviations.extend(self._check_stale_data(sorted_observations, today))
+        # Устаревшие данные — единственное отклонение: выводы по старым кадрам о сегодняшнем
+        # дне ничего не говорят (как в clean-mvp)
+        stale = self._check_stale_data(sorted_observations, today)
+        if stale:
+            summary = summarize(stages, statuses, sorted_observations, today, self.config)
+            return SiteComputation(statuses=statuses, deviations=stale, summary=summary)
 
         # Отклонения по этапам
         for stage in stages:
@@ -224,6 +235,13 @@ class RuleEngine:
                         stage, rule, stage_status, sorted_observations, today
                     )
                 )
+
+        # Чужая техника — одна строка на машину, а не на каждый идущий этап
+        deviations.extend(
+            self._check_mismatch_and_extra(
+                stages, rules_by_stage, statuses, sorted_observations, names, coarse or {}
+            )
+        )
 
         summary = summarize(stages, statuses, sorted_observations, today, self.config)
         return SiteComputation(statuses=statuses, deviations=deviations, summary=summary)
@@ -610,7 +628,7 @@ class RuleEngine:
                     stage_id=None,
                     type=DeviationType.STALE_DATA,
                     is_hypothesis=False,
-                    severity=Severity.CRITICAL,
+                    severity=Severity.ATTENTION,
                     confidence=Confidence.HIGH,
                     period_start=period_start,
                     period_end=period_end,
@@ -661,15 +679,8 @@ class RuleEngine:
                 deviations.extend(self._check_no_progress(observations, stage, rule))
             return deviations
 
-        # Получаем требуемую технику (из flat requirements или из kits)
-        all_required = {r.equipment_type_id for r in rule.requirements}
-        # Если используются kits, добавляем технику из них
-        for kit in rule.effective_kits:
-            for req in kit.requirements:
-                all_required.add(req.equipment_type_id)
-
-        # 2. missing_equipment (работает с kits внутри)
-        deviations.extend(self._check_missing_equipment(stage, latest_obs, latest_obs_on, rule))
+        # 2. missing_equipment — по окну последних дат, а не по одному дню
+        deviations.extend(self._check_missing_equipment(stage, observations, rule))
 
         # 2b. missing_logical_equipment (LCT-15) — мягкое предупреждение по
         # "логической" технике методики: ожидаемой на этапе, но не
@@ -680,42 +691,6 @@ class RuleEngine:
                 stage, latest_obs, latest_obs_on, rule, equipment_names
             )
         )
-
-        # 3. stage_mismatch
-        if latest_obs.equipment and not any(
-            eq.equipment_type_id in all_required for eq in latest_obs.equipment
-        ):
-            mismatch_names = self._format_equipment_names(
-                [eq.equipment_type_id for eq in latest_obs.equipment], equipment_names
-            )
-            deviations.append(
-                DeviationResult(
-                    stage_id=stage.stage_id,
-                    type=DeviationType.STAGE_MISMATCH,
-                    is_hypothesis=False,
-                    severity=Severity.CRITICAL,
-                    confidence=self._worst_confidence(latest_obs.equipment),
-                    period_start=latest_obs_on,
-                    period_end=latest_obs_on,
-                    expected=(
-                        "Техника этапа по методике: "
-                        f"{self._format_equipment_names(all_required, equipment_names)}"
-                    ),
-                    observed=f"Техника: {mismatch_names}",
-                    limits_text=(
-                        "Не доказывает завершённость этапа или смену техники — "
-                        "техника могла быть вне зоны обзора камер."
-                    ),
-                    rule_id=rule.rule_id,
-                    evidence_dates=(latest_obs_on,),
-                )
-            )
-            # Не добавляем missing_equipment, если есть stage_mismatch
-            deviations = [
-                d
-                for d in deviations
-                if not (d.type == DeviationType.MISSING_EQUIPMENT and d.stage_id == stage.stage_id)
-            ]
 
         # 4. idle
         idle_eq = [eq for eq in latest_obs.equipment if eq.activity == "idle"]
@@ -739,38 +714,6 @@ class RuleEngine:
                     limits_text=(
                         "Гипотеза — не доказывает остановку работ, "
                         "техника могла быть в перерыве или ожидании."
-                    ),
-                    rule_id=rule.rule_id,
-                    evidence_dates=(latest_obs_on,),
-                )
-            )
-
-        # 5. extra_equipment
-        extra_eq = [eq for eq in latest_obs.equipment if eq.equipment_type_id not in all_required]
-        markers_active_now = latest_obs_on in status_basis_dates
-        if extra_eq and markers_active_now:
-            extra_names = self._format_equipment_names(
-                [eq.equipment_type_id for eq in extra_eq], equipment_names
-            )
-            deviations.append(
-                DeviationResult(
-                    stage_id=stage.stage_id,
-                    type=DeviationType.EXTRA_EQUIPMENT,
-                    is_hypothesis=True,
-                    severity=Severity.ATTENTION,
-                    confidence=self._min_confidence(
-                        self._worst_confidence(extra_eq), Confidence.MEDIUM
-                    ),
-                    period_start=latest_obs_on,
-                    period_end=latest_obs_on,
-                    expected=(
-                        "Только техника этапа по методике: "
-                        f"{self._format_equipment_names(all_required, equipment_names)}"
-                    ),
-                    observed=f"Дополнительная техника: {extra_names}",
-                    limits_text=(
-                        "Гипотеза — не доказывает незапланированные работы, "
-                        "техника могла быть на соседнем объекте или проезжать мимо."
                     ),
                     rule_id=rule.rule_id,
                     evidence_dates=(latest_obs_on,),
@@ -814,49 +757,243 @@ class RuleEngine:
     def _check_missing_equipment(
         self,
         stage: StageInput,
-        latest_obs: ObservationInput,
-        latest_obs_on: date,
+        observations: Sequence[ObservationInput],
         rule: RuleInput,
     ) -> list[DeviationResult]:
-        """Проверить отклонение missing_equipment.
+        """«Нет маркерной техники» (как в clean-mvp): по окну дат, а не по одному дню.
 
-        С поддержкой kits: проверяем, выполнен ли хотя бы один набор.
+        Срабатывает, когда допуск после планового начала прошёл и последние `window_dates`
+        дат наблюдений — внутри этапа, все с высокой наблюдаемостью и ни в одну не выполнен
+        ни один набор. Один день без маркера ничего не доказывает: техника могла работать
+        вне кадра (Березники на стенде: «Критично» по одному дню, датированному по имени
+        файла).
         """
-        if latest_obs.observability == "high":
-            effective_kits = rule.effective_kits
-            # Проверяем, есть ли хотя бы один набор с нормативными требованиями
-            kits_with_normative = [
-                kit
-                for kit in effective_kits
-                if any(r.obligation == "normative" for r in kit.requirements)
-            ]
-            if kits_with_normative:
-                # Проверяем, выполнен ли хотя бы один набор
-                any_kit_fulfilled = any(
-                    self._is_kit_fulfilled(kit, latest_obs) for kit in kits_with_normative
-                )
-                if not any_kit_fulfilled:
-                    return [
-                        DeviationResult(
-                            stage_id=stage.stage_id,
-                            type=DeviationType.MISSING_EQUIPMENT,
-                            is_hypothesis=False,
-                            severity=Severity.CRITICAL,
-                            confidence=Confidence.HIGH,
-                            period_start=latest_obs_on,
-                            period_end=latest_obs_on,
-                            expected="Присутствие маркерной техники этапа",
-                            observed="Маркерная техника не обнаружена",
-                            limits_text=(
-                                "Не доказывает остановку работ вне времени и мест съёмки — "
-                                "техника могла работать вне зоны обзора камер."
-                            ),
-                            rule_id=rule.rule_id,
-                            evidence_dates=(latest_obs_on,),
-                        )
-                    ]
+        kits = [
+            kit
+            for kit in rule.effective_kits
+            if any(r.obligation == "normative" for r in kit.requirements)
+        ]
+        latest = observations[-1]
+        day = latest.observed_on
+        tolerance = timedelta(days=self.config.tolerance_days)
+        if (
+            not kits
+            or stage.planned_start is None
+            or day <= stage.planned_start + tolerance
+            or day.weekday() not in self.config.workdays
+        ):
+            return []
+        tail = observations[-self.config.window_dates :]
+        if len(tail) < self.config.window_dates:
+            return []
+        if any(
+            o.observed_on < stage.planned_start
+            or o.observability != Observability.HIGH.value
+            or any(self._is_kit_fulfilled(kit, o) for kit in kits)
+            for o in tail
+        ):
+            return []
 
-        return []
+        def no_marker(o: ObservationInput) -> bool:
+            return o.observed_on >= (stage.planned_start or o.observed_on) and not any(
+                self._is_kit_fulfilled(kit, o) for kit in kits
+            )
+
+        days = (day - stage.planned_start).days
+        tail_dates = tuple(o.observed_on for o in tail)
+        return [
+            DeviationResult(
+                stage_id=stage.stage_id,
+                type=DeviationType.MISSING_EQUIPMENT,
+                is_hypothesis=False,
+                severity=self._severity(days, Confidence.HIGH, latest),
+                confidence=Confidence.HIGH,
+                period_start=self._streak_start(observations, no_marker),
+                period_end=day,
+                expected="Присутствие маркерной техники этапа",
+                observed=(
+                    "Маркерная техника не найдена ни на одном снимке за "
+                    f"{len(tail)} {_dates_word(len(tail))}: "
+                    + ", ".join(f"{d:%d.%m}" for d in tail_dates)
+                ),
+                limits_text=(
+                    "Не доказывает остановку работ вне времени и мест съёмки — "
+                    "техника могла работать вне зоны обзора камер."
+                ),
+                rule_id=rule.rule_id,
+                evidence_dates=tail_dates,
+            )
+        ]
+
+    def _severity(self, days: int, confidence: Confidence, latest: ObservationInput) -> Severity:
+        """«Критично» — только при уверенности не ниже средней, высокой наблюдаемости
+        последнего дня и не раньше `critical_days` от начала этапа (или подряд)."""
+        if (
+            days >= self.config.critical_days
+            and confidence != Confidence.LOW
+            and latest.observability == Observability.HIGH.value
+        ):
+            return Severity.CRITICAL
+        return Severity.ATTENTION
+
+    @staticmethod
+    def _streak_start(
+        observations: Sequence[ObservationInput], holds: Callable[[ObservationInput], bool]
+    ) -> date:
+        """Первый день непрерывной серии с конца, на которой условие выполняется."""
+        start = observations[-1].observed_on
+        for current in reversed(observations):
+            if not holds(current):
+                break
+            start = current.observed_on
+        return start
+
+    @staticmethod
+    def _stage_classes(rule: RuleInput) -> frozenset[uuid.UUID]:
+        """Вся техника методики этапа: требования и наборы."""
+        ids = {r.equipment_type_id for r in rule.requirements}
+        for kit in rule.effective_kits:
+            ids.update(r.equipment_type_id for r in kit.requirements)
+        return frozenset(ids)
+
+    @staticmethod
+    def _fits(
+        equipment_type_id: uuid.UUID,
+        classes: frozenset[uuid.UUID],
+        coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]],
+    ) -> bool:
+        """Подходит ли машина этапу: тот же класс или «тип не определён» того же рода."""
+        return equipment_type_id in classes or bool(
+            coarse.get(equipment_type_id, frozenset()) & classes
+        )
+
+    def _check_mismatch_and_extra(
+        self,
+        stages: Sequence[StageInput],
+        rules_by_stage: Mapping[uuid.UUID, RuleInput],
+        statuses: Sequence[StageStatusResult],
+        observations: Sequence[ObservationInput],
+        names: Mapping[uuid.UUID, str],
+        coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]],
+    ) -> list[DeviationResult]:
+        """«Несоответствие этапу» и «Лишняя техника» по машинам последнего дня.
+
+        Как в clean-mvp: машина, которой нет ни в одном идущем по плану этапе, — одна
+        строка на машину. Есть в методике другого этапа — «Несоответствие» к идущим этапам;
+        нет ни в одном этапе — гипотеза «Лишняя техника». Машины вне рабочей зоны не
+        считаются: они ни о чём на площадке не говорят. «Критично» — только когда машина
+        видна `critical_days` дат подряд; один снимок — «Внимание». Машина затянувшегося
+        этапа без идущих этапов — это уже «Отставание», второй строкой не повторяется.
+        """
+        if not observations:
+            return []
+        latest = observations[-1]
+        day = latest.observed_on
+        tolerance = timedelta(days=self.config.tolerance_days)
+        # Этапы с методикой — и ещё не наступившие: их машина тоже «чужая» для идущих
+        not_checked = {s.stage_id for s in statuses if s.status == StageStatusValue.NOT_CHECKED}
+        checked = [
+            s
+            for s in stages
+            if (rule := rules_by_stage.get(s.stage_id)) is not None
+            and rule.is_verifiable
+            and s.stage_id not in not_checked
+            and any(
+                r.obligation == "normative" for kit in rule.effective_kits for r in kit.requirements
+            )
+        ]
+        classes = {s.stage_id: self._stage_classes(rules_by_stage[s.stage_id]) for s in checked}
+        expected = [
+            s
+            for s in checked
+            if (s.planned_start is None or day >= s.planned_start - tolerance)
+            and (s.planned_end is None or day <= s.planned_end + tolerance)
+        ]
+        all_classes = frozenset().union(*classes.values()) if classes else frozenset()
+        lagging = {s.stage_id for s in statuses if s.status == StageStatusValue.BEHIND}
+        plan_now = ", ".join(f"«{s.name}»" for s in expected)
+        expected_text = (
+            f"Техника этапов, идущих по плану на {day:%d.%m}: {plan_now}."
+            if expected
+            else f"По плану на {day:%d.%m} этапов с техникой нет."
+        )
+        observability = self._str_to_confidence(latest.observability)
+
+        out: list[DeviationResult] = []
+        for eq in sorted(latest.equipment, key=lambda e: names.get(e.equipment_type_id, "")):
+            code = eq.equipment_type_id
+            if eq.in_zone is False or any(
+                self._fits(code, classes[s.stage_id], coarse) for s in expected
+            ):
+                continue
+            name = names.get(code, str(code))
+
+            def seen(o: ObservationInput, code: uuid.UUID = code) -> bool:
+                return any(
+                    e.equipment_type_id == code and e.in_zone is not False for e in o.equipment
+                )
+
+            start = self._streak_start(observations, seen)
+            streak = tuple(o.observed_on for o in observations if start <= o.observed_on <= day)
+            confidence = self._min_confidence(self._str_to_confidence(eq.confidence), observability)
+            if not self._fits(code, all_classes, coarse):
+                out.append(
+                    DeviationResult(
+                        stage_id=None,
+                        type=DeviationType.EXTRA_EQUIPMENT,
+                        is_hypothesis=True,
+                        severity=Severity.ATTENTION,
+                        confidence=self._min_confidence(confidence, Confidence.MEDIUM),
+                        period_start=start,
+                        period_end=day,
+                        expected="Техника из методики одного из этапов графика.",
+                        observed=(
+                            f"{name} (не менее {eq.count_min}) не входит ни в один этап графика."
+                        ),
+                        limits_text=(
+                            "Гипотеза — не доказывает незапланированные работы, "
+                            "техника могла быть на соседнем объекте или проезжать мимо."
+                        ),
+                        rule_id=None,
+                        evidence_dates=streak,
+                    )
+                )
+                continue
+            owner = min(
+                (s for s in checked if self._fits(code, classes[s.stage_id], coarse)),
+                key=lambda s: (s.stage_id not in lagging, s.position),
+            )
+            if owner.stage_id in lagging and not expected:
+                continue
+            targets: list[StageInput | None] = list(expected) or [None]
+            for target in targets:
+                days = 0
+                if target is not None and target.planned_start is not None:
+                    days = min(len(streak), (day - target.planned_start).days)
+                rule = rules_by_stage[(target or owner).stage_id]
+                out.append(
+                    DeviationResult(
+                        stage_id=target.stage_id if target else None,
+                        type=DeviationType.STAGE_MISMATCH,
+                        is_hypothesis=False,
+                        severity=self._severity(days, confidence, latest),
+                        confidence=confidence,
+                        period_start=start,
+                        period_end=day,
+                        expected=expected_text,
+                        observed=(
+                            f"{name} (не менее {eq.count_min}) — техника этапа "
+                            f"«{owner.name}», который по плану сейчас не идёт."
+                        ),
+                        limits_text=(
+                            "Не доказывает завершённость этапа или смену техники — "
+                            "техника могла быть вне зоны обзора камер."
+                        ),
+                        rule_id=rule.rule_id,
+                        evidence_dates=streak,
+                    )
+                )
+        return out
 
     def _check_missing_logical_equipment(
         self,
@@ -1024,6 +1161,15 @@ class RuleEngine:
 
         confidences = [self._str_to_confidence(eq.confidence) for eq in equipment]
         return min(confidences, key=self._confidence_order)
+
+
+def _dates_word(n: int) -> str:
+    """«дату», «даты», «дат» для «за N …»."""
+    if n % 10 == 1 and n % 100 != 11:
+        return "дату"
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return "даты"
+    return "дат"
 
 
 def _insufficient(reason: str) -> SummaryResult:

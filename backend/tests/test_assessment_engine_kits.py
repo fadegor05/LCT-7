@@ -623,7 +623,11 @@ class TestMissingEquipmentDeviation:
     """Тест: MISSING_EQUIPMENT для двухмашинного набора с только одной машиной."""
 
     def test_missing_equipment_when_kit_not_fulfilled(self):
-        """Высокая observability, ни один набор не выполнен -> MISSING_EQUIPMENT."""
+        """Три дня с высокой observability, ни один набор не выполнен -> MISSING_EQUIPMENT.
+
+        «Нет маркерной техники» — по окну из window_dates дат после допуска от начала,
+        а не по одному дню.
+        """
         config = EngineConfig(
             tolerance_days=5,
             stale_data_days=30,
@@ -643,7 +647,7 @@ class TestMissingEquipmentDeviation:
                 stage_id=stage_id,
                 name="Excavation",
                 position=1,
-                planned_start=date(2024, 1, 15),
+                planned_start=date(2024, 1, 8),
                 planned_end=date(2024, 1, 25),
             )
         ]
@@ -679,6 +683,19 @@ class TestMissingEquipmentDeviation:
         observations = [
             ObservationInput(
                 observed_on=date(2024, 1, 16),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=excavator_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    )
+                ],
+            ),
+            ObservationInput(
+                observed_on=date(2024, 1, 17),
                 photo_count=10,
                 observability="high",
                 equipment=[

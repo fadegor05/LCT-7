@@ -37,6 +37,7 @@ from app.domains.assessment.repository import (
 from app.domains.camera.models import Camera
 from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import (
+    COARSE_TO_SPECIFIC,
     SPECIFIC_EQUIPMENT_CODES,
     EquipmentCatalog,
 )
@@ -374,8 +375,14 @@ class RecomputeCoordinator:
             reference_date = self._resolve_as_of(observations)
             # Переиспользовать equipment_catalog_items загруженный при построении kits
             equipment_names = {item.id: item.title for item in equipment_catalog_items}
+            id_by_code = {item.code: item.id for item in equipment_catalog_items}
+            coarse = {
+                id_by_code[code]: frozenset(id_by_code[c] for c in specific if c in id_by_code)
+                for code, specific in COARSE_TO_SPECIFIC.items()
+                if code in id_by_code
+            }
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, reference_date, equipment_names
+                stages, rules_by_stage, observations, reference_date, equipment_names, coarse
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)
