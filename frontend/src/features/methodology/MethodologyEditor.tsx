@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useEquipmentTypes, useMethodology, useApplyDefaults } from '@/api/methodology'
 import { useSchedule } from '@/api/schedule'
-import type { Rule } from '@/api/schemas'
+import { useStageStatuses } from '@/api/deviations'
+import type { Rule, StageStatus } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { Card } from '@/components/ui/Card'
@@ -11,9 +12,17 @@ import { plural } from '@/lib/labels'
 import { StageKitEditor } from './StageKitEditor'
 import styles from './Methodology.module.css'
 
-/** Маркеры — нормативная техника всех комплектов: только она даёт даты этапа (§8 п. 8). */
-function ruleSubtitle(rule: Rule): string {
+/**
+ * Подпись этапа в списке (clean-mvp): настоящие маркеры — техника, которая отличает этап от
+ * идущих одновременно (по последнему пересчёту), или «Нет отличительной техники». Пока
+ * пересчёта не было — нормативная техника комплектов.
+ */
+function ruleSubtitle(rule: Rule, status: StageStatus | undefined): string {
   if (!rule.is_verifiable) return 'Не проверяется по технике'
+  if (status?.marker_periods) {
+    const names = [...new Set(status.marker_periods.map((p) => p.name.toLowerCase()))]
+    return names.length ? `маркер: ${names.join(', ')}` : 'Нет отличительной техники'
+  }
   const markers = [
     ...new Set(
       rule.sets.flatMap((s) =>
@@ -35,6 +44,8 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [showDialog, setShowDialog] = useState(false)
   const applyDefaults = useApplyDefaults(siteId)
+  const statuses = useStageStatuses(siteId)
+  const statusOf = (rule: Rule) => statuses.data?.find((s) => s.stage_id === rule.stage_id)
 
   // Выбор по умолчанию фиксируется при первой загрузке: иначе после «Не проверяется»
   // редактор перепрыгнул бы на следующий проверяемый этап.
@@ -76,7 +87,7 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
                       onClick={() => setSelected(rule.id)}
                     >
                       <span>{rule.stage_name ?? 'Этап'}</span>
-                      <span className="sm muted">{ruleSubtitle(rule)}</span>
+                      <span className="sm muted">{ruleSubtitle(rule, statusOf(rule))}</span>
                     </button>
                   ))}
                 </div>
@@ -89,12 +100,13 @@ export function MethodologyEditor({ siteId }: { siteId: string }) {
                 rule={current}
                 stage={schedule.data?.stages.find((s) => s.id === current.stage_id)}
                 types={types.data ?? []}
+                markers={statusOf(current)?.marker_periods}
               />
               <p className="sm muted">
-                Комплект — набор техники, которым подтверждается этап; у этапа он один. Нормативная
-                техника — маркер: только она даёт даты этапа. Логическая обязательна по смыслу
-                работы, но одна этап не подтверждает. Вспомогательная может присутствовать, её
-                отсутствие — не отклонение.
+                Комплект — набор техники, которым подтверждается этап. Маркер — нормативная машина,
+                которой нет у этапов, идущих в это же время: только маркеры дают даты этапа.
+                Логическая обязательна по смыслу работы, но одна этап не подтверждает.
+                Вспомогательная может присутствовать, её отсутствие — не отклонение.
               </p>
             </div>
 

@@ -52,6 +52,20 @@ class StorageSettings(BaseModel):
         return int(self.max_batch_mb * 1024 * 1024)
 
 
+class UploadSettings(BaseModel):
+    """Фоновая обработка загруженных снимков (UPLOAD__*).
+
+    Запрос загрузки только принимает файлы; дату со штампа и технику ставит фоновый
+    обработчик. UPLOAD__BACKGROUND=false — прежняя обработка внутри запроса (тесты, отладка).
+    """
+
+    background: bool = True
+    # Сколько кадров обрабатывать одновременно (штамп и детектор — запросы к ML)
+    workers: int = Field(default=3, ge=1)
+    # Как часто обработчик смотрит очередь, если его не разбудила загрузка
+    tick_s: float = 5.0
+
+
 class DetectorSettings(BaseModel):
     """Параметры ML-детектора."""
 
@@ -258,6 +272,7 @@ class Settings(BaseSettings):
     postgres: PostgresSettings = PostgresSettings()
     s3: bool = False
     storage: StorageSettings = StorageSettings()
+    upload: UploadSettings = UploadSettings()
     detector: DetectorSettings = DetectorSettings()
     stream: StreamSettings = StreamSettings()
     observation: ObservationSettings = ObservationSettings()

@@ -364,6 +364,15 @@ class TestActivityPolicy:
         assert got.activity is Activity.WORKS
         assert got.basis.startswith("Движение: машина сместилась между 10:00 и 10:05")
 
+    def test_same_minute_pair_shows_seconds(self):
+        policy = ActivityPolicy(ActivityParams())
+        shots = [
+            Shot(datetime(2026, 9, 9, 19, 0, 5), (Box(self.EXC, [0.1, 0.1, 0.2, 0.2]),)),
+            Shot(datetime(2026, 9, 9, 19, 0, 40), (Box(self.EXC, [0.16, 0.1, 0.26, 0.2]),)),
+        ]
+        got = policy.assess_day([CameraSeries("Север", None, shots)], [self.EXC])[self.EXC]
+        assert got.basis.startswith("Движение: машина сместилась между 19:00:05 и 19:00:40")
+
     def test_long_gap_does_not_pair(self):
         """За разрыв больше 10 минут машина успеет уехать и вернуться — пары нет."""
         got = self._day(

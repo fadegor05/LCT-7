@@ -35,9 +35,15 @@ class DateSource(StrEnum):
 class ProcessingStatus(StrEnum):
     """Статус обработки фотографии."""
 
-    PENDING = "pending"
+    PENDING = "pending"  # детектор выключен или не ответил — можно запустить ещё раз
+    QUEUED = "queued"  # принят, ждёт фоновой обработки (дата и детекция)
+    PROCESSING = "processing"  # фоновая обработка идёт
     DONE = "done"
     FAILED = "failed"
+
+
+# Кадр ещё в работе: дату и технику о нём знать рано
+IN_QUEUE = (ProcessingStatus.QUEUED.value, ProcessingStatus.PROCESSING.value)
 
 
 class Photo(Base):
@@ -68,8 +74,12 @@ class Photo(Base):
     # Проверка серии штампов камеры: ok | series_outlier; null — не проверялось
     time_check: Mapped[str | None] = mapped_column(String(16), nullable=True)
     processing_status: Mapped[str] = mapped_column(
-        String(16), default=ProcessingStatus.PENDING.value, nullable=False
+        String(16), default=ProcessingStatus.PENDING.value, nullable=False, index=True
     )
+    # Пачка загрузки и место кадра в ней: пока пачка в фоновой обработке, по ним ставится
+    # дата по соседям в исходном порядке; после завершения обработки сбрасываются
+    upload_batch_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True, index=True)
+    upload_batch_pos: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Камера, с которой снят кадр; null — загружен вручную, как раньше
     camera_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("cameras.id", ondelete="SET NULL"), nullable=True, index=True

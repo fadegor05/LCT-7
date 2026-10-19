@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { useSummary } from '@/api/deviations'
-import { useObservations, useUndatedPhotos } from '@/api/frames'
+import { useCameras } from '@/api/cameras'
+import { useObservations, usePhotos, useUndatedPhotos } from '@/api/frames'
 import { useSchedule } from '@/api/schedule'
 import type { SiteSummary } from '@/api/schemas'
 import { Card } from '@/components/ui/Card'
-import { formatDate, latestObservation } from '@/lib/format'
+import { formatDate, formatShortDateTime, latestObservation } from '@/lib/format'
 import { levelLabels, plural } from '@/lib/labels'
 import { verdictText } from '@/features/sites/verdict'
 import styles from './Overview.module.css'
@@ -84,6 +85,16 @@ function DataStateCard({ siteId }: { siteId: string }) {
   const undated = useUndatedPhotos(siteId).data?.length ?? 0
   const last = latestObservation(observations)
   const dated = observations.reduce((sum, o) => sum + o.photo_count, 0)
+  const cameras = useCameras(siteId).data ?? []
+  const photos = usePhotos(siteId).data ?? []
+  // Как в clean-mvp: сколько камер прислали кадры в последний день и когда последний кадр
+  const lastDay = photos.filter((p) => last && p.captured_on === last.observed_on)
+  const sending = cameras.filter((c) => lastDay.some((p) => p.camera_id === c.id)).length
+  const lastShot = photos
+    .map((p) => p.captured_at)
+    .filter((v): v is string => !!v)
+    .sort()
+    .at(-1)
   return (
     <Card aria-labelledby="data-state-title">
       <p id="data-state-title" className="lab muted">
@@ -99,6 +110,21 @@ function DataStateCard({ siteId }: { siteId: string }) {
           <dt>Последнее наблюдение</dt>
           <dd className="data">{formatDate(last?.observed_on)}</dd>
         </div>
+        {cameras.length > 0 && (
+          <div>
+            <dt>Камеры</dt>
+            <dd>
+              {sending} из {cameras.length}{' '}
+              {plural(sending, ['присылает', 'присылают', 'присылают'])} кадры
+            </dd>
+          </div>
+        )}
+        {lastShot && (
+          <div>
+            <dt>Последний кадр</dt>
+            <dd className="data">{formatShortDateTime(lastShot)}</dd>
+          </div>
+        )}
         <div>
           <dt>Дней наблюдений</dt>
           <dd className="data">{observations.length}</dd>

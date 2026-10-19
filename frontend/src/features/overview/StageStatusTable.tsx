@@ -3,11 +3,9 @@ import type { Stage, StageStatus } from '@/api/schemas'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { stageAnchorId } from '@/features/assistant/linkifyAnswer'
 import type { DeviationItem } from '@/lib/deviations'
-import { formatWindow, stageDelayText } from '@/lib/format'
+import { factText, formatPeriod, stageDelayText } from '@/lib/format'
 import { deviationTypeLabels, levelLabels } from '@/lib/labels'
 import styles from './Overview.module.css'
-
-const NBSP = '\u00a0'
 
 const lowerFirst = (name: string) => name.charAt(0).toLowerCase() + name.slice(1)
 
@@ -77,18 +75,9 @@ export function StageStatusTable({
                   </div>
                 </th>
                 <td className="data">
-                  {/* Неразрывные пробелы: окно переносится только после тире, дата целиком */}
-                  {formatWindow(
-                    stage?.planned_start ?? null,
-                    stage?.planned_end ?? null,
-                    '–',
-                  ).replace(/ /g, NBSP)}
+                  {formatPeriod(stage?.planned_start ?? null, stage?.planned_end ?? null)}
                 </td>
-                <td className="data">
-                  {row.start_fact
-                    ? `с ${row.start_fact.slice(8, 10)}.${row.start_fact.slice(5, 7)}`
-                    : '—'}
-                </td>
+                <td className="data">{factText(row.start_fact, row.status)}</td>
                 <td>
                   <div className={styles.statusCell}>
                     <StatusBadge

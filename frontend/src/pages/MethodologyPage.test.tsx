@@ -263,3 +263,44 @@ describe('MethodologyPage', () => {
     expect(await screen.findByText('Ошибка сервера')).toBeInTheDocument()
   })
 })
+
+describe('MethodologyPage: маркеры этапа', () => {
+  it('shows the real markers with their periods after a recompute', async () => {
+    const { equipmentByCode } = await import('@/mocks/fixtures')
+    const excavator = equipmentByCode('excavator_crawler')
+    const { user, client } = renderRoute('/sites/site-berezniki/methodology')
+    await createPitKit(user)
+    server.use(
+      http.get('*/sites/:siteId/assessment/stages', () =>
+        HttpResponse.json([
+          {
+            stage_id: 'site-berezniki-stage-2',
+            stage_name: 'Разработка котлована',
+            position: 2,
+            status: 'on_track',
+            delay_days: null,
+            confidence: 'high',
+            confidence_reason: null,
+            computed_at: '2026-09-18T12:00:00Z',
+            marker_names: ['Гусеничный экскаватор'],
+            marker_periods: [
+              {
+                equipment_type_id: excavator.id,
+                name: 'Гусеничный экскаватор',
+                start: '2026-08-21',
+                end: '2026-09-17',
+              },
+            ],
+          },
+        ]),
+      ),
+    )
+    // Пересчёт после правки комплекта: статусы этапов перезапрошены
+    await client.invalidateQueries({ queryKey: ['site', 'site-berezniki'] })
+    expect(
+      await screen.findByRole('button', { name: /маркер: гусеничный экскаватор/ }),
+    ).toBeInTheDocument()
+    expect(within(kit(1)).getByText('21.08–17.09', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('Маркерная техника этапа')).toBeInTheDocument()
+  })
+})

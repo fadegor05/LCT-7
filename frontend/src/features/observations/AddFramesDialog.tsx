@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCameras } from '@/api/cameras'
-import { useUploadPhotos } from '@/api/frames'
+import { chunkFiles, useUploadPhotos } from '@/api/frames'
 import type { Camera, UploadReport } from '@/api/schemas'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
@@ -8,9 +8,7 @@ import { Dialog } from '@/components/ui/Dialog'
 import { FileDrop } from '@/components/ui/FileDrop'
 import { QueryState } from '@/components/ui/QueryState'
 import { SelectField } from '@/components/ui/SelectField'
-
-// Зеркалит StorageSettings.max_batch_mb на бэкенде
-const MAX_BATCH_MB = 200
+import { plural } from '@/lib/labels'
 
 function Failed({ report }: { report: UploadReport }) {
   return (
@@ -66,14 +64,12 @@ function UploadDialog({ siteId, cameras, onClose }: DialogProps & { cameras: rea
   // Камера одна — она и выбрана: лишний шаг ничего не решает
   const [cameraId, setCameraId] = useState(cameras.length === 1 ? cameras[0]!.id : '')
   const report = upload.data
+  const [sent, setSent] = useState(0)
 
-  const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
-  const totalMb = totalBytes / 1024 / 1024
-  const isBatchTooLarge = totalBytes > MAX_BATCH_MB * 1024 * 1024
-
-  const submit = () =>
+  const submit = () => {
+    setSent(0)
     upload.mutate(
-      { files, cameraId },
+      { files, cameraId, onProgress: setSent },
       {
         onSuccess: (result) => {
           if (result.failed === 0) onClose()
@@ -81,6 +77,7 @@ function UploadDialog({ siteId, cameras, onClose }: DialogProps & { cameras: rea
         },
       },
     )
+  }
 
   return (
     <Dialog
@@ -91,18 +88,15 @@ function UploadDialog({ siteId, cameras, onClose }: DialogProps & { cameras: rea
           <Button variant="ghost" onClick={onClose}>
             {report ? 'Готово' : 'Отмена'}
           </Button>
-          <Button
-            onClick={submit}
-            disabled={files.length === 0 || !cameraId || upload.isPending || isBatchTooLarge}
-          >
-            Загрузить
+          <Button onClick={submit} disabled={files.length === 0 || !cameraId || upload.isPending}>
+            {upload.isPending ? 'Отправка…' : 'Загрузить'}
           </Button>
         </>
       }
     >
       <FileDrop
         title="Перетащите снимки"
-        hint="JPEG, PNG или WEBP. Дата берётся из метаданных, затем со штампа в кадре. Снимки без даты попадут в список «Без даты»."
+        hint="JPEG, PNG или WEBP, сколько угодно снимков. После отправки сервер обработает их в фоне: дата со штампа, из метаданных или имени файла и техника на кадре. Снимки без даты попадут в список «Без даты»."
         accept="image/jpeg,image/png,image/webp"
         multiple
         buttonLabel="Выбрать файлы"
@@ -110,7 +104,12 @@ function UploadDialog({ siteId, cameras, onClose }: DialogProps & { cameras: rea
       />
       {files.length > 0 && (
         <p className="sm" role="status">
-          Выбрано: {files.map((f) => f.name).join(', ')}
+          {upload.isPending
+            ? `Отправлено ${sent} из ${files.length}`
+            : files.length > 5
+              ? `Выбрано: ${files.length} ${plural(files.length, ['снимок', 'снимка', 'снимков'])}` +
+                (chunkFiles(files).length > 1 ? ` — уйдут ${chunkFiles(files).length} пачками` : '')
+              : `Выбрано: ${files.map((f) => f.name).join(', ')}`}
         </p>
       )}
       <SelectField
@@ -122,11 +121,6 @@ function UploadDialog({ siteId, cameras, onClose }: DialogProps & { cameras: rea
         value={cameraId}
         onChange={(e) => setCameraId(e.target.value)}
       />
-      {isBatchTooLarge && (
-        <Callout tone="caution">
-          Пачка слишком большая: выбрано {totalMb.toFixed(1)} МБ, максимум {MAX_BATCH_MB} МБ
-        </Callout>
-      )}
       {report && report.failed > 0 && <Failed report={report} />}
       {upload.error && (
         <Callout tone="behind" title="Снимки не загружены">

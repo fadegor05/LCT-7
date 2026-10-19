@@ -25,6 +25,7 @@ from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.date_resolver import (
     DateResolver,
+    ImageInfo,
     InvalidImageError,
     read_image_info,
 )
@@ -145,6 +146,10 @@ class PhotoService:
         if camera_id is not None:
             await self._require_camera(site_id, camera_id)
 
+        # Фоновая обработка: запрос только принимает файлы, дату и технику ставит очередь
+        if self._settings.upload.background:
+            return await self._accept_batch(site_id, files, camera_id)
+
         items: list[UploadItem] = []
         batch_photo_ids: list[uuid.UUID] = []
 
@@ -200,6 +205,151 @@ class PhotoService:
 
         return UploadReport(items=final_items, uploaded=uploaded, failed=failed)
 
+    async def _accept_batch(
+        self, site_id: uuid.UUID, files: Sequence[UploadInput], camera_id: uuid.UUID | None
+    ) -> UploadReport:
+        """Принять пачку в очередь: проверка, хранилище, снимок со статусом queued."""
+        batch_id = uuid.uuid4()
+        items = [
+            await self._accept_file(site_id, file_input, camera_id, batch_id, pos)
+            for pos, file_input in enumerate(files)
+        ]
+        return UploadReport(
+            items=items,
+            uploaded=sum(1 for i in items if i.photo is not None),
+            failed=sum(1 for i in items if i.error is not None),
+        )
+
+    async def _accept_file(
+        self,
+        site_id: uuid.UUID,
+        file_input: UploadInput,
+        camera_id: uuid.UUID | None,
+        batch_id: uuid.UUID,
+        pos: int,
+    ) -> UploadItem:
+        info, error = await self._check_file(file_input)
+        if error is not None:
+            return error
+        assert info is not None and info.format is not None  # проверено в _check_file
+        photo_id = uuid.uuid4()
+        storage_key = (
+            f"sites/{site_id}/photos/{photo_id}{self._get_extension_from_format(info.format)}"
+        )
+        try:
+            await self._storage.put(
+                storage_key, file_input.content, self._get_content_type_from_format(info.format)
+            )
+        except StorageError:
+            logger.exception("Не удалось сохранить файл в хранилище")
+            return UploadItem(
+                filename=file_input.filename, photo=None, error="Не удалось сохранить файл"
+            )
+        photo = Photo(
+            id=photo_id,
+            site_id=site_id,
+            storage_key=storage_key,
+            original_name=os.path.basename(file_input.filename)[:255],
+            width=info.width,
+            height=info.height,
+            processing_status=ProcessingStatus.QUEUED.value,
+            camera_id=camera_id,
+            upload_batch_id=batch_id,
+            upload_batch_pos=pos,
+        )
+        self._session.add(photo)
+        try:
+            await self._session.commit()
+        except Exception:
+            logger.exception("Не удалось сохранить снимок в БД")
+            await self._session.rollback()
+            try:
+                await self._storage.delete(storage_key)
+            except StorageError:
+                logger.warning("Не удалось удалить %s из хранилища после ошибки БД", storage_key)
+            return UploadItem(
+                filename=file_input.filename, photo=None, error="Ошибка сохранения снимка"
+            )
+        return UploadItem(
+            filename=file_input.filename, photo=PhotoRead.model_validate(photo), error=None
+        )
+
+    async def process_queued(self, photo_id: uuid.UUID) -> uuid.UUID | None:
+        """Фоновая обработка одного кадра: дата (штамп, EXIF, имя), затем детекция.
+
+        Вызывает очередь (photo/queue.py) для кадра, который она уже перевела в processing.
+        Возвращает объект кадра, чтобы очередь закрыла его, когда кадры объекта кончатся.
+        """
+        photo = await self._repository.get(photo_id)
+        if photo is None:
+            return None
+        try:
+            content = await self._storage.get(photo.storage_key)
+        except StorageError:
+            logger.exception("Файл кадра %s недоступен", photo_id)
+            photo.processing_status = ProcessingStatus.FAILED.value
+            await self._session.commit()
+            return photo.site_id
+        try:
+            resolved = await self._resolver.resolve(content, filename=photo.original_name)
+        except InvalidImageError:
+            logger.warning("Не удалось определить дату для %s", photo.original_name)
+            photo.processing_status = ProcessingStatus.FAILED.value
+            await self._session.commit()
+            return photo.site_id
+        # Дату, заданную инженером, пока кадр ждал очереди, прочитанная не перебивает
+        if photo.date_source != DateSource.MANUAL.value:
+            photo.captured_on = resolved.captured_on
+            photo.date_source = resolved.source.value if resolved.source else None
+            photo.captured_at = resolved.captured_at
+            photo.date_hint = resolved.hint
+            photo.uncertain_at = resolved.uncertain_at
+        photo.processing_status = ProcessingStatus.PENDING.value
+        await self._session.flush()
+        content_type = self._get_content_type_from_key(photo.storage_key)
+        await self._run_detection(photo, content, photo.original_name, content_type)
+        await self._session.commit()
+        return photo.site_id
+
+    async def finish_site_queue(self, site_id: uuid.UUID) -> bool:
+        """Кадры объекта обработаны — закрыть его пачки и пересчитать наблюдения один раз.
+
+        Пока у объекта есть кадры в очереди, ничего не делает (False): дату по соседям и
+        серию камеры ставят по всей пачке, а пересчёт объекта — по всем датам сразу.
+        """
+        if await self._repository.count_in_queue(site_id):
+            return False
+        photos = await self._repository.list_in_batches(site_id)
+        if not photos:
+            return True
+        cameras = {p.camera_id for p in photos if p.camera_id is not None}
+        for camera_id in sorted(cameras, key=str):
+            await self._apply_camera_series(site_id, camera_id)
+        # Дату по соседям — только снимкам без камеры, как в загрузке внутри запроса
+        batches: dict[uuid.UUID, list[Photo]] = {}
+        for p in photos:
+            if p.camera_id is None and p.upload_batch_id is not None:
+                batches.setdefault(p.upload_batch_id, []).append(p)
+        for batch in batches.values():
+            batch.sort(key=lambda p: p.upload_batch_pos or 0)
+            await self._apply_neighbours_dating(site_id, [p.id for p in batch])
+        for p in photos:
+            p.upload_batch_id = None
+            p.upload_batch_pos = None
+        await self._session.commit()
+        dates = {p.captured_on for p in photos if p.captured_on is not None}
+        try:
+            await self._recalculator.recompute_many(site_id, dates)
+        except Exception:
+            logger.exception("Ошибка при пересчёте наблюдений после очереди загрузки")
+            await self._session.rollback()
+        return True
+
+    async def queue_progress(self, site_id: uuid.UUID) -> tuple[int, int]:
+        """Сколько кадров объекта ждут обработки и сколько обрабатываются сейчас."""
+        await self._site_guard.require(site_id)
+        return await self._repository.queue_counts(site_id)
+
     async def add_camera_frame(
         self,
         site_id: uuid.UUID,
@@ -235,6 +385,47 @@ class PhotoService:
         if camera is None or camera.site_id != site_id:
             raise AppError("Камера не найдена", status_code=404)
 
+    async def _check_file(
+        self, file_input: UploadInput
+    ) -> tuple[ImageInfo | None, UploadItem | None]:
+        """Размер, целостность и формат файла; ошибка — UploadItem с причиной."""
+        # Шаг (a): Размер и пустой контент
+        if len(file_input.content) > self._settings.storage.max_upload_bytes:
+            return None, UploadItem(
+                filename=file_input.filename,
+                photo=None,
+                error=f"Файл слишком большой (макс {self._settings.storage.max_upload_mb:g} МБ)",
+            )
+
+        if not file_input.content:
+            return None, UploadItem(
+                filename=file_input.filename,
+                photo=None,
+                error="Файл пуст",
+            )
+
+        # Шаг (b): Валидация изображения и определение формата
+        try:
+            info = await asyncio.to_thread(read_image_info, file_input.content)
+        except InvalidImageError:
+            logger.info("Файл %s не является корректным изображением", file_input.filename)
+            return None, UploadItem(
+                filename=file_input.filename,
+                photo=None,
+                error="Файл не является корректным изображением",
+            )
+
+        # Проверяем формат
+        allowed_formats = {"JPEG", "PNG", "WEBP"}
+        if info.format not in allowed_formats:
+            return None, UploadItem(
+                filename=file_input.filename,
+                photo=None,
+                error=f"Неподдерживаемый формат: {info.format}",
+            )
+
+        return info, None
+
     async def _process_single_file(
         self,
         site_id: uuid.UUID,
@@ -256,40 +447,10 @@ class PhotoService:
         Returns:
             UploadItem с результатом
         """
-        # Шаг (a): Размер и пустой контент
-        if len(file_input.content) > self._settings.storage.max_upload_bytes:
-            return UploadItem(
-                filename=file_input.filename,
-                photo=None,
-                error=f"Файл слишком большой (макс {self._settings.storage.max_upload_mb:g} МБ)",
-            )
-
-        if not file_input.content:
-            return UploadItem(
-                filename=file_input.filename,
-                photo=None,
-                error="Файл пуст",
-            )
-
-        # Шаг (b): Валидация изображения и определение формата
-        try:
-            info = await asyncio.to_thread(read_image_info, file_input.content)
-        except InvalidImageError:
-            logger.info("Файл %s не является корректным изображением", file_input.filename)
-            return UploadItem(
-                filename=file_input.filename,
-                photo=None,
-                error="Файл не является корректным изображением",
-            )
-
-        # Проверяем формат
-        allowed_formats = {"JPEG", "PNG", "WEBP"}
-        if info.format not in allowed_formats:
-            return UploadItem(
-                filename=file_input.filename,
-                photo=None,
-                error=f"Неподдерживаемый формат: {info.format}",
-            )
+        info, error = await self._check_file(file_input)
+        if error is not None:
+            return error
+        assert info is not None and info.format is not None  # проверено в _check_file
 
         # Шаг (c): Разрешение даты
         try:

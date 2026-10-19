@@ -9,6 +9,7 @@ import {
   usePhotos,
   useUndatedPhotos,
 } from '@/api/frames'
+import { useSchedule } from '@/api/schedule'
 import { useSite } from '@/api/sites'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { SiteQueryState } from '@/components/layout/SiteQueryState'
@@ -40,6 +41,7 @@ export function ObservationsPage() {
   const photos = usePhotos(siteId)
   const undated = useUndatedPhotos(siteId)
   const cameras = useCameras(siteId)
+  const schedule = useSchedule(siteId)
 
   // В последнем дне меньше трёх снимков (фотоотчёт раз в месяц) — сразу «Все дни»: иначе
   // объект с 15 снимками открывался на одном и казался пустым (как в clean-mvp)
@@ -98,7 +100,7 @@ export function ObservationsPage() {
                   }}
                   aria-busy={observation.isPlaceholderData}
                 >
-                  <EquipmentList observation={observation.data} />
+                  <EquipmentList observation={observation.data} stages={schedule.data?.stages} />
                 </div>
               )}
 

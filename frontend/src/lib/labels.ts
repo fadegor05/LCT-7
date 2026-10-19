@@ -4,6 +4,7 @@ import type {
   DateSource,
   DeviationType,
   Level,
+  ObjectType,
   Obligation,
   ProcessingStatus,
   Severity,
@@ -18,8 +19,45 @@ export const dateSourceLabels: Record<DateSource, string> = {
   manual: 'Вручную',
 }
 
+export const objectTypeLabels: Record<ObjectType, string> = {
+  housing: 'Жильё',
+  education: 'Образование',
+  health: 'Здравоохранение',
+  other: 'Другое',
+}
+
+/** Рабочие дни — пресеты макета (clean-mvp). */
+export const WORKDAY_PRESETS = [
+  { value: 'weekdays', label: 'Пн–Пт', days: [0, 1, 2, 3, 4] },
+  { value: 'six', label: 'Пн–Сб', days: [0, 1, 2, 3, 4, 5] },
+  { value: 'daily', label: 'Ежедневно', days: [0, 1, 2, 3, 4, 5, 6] },
+] as const
+
+export type WorkdayPreset = (typeof WORKDAY_PRESETS)[number]['value']
+
+/** Пресет по списку дней; `null` — набор не из макета (задан через API). */
+export function workdayPreset(days: readonly number[]): WorkdayPreset | null {
+  const key = [...days].sort((a, b) => a - b).join(',')
+  return WORKDAY_PRESETS.find((p) => p.days.join(',') === key)?.value ?? null
+}
+
+const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
+
+/** «Пн–Пт», «Ежедневно» или перечень дней набора не из макета. */
+export function workdaysText(days: readonly number[]): string {
+  const preset = WORKDAY_PRESETS.find((p) => p.value === workdayPreset(days))
+  return preset
+    ? preset.label
+    : [...days]
+        .sort((a, b) => a - b)
+        .map((d) => WEEKDAYS[d])
+        .join(', ')
+}
+
 export const processingStatusLabels: Record<ProcessingStatus, string> = {
   pending: 'Не обработан',
+  queued: 'В очереди',
+  processing: 'Обрабатывается',
   done: 'Обработан',
   failed: 'Ошибка детектора',
 }

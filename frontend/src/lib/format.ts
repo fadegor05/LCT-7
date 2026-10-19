@@ -80,6 +80,26 @@ export function formatWindow(start: string | null, end: string | null, sep = ' �
   return `${formatDate(start)}${sep}${formatDate(end)}`
 }
 
+/**
+ * Период этапа компактно, как в clean-mvp: «10.04–30.08»; год — у конца, если период
+ * переходит через год или он не текущий: «15.08–30.03.2027».
+ */
+export function formatPeriod(start: string | null, end: string | null): string {
+  if (!start || !end) return '—'
+  const dm = (v: string) => `${v.slice(8, 10)}.${v.slice(5, 7)}`
+  const year = todayIso().slice(0, 4)
+  const withYear = start.slice(0, 4) !== end.slice(0, 4) || end.slice(0, 4) !== year
+  const span = start === end ? dm(start) : `${dm(start)}–${dm(end)}`
+  return `${span}${withYear ? `.${end.slice(0, 4)}` : ''}`
+}
+
+/** Факт по маркеру: «с 03.08», у идущего этапа — «с 03.08, идёт». */
+export function factText(startFact: string | null | undefined, status: string | null): string {
+  if (!startFact) return '—'
+  const since = `с ${startFact.slice(8, 10)}.${startFact.slice(5, 7)}`
+  return status && ['on_track', 'behind', 'ahead'].includes(status) ? `${since}, идёт` : since
+}
+
 /** Отставание: «от 4 дн.» или «4–6 дн.» */
 export function formatDelay(min: number | null, max: number | null): string | null {
   if (min === null) return max === null ? null : `до ${max} дн.`

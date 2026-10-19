@@ -490,10 +490,19 @@ class ScheduleParser:
             if not error_reason and start is not None and end is not None and end < start:
                 error_reason = "Дата окончания раньше даты начала"
 
+            # Строка с неразобранной датой остаётся работой без дат (clean-mvp): иначе этап
+            # из одной строки-родителя («6 Работы по устройству кровли | 30.02.2027») пропадал
+            # из графика целиком, а инженер мог бы задать даты в мастере
             if error_reason:
                 raw_row = " | ".join(str(cell) if cell is not None else "" for cell in row_data)
-                issues.append(ParsedIssue(row_number=row_num, raw_row=raw_row, reason=error_reason))
-                continue
+                issues.append(
+                    ParsedIssue(
+                        row_number=row_num,
+                        raw_row=raw_row,
+                        reason=f"{error_reason} — задайте даты вручную",
+                    )
+                )
+                start = end = None
 
             # Успешно распарсена строка
             number_idx = header.get("number")

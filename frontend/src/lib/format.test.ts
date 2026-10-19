@@ -1,10 +1,12 @@
 import {
   daysAgo,
+  factText,
   formatDate,
   formatDateTime,
   formatDelay,
   latestObservation,
   formatFileSize,
+  formatPeriod,
   formatShortDate,
   formatShortDateTime,
   formatTime,
@@ -64,6 +66,22 @@ describe('format', () => {
     expect(formatWindow('2026-08-24', '2026-08-31')).toBe('ПН 24.08.2026 — ПН 31.08.2026')
     expect(formatWindow('2026-08-24', '2026-08-31', '–')).toBe('ПН 24.08.2026–ПН 31.08.2026')
     expect(formatWindow(null, null)).toBe('—')
+  })
+
+  it('formats stage periods compactly, like clean-mvp', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 19) })
+    expect(formatPeriod('2026-04-10', '2026-08-30')).toBe('10.04–30.08')
+    expect(formatPeriod('2026-08-15', '2027-03-30')).toBe('15.08–30.03.2027')
+    expect(formatPeriod('2023-05-15', '2023-07-31')).toBe('15.05–31.07.2023')
+    expect(formatPeriod('2026-08-14', '2026-08-14')).toBe('14.08')
+    expect(formatPeriod(null, '2026-08-30')).toBe('—')
+    vi.useRealTimers()
+  })
+
+  it('describes the marker fact', () => {
+    expect(factText('2026-08-03', 'ahead')).toBe('с 03.08, идёт')
+    expect(factText('2026-08-03', 'not_observed')).toBe('с 03.08')
+    expect(factText(null, 'on_track')).toBe('—')
   })
 
   it('formats delay intervals', () => {

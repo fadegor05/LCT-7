@@ -9,6 +9,7 @@ from app.domains.assessment.recalculator import LiveStatusRecalculator
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
     DeviationRepository,
+    HypothesisDecisionRepository,
     SiteSummaryRepository,
     StageStatusRepository,
     StatusBasisRepository,
@@ -55,6 +56,7 @@ class AssessmentProvider(Provider):
     stage_status_repository = provide(StageStatusRepository, scope=Scope.REQUEST)
     deviation_repository = provide(DeviationRepository, scope=Scope.REQUEST)
     deviation_evidence_repository = provide(DeviationEvidenceRepository, scope=Scope.REQUEST)
+    decision_repository = provide(HypothesisDecisionRepository, scope=Scope.REQUEST)
     status_basis_repository = provide(StatusBasisRepository, scope=Scope.REQUEST)
     site_summary_repository = provide(SiteSummaryRepository, scope=Scope.REQUEST)
     coordinator = provide(RecomputeCoordinator, scope=Scope.REQUEST)

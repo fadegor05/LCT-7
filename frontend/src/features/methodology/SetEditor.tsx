@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useCreateSet, useReplaceSet } from '@/api/methodology'
-import type { EquipmentSet, EquipmentType, Requirement, SetWrite } from '@/api/schemas'
+import type {
+  EquipmentSet,
+  EquipmentType,
+  MarkerPeriod,
+  Requirement,
+  SetWrite,
+} from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { Icon } from '@/components/ui/Icon'
 import { Pill } from '@/components/ui/Pill'
+import { formatPeriod } from '@/lib/format'
 import { obligationLabels } from '@/lib/labels'
 import { AddRuleForm } from './AddRuleForm'
 import styles from './Methodology.module.css'
@@ -30,6 +37,7 @@ interface SetEditorProps {
   set: EquipmentSet | null
   number: number
   types: readonly EquipmentType[]
+  markers?: readonly MarkerPeriod[]
 }
 
 /**
@@ -38,7 +46,7 @@ interface SetEditorProps {
  * не сохраняется — то же правило проверяет backend. Комплект у этапа один (альтернативные — P2),
  * поэтому ни добавить второй, ни удалить комплект отсюда нельзя.
  */
-export function SetEditor({ siteId, ruleId, set, number, types }: SetEditorProps) {
+export function SetEditor({ siteId, ruleId, set, number, types, markers }: SetEditorProps) {
   const initial = useMemo(() => (set?.requirements ?? []).map(toDraft), [set])
   const [drafts, setDrafts] = useState<Draft[]>(initial)
   const [adding, setAdding] = useState(set === null)
@@ -90,11 +98,26 @@ export function SetEditor({ siteId, ruleId, set, number, types }: SetEditorProps
                 />
               </label>
               <span>
-                {r.obligation === 'normative' && (
-                  <Pill tone="accent" icon="check">
-                    Маркер
-                  </Pill>
-                )}
+                {r.obligation === 'normative' &&
+                  (() => {
+                    // Маркер — только если отличает этап от соседних (после пересчёта)
+                    const own = markers?.filter((p) => p.equipment_type_id === r.equipment_type.id)
+                    if (markers && !own?.length)
+                      return <span className="sm muted">общая с соседними этапами</span>
+                    return (
+                      <>
+                        <Pill tone="accent" icon="check">
+                          Маркер
+                        </Pill>
+                        {own?.length ? (
+                          <span className="sm muted">
+                            {' '}
+                            {own.map((p) => formatPeriod(p.start, p.end)).join(', ')}
+                          </span>
+                        ) : null}
+                      </>
+                    )
+                  })()}
               </span>
               <Button
                 variant="ghost"

@@ -2,8 +2,18 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class MarkerPeriodRead(BaseModel):
+    """Период, когда машина отличает этап от идущих одновременно."""
+
+    equipment_type_id: uuid.UUID
+    name: str
+    start: date
+    end: date
 
 
 class StageStatusRead(BaseModel):
@@ -26,6 +36,8 @@ class StageStatusRead(BaseModel):
     # Факт по маркеру и маркеры этапа
     start_fact: date | None = None
     marker_names: list[str] = []
+    # Когда машина — маркер этапа (методика): «маркер 07.04–11.05»
+    marker_periods: list[MarkerPeriodRead] = []
     confidence: str | None
     confidence_reason: str | None
     computed_at: datetime | None
@@ -40,6 +52,26 @@ class DeviationEvidenceRead(BaseModel):
     detection_id: uuid.UUID | None
     # Подпись под снимком: «К-2 · свайное поле: Буровая установка»
     caption: str | None = None
+
+
+class DecisionRead(BaseModel):
+    """Решение инженера по гипотезе."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    decision: Literal["confirmed", "rejected"]
+    comment: str | None
+    decided_by_name: str
+    decided_at: datetime
+
+
+class DecisionIn(BaseModel):
+    """Подтвердить или отклонить гипотезу; `decision: null` — снять решение («Изменить»)."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    decision: Literal["confirmed", "rejected"] | None
+    comment: str | None = Field(default=None, max_length=2000)
 
 
 class DeviationRead(BaseModel):
@@ -64,6 +96,9 @@ class DeviationRead(BaseModel):
     title: str | None = None
     equipment_type_id: uuid.UUID | None = None
     cause_stage_id: uuid.UUID | None = None
+    # Устойчивый ключ «тип:этап:машина» и решение инженера по гипотезе (clean-mvp)
+    key: str = ""
+    decision: DecisionRead | None = None
 
 
 class DeviationDetailRead(DeviationRead):
@@ -89,3 +124,5 @@ class SiteSummaryRead(BaseModel):
     stage_id: uuid.UUID | None = None
     # Опорная дата расчёта: «данные на»
     as_of: date | None = None
+    # Гипотезы без решения инженера: «2 гипотезы ждут вашего решения»
+    awaiting_decision: int = 0

@@ -255,6 +255,10 @@ export const handlers = [
     const undated = new URL(request.url).searchParams.get('undated') === 'true'
     return handle(() => db.listPhotos(params.siteId, undated))
   }),
+  // Моки обрабатывают снимки сразу: фоновой очереди нет
+  http.get<SiteParams>(api('/sites/:siteId/photos/progress'), ({ params }) =>
+    handle(() => db.queueProgress(params.siteId)),
+  ),
   http.post<SiteParams>(api('/sites/:siteId/photos'), async ({ params, request }) => {
     const form = await request.formData()
     const files = form.getAll('files').filter(isFile)
@@ -346,6 +350,13 @@ export const handlers = [
   http.get<{ siteId: string; id: string }>(
     api('/sites/:siteId/assessment/deviations/:id'),
     ({ params }) => handle(() => db.getDeviation(params.siteId, params.id)),
+  ),
+  http.put<{ siteId: string; id: string }>(
+    api('/sites/:siteId/assessment/deviations/:id/decision'),
+    async ({ params, request }) => {
+      const body = (await request.json()) as Parameters<typeof db.decideDeviation>[2]
+      return handle(() => db.decideDeviation(params.siteId, params.id, body))
+    },
   ),
   http.get<SiteParams>(api('/sites/:siteId/assessment/summary'), ({ params }) =>
     handle(() => db.getSummary(params.siteId)),

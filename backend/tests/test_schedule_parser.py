@@ -486,7 +486,8 @@ class TestScheduleParserDateValidation:
         parser = ScheduleParser()
         result = parser.parse("schedule.csv", content)
 
-        assert len(result.rows) == 0
+        # Строка остаётся работой без дат — инженер задаст их в мастере (clean-mvp)
+        assert [(r.name, r.start, r.end) for r in result.rows] == [("Работа 1", None, None)]
         assert len(result.issues) == 1
         assert "Не удалось разобрать дату" in result.issues[0].reason
         assert "invalid" in result.issues[0].reason
@@ -497,9 +498,10 @@ class TestScheduleParserDateValidation:
         parser = ScheduleParser()
         result = parser.parse("schedule.csv", content)
 
-        assert len(result.rows) == 0
+        # Строка остаётся работой без дат — инженер задаст их в мастере (clean-mvp)
+        assert [(r.name, r.start, r.end) for r in result.rows] == [("Работа 1", None, None)]
         assert len(result.issues) == 1
-        assert result.issues[0].reason == "Дата окончания раньше даты начала"
+        assert result.issues[0].reason == "Дата окончания раньше даты начала — задайте даты вручную"
 
     def test_end_equals_start_is_valid(self):
         """Дата окончания равна дате начала - допустимо."""
@@ -517,7 +519,8 @@ class TestScheduleParserDateValidation:
         parser = ScheduleParser()
         result = parser.parse("schedule.csv", content)
 
-        assert len(result.rows) == 0
+        # Строка остаётся работой без дат — инженер задаст их в мастере (clean-mvp)
+        assert [(r.name, r.start, r.end) for r in result.rows] == [("Работа 1", None, None)]
         assert len(result.issues) == 1
         assert "Не удалось разобрать дату" in result.issues[0].reason
 
@@ -745,8 +748,9 @@ class TestScheduleParserIntegration:
         parser = ScheduleParser()
         result = parser.parse("schedule.csv", content)
 
-        # Успешно распарсены: Работа 1, 2, 3
-        assert len(result.rows) == 3
+        # Работы 1–3 и Работа 4 без дат (дата не разобрана)
+        assert len(result.rows) == 4
+        assert (result.rows[-1].name, result.rows[-1].start) == ("Работа 4", None)
         # Ошибки: 2 строки
         assert len(result.issues) == 2
         # rows_total = количество непустых строк данных

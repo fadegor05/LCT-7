@@ -9,11 +9,13 @@ from fastapi.responses import Response
 
 from app.core.settings import Settings
 from app.domains.photo.models import ProcessingStatus
+from app.domains.photo.queue import PhotoQueue
 from app.domains.photo.schemas import (
     DateUpdate,
     DetectBacklogReport,
     PhotoDetail,
     PhotoRead,
+    QueueProgress,
     UploadReport,
 )
 from app.domains.photo.service import PhotoService, UploadInput
@@ -36,6 +38,7 @@ async def upload_photos(
     files: list[UploadFile],
     service: FromDishka[PhotoService],
     settings: FromDishka[Settings],
+    queue: FromDishka[PhotoQueue],
     camera_id: Annotated[uuid.UUID | None, Form()] = None,
 ) -> UploadReport:
     """Загрузить пакет фотографий.
@@ -102,9 +105,19 @@ async def upload_photos(
             UploadInput(filename=filename, content=content, content_type=content_type)
         )
 
-    # Загружаем пакет
+    # Загружаем пакет; при фоновой обработке — будим очередь, не дожидаясь её тика
     report = await service.upload_batch(site_id, upload_inputs, camera_id=camera_id)
+    if settings.upload.background and report.uploaded:
+        queue.wake()
     return report
+
+
+@router.get("/progress")
+@inject
+async def queue_progress(site_id: uuid.UUID, service: FromDishka[PhotoService]) -> QueueProgress:
+    """Сколько снимков объекта ещё в фоновой обработке (экран «Наблюдения» опрашивает)."""
+    queued, processing = await service.queue_progress(site_id)
+    return QueueProgress(queued=queued, processing=processing)
 
 
 @router.post("/detect")

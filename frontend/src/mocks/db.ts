@@ -106,11 +106,18 @@ export function getSite(siteId: string): Site {
   return site
 }
 
-export function createSite(data: { name: string; address?: string | null }): Site {
+type SiteInput = Partial<Pick<Site, 'object_type' | 'workdays'>> & {
+  name?: string
+  address?: string | null
+}
+
+export function createSite(data: SiteInput & { name: string }): Site {
   const site: Site = {
     id: nextId('site'),
     name: data.name,
     address: data.address ?? null,
+    object_type: data.object_type ?? 'other',
+    workdays: data.workdays ?? [0, 1, 2, 3, 4],
     owner_id: user.id,
     created_at: now(),
     updated_at: now(),
@@ -119,10 +126,12 @@ export function createSite(data: { name: string; address?: string | null }): Sit
   return site
 }
 
-export function updateSite(siteId: string, data: { name?: string; address?: string | null }): Site {
+export function updateSite(siteId: string, data: SiteInput): Site {
   const site = getSite(siteId)
   if (data.name !== undefined) site.name = data.name
   if (data.address !== undefined) site.address = data.address
+  if (data.object_type !== undefined) site.object_type = data.object_type
+  if (data.workdays !== undefined) site.workdays = data.workdays
   site.updated_at = now()
   return site
 }
@@ -514,6 +523,12 @@ export function getObservation(siteId: string, date: string): Observation {
   return observation
 }
 
+/** Как PhotoService.queue_progress; моки обрабатывают снимки при загрузке. */
+export function queueProgress(siteId: string) {
+  getSite(siteId)
+  return { queued: 0, processing: 0 }
+}
+
 export function listPhotos(siteId: string, undated: boolean): Photo[] {
   getSite(siteId)
   return state.photos
@@ -640,7 +655,29 @@ export function listStageStatuses(siteId: string): StageStatus[] {
 
 export function listDeviations(siteId: string): Omit<DeviationDetail, 'evidence'>[] {
   getSite(siteId)
-  return (state.deviations.get(siteId) ?? []).map(({ evidence: _, ...d }) => d)
+  // Отклонённая инженером гипотеза — в архиве (AssessmentService._visible)
+  return (state.deviations.get(siteId) ?? [])
+    .filter((d) => d.decision?.decision !== 'rejected')
+    .map(({ evidence: _, ...d }) => d)
+}
+
+/** Как AssessmentService.decide: только гипотезы; `null` снимает решение. */
+export function decideDeviation(
+  siteId: string,
+  id: string,
+  body: { decision: 'confirmed' | 'rejected' | null; comment?: string | null },
+): DeviationDetail {
+  const deviation = getDeviation(siteId, id)
+  if (!deviation.is_hypothesis) throw new MockError(422, 'Решение принимается только по гипотезе')
+  deviation.decision = body.decision
+    ? {
+        decision: body.decision,
+        comment: body.comment?.trim() || null,
+        decided_by_name: user.full_name,
+        decided_at: now(),
+      }
+    : null
+  return deviation
 }
 
 export function getDeviation(siteId: string, id: string): DeviationDetail {
@@ -657,7 +694,10 @@ export function getSummary(siteId: string): SiteSummary {
       .map((o) => o.observed_on)
       .sort()
       .at(-1) ?? null
-  return { ...summaryOf(siteId), as_of }
+  const awaiting_decision = listDeviations(siteId).filter(
+    (d) => d.is_hypothesis && !d.decision,
+  ).length
+  return { ...summaryOf(siteId), as_of, awaiting_decision }
 }
 
 function summaryOf(siteId: string): SiteSummary {

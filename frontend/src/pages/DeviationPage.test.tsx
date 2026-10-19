@@ -132,3 +132,146 @@ describe('DeviationPage: заголовок по машине и причина'
     expect(within(importance).getByText('до 2 дн.')).toBeInTheDocument()
   })
 })
+
+describe('DeviationPage: отставание', () => {
+  it('shows the stage delay interval, not the period length', async () => {
+    const { server } = await import('@/mocks/server')
+    const { http, HttpResponse } = await import('msw')
+    const stage = 'site-berezniki-stage-2'
+    server.use(
+      http.get('/api/sites/:siteId/assessment/deviations/:id', () =>
+        HttpResponse.json({
+          id: 'dev-behind',
+          stage_id: stage,
+          type: 'behind_schedule',
+          is_hypothesis: false,
+          severity: 'critical',
+          confidence: 'high',
+          period_start: '2026-09-11',
+          period_end: '2026-09-18',
+          expected: 'Этап завершён по графику к 11.09.2026',
+          observed: 'Маркерная техника видна и 18.09.2026, отставание 7 дн.',
+          limits_text: 'Оценка по снимкам.',
+          rule_id: null,
+          created_at: '2026-09-18T12:00:00Z',
+          title: 'Отставание: Свайные работы',
+          evidence: [],
+        }),
+      ),
+      http.get('/api/sites/:siteId/assessment/stages', () =>
+        HttpResponse.json([
+          {
+            stage_id: stage,
+            stage_name: 'Свайные работы',
+            position: 2,
+            status: 'behind',
+            delay_days: 7,
+            delay_min: 7,
+            delay_max: 7,
+            confidence: 'high',
+            confidence_reason: null,
+            computed_at: '2026-09-18T12:00:00Z',
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/deviations/dev-behind')
+    const importance = await screen.findByRole('complementary', { name: 'Важность' })
+    // Точный интервал 7–7 — «7 дн.», а не «до 7 дн.» по длине периода
+    expect(await within(importance).findByText('7 дн.')).toBeInTheDocument()
+    // Смысл числа: нижняя граница на опорную дату (clean-mvp)
+    expect(
+      await within(importance).findByText(/^Нижняя граница: этап не закончен к \d\d\.\d\d/),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('DeviationPage: решение инженера', () => {
+  it('confirms, rejects into the archive and changes the decision', async () => {
+    const { user } = renderRoute('/sites/site-berezniki/deviations/dev-idle-truck')
+    const panel = await screen.findByRole('region', { name: 'Решение инженера' })
+    await user.type(within(panel).getByLabelText('Комментарий (необязательно)'), 'видно по кадрам')
+    await user.click(within(panel).getByRole('button', { name: 'Подтвердить простой' }))
+
+    const done = await screen.findByRole('region', { name: 'Решение инженера' })
+    expect(await within(done).findByText('Простой подтверждён')).toBeInTheDocument()
+    expect(done).toHaveTextContent('Комментарий: видно по кадрам')
+
+    await user.click(within(done).getByRole('button', { name: 'Изменить решение' }))
+    const again = await screen.findByRole('button', { name: 'Простоя не было' })
+    await user.click(again)
+    expect(
+      await screen.findByText('Ушло в архив, в списках и отчёте его нет', { exact: false }),
+    ).toBeInTheDocument()
+  })
+
+  it('marks hypotheses awaiting a decision in the list', async () => {
+    renderRoute('/sites/site-berezniki')
+    const list = await screen.findByRole('list', { name: 'Отклонения' })
+    expect(await within(list).findAllByText('Ждёт решения')).not.toHaveLength(0)
+    expect(screen.getByText(/(ждёт|ждут) вашего решения/)).toBeInTheDocument()
+  })
+})
+
+describe('DeviationPage: сработавшее правило', () => {
+  it('names the methodology requirement that fired', async () => {
+    const { server } = await import('@/mocks/server')
+    const { http, HttpResponse } = await import('msw')
+    const pump = { id: 'eq-pump', code: 'concrete_pump', title: 'Автобетононасос', synonyms: [] }
+    server.use(
+      http.get('/api/sites/:siteId/assessment/deviations/:id', () =>
+        HttpResponse.json({
+          id: 'dev-rule',
+          stage_id: 'site-berezniki-stage-3',
+          type: 'missing_equipment',
+          is_hypothesis: false,
+          severity: 'attention',
+          confidence: 'high',
+          period_start: '2026-09-16',
+          period_end: '2026-09-18',
+          expected: 'Автобетононасос на площадке',
+          observed: 'Автобетононасоса нет',
+          limits_text: 'Оценка по снимкам.',
+          rule_id: 'rule-slab',
+          created_at: '2026-09-18T12:00:00Z',
+          equipment_type_id: pump.id,
+          evidence: [],
+        }),
+      ),
+      http.get('/api/sites/:siteId/methodology', () =>
+        HttpResponse.json([
+          {
+            id: 'rule-slab',
+            stage_id: 'site-berezniki-stage-3',
+            stage_name: 'Устройство фундаментной плиты',
+            is_verifiable: true,
+            unverifiable_reason: null,
+            updated_at: '2026-09-18T12:00:00Z',
+            sets: [
+              {
+                id: 'set-1',
+                position: 1,
+                requirements: [
+                  {
+                    id: 'req-1',
+                    equipment_type: pump,
+                    min_count: 1,
+                    obligation: 'normative',
+                    gesn_code: '06-01-003-08',
+                    source_note: 'Бетонирование автобетононасосом',
+                  },
+                ],
+              },
+            ],
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/deviations/dev-rule')
+    expect(
+      await screen.findByText(
+        'Бетонирование автобетононасосом · Нормативная: автобетононасос · ГЭСН 06-01-003-08',
+      ),
+    ).toBeInTheDocument()
+  })
+})

@@ -238,7 +238,8 @@ describe('StageStatusTable', () => {
       />,
     )
     const [, pit, slab, backfill] = screen.getAllByRole('row')
-    expect(pit).toHaveTextContent('ВТ 01.09.2026–ЧТ 10.09.2026')
+    // Период компактно, как в clean-mvp
+    expect(pit).toHaveTextContent(/01\.09–10\.09/)
     expect(pit).toHaveTextContent('Экскаватор после планового конца')
     expect(pit).toHaveTextContent('отставание 4 дн. · уверенность высокая')
     expect(within(pit!).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(

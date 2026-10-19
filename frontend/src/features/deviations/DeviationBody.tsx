@@ -1,12 +1,13 @@
 import { Link } from 'react-router'
-import { annotatedImageUrl } from '@/api/frames'
+import { annotatedThumbUrl } from '@/api/frames'
+import { useMethodology } from '@/api/methodology'
 import type { DeviationDetail } from '@/api/schemas'
 import { Callout } from '@/components/ui/Callout'
 import { ConfidenceMeter } from '@/components/ui/ConfidenceMeter'
 import { FrameView } from '@/components/ui/FrameView'
 import { Pill } from '@/components/ui/Pill'
 import { formatDate } from '@/lib/format'
-import { deviationTypeLabels } from '@/lib/labels'
+import { deviationTypeLabels, obligationLabels } from '@/lib/labels'
 import styles from './Deviation.module.css'
 
 interface DeviationBodyProps {
@@ -21,6 +22,21 @@ interface DeviationBodyProps {
 export function DeviationBody({ siteId, deviation: d, stageName, causeName }: DeviationBodyProps) {
   const siteUrl = `/sites/${siteId}`
   const period = [d.period_start, d.period_end].map(formatDate).join(' — ')
+  // Какое требование методики сработало (clean-mvp): машина отклонения или первая нормативная
+  const rule = useMethodology(siteId).data?.find((r) => r.id === d.rule_id)
+  const reqs = rule?.sets.flatMap((s) => s.requirements) ?? []
+  const req =
+    reqs.find((r) => r.equipment_type.id === d.equipment_type_id) ??
+    reqs.find((r) => r.obligation === 'normative')
+  const ruleText = req
+    ? [
+        req.source_note,
+        `${obligationLabels[req.obligation]}${req.equipment_type ? `: ${req.equipment_type.title.toLowerCase()}` : ''}`,
+        req.gesn_code && `ГЭСН ${req.gesn_code}`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : null
 
   return (
     <div className={styles.body}>
@@ -68,7 +84,7 @@ export function DeviationBody({ siteId, deviation: d, stageName, causeName }: De
             {d.evidence.map((e, i) => (
               <FrameView
                 key={`${e.photo_id}-${e.detection_id ?? i}`}
-                imageUrl={annotatedImageUrl(siteId, e.photo_id)}
+                imageUrl={annotatedThumbUrl(siteId, e.photo_id)}
                 alt={`Снимок-доказательство ${i + 1}`}
                 caption={e.caption ? <span className="sm">{e.caption}</span> : undefined}
               />
@@ -82,7 +98,10 @@ export function DeviationBody({ siteId, deviation: d, stageName, causeName }: De
           <dt>Сработавшее правило</dt>
           <dd>
             {d.rule_id ? (
-              <Link to={`${siteUrl}/methodology`}>Методика этапа</Link>
+              <>
+                {ruleText && <span className="sm">{ruleText}</span>}{' '}
+                <Link to={`${siteUrl}/methodology`}>Методика этапа</Link>
+              </>
             ) : (
               <span className="muted">Правило сервиса</span>
             )}

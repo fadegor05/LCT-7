@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import Protocol, cast
 
@@ -33,6 +33,7 @@ from app.domains.assessment.models import (
     SiteSummary,
     StageStatus,
     StatusBasis,
+    deviation_key,
 )
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
@@ -57,7 +58,23 @@ from app.domains.observation.repository import (
 from app.domains.photo.models import Photo, ProcessingStatus
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
+from app.domains.site.models import Site
 from app.plugins.exceptions import AppError
+
+
+def _periods(
+    periods: tuple[tuple[uuid.UUID, date, date], ...], names: dict[uuid.UUID, str]
+) -> list[dict[str, str]]:
+    """Периоды маркеров для методики: машина, название, с, по (ISO-даты)."""
+    return [
+        {
+            "equipment_type_id": str(kind),
+            "name": names.get(kind, str(kind)),
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+        }
+        for kind, start, end in periods
+    ]
 
 
 def _names(ids: frozenset[uuid.UUID], names: dict[uuid.UUID, str]) -> list[str]:
@@ -397,7 +414,12 @@ class RecomputeCoordinator:
             stationary = frozenset(
                 id_by_code[c] for c in STATIONARY_EQUIPMENT_CODES if c in id_by_code
             )
-            computation = self._engine.compute_site(
+            # Рабочие дни — свои у каждого объекта (clean-mvp); движок без состояния
+            site = await self._session.get(Site, site_id)
+            engine = self._engine
+            if site is not None and tuple(site.workdays) != engine.config.workdays:
+                engine = RuleEngine(replace(engine.config, workdays=tuple(site.workdays)))
+            computation = engine.compute_site(
                 stages,
                 rules_by_stage,
                 observations,
@@ -419,6 +441,7 @@ class RecomputeCoordinator:
                     existing.delay_max = result.delay_max
                     existing.start_fact = result.start_fact
                     existing.marker_names = _names(result.markers, equipment_names)
+                    existing.marker_periods = _periods(result.marker_periods, equipment_names)
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -433,6 +456,7 @@ class RecomputeCoordinator:
                         delay_max=result.delay_max,
                         start_fact=result.start_fact,
                         marker_names=_names(result.markers, equipment_names),
+                        marker_periods=_periods(result.marker_periods, equipment_names),
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )
@@ -477,14 +501,25 @@ class RecomputeCoordinator:
                 if basis_rows:
                     await self._status_basis_repo.add_many(basis_rows)
 
-            # Шаг 8: Персистировать Deviation (full replace)
+            # Шаг 8: Персистировать Deviation (full replace). id то же, что у отклонения с тем
+            # же ключом до пересчёта: открытая карточка, ссылка из уведомления или закладка
+            # не ломаются, когда пересчёт пересоздаёт строки
+            previous = await self._deviation_repo.ids_by_key(site_id)
             await self._deviation_repo.delete_by_site(site_id)
+            used: set[uuid.UUID] = set()
 
             # Создать Deviation объекты в том же порядке, что и computation.deviations
             deviations: list[Deviation] = []
             for dev_result in cast(list[DeviationResult], computation.deviations):
+                key = deviation_key(
+                    dev_result.type.value, dev_result.stage_id, dev_result.equipment_type_id
+                )
+                dev_id = previous.get(key)
+                if dev_id is None or dev_id in used:
+                    dev_id = uuid.uuid4()
+                used.add(dev_id)
                 dev = Deviation(
-                    id=uuid.uuid4(),
+                    id=dev_id,
                     site_id=site_id,
                     stage_id=dev_result.stage_id,
                     type=dev_result.type.value,

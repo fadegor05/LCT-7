@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useUpdateRule } from '@/api/methodology'
-import type { EquipmentType, Rule, Stage } from '@/api/schemas'
+import type { EquipmentType, MarkerPeriod, Rule, Stage } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { Card } from '@/components/ui/Card'
 import { Segmented } from '@/components/ui/Segmented'
 import { TextField } from '@/components/ui/TextField'
 import { formatWindow } from '@/lib/format'
+import { MarkerNote } from './MarkerNote'
 import { SetEditor } from './SetEditor'
 import styles from './Methodology.module.css'
 
@@ -20,13 +21,15 @@ interface StageKitEditorProps {
   rule: Rule
   stage: Stage | undefined
   types: readonly EquipmentType[]
+  /** Периоды маркеров из последнего пересчёта; undefined — пересчёта ещё не было. */
+  markers?: readonly MarkerPeriod[]
 }
 
 /**
  * Правило этапа (UC-2): проверяется ли этап по технике и каким комплектом. Комплект у этапа
  * один; у этапа без комплекта сразу открыт пустой. Правка пересчитывает выводы на сервере.
  */
-export function StageKitEditor({ siteId, rule, stage, types }: StageKitEditorProps) {
+export function StageKitEditor({ siteId, rule, stage, types, markers }: StageKitEditorProps) {
   const update = useUpdateRule(siteId)
   const [check, setCheck] = useState(rule.is_verifiable)
   const [reason, setReason] = useState(rule.unverifiable_reason ?? '')
@@ -115,8 +118,10 @@ export function StageKitEditor({ siteId, rule, stage, types }: StageKitEditorPro
               set={set}
               number={i + 1}
               types={types}
+              markers={markers}
             />
           ))}
+          {markers && <MarkerNote markers={markers} />}
           {rule.sets.length === 0 && (
             <SetEditor siteId={siteId} ruleId={rule.id} set={null} number={1} types={types} />
           )}

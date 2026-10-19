@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import type { Observation } from '@/api/schemas'
-import { formatDate } from '@/lib/format'
+import { formatShortDate } from '@/lib/format'
 import { pluralPhotos } from '@/lib/labels'
 import styles from './Observations.module.css'
 
@@ -45,7 +45,7 @@ export function DayPicker({ days, value, onChange, onPreview, undated }: DayPick
           onMouseEnter={() => onPreview?.(d.observed_on)}
           onFocus={() => onPreview?.(d.observed_on)}
         >
-          <span className="lab data">{formatDate(d.observed_on)}</span>
+          <span className="lab data">{formatShortDate(d.observed_on)}</span>
           <span className="sm muted">{pluralPhotos(d.photo_count)}</span>
         </button>
       ))}

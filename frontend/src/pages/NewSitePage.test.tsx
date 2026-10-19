@@ -137,6 +137,35 @@ describe('creating a site', () => {
     expect(screen.queryByText('Пермь')).not.toBeInTheDocument()
   })
 
+  it('sends object type and workdays with the site', async () => {
+    const bodies: unknown[] = []
+    server.events.on('request:start', ({ request }) => {
+      if (request.method !== 'GET' && /\/sites(\/site-\d+)?$/.test(new URL(request.url).pathname))
+        void request
+          .clone()
+          .json()
+          .then((b) => bodies.push(b))
+    })
+    const { user } = renderRoute('/sites/new')
+    const days = screen.getByRole('group', { name: 'Рабочие дни' })
+    // По умолчанию пн–пт, как в движке
+    expect(within(days).getByRole('button', { name: 'Пн–Пт' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.type(screen.getByLabelText('Название'), 'Школа')
+    await user.selectOptions(screen.getByLabelText('Тип объекта'), 'education')
+    await user.click(within(days).getByRole('button', { name: 'Пн–Сб' }))
+    await user.upload(screen.getByLabelText('Выбрать файл'), file())
+    await screen.findByText('Заменить файл')
+    await user.click(screen.getByRole('button', { name: 'Далее: методика' }))
+    await screen.findByRole('heading', { name: 'Методика: этап → техника' })
+    server.events.removeAllListeners()
+    expect(bodies).toContainEqual(
+      expect.objectContaining({ object_type: 'education', workdays: [0, 1, 2, 3, 4, 5] }),
+    )
+  })
+
   it('goes back from the methodology step to the saved object', async () => {
     const { user } = renderRoute('/sites/new')
     await user.type(screen.getByLabelText('Название'), 'Склад')

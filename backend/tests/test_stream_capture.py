@@ -356,3 +356,24 @@ async def test_production_container_wires_the_grabber_and_the_scheduler() -> Non
         assert isinstance(await container.get(StreamCapture), StreamCapture)
     finally:
         await container.close()
+
+
+async def test_background_ingest_resolves_without_http_request(tmp_path) -> None:
+    """Фоновые задачи (планировщик стрима, очередь загрузки) работают вне HTTP-запроса.
+
+    С настоящим UserProvider текущего пользователя нет: пересчёт наблюдений не должен его
+    требовать. Раньше гвард в ObservationService ронял каждый снимок по расписанию
+    с NoContextValueError, а тесты с TestUserProvider этого не видели.
+    """
+    from app.domains.camera.capture import CameraFrameIngest
+    from app.domains.photo.recalculator import ObservationRecalculator
+    from app.domains.user.provider import UserProvider
+    from tests.conftest import _make_container
+
+    container = _make_container(tmp_path, user_provider=UserProvider())
+    try:
+        async with container() as request:
+            assert await request.get(CameraFrameIngest) is not None
+            assert await request.get(ObservationRecalculator) is not None
+    finally:
+        await container.close()

@@ -36,7 +36,7 @@ export const dateSourceSchema = z.enum([
   'manual',
 ])
 /** photo.models.ProcessingStatus */
-export const processingStatusSchema = z.enum(['pending', 'done', 'failed'])
+export const processingStatusSchema = z.enum(['pending', 'queued', 'processing', 'done', 'failed'])
 /** observation.models.Activity */
 export const activitySchema = z.enum(['works', 'idle', 'unknown'])
 /** assessment.models.DeviationType */
@@ -76,10 +76,16 @@ export const loginResponseSchema = z.object({
 
 // ---------- Стройка (site) ----------
 
+/** site.schemas.ObjectType */
+export const objectTypeSchema = z.enum(['housing', 'education', 'health', 'other'])
+
 export const siteSchema = z.object({
   id: z.string(),
   name: z.string(),
   address: z.string().nullable(),
+  object_type: objectTypeSchema.default('other'),
+  /** Рабочие дни, date.weekday(): пн=0…вс=6 — вход движка. */
+  workdays: z.array(z.number().int()).default([0, 1, 2, 3, 4]),
   owner_id: z.string(),
   created_at: isoDateTime,
   updated_at: isoDateTime,
@@ -89,6 +95,8 @@ export const siteSchema = z.object({
 export const siteCreateSchema = z.object({
   name: z.string().trim().min(1, 'Укажите название').max(255),
   address: z.string().trim().max(500),
+  object_type: objectTypeSchema,
+  workdays: z.array(z.number().int().min(0).max(6)).min(1, 'Выберите рабочие дни'),
 })
 
 // ---------- График (schedule) ----------
@@ -242,6 +250,12 @@ export const uploadReportSchema = z.object({
   failed: z.number(),
 })
 
+/** Фоновая обработка снимков объекта (`GET /photos/progress`). */
+export const queueProgressSchema = z.object({
+  queued: z.number().int(),
+  processing: z.number().int(),
+})
+
 export const detectBacklogReportSchema = z.object({
   processed: z.number().int(),
   done: z.number().int(),
@@ -284,6 +298,12 @@ export const stageStatusSchema = z.object({
   delay_days: z.number().nullable(),
   /** delay_days — нижняя граница («от N дней»): этап не начат. */
   delay_open: z.boolean().optional(),
+  /** Когда машина — маркер этапа (методика): «маркер 07.04–11.05». */
+  marker_periods: z
+    .array(
+      z.object({ equipment_type_id: z.string(), name: z.string(), start: isoDate, end: isoDate }),
+    )
+    .optional(),
   /** Сдвиг интервалом: null — граница неизвестна («до N», «от N»). */
   delay_min: z.number().nullable().optional(),
   delay_max: z.number().nullable().optional(),
@@ -296,7 +316,18 @@ export const stageStatusSchema = z.object({
   computed_at: isoDateTime.nullable(),
 })
 
+/** Решение инженера по гипотезе (clean-mvp, §8.8). */
+export const decisionSchema = z.object({
+  decision: z.enum(['confirmed', 'rejected']),
+  comment: z.string().nullable(),
+  decided_by_name: z.string(),
+  decided_at: isoDateTime,
+})
+
 export const deviationSchema = z.object({
+  /** Устойчивый ключ «тип:этап:машина»: решение переживает пересчёт. */
+  key: z.string().optional(),
+  decision: decisionSchema.nullable().optional(),
   id: z.string(),
   stage_id: z.string().nullable(),
   type: deviationTypeSchema,
@@ -328,6 +359,8 @@ export const deviationDetailSchema = deviationSchema.extend({
 })
 
 export const siteSummarySchema = z.object({
+  /** Гипотезы без решения инженера. */
+  awaiting_decision: z.number().int().optional(),
   verdict: verdictSchema,
   delay_days_min: z.number().nullable(),
   delay_days_max: z.number().nullable(),
@@ -407,6 +440,9 @@ export type User = z.infer<typeof userSchema>
 export type LoginResponse = z.infer<typeof loginResponseSchema>
 export type Site = z.infer<typeof siteSchema>
 export type SiteCreate = z.infer<typeof siteCreateSchema>
+export type ObjectType = z.infer<typeof objectTypeSchema>
+export type Decision = z.infer<typeof decisionSchema>
+export type MarkerPeriod = NonNullable<StageStatus['marker_periods']>[number]
 export type Stage = z.infer<typeof stageSchema>
 export type ImportIssue = z.infer<typeof importIssueSchema>
 export type ParseMode = z.infer<typeof parseModeSchema>

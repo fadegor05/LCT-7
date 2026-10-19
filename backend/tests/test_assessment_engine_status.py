@@ -951,6 +951,32 @@ class TestMarkersAgainstConcurrentStages:
         assert status.markers == frozenset({excavator})
         assert result.summary.as_of == date(2023, 9, 15)
 
+    def test_marker_periods_end_where_a_concurrent_stage_shares_the_machine(self):
+        """Методика показывает, когда машина — маркер: буровая отличает сваи, пока не
+        начался шпунт с той же буровой (окно ± допуск 3 дня)."""
+        drill, crane = uuid.uuid4(), uuid.uuid4()
+        piles = StageInput(uuid.uuid4(), "Сваи", 1, date(2023, 5, 15), date(2023, 7, 31))
+        sheet = StageInput(uuid.uuid4(), "Шпунт", 2, date(2023, 7, 1), date(2023, 8, 31))
+        rules = {
+            piles.stage_id: _rule(piles.stage_id, drill),
+            sheet.stage_id: _rule(sheet.stage_id, drill, crane),
+        }
+        observations = [_seen(date(2023, 6, 19), drill), _seen(date(2023, 7, 16), drill)]
+
+        result = RuleEngine(_CONFIG).compute_site(
+            [piles, sheet], rules, observations, date(2023, 7, 17)
+        )
+
+        by_stage = {s.stage_id: s for s in result.statuses}
+        assert by_stage[piles.stage_id].marker_periods == (
+            (drill, date(2023, 5, 12), date(2023, 6, 27)),
+        )
+        # У шпунта буровая — маркер только после конца свай, кран — всё окно
+        assert set(by_stage[sheet.stage_id].marker_periods) == {
+            (crane, date(2023, 6, 28), date(2023, 9, 3)),
+            (drill, date(2023, 8, 4), date(2023, 9, 3)),
+        }
+
     def test_tower_crane_is_never_a_marker(self):
         crane, excavator = uuid.uuid4(), uuid.uuid4()
         stage = StageInput(uuid.uuid4(), "Каркас", 1, date(2024, 1, 10), date(2024, 3, 1))

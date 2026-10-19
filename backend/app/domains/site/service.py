@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domains.methodology.recalculator import StatusRecalculator
 from app.domains.site.guard import SiteAccessGuard
 from app.domains.site.models import Site
 from app.domains.site.repository import SiteRepository
@@ -22,7 +23,9 @@ class SiteService:
         session: AsyncSession,
         guard: SiteAccessGuard,
         current_user: CurrentUser,
+        recalculator: StatusRecalculator,
     ) -> None:
+        self._recalculator = recalculator
         self._repository = repository
         self._session = session
         self._guard = guard
@@ -30,7 +33,13 @@ class SiteService:
 
     async def create(self, data: SiteCreate) -> Site:
         """Создать сайт текущего пользователя."""
-        site = Site(name=data.name, address=data.address, owner_id=self._current_user.id)
+        site = Site(
+            name=data.name,
+            address=data.address,
+            object_type=data.object_type,
+            workdays=data.workdays,
+            owner_id=self._current_user.id,
+        )
         await self._repository.add(site)
         await self._session.commit()
         return site
@@ -50,9 +59,11 @@ class SiteService:
         # Получить только установленные поля
         update_dict = data.model_dump(exclude_unset=True)
 
-        # Запретить явный None для name
-        if "name" in update_dict and update_dict["name"] is None:
-            raise AppError("name не может быть null", status_code=422)
+        # Запретить явный None для name и полей с умолчанием
+        for key in ("name", "object_type", "workdays"):
+            if key in update_dict and update_dict[key] is None:
+                raise AppError(f"{key} не может быть null", status_code=422)
+        workdays_changed = "workdays" in update_dict and update_dict["workdays"] != site.workdays
 
         # Применить только установленные поля
         for key, value in update_dict.items():
@@ -60,6 +71,10 @@ class SiteService:
 
         await self._session.commit()
         await self._session.refresh(site)
+        # Рабочие дни — вход движка: статусы и отклонения пересчитываются сразу
+        if workdays_changed:
+            await self._recalculator.recalculate(site_id)
+            await self._session.refresh(site)
         return site
 
     async def delete(self, site_id: uuid.UUID) -> None:

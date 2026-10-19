@@ -37,7 +37,7 @@ describe('SiteOverviewPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Отклонения: 3' })).toBeInTheDocument()
     expect(
-      screen.getByText('1 критичное, 1 гипотеза: проверьте снимки. Сначала самые важные.'),
+      screen.getByText('1 критичное, 1 гипотеза ждёт вашего решения. Сначала самые важные.'),
     ).toBeInTheDocument()
 
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
@@ -45,7 +45,7 @@ describe('SiteOverviewPage', () => {
     expect(pit).toHaveAttribute('id', 'stage-site-berezniki-stage-2')
     expect(pit).toHaveAttribute('tabindex', '-1')
     expect(within(pit).getByText('Отставание')).toBeInTheDocument()
-    expect(within(pit).getByText('ВТ 01.09.2026–ПН 14.09.2026')).toBeInTheDocument()
+    expect(within(pit).getByText(/^01\.09–14\.09/)).toBeInTheDocument()
     expect(within(pit).getByText('отставание 4 дн. · уверенность высокая')).toBeInTheDocument()
     expect(within(pit).getByRole('link', { name: 'Простой техники (гипотеза)' })).toHaveAttribute(
       'href',
@@ -145,7 +145,8 @@ describe('SiteOverviewPage', () => {
     )
     renderRoute('/sites/site-berezniki')
     const table = await screen.findByRole('table', { name: 'Статусы этапов' })
-    expect(within(table).getByText('с 09.09')).toBeInTheDocument()
+    // Идущий этап: «с 09.09, идёт», как в clean-mvp
+    expect(within(table).getByText(/^с 09\.09/)).toBeInTheDocument()
     expect(within(table).getByText('Маркер: бульдозер, гусеничный экскаватор')).toBeInTheDocument()
     expect(screen.getByText(/данные на 18\.09\.2026/)).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Как выбирается статус этапа' })).toBeInTheDocument()
@@ -248,5 +249,20 @@ describe('SiteOverviewPage', () => {
 
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
+describe('SiteOverviewPage: состояние данных', () => {
+  it('shows how many cameras sent frames on the last day', async () => {
+    db.createCamera('site-berezniki', {
+      name: 'К-9 · тест',
+      stream_url: null,
+      capture_every_s: null,
+      zone: null,
+    })
+    renderRoute('/sites/site-berezniki')
+    const card = await screen.findByLabelText('Состояние данных')
+    // Новая камера без кадров: «0 из N присылают кадры», как в clean-mvp
+    expect(await within(card).findByText(/^\d+ из \d+ присыла(ет|ют) кадры$/)).toBeInTheDocument()
   })
 })

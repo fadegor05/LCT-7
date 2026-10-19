@@ -1,6 +1,7 @@
 """Реализация ObservationRecalculator для photo: настоящий пересчёт через ObservationService."""
 
 import uuid
+from collections.abc import Iterable
 from datetime import date
 
 from app.domains.observation.service import ObservationService
@@ -17,3 +18,6 @@ class LiveObservationRecalculator:
 
     async def recompute(self, site_id: uuid.UUID, observed_on: date) -> None:
         await self._service.recompute(site_id, observed_on)
+
+    async def recompute_many(self, site_id: uuid.UUID, dates: Iterable[date]) -> None:
+        await self._service.recompute_many(site_id, dates)
