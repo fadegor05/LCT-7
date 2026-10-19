@@ -14,6 +14,11 @@ PROD = $(COMPOSE) \
 TUNNEL = $(COMPOSE) \
 	-f $(DOCKER_FILES)/prod/tunnel.yaml
 
+# Прод с прокси для телеграма: в России api.telegram.org заблокирован.
+# Нужен XRAY__LINKS в .env, иначе xray-init упадёт с понятной ошибкой.
+PROXY = $(PROD) \
+	-f $(DOCKER_FILES)/common/proxy.yaml
+
 # Загрузка весов детектора из приватного репозитория HuggingFace
 # Требует переменной окружения HF_TOKEN (HuggingFace токен с доступом к Gatarez/lct7-construction-detector)
 ml-weights:
@@ -34,12 +39,19 @@ dev-proxy:
 		--profile proxy \
 		up --build -d
 
-# Прод с прокси для телеграма (профиль proxy), без сборки
+# Прод с прокси для телеграма (профиль proxy), без сборки и без pull
 up-proxy:
-	$(PROD) \
-		-f $(DOCKER_FILES)/common/proxy.yaml \
-		--profile proxy \
-		up -d --no-build
+	$(PROXY) --profile proxy up -d --no-build
+
+# Тянем образы по тегам и поднимаем прод вместе с прокси — то же, что deploy, но с Xray
+deploy-proxy:
+	$(PROXY) --profile proxy pull
+	$(PROXY) --profile proxy up -d --no-build
+
+# То же за туннелем
+deploy-tunnel-proxy:
+	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy pull
+	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy up -d --no-build
 
 # Проверить, что из XRAY__LINKS собирается конфиг, который принимает сам Xray
 xray-check:
@@ -97,4 +109,4 @@ front-check:
 front-test:
 	cd frontend && pnpm run test:coverage
 
-.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test
+.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check deploy deploy-proxy deploy-tunnel deploy-tunnel-proxy down logs pretty check test front-pretty front-check front-test
