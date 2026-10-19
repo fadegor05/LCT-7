@@ -5,6 +5,7 @@ import uuid
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
     DeviationRepository,
+    SiteSummaryRepository,
     StageStatusRepository,
 )
 from app.domains.assessment.schemas import (
@@ -29,6 +30,7 @@ class AssessmentService:
         deviation_evidence_repo: DeviationEvidenceRepository,
         schedule_repo: ScheduleRepository,
         guard: SiteAccessGuard,
+        summary_repo: SiteSummaryRepository,
     ) -> None:
         """Инициализировать AssessmentService.
 
@@ -38,12 +40,14 @@ class AssessmentService:
             deviation_evidence_repo: DeviationEvidenceRepository для работы с доказательствами.
             schedule_repo: ScheduleRepository для работы с графиками.
             guard: SiteAccessGuard для проверки доступа.
+            summary_repo: SiteSummaryRepository — итог из последнего пересчёта.
         """
         self._stage_status_repo = stage_status_repo
         self._deviation_repo = deviation_repo
         self._deviation_evidence_repo = deviation_evidence_repo
         self._schedule_repo = schedule_repo
         self._guard = guard
+        self._summary_repo = summary_repo
 
     async def list_stage_statuses(self, site_id: uuid.UUID) -> list[StageStatusRead]:
         """Получить список статусов этапов для сайта.
@@ -83,6 +87,7 @@ class AssessmentService:
                 position=stage.position,
                 status=status.status if status else None,
                 delay_days=status.delay_days if status else None,
+                delay_open=status.delay_open if status else False,
                 confidence=status.confidence if status else None,
                 confidence_reason=status.confidence_reason if status else None,
                 computed_at=status.computed_at if status else None,
@@ -163,58 +168,24 @@ class AssessmentService:
         critical_count = sum(1 for d in deviations if d.severity == "critical")
         attention_count = sum(1 for d in deviations if d.severity == "attention")
 
-        # Получить все статусы этапов
-        statuses = await self._stage_status_repo.list_by_site(site_id)
-
-        # Получить график для проверки наличия расписания
+        # Итог считает пересчёт по той же опорной дате, что статусы этапов (engine.summarize)
         schedule = await self._schedule_repo.get_by_site(site_id)
-
-        # Определить вердикт
-        # Случай 1: нет расписания или нет статусов этапов -> insufficient_data
-        if schedule is None or len(statuses) == 0:
+        summary = await self._summary_repo.get(site_id) if schedule else None
+        if summary is None:
             return SiteSummaryRead(
                 verdict="insufficient_data",
                 delay_days_min=None,
                 delay_days_max=None,
                 critical_count=critical_count,
                 attention_count=attention_count,
+                reason=None if schedule else "График не загружен.",
             )
-
-        # Проверить, есть ли какие-то meaningful статусы (не not_observed, не not_checked)
-        meaningful_statuses = [
-            s for s in statuses if s.status not in ("not_observed", "not_checked")
-        ]
-
-        if len(meaningful_statuses) == 0:
-            return SiteSummaryRead(
-                verdict="insufficient_data",
-                delay_days_min=None,
-                delay_days_max=None,
-                critical_count=critical_count,
-                attention_count=attention_count,
-            )
-
-        # Случай 2: есть статусы "behind" -> behind
-        behind_statuses = [s for s in statuses if s.status == "behind"]
-        if behind_statuses:
-            # Найти min/max delay_days среди behind статусов
-            delay_days_list = [s.delay_days for s in behind_statuses if s.delay_days is not None]
-            delay_days_min = min(delay_days_list) if delay_days_list else None
-            delay_days_max = max(delay_days_list) if delay_days_list else None
-
-            return SiteSummaryRead(
-                verdict="behind",
-                delay_days_min=delay_days_min,
-                delay_days_max=delay_days_max,
-                critical_count=critical_count,
-                attention_count=attention_count,
-            )
-
-        # Случай 3: иначе -> no_deviations
         return SiteSummaryRead(
-            verdict="no_deviations",
-            delay_days_min=None,
-            delay_days_max=None,
+            verdict=summary.verdict,
+            delay_days_min=summary.delay_days_min,
+            delay_days_max=summary.delay_days_max,
             critical_count=critical_count,
             attention_count=attention_count,
+            reason=summary.reason,
+            stage_id=summary.stage_id,
         )

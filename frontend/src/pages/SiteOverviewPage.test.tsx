@@ -21,6 +21,12 @@ describe('SiteOverviewPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Березники, [адрес объекта]')).toBeInTheDocument()
     expect(await screen.findByText('Отставание 4 дней')).toBeInTheDocument()
+    // Пояснение итога — про тот же этап, что интервал
+    expect(
+      screen.getByText(
+        'Измерено по этапу «Разработка котлована». Точность не выше частоты съёмки.',
+      ),
+    ).toBeInTheDocument()
     expect(await screen.findByText('Наблюдаемость высокая')).toBeInTheDocument()
     expect(screen.getByText('Всего снимков').nextSibling).toHaveTextContent('14')
     expect(await screen.findByText('Без даты')).toBeInTheDocument()
@@ -54,6 +60,46 @@ describe('SiteOverviewPage', () => {
     const photos = await screen.findAllByRole('img', { name: /Снимок IMG_/ })
     expect(photos).toHaveLength(3)
     await waitFor(() => expect(photos[0]).toHaveStyle({ backgroundImage: 'url(blob:test)' }))
+  })
+
+  it('shows an open-ended delay for a stage that has not started', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/assessment/summary', () =>
+        HttpResponse.json({
+          verdict: 'behind',
+          delay_days_min: 12,
+          delay_days_max: null,
+          critical_count: 0,
+          attention_count: 0,
+          stage_id: 'site-berezniki-stage-2',
+          reason: 'Измерено по этапу «Разработка котлована»: это нижняя граница.',
+        }),
+      ),
+      http.get('/api/sites/:siteId/assessment/stages', () =>
+        HttpResponse.json([
+          {
+            stage_id: 'site-berezniki-stage-2',
+            stage_name: 'Разработка котлована',
+            position: 2,
+            status: 'not_started',
+            delay_days: 12,
+            delay_open: true,
+            confidence: 'high',
+            confidence_reason: null,
+            computed_at: '2026-09-18T12:00:00Z',
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki')
+    expect(await screen.findByText('Отставание от 12 дней')).toBeInTheDocument()
+    expect(
+      screen.getByText('Измерено по этапу «Разработка котлована»: это нижняя граница.'),
+    ).toBeInTheDocument()
+    const table = await screen.findByRole('table', { name: 'Статусы этапов' })
+    expect(
+      within(table).getByText('отставание от 12 дн. · уверенность высокая'),
+    ).toBeInTheDocument()
   })
 
   it('prints the report', async () => {

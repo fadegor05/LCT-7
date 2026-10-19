@@ -11,7 +11,7 @@ from app.adapters.ml.base import DetectorClient
 from app.core.settings import AsOfMode
 from app.domains.assessment.coordinator import AsOfConfig, RecomputeCoordinator
 from app.domains.assessment.engine import EngineConfig, RuleEngine
-from app.domains.assessment.models import DeviationType, StageStatusValue
+from app.domains.assessment.models import DeviationType, SiteSummary, StageStatusValue
 from app.domains.assessment.recalculator import LiveStatusRecalculator
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
@@ -243,6 +243,12 @@ class TestRecomputeCoordinator:
             basis_repo = StatusBasisRepository(await request_container.get(AsyncSession))
             basis_rows = await basis_repo.list_by_status(status.id)
             assert len(basis_rows) == 1
+
+            # Итог по объекту сохранён тем же пересчётом
+            summary = await (await request_container.get(AsyncSession)).get(SiteSummary, site_id)
+            assert summary is not None
+            assert summary.verdict == "no_deviations"
+            assert summary.reason == "Отклонений не выявлено."
 
     @pytest.mark.asyncio
     async def test_idempotency_same_data(self, container) -> None:

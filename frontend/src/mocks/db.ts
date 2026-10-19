@@ -612,6 +612,7 @@ export function listStageStatuses(siteId: string): StageStatus[] {
       position: stage.position,
       status: s?.status ?? null,
       delay_days: s?.delay_days ?? null,
+      delay_open: s?.delay_open ?? false,
       confidence: s?.confidence ?? null,
       confidence_reason: s?.confidence_reason ?? null,
       computed_at: s?.computed_at ?? null,
@@ -644,17 +645,34 @@ export function getSummary(siteId: string): SiteSummary {
     return { ...insufficient, ...counts } as SiteSummary
   const meaningful = statuses.filter((s) => !['not_observed', 'not_checked'].includes(s.status!))
   if (meaningful.length === 0) return { ...insufficient, ...counts } as SiteSummary
-  const behind = statuses.filter((s) => s.status === 'behind')
-  if (behind.length > 0) {
-    const delays = behind.map((s) => s.delay_days).filter((d): d is number => d !== null)
+  // Худший этап с отставанием (engine.summarize): «Не начат» — отставание «от N дней»
+  const lagging = [...(state.statuses.get(siteId)?.entries() ?? [])].filter(
+    ([, s]) => (s.status === 'behind' || s.status === 'not_started') && s.delay_days,
+  )
+  if (lagging.length > 0) {
+    const [stageId, worst] = lagging.reduce((a, b) =>
+      b[1].delay_days! > a[1].delay_days! ||
+      (b[1].delay_days === a[1].delay_days && b[1].delay_open && !a[1].delay_open)
+        ? b
+        : a,
+    )
+    const name = state.schedules.get(siteId)?.stages.find((st) => st.id === stageId)?.name
     return {
       verdict: 'behind',
-      delay_days_min: delays.length ? Math.min(...delays) : null,
-      delay_days_max: delays.length ? Math.max(...delays) : null,
+      delay_days_min: worst.delay_days,
+      delay_days_max: worst.delay_open ? null : worst.delay_days,
+      stage_id: stageId,
+      reason: `Измерено по этапу «${name}». Точность не выше частоты съёмки.`,
       ...counts,
     }
   }
-  return { verdict: 'no_deviations', delay_days_min: null, delay_days_max: null, ...counts }
+  return {
+    verdict: 'no_deviations',
+    delay_days_min: null,
+    delay_days_max: null,
+    reason: 'Отклонений не выявлено.',
+    ...counts,
+  }
 }
 
 // ---------- Ассистент ----------

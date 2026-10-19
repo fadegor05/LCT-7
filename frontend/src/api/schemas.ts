@@ -269,6 +269,8 @@ export const stageStatusSchema = z.object({
   /** null — статус ещё не рассчитан (этап не наступил или нет данных). */
   status: stageStatusValueSchema.nullable(),
   delay_days: z.number().nullable(),
+  /** delay_days — нижняя граница («от N дней»): этап не начат. */
+  delay_open: z.boolean().optional(),
   confidence: levelSchema.nullable(),
   confidence_reason: z.string().nullable(),
   computed_at: isoDateTime.nullable(),
@@ -300,6 +302,9 @@ export const siteSummarySchema = z.object({
   delay_days_max: z.number().nullable(),
   critical_count: z.number(),
   attention_count: z.number(),
+  /** Почему такой итог: этап с наибольшим отставанием или причина «Недостаточно данных». */
+  reason: z.string().nullable().optional(),
+  stage_id: z.string().nullable().optional(),
 })
 
 // ---------- Ассистент (assistant) ----------

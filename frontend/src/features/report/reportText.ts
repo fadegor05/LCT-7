@@ -28,7 +28,7 @@ export function stampDate(iso: string): string {
 export function stageBasis(row: StageStatus): string {
   const delay =
     row.delay_days !== null
-      ? `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_days} дн.`
+      ? `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_open ? 'от ' : ''}${row.delay_days} дн.`
       : null
   const confidence = row.confidence
     ? `уверенность ${levelLabels[row.confidence].toLowerCase()}`

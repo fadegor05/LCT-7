@@ -5,6 +5,7 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
+    Boolean,
     Date,
     DateTime,
     ForeignKey,
@@ -67,8 +68,36 @@ class StageStatus(Base):
     )
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     delay_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # delay_days — нижняя граница («от N дней»): этап не начат, конец сдвига неизвестен
+    delay_open: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
     confidence_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class SiteSummary(Base):
+    """Итог по объекту из последнего пересчёта (таблица site_summaries).
+
+    Считается вместе со статусами этапов, по той же опорной дате: итог на чтении из одних
+    статусов не видел устаревших данных и наблюдаемости последнего дня.
+    """
+
+    __tablename__ = "site_summaries"
+
+    site_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("sites.id", ondelete="CASCADE"), primary_key=True
+    )
+    verdict: Mapped[str] = mapped_column(String(24), nullable=False)
+    delay_days_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    delay_days_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stage_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("schedule_stages.id", ondelete="SET NULL"), nullable=True
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

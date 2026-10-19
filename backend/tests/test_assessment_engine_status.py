@@ -11,6 +11,7 @@ from app.domains.assessment.engine import (
     RuleEngine,
     RuleInput,
     StageInput,
+    Verdict,
 )
 from app.domains.assessment.models import StageStatusValue
 from app.domains.observation.models import Confidence
@@ -347,7 +348,13 @@ class TestStageStatusNotStarted:
                 equipment=[],  # Нет маркера
             ),
             ObservationInput(
-                observed_on=date(2024, 1, 20),
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=[],
+            ),
+            ObservationInput(
+                observed_on=date(2024, 1, 22),
                 photo_count=10,
                 observability="high",
                 equipment=[],
@@ -360,6 +367,56 @@ class TestStageStatusNotStarted:
         status = result.statuses[0]
         assert status.status == StageStatusValue.NOT_STARTED
         assert status.confidence == Confidence.HIGH
+        # Отставание — нижняя граница: этап не начат уже 10 дней
+        assert status.delay_days == 10
+        assert status.delay_open is True
+        assert result.summary.verdict == Verdict.BEHIND
+        assert (result.summary.delay_days_min, result.summary.delay_days_max) == (10, None)
+        assert result.summary.stage_id == stage_id
+
+    def test_two_high_days_do_not_prove_not_started(self):
+        """Двух дней с кадрами мало для «Не начат» (window_dates=3): «Не наблюдалось»."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        stage_id = uuid.uuid4()
+        equipment_id = uuid.uuid4()
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 15),
+                planned_end=date(2024, 1, 30),
+            )
+        ]
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=uuid.uuid4(),
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=equipment_id, obligation="normative", min_count=1
+                    )
+                ],
+            )
+        }
+        observations = [
+            ObservationInput(observed_on=day, photo_count=10, observability="high", equipment=[])
+            for day in (date(2024, 1, 16), date(2024, 1, 22))
+        ]
+
+        result = RuleEngine(config).compute_site(stages, rules, observations, date(2024, 1, 25))
+
+        status = result.statuses[0]
+        assert status.status == StageStatusValue.NOT_OBSERVED
+        assert status.delay_days is None
+        assert result.summary.verdict == Verdict.INSUFFICIENT_DATA
 
 
 class TestStageStatusNotObserved:

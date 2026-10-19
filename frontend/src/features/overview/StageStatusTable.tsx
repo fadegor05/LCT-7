@@ -10,7 +10,7 @@ import styles from './Overview.module.css'
 function meta(row: StageStatus): string | null {
   const delay =
     row.delay_days !== null &&
-    `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_days} дн.`
+    `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_open ? 'от ' : ''}${row.delay_days} дн.`
   const parts = [
     delay,
     row.confidence && `уверенность ${levelLabels[row.confidence].toLowerCase()}`,

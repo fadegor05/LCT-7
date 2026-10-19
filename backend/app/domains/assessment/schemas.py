@@ -18,6 +18,8 @@ class StageStatusRead(BaseModel):
     position: int
     status: str | None  # None = этап ещё не начался (нет строки в таблице)
     delay_days: int | None
+    # delay_days — нижняя граница («от N дней»): этап не начат
+    delay_open: bool = False
     confidence: str | None
     confidence_reason: str | None
     computed_at: datetime | None
@@ -69,3 +71,7 @@ class SiteSummaryRead(BaseModel):
     delay_days_max: int | None
     critical_count: int
     attention_count: int
+    # Почему такой итог: этап с наибольшим отставанием или причина «Недостаточно данных».
+    # None — объект ещё не пересчитывался
+    reason: str | None = None
+    stage_id: uuid.UUID | None = None

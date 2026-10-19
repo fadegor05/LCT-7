@@ -4,6 +4,7 @@ import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
+from enum import StrEnum
 
 from app.domains.assessment.models import (
     DeviationType,
@@ -91,6 +92,9 @@ class EngineConfig:
     no_progress_window_days: int
     min_confirming_observations: int
     workdays: tuple[int, ...] = (0, 1, 2, 3, 4)  # date.weekday(): Mon=0..Sun=6
+    # «Не начат» — только по стольким рабочим дням окна с высокой наблюдаемостью:
+    # один день с кадрами не доказывает, что этап не начался
+    window_dates: int = 3
 
 
 @dataclass(frozen=True)
@@ -103,6 +107,8 @@ class StageStatusResult:
     confidence: Confidence
     confidence_reason: str | None
     basis_dates: tuple[date, ...]
+    # delay_days — нижняя граница («от N дней»): этап не начат, конец сдвига неизвестен
+    delay_open: bool = False
 
 
 @dataclass(frozen=True)
@@ -123,12 +129,32 @@ class DeviationResult:
     evidence_dates: tuple[date, ...]
 
 
+class Verdict(StrEnum):
+    """Итог по объекту."""
+
+    BEHIND = "behind"
+    NO_DEVIATIONS = "no_deviations"
+    INSUFFICIENT_DATA = "insufficient_data"
+
+
+@dataclass(frozen=True)
+class SummaryResult:
+    """Итог по объекту: худший этап с отставанием или причина, почему итога нет."""
+
+    verdict: Verdict
+    delay_days_min: int | None
+    delay_days_max: int | None
+    stage_id: uuid.UUID | None
+    reason: str
+
+
 @dataclass(frozen=True)
 class SiteComputation:
     """Результат расчёта для объекта."""
 
     statuses: list[StageStatusResult]
     deviations: list[DeviationResult]
+    summary: SummaryResult
 
 
 class RuleEngine:
@@ -199,7 +225,8 @@ class RuleEngine:
                     )
                 )
 
-        return SiteComputation(statuses=statuses, deviations=deviations)
+        summary = summarize(stages, statuses, sorted_observations, today, self.config)
+        return SiteComputation(statuses=statuses, deviations=deviations, summary=summary)
 
     def _compute_stage_status(
         self,
@@ -305,17 +332,7 @@ class RuleEngine:
             )
         else:
             # e. Маркер никогда не видели
-            status, confidence, reason, basis_dates = self._check_not_started_vs_not_observed(
-                stage, observations, today
-            )
-            return StageStatusResult(
-                stage_id=stage.stage_id,
-                status=status,
-                delay_days=None,
-                confidence=confidence,
-                confidence_reason=reason,
-                basis_dates=basis_dates,
-            )
+            return self._check_not_started_vs_not_observed(stage, observations, today)
 
         # Шаг 6-8: Возвращаем результат для a/b/c/d
         return StageStatusResult(
@@ -448,47 +465,66 @@ class RuleEngine:
 
     def _check_not_started_vs_not_observed(
         self, stage: StageInput, observations: Sequence[ObservationInput], today: date
-    ) -> tuple[StageStatusValue, Confidence, str, tuple[date, ...]]:
-        """Определить NOT_STARTED или NOT_OBSERVED.
+    ) -> StageStatusResult | None:
+        """Маркер этапа ни разу не виден: «Не начат», «Не наблюдалось» или ещё рано.
 
-        Шаг 5e алгоритма.
+        «Не начат» — только когда плановое начало прошло больше чем на допуск и в окне
+        этапа не меньше `window_dates` рабочих дней, все с высокой наблюдаемостью. Тогда
+        отставание — «от N дней»: сколько этап уже не начат, а не итоговый сдвиг. Один
+        день с кадрами ничего не доказывает (Березники на стенде: один день — критично).
         """
-        # Определяем окно для проверки наблюдаемости
+        tolerance = timedelta(days=self.config.tolerance_days)
         window_start = stage.planned_start or (
             observations[0].observed_on if observations else today
         )
-        window_end = today
-
-        # Находим наблюдения в окне на рабочие дни
-        obs_in_window = [
+        window = [
             o
             for o in observations
-            if window_start <= o.observed_on <= window_end
+            if window_start <= o.observed_on <= today
             and o.observed_on.weekday() in self.config.workdays
         ]
+        basis_dates = tuple(o.observed_on for o in window)
 
-        # Вычисляем худшую наблюдаемость в окне
-        worst_observability = Observability.LOW
-        if obs_in_window:
-            observabilities = [self._str_to_observability(o.observability) for o in obs_in_window]
-            worst_observability = min(observabilities, key=lambda o: self._observability_order(o))
+        def result(
+            status: StageStatusValue,
+            confidence: Confidence,
+            reason: str,
+            delay_days: int | None = None,
+        ) -> StageStatusResult:
+            return StageStatusResult(
+                stage_id=stage.stage_id,
+                status=status,
+                delay_days=delay_days,
+                confidence=confidence,
+                confidence_reason=reason,
+                basis_dates=basis_dates,
+                delay_open=delay_days is not None,
+            )
 
-        basis_dates = tuple(o.observed_on for o in obs_in_window)
-
-        if worst_observability == Observability.HIGH:
-            status = StageStatusValue.NOT_STARTED
-            confidence = Confidence.HIGH
-            reason = "маркерная техника не наблюдается при высокой наблюдаемости всего окна"
-        else:
-            status = StageStatusValue.NOT_OBSERVED
-            if obs_in_window:
-                confidence = Confidence.MEDIUM
-                reason = "низкая наблюдаемость в окне этапа"
-            else:
-                confidence = Confidence.LOW
-                reason = "отсутствуют наблюдения в окне этапа"
-
-        return status, confidence, reason, basis_dates
+        if stage.planned_start is not None and today <= stage.planned_start + tolerance:
+            # Срок допуска ещё не прошёл: отсутствие маркера пока ни о чём не говорит
+            return result(
+                StageStatusValue.NOT_OBSERVED,
+                Confidence.LOW,
+                "срок допуска после планового начала ещё не прошёл",
+            )
+        if len(window) >= self.config.window_dates and all(
+            o.observability == Observability.HIGH.value for o in window
+        ):
+            return result(
+                StageStatusValue.NOT_STARTED,
+                Confidence.HIGH,
+                "маркерная техника не наблюдается при высокой наблюдаемости всех рабочих дней окна",
+                (today - stage.planned_start).days if stage.planned_start else None,
+            )
+        if window:
+            return result(
+                StageStatusValue.NOT_OBSERVED,
+                Confidence.MEDIUM,
+                "наблюдаемость в окне этапа не высокая или дней с кадрами меньше "
+                f"{self.config.window_dates}",
+            )
+        return result(StageStatusValue.NOT_OBSERVED, Confidence.LOW, "в окне этапа нет кадров")
 
     def _check_schedule_delay(
         self,
@@ -500,6 +536,8 @@ class RuleEngine:
     ) -> list[DeviationResult]:
         """Отклонение behind_schedule: этап со статусом «Отстаёт» и числом дней отставания."""
         if status.status != StageStatusValue.BEHIND or not status.delay_days:
+            # «Не начат» строкой отставания не бывает: срок у него — нижняя граница, и он
+            # уже в статусе этапа и в итоге
             return []
         if status.delay_days <= 0 or not status.basis_dates:
             return []
@@ -986,3 +1024,91 @@ class RuleEngine:
 
         confidences = [self._str_to_confidence(eq.confidence) for eq in equipment]
         return min(confidences, key=self._confidence_order)
+
+
+def _insufficient(reason: str) -> SummaryResult:
+    return SummaryResult(Verdict.INSUFFICIENT_DATA, None, None, None, reason)
+
+
+def _explain_behind(stage: StageInput, status: StageStatusResult, today: date) -> str:
+    """Пояснение итога по этапу с наибольшим отставанием."""
+    prefix = f"Измерено по этапу «{stage.name}»"
+    accuracy = "Точность не выше частоты съёмки."
+    if status.status == StageStatusValue.NOT_STARTED:
+        start = f"{stage.planned_start:%d.%m}" if stage.planned_start else "—"
+        return (
+            f"{prefix}: плановое начало {start}, к {today:%d.%m} маркерная техника этапа "
+            "не найдена при высокой наблюдаемости. Это нижняя граница."
+        )
+    first = status.basis_dates[0] if status.basis_dates else None
+    if (
+        stage.planned_start is not None
+        and first is not None
+        and status.delay_days == (first - stage.planned_start).days
+    ):
+        return (
+            f"{prefix}: плановое начало {stage.planned_start:%d.%m}, маркерная техника "
+            f"появилась {first:%d.%m}. {accuracy}"
+        )
+    last = status.basis_dates[-1] if status.basis_dates else today
+    end = f"{stage.planned_end:%d.%m}" if stage.planned_end else "—"
+    return (
+        f"{prefix}: плановый конец {end}, маркерная техника наблюдается и {last:%d.%m}. {accuracy}"
+    )
+
+
+def summarize(
+    stages: Sequence[StageInput],
+    statuses: Sequence[StageStatusResult],
+    observations: Sequence[ObservationInput],
+    today: date,
+    config: EngineConfig,
+) -> SummaryResult:
+    """Итог по объекту (как в clean-mvp, engine/summary.py).
+
+    Итог — интервал одного, худшего этапа, а не склейка границ разных этапов: пояснение под
+    итогом говорит про тот же этап. «Не начат» с отставанием «от N дней» — тоже отставание,
+    иначе итог «Отклонений нет» стоял бы рядом с критичными отклонениями этого этапа.
+    """
+    if not observations:
+        return _insufficient("Снимков с датой нет.")
+    latest = observations[-1]
+    if (today - latest.observed_on).days > config.stale_data_days:
+        return _insufficient(
+            f"Данные устарели: последнее наблюдение {latest.observed_on:%d.%m.%Y}."
+        )
+    workdays = [o for o in observations if o.observed_on.weekday() in config.workdays]
+    last_workday = workdays[-1] if workdays else latest
+    # Низкая наблюдаемость последнего дня — оговорка к отставанию, а не его отмена: строка
+    # отставания уже в отклонениях
+    poorly_seen = last_workday.observability == Observability.LOW.value
+
+    considered = [s for s in statuses if s.status != StageStatusValue.NOT_CHECKED]
+    lagging = (
+        (StageStatusValue.BEHIND,)
+        if poorly_seen
+        else (StageStatusValue.BEHIND, StageStatusValue.NOT_STARTED)
+    )
+    behind = [s for s in considered if s.status in lagging and s.delay_days]
+    if behind:
+        # Худший — с наибольшей нижней границей, при равной — без верхней границы
+        worst = max(behind, key=lambda s: (s.delay_days or 0, s.delay_open))
+        stage = next(st for st in stages if st.stage_id == worst.stage_id)
+        reason = _explain_behind(stage, worst, today)
+        if poorly_seen:
+            reason += " Наблюдаемость последнего рабочего дня низкая: оценка по прошлым снимкам."
+        return SummaryResult(
+            verdict=Verdict.BEHIND,
+            delay_days_min=worst.delay_days,
+            delay_days_max=None if worst.delay_open else worst.delay_days,
+            stage_id=worst.stage_id,
+            reason=reason,
+        )
+
+    if poorly_seen:
+        return _insufficient("Наблюдаемость последнего рабочего дня низкая.")
+    if not considered:
+        return _insufficient("Нет этапов, которые проверяются по технике сейчас.")
+    if all(s.status == StageStatusValue.NOT_OBSERVED for s in considered):
+        return _insufficient("По идущим этапам наблюдаемость недостаточна.")
+    return SummaryResult(Verdict.NO_DEVIATIONS, None, None, None, "Отклонений не выявлено.")

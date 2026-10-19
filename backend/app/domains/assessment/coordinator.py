@@ -21,7 +21,13 @@ from app.domains.assessment.engine import (
     RuleInput,
     StageInput,
 )
-from app.domains.assessment.models import Deviation, DeviationEvidence, StageStatus, StatusBasis
+from app.domains.assessment.models import (
+    Deviation,
+    DeviationEvidence,
+    SiteSummary,
+    StageStatus,
+    StatusBasis,
+)
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
     DeviationRepository,
@@ -379,6 +385,7 @@ class RecomputeCoordinator:
                     # Обновить in-place
                     existing.status = result.status.value
                     existing.delay_days = result.delay_days
+                    existing.delay_open = result.delay_open
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -388,6 +395,7 @@ class RecomputeCoordinator:
                         stage_id=result.stage_id,
                         status=result.status.value,
                         delay_days=result.delay_days,
+                        delay_open=result.delay_open,
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )
@@ -483,6 +491,18 @@ class RecomputeCoordinator:
 
             if evidence_rows:
                 await self._deviation_evidence_repo.add_many(evidence_rows)
+
+            # Шаг 9b: Итог по объекту — по той же опорной дате, что статусы
+            summary = computation.summary
+            row = await self._session.get(SiteSummary, site_id)
+            if row is None:
+                row = SiteSummary(site_id=site_id)
+                self._session.add(row)
+            row.verdict = summary.verdict.value
+            row.delay_days_min = summary.delay_days_min
+            row.delay_days_max = summary.delay_days_max
+            row.stage_id = summary.stage_id
+            row.reason = summary.reason
 
             # Шаг 10: Коммитить
             await self._session.commit()
