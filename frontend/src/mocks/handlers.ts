@@ -3,7 +3,7 @@
  * работают в браузере (VITE_USE_MOCKS=true) и в тестах (src/test/setup.ts).
  */
 import { delay, http, HttpResponse } from 'msw'
-import { parseModeSchema, type Zone } from '@/api/schemas'
+import { parseModeSchema, type ChannelKind, type Zone } from '@/api/schemas'
 import { env } from '@/lib/env'
 import * as db from './db'
 import { user } from './fixtures'
@@ -154,17 +154,22 @@ export const handlers = [
 
   // ---------- Каналы доставки ----------
   http.get(api('/users/me/channels'), () => handle(db.listChannels)),
-  http.post<{ channel: 'telegram' }>(api('/users/me/channels/:channel/link'), ({ params }) =>
-    handle(() => db.linkChannel(params.channel)),
+  http.post<{ channel: ChannelKind }>(
+    api('/users/me/channels/:channel/link'),
+    async ({ params, request }) => {
+      // У телеграма тела нет
+      const data = await json<{ address?: string }>(request).catch((): { address?: string } => ({}))
+      return handle(() => db.linkChannel(params.channel, data.address))
+    },
   ),
-  http.patch<{ channel: 'telegram' }>(
+  http.patch<{ channel: ChannelKind }>(
     api('/users/me/channels/:channel'),
     async ({ params, request }) => {
       const data = await json<{ enabled: boolean }>(request)
       return handle(() => db.toggleChannel(params.channel, data.enabled))
     },
   ),
-  http.delete<{ channel: 'telegram' }>(api('/users/me/channels/:channel'), ({ params }) =>
+  http.delete<{ channel: ChannelKind }>(api('/users/me/channels/:channel'), ({ params }) =>
     handle(() => {
       db.unlinkChannel(params.channel)
       return undefined

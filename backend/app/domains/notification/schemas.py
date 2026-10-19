@@ -7,7 +7,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.domains.notification.models import ChannelKind, NotificationType
 
@@ -48,10 +48,18 @@ class ChannelToggle(BaseModel):
     enabled: bool
 
 
-class ChannelLinkResponse(BaseModel):
-    """Ссылка привязки и срок её жизни."""
+class ChannelLinkRequest(BaseModel):
+    """Тело запроса привязки. Адрес нужен только почте; у телеграма тела нет."""
 
-    url: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    address: EmailStr | None = None
+
+
+class ChannelLinkResponse(BaseModel):
+    """Ссылка привязки и срок её жизни. У почты ссылки нет: она уходит в письме."""
+
+    url: str | None
     expires_at: datetime
 
 

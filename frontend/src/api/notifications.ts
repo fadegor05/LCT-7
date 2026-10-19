@@ -26,9 +26,10 @@ export const notificationsApi = {
   createTest: (body: TestNotification) =>
     request('/notifications/test', { method: 'POST', body, schema: notificationSchema }),
   listChannels: () => request('/users/me/channels', { schema: z.array(userChannelSchema) }),
-  link: (channel: ChannelKind) =>
+  link: (channel: ChannelKind, address?: string) =>
     request(`/users/me/channels/${channel}/link`, {
       method: 'POST',
+      body: address ? { address } : undefined,
       schema: channelLinkSchema,
     }),
   toggle: (channel: ChannelKind, enabled: boolean) =>
@@ -70,18 +71,23 @@ export function useCreateTestNotification() {
  * нажимать «Запустить»: привязку создаёт фоновый поллер бота, и без опроса
  * страница узнает о ней только после перезагрузки.
  */
-export function useChannels({ pollWhileEmpty = false } = {}) {
+export function useChannels({ pollUntil }: { pollUntil?: ChannelKind } = {}) {
   return useQuery({
     queryKey: keys.channels,
     queryFn: notificationsApi.listChannels,
     // Опрашиваем, только пока ждём привязку, и прекращаем, как только она пришла
     refetchInterval: (query) =>
-      pollWhileEmpty && !query.state.data?.length ? CHANNEL_POLL_MS : false,
+      pollUntil && !query.state.data?.some((channel) => channel.channel === pollUntil)
+        ? CHANNEL_POLL_MS
+        : false,
   })
 }
 
 export function useLinkChannel() {
-  return useMutation({ mutationFn: (channel: ChannelKind) => notificationsApi.link(channel) })
+  return useMutation({
+    mutationFn: ({ channel, address }: { channel: ChannelKind; address?: string }) =>
+      notificationsApi.link(channel, address),
+  })
 }
 
 export function useToggleChannel() {
