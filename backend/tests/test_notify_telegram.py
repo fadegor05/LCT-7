@@ -161,3 +161,31 @@ async def test_client_goes_direct_without_a_proxy(monkeypatch: pytest.MonkeyPatc
     await TelegramClient(token="1:abc").send_message("1", "текст")
 
     assert captured.get("proxy") is None
+
+
+async def test_error_message_names_the_exception_type() -> None:
+    """У httpx.ConnectTimeout пустой str(), и без типа в логе остаётся «getUpdates:».
+
+    Именно так выглядел отказ на проде: строка без причины, по которой нельзя
+    отличить блокировку от неподнятого прокси или сбоя DNS.
+    """
+    import httpx as httpx_module
+
+    from app.adapters.notify.telegram import TelegramClient
+
+    class TimingOutTransport(httpx_module.AsyncBaseTransport):
+        async def handle_async_request(
+            self, request: httpx_module.Request
+        ) -> httpx_module.Response:
+            raise httpx_module.ConnectTimeout("")
+
+    client = TelegramClient(token="1:abc")
+    client._transport = TimingOutTransport()
+
+    with pytest.raises(NotifyError) as send_error:
+        await client.send_message("1", "текст")
+    with pytest.raises(NotifyError) as updates_error:
+        await client.get_updates(offset=None, timeout_s=1)
+
+    assert "ConnectTimeout" in str(send_error.value)
+    assert "ConnectTimeout" in str(updates_error.value)
