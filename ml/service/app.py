@@ -125,7 +125,8 @@ class StampResponse(BaseModel):
     text: str | None
     roi: str | None
     profile: str | None = Field(
-        None, description="«2592x1944» или «1920x1080», если время прочитано по эталонам камеры")
+        None, description="«2592x1944» или «1920x1080» — кадр камеры с эталонами знаков; "
+                          "при date=null время на таком кадре не прочитано")
 
 
 @asynccontextmanager

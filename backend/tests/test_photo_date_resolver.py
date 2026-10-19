@@ -14,6 +14,7 @@ from datetime import date
 import pytest
 from PIL import Image
 
+from app.adapters.ml.stamp import StampReading
 from app.domains.photo.date_resolver import (
     DateResolver,
     ImageInfo,
@@ -817,3 +818,49 @@ class TestDateResolverFilename:
     async def test_filename_without_date_leaves_photo_undated(self) -> None:
         result = await DateResolver().resolve(self._plain_png(), filename="photo.jpg")
         assert result == ResolvedDate(captured_on=None, source=None)
+
+
+class TestCameraFrameFilename:
+    """Кадр камеры известного разрешения: имя файла — момент выгрузки, а не съёмки."""
+
+    @staticmethod
+    def _png() -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (100, 100), color="white").save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_unread_camera_stamp_ignores_filename(self) -> None:
+        class CameraOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(None, "2592x1944")
+
+        result = await DateResolver(ocr=CameraOcr()).resolve(
+            self._png(), filename="202609272307241790539644116.jpg"
+        )
+        assert result.captured_on is None
+        assert result.source is None
+
+    @pytest.mark.asyncio
+    async def test_read_camera_stamp_wins(self) -> None:
+        class CameraOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(date(2026, 8, 13), "2592x1944")
+
+        result = await DateResolver(ocr=CameraOcr()).resolve(
+            self._png(), filename="202609272307241790539644116.jpg"
+        )
+        assert result.captured_on == date(2026, 8, 13)
+        assert result.source == DateSource.STAMP
+
+    @pytest.mark.asyncio
+    async def test_frame_of_unknown_camera_keeps_filename(self) -> None:
+        class PlainOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(None, None)
+
+        result = await DateResolver(ocr=PlainOcr()).resolve(
+            self._png(), filename="IMG_20260927_020037.jpg"
+        )
+        assert result.captured_on == date(2026, 9, 27)
+        assert result.source == DateSource.FILENAME

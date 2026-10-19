@@ -514,9 +514,11 @@ export function findPhoto(siteId: string, photoId: string): StoredPhoto {
 export function uploadPhotos(
   siteId: string,
   files: readonly { name: string; type: string }[],
+  cameraId: string | null = null,
 ): UploadReport {
   getSite(siteId)
   if (files.length === 0) throw new MockError(422, 'Нет файлов')
+  if (cameraId) findCamera(siteId, cameraId)
   const touched = new Set<string>()
   const items = files.map((file) => {
     if (!file.type.startsWith('image/')) {
@@ -534,6 +536,7 @@ export function uploadPhotos(
       date_source: date ? 'metadata' : null,
       processing_status: 'done',
       uploaded_at: now(),
+      camera_id: cameraId,
       detections: detections(id, ['dump_truck']),
     }
     state.photos.push(photo)

@@ -212,6 +212,7 @@ export const photoSchema = z.object({
   date_source: dateSourceSchema.nullable(),
   processing_status: processingStatusSchema,
   uploaded_at: isoDateTime,
+  camera_id: z.string().nullable().optional(),
 })
 
 export const photoDetailSchema = photoSchema.extend({

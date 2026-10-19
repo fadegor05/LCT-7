@@ -95,14 +95,16 @@ def test_unsure_camera_read_falls_back_to_ocr(store, monkeypatch) -> None:
     reader._camera = store
     reader._ocr = object()
     out = reader.read_bytes(_png(frame(P, "13-08-2026 08:00:13", "sky", seed=3)))
-    assert out == {"date": None, "text": None, "roi": None}
+    # Время не прочитано, но кадр — с камеры известного разрешения
+    assert out == {"date": None, "text": None, "roi": None, "profile": "2592x1944"}
     assert calls, "неуверенное чтение камеры должно уступить OCR"
 
 
-def test_flag_unset_uses_ocr_and_never_calls_camera_reader(store, monkeypatch) -> None:
+@pytest.mark.parametrize("value", ["0", "false", "NO"])
+def test_flag_off_uses_ocr_and_never_calls_camera_reader(store, monkeypatch, value) -> None:
     from tools import read_date_stamp
 
-    monkeypatch.delenv("STAMP_CAMERA_READER", raising=False)
+    monkeypatch.setenv("STAMP_CAMERA_READER", value)
     camera_calls = []
     monkeypatch.setattr(StampReader, "read_camera",
                         lambda self, img: camera_calls.append(img) or {"date": "x"})
@@ -118,13 +120,17 @@ def test_flag_unset_uses_ocr_and_never_calls_camera_reader(store, monkeypatch) -
     reader._ocr = object()
     out = reader.read_bytes(_png(frame(P, "13-08-2026 08:00:13", "sky", seed=8)))
     assert out == {"date": None, "text": None, "roi": None}
-    assert ocr_calls, "без флага кадр идёт через OCR"
-    assert camera_calls == [], "без флага read_camera не вызывается"
+    assert ocr_calls, "с выключенным флагом кадр идёт через OCR"
+    assert camera_calls == [], "с выключенным флагом read_camera не вызывается"
 
 
-@pytest.mark.parametrize("value", ["1", "true", "YES", " True "])
+@pytest.mark.parametrize("value", [None, "1", "true", "YES", " True "])
 def test_flag_set_uses_camera_reader(store, monkeypatch, value) -> None:
-    monkeypatch.setenv("STAMP_CAMERA_READER", value)
+    # Без переменной чтение камеры включено
+    if value is None:
+        monkeypatch.delenv("STAMP_CAMERA_READER", raising=False)
+    else:
+        monkeypatch.setenv("STAMP_CAMERA_READER", value)
     reader = StampReader()
     reader._camera = store
     reader._ocr = object()

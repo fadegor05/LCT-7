@@ -219,8 +219,13 @@ export const handlers = [
     return handle(() => db.listPhotos(params.siteId, undated))
   }),
   http.post<SiteParams>(api('/sites/:siteId/photos'), async ({ params, request }) => {
-    const files = (await request.formData()).getAll('files').filter(isFile)
-    return handle(() => db.uploadPhotos(params.siteId, files), 201)
+    const form = await request.formData()
+    const files = form.getAll('files').filter(isFile)
+    const cameraId = form.get('camera_id')
+    return handle(
+      () => db.uploadPhotos(params.siteId, files, typeof cameraId === 'string' ? cameraId : null),
+      201,
+    )
   }),
   http.patch<{ siteId: string; photoId: string }>(
     api('/sites/:siteId/photos/:photoId/date'),

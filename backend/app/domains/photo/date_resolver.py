@@ -4,7 +4,9 @@
 1. Дата из канала (channel) — явно указана при загрузке
 2. EXIF metadata — DateTimeOriginal, DateTime, DateTimeDigitized
 3. Штамп на кадре (OCR) — распознавание текста на фотографии
-4. Имя файла — мессенджеры вырезают EXIF, но оставляют дату в имени
+4. Имя файла — мессенджеры вырезают EXIF, но оставляют дату в имени. Кроме кадров
+   камеры известного разрешения с непрочитанным штампом: у выгрузок с камер имя —
+   момент выгрузки, а не съёмки
 5. Соседние фотографии — определяется сервисом позже
 6. Ручной ввод — вводит инженер
 """
@@ -35,6 +37,22 @@ class StampOcr(Protocol):
         """Прочитать дату со штампа. Возвращает None, если штамп не найден
         или не прошёл проверку — это не ошибка."""
         ...
+
+
+class StampReadingLike(Protocol):
+    """Результат чтения штампа: дата и профиль камеры (кадр известного разрешения)."""
+
+    @property
+    def date(self) -> date | None: ...
+
+    @property
+    def profile(self) -> str | None: ...
+
+
+@dataclass(frozen=True)
+class _Reading:
+    date: date | None
+    profile: str | None = None
 
 
 class NullStampOcr:
@@ -322,9 +340,13 @@ class DateResolver:
             return ResolvedDate(captured_on=exif_date, source=DateSource.METADATA)
 
         # 3. Stamp OCR
-        stamp_date = await self._extract_stamp_date(content)
-        if stamp_date is not None:
-            return ResolvedDate(captured_on=stamp_date, source=DateSource.STAMP)
+        stamp = await self._read_stamp(content)
+        if stamp.date is not None:
+            return ResolvedDate(captured_on=stamp.date, source=DateSource.STAMP)
+        if stamp.profile is not None:
+            # Кадр камеры, а время со штампа не прочитано: имя файла у выгрузок с камер —
+            # момент выгрузки (49 кадров Березников «за 27.09» при съёмке в августе)
+            return ResolvedDate(captured_on=None, source=None)
 
         # 4. Имя файла
         filename_date = parse_filename_date(filename)
@@ -420,10 +442,14 @@ class DateResolver:
         except (ValueError, IndexError, AttributeError):
             return None
 
-    async def _extract_stamp_date(self, content: bytes) -> date | None:
-        """Извлечь дату через OCR-адаптер. Исключения НЕ распространяются
-        (as before) — сеть/ML-сервис недоступен -> просто нет даты со штампа."""
+    async def _read_stamp(self, content: bytes) -> StampReadingLike:
+        """Прочитать штамп через OCR-адаптер. Исключения НЕ распространяются —
+        сеть/ML-сервис недоступен -> просто нет даты со штампа. Адаптер без `read`
+        (только `read_date`) профиля камеры не знает."""
         try:
-            return await self.ocr.read_date(content)
+            read = getattr(self.ocr, "read", None)
+            if read is not None:
+                return await read(content)
+            return _Reading(await self.ocr.read_date(content))
         except Exception:
-            return None
+            return _Reading(None)

@@ -1,12 +1,16 @@
 """HTTP-клиент для чтения даты со штампа через ML-сервис (LCT-13).
 
 Контракт: POST {base}/stamp, multipart/form-data, поле `file`.
-Ответ: {"date": "2024-04-24" | null, "text": "...", "roi": "right"|"left"|null}.
+Ответ: {"date": "2024-04-24" | null, "text": "...", "roi": "right"|"left"|"camera"|null,
+"profile": "2592x1944" | null}. `profile` при `date: null` — кадр камеры известного
+разрешения, на котором время не прочитано.
 Ошибки как у /detect: 400/413/422 не повторяются, 503 — retry с backoff.
 """
 
 import asyncio
+import datetime as dt
 import logging
+from dataclasses import dataclass
 from datetime import date
 
 import httpx
@@ -22,8 +26,20 @@ class _StampSchema(BaseModel):
     date: str | None = None
     text: str | None = None
     roi: str | None = None
+    profile: str | None = None
 
     model_config = {"extra": "ignore"}
+
+
+@dataclass(frozen=True)
+class StampReading:
+    """Дата со штампа и профиль камеры; оба None — штамп не прочитан, сервис недоступен."""
+
+    date: dt.date | None = None
+    profile: str | None = None
+
+
+_NOTHING = StampReading()
 
 
 class HttpStampReader:
@@ -51,6 +67,9 @@ class HttpStampReader:
         return None
 
     async def read_date(self, content: bytes) -> date | None:
+        return (await self.read(content)).date
+
+    async def read(self, content: bytes) -> StampReading:
         url = f"{self.base_url}/stamp"
         timeout = httpx.Timeout(self.settings.timeout_s, connect=self.settings.connect_timeout_s)
 
@@ -75,11 +94,11 @@ class HttpStampReader:
                             total_sleep = new_spent
                             continue
                     logger.warning("Stamp service 503, retries exhausted")
-                    return None
+                    return _NOTHING
 
                 if 400 <= response.status_code < 500:
                     logger.warning("Stamp service HTTP %d, no retry", response.status_code)
-                    return None
+                    return _NOTHING
 
                 if response.status_code >= 500:
                     if retry_other_count < self.settings.retry_other:
@@ -89,7 +108,7 @@ class HttpStampReader:
                             total_sleep = new_spent
                             continue
                     logger.warning("Stamp service HTTP %d, retries exhausted", response.status_code)
-                    return None
+                    return _NOTHING
 
                 if response.status_code == 200:
                     try:
@@ -97,17 +116,17 @@ class HttpStampReader:
                         parsed = _StampSchema(**data)
                     except Exception:
                         logger.warning("Stamp service: invalid response body")
-                        return None
+                        return _NOTHING
                     if not parsed.date:
-                        return None
+                        return StampReading(profile=parsed.profile)
                     try:
-                        return date.fromisoformat(parsed.date)
+                        return StampReading(date.fromisoformat(parsed.date), parsed.profile)
                     except ValueError:
                         logger.warning("Stamp service returned unparseable date: %r", parsed.date)
-                        return None
+                        return StampReading(profile=parsed.profile)
 
                 logger.warning("Stamp service unexpected HTTP %d", response.status_code)
-                return None
+                return _NOTHING
 
             except httpx.TimeoutException:
                 if retry_other_count < self.settings.retry_other:
@@ -117,7 +136,7 @@ class HttpStampReader:
                         total_sleep = new_spent
                         continue
                 logger.warning("Stamp service timeout, retries exhausted")
-                return None
+                return _NOTHING
             except httpx.TransportError:
                 if retry_other_count < self.settings.retry_other:
                     retry_other_count += 1
@@ -126,4 +145,4 @@ class HttpStampReader:
                         total_sleep = new_spent
                         continue
                 logger.warning("Stamp service connection error, retries exhausted")
-                return None
+                return _NOTHING

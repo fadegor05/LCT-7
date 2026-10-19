@@ -153,13 +153,13 @@ class Detector:
 # Время, которое знакогенератор камеры впечатал слева сверху (ml/stamp/).
 # Порог — как у бэкенда (FRAMES__STAMP_MIN_CONFIDENCE, см. ml/stamp/eval.py).
 CAMERA_MIN_CONFIDENCE = 0.9
-# Включается переменной окружения STAMP_CAMERA_READER=1 (true/yes). По умолчанию выключено:
-# точность на настоящих кадрах не проверена, а /stamp кормит даты фото в проде.
+# Включено по умолчанию; STAMP_CAMERA_READER=0 (false/no) выключает и оставляет только OCR.
+# Без него кадры камер Березников датировались по имени файла — моменту выгрузки, а не съёмки.
 
 
 def camera_reader_enabled() -> bool:
     """Читается при каждом вызове, а не при импорте: тесты могут подменить окружение."""
-    return os.environ.get("STAMP_CAMERA_READER", "").strip().lower() in ("1", "true", "yes")
+    return os.environ.get("STAMP_CAMERA_READER", "").strip().lower() not in ("0", "false", "no")
 
 
 @dataclass
@@ -212,12 +212,23 @@ class StampReader:
         from tools.read_date_stamp import read_stamp_for_service
         img = Image.open(io.BytesIO(data))
         img = ImageOps.exif_transpose(img)
+        profile = None
         if camera_reader_enabled():
             camera = self.read_camera(img)
             if camera is not None:
                 return camera
+            profile = self.camera_profile(*img.size)
         arr = np.asarray(img.convert("RGB"))
-        return read_stamp_for_service(arr, self.ocr)
+        out = read_stamp_for_service(arr, self.ocr)
+        # Кадр камеры известного разрешения, а время не прочитано: бэкенду важно это знать —
+        # имя файла у таких кадров обычно момент выгрузки, а не съёмки
+        return {**out, "profile": profile} if profile and not out.get("date") else out
+
+    def camera_profile(self, width: int, height: int) -> str | None:
+        """Профиль камеры, если для этого разрешения есть эталоны знаков."""
+        from stamp.layout import profile_for
+        profile = profile_for(width, height)
+        return profile.name if profile and profile.name in self.camera_templates else None
 
 
 def main() -> int:

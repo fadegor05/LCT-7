@@ -28,9 +28,10 @@ export const framesApi = {
       schema: z.array(photoSchema),
     }),
   /** Пачка снимков (multipart `files`); ошибка одного файла не прерывает остальные. */
-  upload: (siteId: string, files: readonly File[]) => {
+  upload: (siteId: string, files: readonly File[], cameraId: string | null = null) => {
     const form = new FormData()
     files.forEach((file) => form.append('files', file))
+    if (cameraId) form.append('camera_id', cameraId)
     return request(`/sites/${siteId}/photos`, {
       method: 'POST',
       body: form,
@@ -116,7 +117,11 @@ function useSiteMutation<TArgs, TResult>(siteId: string, fn: (args: TArgs) => Pr
 }
 
 export function useUploadPhotos(siteId: string) {
-  return useSiteMutation(siteId, (files: readonly File[]) => framesApi.upload(siteId, files))
+  return useSiteMutation(
+    siteId,
+    ({ files, cameraId }: { files: readonly File[]; cameraId: string | null }) =>
+      framesApi.upload(siteId, files, cameraId),
+  )
 }
 
 export function useSetPhotoDate(siteId: string) {
