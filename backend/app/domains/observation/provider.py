@@ -1,8 +1,10 @@
 """DI-провайдер домена observation."""
 
 from dishka import Provider, Scope, provide
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import Settings
+from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.recalculator import (
     NoopStatusRecalculator,
     StatusRecalculator,
@@ -20,6 +22,8 @@ from app.domains.observation.repository import (
 )
 from app.domains.observation.service import ObservationService
 from app.domains.photo.recalculator import ObservationRecalculator
+from app.domains.photo.repository import DetectionRepository, PhotoRepository
+from app.domains.site.guard import SiteAccessGuard
 
 
 class ObservationProvider(Provider):
@@ -61,9 +65,70 @@ class ObservationProvider(Provider):
 
     observation_repository = provide(ObservationRepository, scope=Scope.REQUEST)
     observed_equipment_repository = provide(ObservedEquipmentRepository, scope=Scope.REQUEST)
-    service = provide(ObservationService, scope=Scope.REQUEST)
+
+    @provide(scope=Scope.REQUEST)
+    def service(
+        self,
+        repository: ObservationRepository,
+        equipment_repo: ObservedEquipmentRepository,
+        photos: PhotoRepository,
+        detections: DetectionRepository,
+        session: AsyncSession,
+        guard: SiteAccessGuard,
+        catalog: EquipmentCatalog,
+        aggregation: AggregationPolicy,
+        observability: ObservabilityPolicy,
+        activity: ActivityPolicy,
+        recalculator: StatusRecalculator,
+    ) -> ObservationService:
+        """Сервис для HTTP-роутов: с гвардом доступа к стройке."""
+        return ObservationService(
+            repository=repository,
+            equipment_repo=equipment_repo,
+            photos=photos,
+            detections=detections,
+            session=session,
+            guard=guard,
+            catalog=catalog,
+            aggregation=aggregation,
+            observability=observability,
+            activity=activity,
+            recalculator=recalculator,
+        )
 
     @provide(scope=Scope.REQUEST, provides=ObservationRecalculator)
-    def observation_recalculator(self, service: ObservationService) -> ObservationRecalculator:
-        """Перекрывает NoopObservationRecalculator из PhotoProvider (регистрация после него)."""
-        return LiveObservationRecalculator(service)
+    def observation_recalculator(
+        self,
+        repository: ObservationRepository,
+        equipment_repo: ObservedEquipmentRepository,
+        photos: PhotoRepository,
+        detections: DetectionRepository,
+        session: AsyncSession,
+        catalog: EquipmentCatalog,
+        aggregation: AggregationPolicy,
+        observability: ObservabilityPolicy,
+        activity: ActivityPolicy,
+        recalculator: StatusRecalculator,
+    ) -> ObservationRecalculator:
+        """Перекрывает NoopObservationRecalculator из PhotoProvider (регистрация после него).
+
+        Пересчёт — системное действие после загрузки, кадра со стрима или очереди обработки:
+        доступ к стройке уже проверил вызывающий. Поэтому сервис собирается без гварда — гвард
+        требует текущего пользователя, а его нет вне HTTP-запроса (фоновые задачи падали
+        с NoContextValueError).
+        """
+        return LiveObservationRecalculator(
+            ObservationService(
+                repository=repository,
+                equipment_repo=equipment_repo,
+                photos=photos,
+                detections=detections,
+                session=session,
+                guard=None,
+                catalog=catalog,
+                aggregation=aggregation,
+                observability=observability,
+                activity=activity,
+                recalculator=recalculator,
+            )
+        )
