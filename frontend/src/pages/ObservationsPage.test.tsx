@@ -23,7 +23,8 @@ describe('ObservationsPage', () => {
     expect(router.state.location.search).toBe('?date=all')
     expect(screen.queryByRole('heading', { name: 'Техника на площадке' })).not.toBeInTheDocument()
     expect(await photos()).toHaveLength(12)
-    expect(screen.getAllByText('ПН 14.09.2026', { selector: 'figcaption span' })).toHaveLength(2)
+    // «Все дни»: у кадра день недели и дата, время — если источник его знает
+    expect(screen.getAllByText('ПН 14.09', { selector: 'figcaption span' })).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: /17\.09/ }))
     expect(

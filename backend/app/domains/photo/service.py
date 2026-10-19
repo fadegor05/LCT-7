@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.base import (
@@ -18,6 +19,7 @@ from app.adapters.ml.base import (
 )
 from app.adapters.storage.base import FileStorage, StorageError
 from app.core.settings import Settings
+from app.domains.assessment.models import DeviationEvidence
 from app.domains.camera.models import Camera
 from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import EquipmentCatalog
@@ -28,7 +30,7 @@ from app.domains.photo.date_resolver import (
 )
 from app.domains.photo.models import DateSource, Detection, Photo, ProcessingStatus
 from app.domains.photo.recalculator import ObservationRecalculator
-from app.domains.photo.render import RENDER_VERSION, render_annotated
+from app.domains.photo.render import MAX_SIDE, RENDER_VERSION, THUMB_SIDE, render_annotated
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.schemas import (
     DetectBacklogReport,
@@ -594,7 +596,44 @@ class PhotoService:
         """
         await self._site_guard.require(site_id)
         photos = await self._repository.list_by_site(site_id, undated=undated)
-        return [PhotoRead.model_validate(p) for p in photos]
+        if not photos:
+            return []
+        ids = [p.id for p in photos]
+        by_photo: dict[uuid.UUID, list[Detection]] = {}
+        for det in await self._detections.list_by_photos(ids):
+            by_photo.setdefault(det.photo_id, []).append(det)
+        camera_ids = {p.camera_id for p in photos if p.camera_id is not None}
+        zones: dict[uuid.UUID, list[list[float]] | None] = {}
+        if camera_ids:
+            rows = await self._session.execute(
+                select(Camera.id, Camera.zone).where(Camera.id.in_(camera_ids))
+            )
+            zones = {cid: zone for cid, zone in rows.all()}
+        evidence = set(
+            (
+                await self._session.execute(
+                    select(DeviationEvidence.photo_id).where(DeviationEvidence.photo_id.in_(ids))
+                )
+            ).scalars()
+        )
+        titles: dict[uuid.UUID, str] = {}
+        result = []
+        for p in photos:
+            dets = by_photo.get(p.id, [])
+            for det in dets:
+                if det.equipment_type_id not in titles:
+                    item = await self._catalog.by_id(det.equipment_type_id)
+                    titles[det.equipment_type_id] = (
+                        item.title if item is not None else "Неизвестная техника"
+                    )
+            zone = zones.get(p.camera_id) if p.camera_id is not None else None
+            read = PhotoRead.model_validate(p)
+            # Порядок — как машины встречаются на кадре, без повторов
+            read.machines = list(dict.fromkeys(titles[d.equipment_type_id] for d in dets))
+            read.out_of_zone = any(bbox_in_zone(d.bbox, zone) is False for d in dets)
+            read.evidence = p.id in evidence
+            result.append(read)
+        return result
 
     async def get_photo(self, site_id: uuid.UUID, photo_id: uuid.UUID) -> PhotoDetail:
         """Получить фотографию с детекциями.
@@ -758,6 +797,7 @@ class PhotoService:
         site_id: uuid.UUID,
         photo_id: uuid.UUID,
         if_none_match: str | None = None,
+        thumb: bool = False,
     ) -> AnnotatedImage:
         """Получить снимок с нарисованными рамками детекций.
 
@@ -771,6 +811,7 @@ class PhotoService:
             site_id: ID стройки
             photo_id: ID фотографии
             if_none_match: Значение заголовка If-None-Match от клиента
+            thumb: миниатюра для ленты — меньше и только рамки, без подписей (clean-mvp)
 
         Returns:
             AnnotatedImage (content=None, если у клиента актуальная версия)
@@ -783,7 +824,7 @@ class PhotoService:
 
         fingerprint = hashlib.sha256(
             "|".join(
-                [RENDER_VERSION, storage_key]
+                [RENDER_VERSION, storage_key, "thumb" if thumb else "full"]
                 + sorted(
                     f"{d.equipment_code}:{','.join(f'{v:.6f}' for v in d.bbox)}:{d.score:.4f}"
                     for d in photo.detections
@@ -808,7 +849,11 @@ class PhotoService:
 
         try:
             content, content_type = await asyncio.to_thread(
-                render_annotated, original, photo.detections
+                render_annotated,
+                original,
+                photo.detections,
+                THUMB_SIDE if thumb else MAX_SIDE,
+                labels=not thumb,
             )
         except InvalidImageError as e:
             raise AppError("Файл снимка недоступен", status_code=404) from e

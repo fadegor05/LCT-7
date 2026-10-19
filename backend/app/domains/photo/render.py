@@ -18,6 +18,8 @@ RENDER_VERSION = "3"
 # Длинная сторона результата: снимок показывается в карточке, полный
 # размер камеры (4000+ px) только раздувает ответ и время кодирования.
 MAX_SIDE = 1920
+# Миниатюра ленты: карточка шириной ~240 px, с запасом на плотные экраны
+THUMB_SIDE = 640
 JPEG_QUALITY = 85
 
 # Шрифты с кириллицей: Debian-образ бэкенда (пакет fonts-dejavu-core), macOS разработчика.
@@ -58,6 +60,8 @@ def render_annotated(
     image_bytes: bytes,
     detections: Sequence[DetectionRead],
     max_side: int = MAX_SIDE,
+    *,
+    labels: bool = True,
 ) -> tuple[bytes, str]:
     """Отрисовать изображение с аннотациями детекций.
 
@@ -153,6 +157,9 @@ def render_annotated(
 
         # Рисуем прямоугольник
         draw.rectangle([x1, y1, x2, y2], outline=color, width=line_width)
+        # На миниатюре подпись не читается и закрывает машину — только рамка
+        if not labels:
+            continue
 
         label_text = annotation_label(
             detection.equipment_title,

@@ -23,11 +23,13 @@ export function CameraStrips({ siteId, photos, cameras, withDate }: CameraStrips
     ...cameras.map((camera) => ({
       key: camera.id,
       name: camera.name,
+      zone: camera.zone,
       own: photos.filter((p) => p.camera_id === camera.id),
     })),
     {
       key: 'none',
       name: 'Без камеры',
+      zone: null,
       own: photos.filter((p) => !p.camera_id || !cameras.some((c) => c.id === p.camera_id)),
     },
   ].filter((g) => g.own.length > 0)
@@ -40,10 +42,17 @@ export function CameraStrips({ siteId, photos, cameras, withDate }: CameraStrips
     <>
       {groups.map((g) => (
         <section key={g.key} className={styles.cameraStrip} aria-label={`Снимки: ${g.name}`}>
-          <h3 className="lab">
-            {g.name} <span className="sm muted">· {count(g.own.length)}</span>
-          </h3>
-          <PhotoStrip siteId={siteId} photos={g.own} withDate={withDate} />
+          <PhotoStrip
+            siteId={siteId}
+            photos={g.own}
+            withDate={withDate}
+            zone={g.zone}
+            title={
+              <h3 className="lab">
+                {g.name} <span className="sm muted">· {count(g.own.length)}</span>
+              </h3>
+            }
+          />
         </section>
       ))}
     </>

@@ -317,6 +317,18 @@ describe('observations', () => {
     expect(screen.getByText(/машина сместилась между 10:05 и 10:15/)).toBeInTheDocument()
   })
 
+  it('EquipmentList shows a shared activity basis once', () => {
+    const basis = 'Движение: нет серии кадров одной камеры со временем — по одному снимку не видно'
+    render(
+      <EquipmentList
+        observation={observation({
+          equipment: equipment.map((e) => ({ ...e, activity_basis: basis })),
+        })}
+      />,
+    )
+    expect(screen.getAllByText(basis)).toHaveLength(1)
+  })
+
   it('EquipmentList has an empty state', () => {
     render(<EquipmentList observation={observation({})} />)
     expect(screen.getByText(/Техники на снимках не найдено/)).toBeInTheDocument()

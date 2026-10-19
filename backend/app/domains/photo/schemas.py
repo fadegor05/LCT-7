@@ -41,6 +41,11 @@ class PhotoRead(BaseModel):
     captured_at: datetime | None = None
     date_hint: date | None = None
     time_check: str | None = None
+    # Сводка кадра для подписи в ленте (clean-mvp): какая техника на нём, есть ли машина
+    # за контуром зоны камеры, служит ли он снимком-доказательством отклонения
+    machines: list[str] = []
+    out_of_zone: bool = False
+    evidence: bool = False
 
 
 class PhotoDetail(PhotoRead):

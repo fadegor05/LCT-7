@@ -420,7 +420,13 @@ export function applyDefaultKits(siteId: string): {
 
 // ---------- Снимки и наблюдения ----------
 
-const toPhoto = ({ detections: _, ...photo }: StoredPhoto): Photo => photo
+/** Список снимков, как у бэкенда: сводка кадра для подписи в ленте. */
+const toPhoto = ({ detections: dets, ...photo }: StoredPhoto): Photo => ({
+  ...photo,
+  machines: [...new Set(dets.map((d) => d.equipment_title))],
+  out_of_zone: false, // у моков нет зон камер
+  evidence: photo.evidence ?? false,
+})
 
 function detections(photoId: string, codes: readonly string[]): Detection[] {
   return codes.map((code, i) => {

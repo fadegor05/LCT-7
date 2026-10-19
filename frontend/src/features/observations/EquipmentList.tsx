@@ -31,6 +31,9 @@ function ActivityBadge({ item }: { item: ObservedEquipment }) {
 /** «Техника на площадке» за дату: не менее N (максимум по снимкам), активность и уверенность. */
 export function EquipmentList({ observation }: { observation: Observation }) {
   const items = observation.equipment
+  // Одно основание на всех (например, нет серий кадров) — один раз под списком, а не в каждой строке
+  const bases = new Set(items.map((i) => i.activity_basis ?? ''))
+  const shared = items.length > 1 && bases.size === 1 ? [...bases][0] || null : null
   return (
     <Card>
       <div>
@@ -57,13 +60,14 @@ export function EquipmentList({ observation }: { observation: Observation }) {
                 <ActivityBadge item={item} />
               </span>
               <ConfidenceMeter level={item.confidence} />
-              {item.activity_basis && (
+              {item.activity_basis && !shared && (
                 <p className={`sm muted ${styles.basis}`}>{item.activity_basis}</p>
               )}
             </li>
           ))}
         </ul>
       )}
+      {shared && <p className={`sm muted ${styles.basis}`}>{shared}</p>}
       <p className="sm muted">
         Число берётся как максимум по снимкам, а не сумма: одна машина, снятая с нескольких
         ракурсов, остаётся одной. По одному снимку работа не видна: «работает» — машина сместилась

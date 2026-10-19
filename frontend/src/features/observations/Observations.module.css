@@ -153,7 +153,42 @@
 }
 
 .cameraStrip {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+/* Имя камеры слева, кнопки ‹ › ленты справа */
+.stripHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stripHead > :first-child {
+  flex-grow: 1;
+}
+
+/* Зона — зелёным пунктиром: рамки техники другого цвета, их не спутать */
+.zone {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.zone polygon {
+  fill: rgb(11 122 99 / 10%);
+  stroke: var(--status-ontrack);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.zone polygon.zoneHalo {
+  fill: none;
+  stroke: rgb(255 255 255 / 85%);
+  stroke-width: 4;
+  stroke-dasharray: none;
 }

@@ -79,6 +79,11 @@ export function annotatedImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`
 }
 
+/** Миниатюра для ленты: меньше, только рамки, без подписей (`?thumb=true`). */
+export function annotatedThumbUrl(siteId: string, photoId: string): string {
+  return `${annotatedImageUrl(siteId, photoId)}?thumb=true`
+}
+
 export function useObservations(siteId: string) {
   return useQuery({
     queryKey: keys.observations(siteId),

@@ -856,6 +856,69 @@ class TestPhotoRouterGuards:
         assert annotated.getpixel((190, 190)) == original.getpixel((190, 190))
 
     @pytest.mark.asyncio
+    async def test_thumb_draws_box_without_label(
+        self, client: AsyncClient, container: AsyncContainer, detector: FakeDetector
+    ) -> None:
+        """Миниатюра ленты: рамка есть, подписи над ней нет (clean-mvp)."""
+        await seed_stand_user(container)
+        site_id = await _create_site(client)
+        await _seed_equipment(container)
+        detector.result = DetectionResult(
+            model_version="v1",
+            detections=[RawDetection(bbox=(0.25, 0.25, 0.75, 0.75), class_ours="COMP_1", conf=0.9)],
+        )
+        upload = await client.post(
+            f"/sites/{site_id}/photos",
+            files=[("files", ("a.jpg", create_jpeg_image(), "image/jpeg"))],
+        )
+        photo_id = upload.json()["items"][0]["photo"]["id"]
+        url = f"/sites/{site_id}/photos/{photo_id}/annotated"
+        full = Image.open(io.BytesIO((await client.get(url)).content)).convert("RGB")
+        thumb = Image.open(io.BytesIO((await client.get(f"{url}?thumb=true")).content)).convert(
+            "RGB"
+        )
+        original = Image.open(
+            io.BytesIO((await client.get(f"/sites/{site_id}/photos/{photo_id}/image")).content)
+        ).convert("RGB")
+
+        # Рамка на месте: левая граница x = 50
+        assert any(thumb.getpixel((x, 100)) != original.getpixel((x, 100)) for x in range(46, 56))
+
+        # Над рамкой у полной картинки подпись, у миниатюры — снимок как есть
+        def label_area(img: Image.Image) -> list:
+            return [img.getpixel((x, 45)) for x in range(56, 90, 4)]
+
+        assert label_area(full) != label_area(original)
+        assert all(
+            max(abs(a - b) for a, b in zip(t, o, strict=True)) < 24
+            for t, o in zip(label_area(thumb), label_area(original), strict=True)
+        )
+
+    @pytest.mark.asyncio
+    async def test_list_photos_summarizes_frame(
+        self, client: AsyncClient, container: AsyncContainer, detector: FakeDetector
+    ) -> None:
+        """Список снимков несёт сводку для подписи: техника на кадре, вне зоны, доказательство."""
+        await seed_stand_user(container)
+        site_id = await _create_site(client)
+        await _seed_equipment(container)
+        detector.result = DetectionResult(
+            model_version="v1",
+            detections=[
+                RawDetection(bbox=(0.1, 0.1, 0.3, 0.3), class_ours="COMP_1", conf=0.9),
+                RawDetection(bbox=(0.5, 0.5, 0.7, 0.7), class_ours="COMP_1", conf=0.8),
+            ],
+        )
+        await client.post(
+            f"/sites/{site_id}/photos",
+            files=[("files", ("a.jpg", create_jpeg_image(), "image/jpeg"))],
+        )
+        [photo] = (await client.get(f"/sites/{site_id}/photos")).json()
+        assert photo["machines"] == ["Компрессор"]
+        assert photo["out_of_zone"] is False  # без камеры зоны нет
+        assert photo["evidence"] is False
+
+    @pytest.mark.asyncio
     async def test_post_detect_same_model_version_keeps_detection_ids(
         self, client: AsyncClient, container: AsyncContainer, detector: FakeDetector
     ) -> None:
