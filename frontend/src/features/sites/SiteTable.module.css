@@ -5,12 +5,15 @@
   overflow-x: auto;
 }
 
+/* «Итог» не уже самой длинной пилюли («Отклонений не выявлено»): иначе она наезжает на
+   соседнюю колонку. Уже 840px таблица прокручивается в своей обёртке */
 .grid {
   display: grid;
   grid-template-columns:
-    minmax(0, 1.5fr) minmax(0, 1.3fr) minmax(0, 0.6fr) minmax(0, 0.6fr) minmax(0, 1.3fr)
+    minmax(0, 1.5fr) minmax(224px, 1.3fr) minmax(0, 0.6fr) minmax(0, 0.6fr) minmax(0, 1.3fr)
     minmax(0, 1fr);
   gap: var(--space-4);
+  min-width: 840px;
   align-items: center;
 }
 
@@ -47,12 +50,6 @@
 
 .count {
   font-size: 16px;
-}
-
-@media (width <= 720px) {
-  .grid {
-    min-width: 720px;
-  }
 }
 
 .last {

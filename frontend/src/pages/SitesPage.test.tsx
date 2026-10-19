@@ -10,7 +10,7 @@ describe('SitesPage', () => {
     // Как в clean-mvp: число объектов и дата данных — последняя среди объектов
     expect(await screen.findByText(/^2 объекта · данные на \d\d\.\d\d\.\d{4}$/)).toBeInTheDocument()
     const berezniki = within(list).getByRole('link', { name: /Жилой дом · Березники/ })
-    expect(await within(berezniki).findByText('Отставание 4 дней')).toBeInTheDocument()
+    expect(await within(berezniki).findByText('Отставание 4 дня')).toBeInTheDocument()
     expect(within(berezniki).getByLabelText('Критично')).toHaveTextContent('1')
     expect(within(berezniki).getByLabelText('Внимание')).toHaveTextContent('2')
     expect(await within(berezniki).findByText('ПТ 18.09.2026')).toBeInTheDocument()
