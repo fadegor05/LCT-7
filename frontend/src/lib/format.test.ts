@@ -24,6 +24,27 @@ describe('format', () => {
     expect(formatDateTime('2026-09-18T08:05:00')).toBe('ПТ 18.09.2026 08:05')
   })
 
+  it('shows UTC-marked moments in Moscow time', () => {
+    expect(formatTime('2026-09-18T07:24:00+00:00')).toBe('10:24')
+    expect(formatTime('2026-09-18T07:24:00Z')).toBe('10:24')
+    expect(formatShortDateTime('2026-09-18T07:24:00+00:00')).toBe('ПТ 18.09 10:24')
+    expect(formatDateTime('2026-09-18T07:24:00Z')).toBe('ПТ 18.09.2026 10:24')
+  })
+
+  it('rolls the Moscow date over when the UTC moment is late evening', () => {
+    expect(formatTime('2026-09-18T22:30:00Z')).toBe('01:30')
+    expect(formatDate('2026-09-18T22:30:00Z')).toBe('СБ 19.09.2026')
+    expect(formatShortDate('2026-09-18T22:30:00+00:00')).toBe('СБ 19.09')
+    expect(formatShortDateTime('2026-09-18T22:30:00Z')).toBe('СБ 19.09 01:30')
+  })
+
+  it('keeps other offsets and zone-less strings as written', () => {
+    expect(formatTime('2026-09-18T14:20:00+05:00')).toBe('14:20')
+    expect(formatDate('2026-09-18T22:30:00+05:00')).toBe('ПТ 18.09.2026')
+    expect(formatTime('2026-09-18T22:30:00')).toBe('22:30')
+    expect(formatDate('2026-09-18')).toBe('ПТ 18.09.2026')
+  })
+
   it('prefixes dates with the weekday', () => {
     expect(formatShortDate('2026-09-01')).toBe('ВТ 01.09')
     expect(formatShortDate('2026-09-07')).toBe('ПН 07.09')

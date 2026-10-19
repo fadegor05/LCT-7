@@ -52,6 +52,18 @@ describe('CameraList', () => {
     expect(onEdit).toHaveBeenCalledWith(list[1])
   })
 
+  it('shows the last capture time of a UTC timestamp in Moscow time', () => {
+    render(
+      <CameraList
+        cameras={[camera({ last_capture_at: '2026-09-18T07:24:00+00:00' })]}
+        onEdit={() => {}}
+      />,
+    )
+    expect(screen.getByText('Въезд').closest('li')!).toHaveTextContent(
+      'Стрим · снимок ПТ 18.09.2026 10:24',
+    )
+  })
+
   it('shows a stream without a capture yet as set', () => {
     render(<CameraList cameras={[camera({})]} onEdit={() => {}} />)
     expect(screen.getByText('Стрим задан')).toBeInTheDocument()

@@ -7,7 +7,32 @@ import { plural } from './labels'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-function parts(value: string): { y: number; m: number; d: number; hh: number; mm: number } | null {
+type Parts = { y: number; m: number; d: number; hh: number; mm: number }
+
+/** Момент с временем и явной UTC-меткой: `Z` или `+00:00`. */
+const UTC_MOMENT = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]00:?00)$/i
+
+const MOSCOW = new Intl.DateTimeFormat('ru-RU', {
+  timeZone: 'Europe/Moscow',
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+/** UTC-момент → дата и время в Москве (календарный день тоже московский). */
+function moscowParts(value: string): Parts | null {
+  const ms = Date.parse(value.replace(' ', 'T').replace(/[+-]00:?00$/, 'Z'))
+  if (Number.isNaN(ms)) return null
+  const got = Object.fromEntries(MOSCOW.formatToParts(ms).map((p) => [p.type, p.value]))
+  return { y: +got.year!, m: +got.month!, d: +got.day!, hh: +got.hour!, mm: +got.minute! }
+}
+
+/** Разбор даты или момента. UTC-момент переводится в Москву; остальное — как записано. */
+function parts(value: string): Parts | null {
+  if (UTC_MOMENT.test(value)) return moscowParts(value)
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(value)
   if (!match) return null
   const [, y, m, d, hh = '0', mm = '0'] = match
@@ -33,7 +58,7 @@ export function formatShortDate(value: string | null | undefined): string {
   return p ? `${weekday(p)} ${pad(p.d)}.${pad(p.m)}` : '—'
 }
 
-/** 2026-09-18T14:20:00+05:00 → 14:20 (локальное время стройки, как записано в строке). */
+/** 2026-09-18T14:20:00+05:00 → 14:20 (как записано в строке); 2026-09-18T07:24:00Z → 10:24 (Москва). */
 export function formatTime(value: string | null | undefined): string {
   const p = value ? parts(value) : null
   return p ? `${pad(p.hh)}:${pad(p.mm)}` : '—'
