@@ -33,7 +33,15 @@ def _status(
     basis: tuple[date, ...] = (),
 ) -> StageStatusResult:
     return StageStatusResult(
-        stage.stage_id, status, delay, Confidence.HIGH, None, basis, delay_open=open_
+        stage.stage_id,
+        status,
+        delay,
+        Confidence.HIGH,
+        None,
+        basis,
+        delay_open=open_,
+        delay_min=delay,
+        delay_max=None if open_ else delay,
     )
 
 

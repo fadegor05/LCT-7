@@ -3,14 +3,12 @@ import type { Stage, StageStatus } from '@/api/schemas'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { stageAnchorId } from '@/features/assistant/linkifyAnswer'
 import type { DeviationItem } from '@/lib/deviations'
-import { formatWindow } from '@/lib/format'
+import { formatWindow, stageDelayText } from '@/lib/format'
 import { deviationTypeLabels, levelLabels } from '@/lib/labels'
 import styles from './Overview.module.css'
 
 function meta(row: StageStatus): string | null {
-  const delay =
-    row.delay_days !== null &&
-    `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_open ? 'от ' : ''}${row.delay_days} дн.`
+  const delay = row.delay_days !== null && stageDelayText(row)
   const parts = [
     delay,
     row.confidence && `уверенность ${levelLabels[row.confidence].toLowerCase()}`,

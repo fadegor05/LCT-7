@@ -115,6 +115,10 @@ class StageStatusResult:
     basis_dates: tuple[date, ...]
     # delay_days — нижняя граница («от N дней»): этап не начат, конец сдвига неизвестен
     delay_open: bool = False
+    # Сдвиг интервалом, как Delay в clean-mvp: None — граница неизвестна («до N», «от N»).
+    # delay_days — одно число для прежних экранов: верхняя граница, а если её нет — нижняя
+    delay_min: int | None = None
+    delay_max: int | None = None
 
 
 @dataclass(frozen=True)
@@ -388,20 +392,27 @@ class RuleEngine:
             if since <= o.observed_on and self._is_marker_day(stage, kits_with_normative, o, plan)
         ]
         first_marker = self._find_start(stage, kits_with_normative, observations, plan)
-        latest_obs_on = observations[-1].observed_on if observations else None
-        markers_active_now = latest_obs_on is not None and latest_obs_on in marker_dates
 
         # Шаг 4: Проверяем, прошёл ли плановый конец
         end_passed = stage.planned_end is not None and today > stage.planned_end + timedelta(
             days=self.config.tolerance_days
         )
 
+        # Маркер в последних датах наблюдений: этап ещё идёт (смены техники не видно)
+        tail = observations[-self.config.window_dates :]
+        seen_recently = [o.observed_on for o in tail if o.observed_on in marker_dates]
+        delay_min: int | None = None
+        delay_max: int | None = None
+
         # Шаг 5: Выбираем статус по приоритету
-        if end_passed and markers_active_now:
-            # a. Конец прошёл, маркеры ещё видны
+        if end_passed and first_marker is not None and seen_recently:
+            # a. Конец прошёл, маркер ещё виден в последних датах (clean-mvp, _overrun):
+            # этап затянулся минимум до последнего дня с маркером и максимум до опорной даты
+            assert stage.planned_end is not None
             status = StageStatusValue.BEHIND
-            # stage.planned_end не None, так как end_passed требует это
-            delay_days = (today - (stage.planned_end or today)).days
+            delay_min = max(0, (seen_recently[-1] - stage.planned_end).days)
+            delay_max = (today - stage.planned_end).days
+            delay_days = delay_max
             confidence, reason = self._compute_confidence_for_status(
                 marker_dates, first_marker, observations, kits_with_normative
             )
@@ -428,9 +439,21 @@ class RuleEngine:
             and first_marker is not None
             and first_marker > stage.planned_start + timedelta(days=self.config.tolerance_days)
         ):
-            # b. Маркер после planned_start + tolerance
+            # b. Маркер после planned_start + tolerance. Нижняя граница — последний день без
+            # маркера после планового начала, когда этап был отличим (clean-mvp, _start_delay)
             status = StageStatusValue.BEHIND
-            delay_days = (first_marker - stage.planned_start).days
+            without = [
+                o.observed_on
+                for o in observations
+                if stage.planned_start <= o.observed_on < first_marker
+                and plan.markers_on(stage, o.observed_on)
+                and o.observed_on not in marker_dates
+            ]
+            delay_min = (
+                (without[-1] + timedelta(days=1) - stage.planned_start).days if without else None
+            )
+            delay_max = (first_marker - stage.planned_start).days
+            delay_days = delay_max
             confidence, reason = self._compute_confidence_for_status(
                 marker_dates, first_marker, observations, kits_with_normative
             )
@@ -442,6 +465,7 @@ class RuleEngine:
             # c. Маркер раньше planned_start - tolerance
             status = StageStatusValue.AHEAD
             delay_days = (stage.planned_start - first_marker).days
+            delay_min = delay_max = delay_days
             confidence, reason = self._compute_confidence_for_status(
                 marker_dates, first_marker, observations, kits_with_normative
             )
@@ -464,6 +488,8 @@ class RuleEngine:
             confidence=confidence,
             confidence_reason=reason,
             basis_dates=tuple(marker_dates),
+            delay_min=delay_min,
+            delay_max=delay_max,
         )
 
     @staticmethod
@@ -493,27 +519,24 @@ class RuleEngine:
             for eq in observation.equipment
             if self._countable(eq, plan.stationary)
         }
+        if not markers:
+            # Этап в этот день не отличить: нужен весь его комплект сразу — нормативная и
+            # логическая техника всех наборов (clean-mvp, kit_of). Одна общая машина, хоть
+            # и выполняющая свой набор, ничего не говорит; неподвижная в комплект не входит
+            whole = {
+                r.equipment_type_id
+                for kit in kits
+                for r in kit.requirements
+                if r.obligation in ("normative", "logical")
+            } - plan.stationary
+            return bool(whole) and whole <= present
         for kit in kits:
             if not self._is_kit_fulfilled(kit, observation):
                 continue
             normative = {
                 r.equipment_type_id for r in kit.requirements if r.obligation == "normative"
             }
-            if markers:
-                if normative & markers & present:
-                    return True
-                continue
-            # Набор из одной неподвижной техники о ходе этапа не говорит ничего
-            movable = normative - plan.stationary
-            if (
-                movable
-                and movable <= present
-                and all(
-                    self._has_equipment(observation, r)
-                    for r in kit.requirements
-                    if r.obligation == "logical"
-                )
-            ):
+            if normative & markers & present:
                 return True
         return False
 
@@ -722,6 +745,7 @@ class RuleEngine:
                 confidence_reason=reason,
                 basis_dates=basis_dates,
                 delay_open=delay_days is not None,
+                delay_min=delay_days,
             )
 
         if stage.planned_start is not None and today <= stage.planned_start + tolerance:
@@ -774,18 +798,16 @@ class RuleEngine:
             return []
 
         tolerance = timedelta(days=self.config.tolerance_days)
-        latest_obs_on = observations[-1].observed_on if observations else None
         end_passed = stage.planned_end is not None and today > stage.planned_end + tolerance
-        if end_passed and latest_obs_on is not None and latest_obs_on in status.basis_dates:
-            # a. План закончился, а маркерная техника всё ещё на площадке
+        last_seen = status.basis_dates[-1]
+        if end_passed and stage.planned_end is not None and last_seen > stage.planned_end:
+            # a. План закончился, а маркерная техника ещё видна после конца
             planned_end = stage.planned_end
-            assert planned_end is not None
             expected = f"Этап завершён по графику к {planned_end:%d.%m.%Y}"
             observed = (
-                f"Маркерная техника ещё на площадке ({latest_obs_on:%d.%m.%Y}), "
-                f"отставание {status.delay_days} дн."
+                f"Маркерная техника видна и {last_seen:%d.%m.%Y}, отставание {delay_text(status)}"
             )
-            period_start, period_end = planned_end, latest_obs_on
+            period_start, period_end = planned_end, last_seen
         else:
             # b. Работы начались позже плана
             first_marker = status.basis_dates[0]
@@ -796,7 +818,7 @@ class RuleEngine:
             )
             observed = (
                 f"Маркерная техника впервые замечена {first_marker:%d.%m.%Y}, "
-                f"отставание {status.delay_days} дн."
+                f"отставание {delay_text(status)}"
             )
             period_start = stage.planned_start or first_marker
             period_end = first_marker
@@ -1385,6 +1407,16 @@ class RuleEngine:
         return min(confidences, key=self._confidence_order)
 
 
+def delay_text(status: StageStatusResult) -> str:
+    """«14–74 дн.», «от 60 дн.», «до 63 дн.» или «7 дн.» — как format_delay в clean-mvp."""
+    lo, hi = status.delay_min, status.delay_max
+    if lo is None and hi is None:
+        return f"{status.delay_days} дн."
+    if lo is not None and hi is not None:
+        return f"{lo} дн." if lo == hi else f"{lo}–{hi} дн."
+    return f"от {lo} дн." if lo is not None else f"до {hi} дн."
+
+
 def _dates_word(n: int) -> str:
     """«дату», «даты», «дат» для «за N …»."""
     if n % 10 == 1 and n % 100 != 11:
@@ -1460,15 +1492,23 @@ def summarize(
     behind = [s for s in considered if s.status in lagging and s.delay_days]
     if behind:
         # Худший — с наибольшей нижней границей, при равной — без верхней границы
-        worst = max(behind, key=lambda s: (s.delay_days or 0, s.delay_open))
+        # Худший — с наибольшей доказанной задержкой (нижняя граница), при равной — без
+        # верхней границы или с большей (clean-mvp, worst_key)
+        worst = max(
+            behind,
+            key=lambda s: (
+                s.delay_min or 0,
+                s.delay_max if s.delay_max is not None else 10**6,
+            ),
+        )
         stage = next(st for st in stages if st.stage_id == worst.stage_id)
         reason = _explain_behind(stage, worst, today)
         if poorly_seen:
             reason += " Наблюдаемость последнего рабочего дня низкая: оценка по прошлым снимкам."
         return SummaryResult(
             verdict=Verdict.BEHIND,
-            delay_days_min=worst.delay_days,
-            delay_days_max=None if worst.delay_open else worst.delay_days,
+            delay_days_min=worst.delay_min,
+            delay_days_max=worst.delay_max,
             stage_id=worst.stage_id,
             reason=reason,
         )

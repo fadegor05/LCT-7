@@ -88,6 +88,8 @@ class AssessmentService:
                 status=status.status if status else None,
                 delay_days=status.delay_days if status else None,
                 delay_open=status.delay_open if status else False,
+                delay_min=status.delay_min if status else None,
+                delay_max=status.delay_max if status else None,
                 confidence=status.confidence if status else None,
                 confidence_reason=status.confidence_reason if status else None,
                 computed_at=status.computed_at if status else None,

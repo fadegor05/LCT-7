@@ -271,6 +271,9 @@ export const stageStatusSchema = z.object({
   delay_days: z.number().nullable(),
   /** delay_days — нижняя граница («от N дней»): этап не начат. */
   delay_open: z.boolean().optional(),
+  /** Сдвиг интервалом: null — граница неизвестна («до N», «от N»). */
+  delay_min: z.number().nullable().optional(),
+  delay_max: z.number().nullable().optional(),
   confidence: levelSchema.nullable(),
   confidence_reason: z.string().nullable(),
   computed_at: isoDateTime.nullable(),

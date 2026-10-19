@@ -20,6 +20,9 @@ class StageStatusRead(BaseModel):
     delay_days: int | None
     # delay_days — нижняя граница («от N дней»): этап не начат
     delay_open: bool = False
+    # Сдвиг интервалом: None — граница неизвестна («до N», «от N»)
+    delay_min: int | None = None
+    delay_max: int | None = None
     confidence: str | None
     confidence_reason: str | None
     computed_at: datetime | None

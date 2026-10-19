@@ -981,3 +981,47 @@ class TestLateStartNotProven:
             "маркерная техника видна с 19.06 — с первых снимков: начало могло быть по плану"
         )
         assert not [d for d in result.deviations if d.type.value == "behind_schedule"]
+
+
+class TestDelayInterval:
+    """Сдвиг интервалом, как Delay в clean-mvp."""
+
+    def test_overrun_is_from_last_seen_to_reference_date(self):
+        """Москва: сваи до 31.07, буровая видна 14.08, дальше нет — «14–74 дня»."""
+        drill = uuid.uuid4()
+        piles = StageInput(uuid.uuid4(), "Сваи", 1, date(2023, 5, 15), date(2023, 7, 31))
+        rules = {piles.stage_id: _rule(piles.stage_id, drill)}
+        observations = [
+            _seen(date(2023, 5, 20)),
+            _seen(date(2023, 6, 19), drill),
+            _seen(date(2023, 7, 16), drill),
+            _seen(date(2023, 8, 14), drill),
+            _seen(date(2023, 9, 14)),
+            _seen(date(2023, 10, 13)),
+        ]
+
+        result = RuleEngine(_CONFIG).compute_site([piles], rules, observations, date(2023, 10, 13))
+
+        status = result.statuses[0]
+        assert status.status == StageStatusValue.BEHIND
+        assert (status.delay_min, status.delay_max) == (14, 74)
+        assert (result.summary.delay_days_min, result.summary.delay_days_max) == (14, 74)
+        behind = next(d for d in result.deviations if d.type.value == "behind_schedule")
+        assert behind.observed == "Маркерная техника видна и 14.08.2023, отставание 14–74 дн."
+
+    def test_late_start_lower_bound_is_last_day_without_marker(self):
+        drill = uuid.uuid4()
+        piles = StageInput(uuid.uuid4(), "Сваи", 1, date(2024, 1, 8), date(2024, 3, 31))
+        rules = {piles.stage_id: _rule(piles.stage_id, drill)}
+        observations = [
+            _seen(date(2024, 1, 15)),
+            _seen(date(2024, 1, 22), drill),
+            _seen(date(2024, 1, 23), drill),
+        ]
+
+        result = RuleEngine(_CONFIG).compute_site([piles], rules, observations, date(2024, 1, 24))
+
+        status = result.statuses[0]
+        assert status.status == StageStatusValue.BEHIND
+        # Начался между 16.01 и 22.01: сдвиг от 8 до 14 дней
+        assert (status.delay_min, status.delay_max) == (8, 14)

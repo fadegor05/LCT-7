@@ -403,6 +403,8 @@ class RecomputeCoordinator:
                     existing.status = result.status.value
                     existing.delay_days = result.delay_days
                     existing.delay_open = result.delay_open
+                    existing.delay_min = result.delay_min
+                    existing.delay_max = result.delay_max
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -413,6 +415,8 @@ class RecomputeCoordinator:
                         status=result.status.value,
                         delay_days=result.delay_days,
                         delay_open=result.delay_open,
+                        delay_min=result.delay_min,
+                        delay_max=result.delay_max,
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )

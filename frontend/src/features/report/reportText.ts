@@ -1,5 +1,6 @@
 import type { StageStatus, SiteSummary } from '@/api/schemas'
 import { levelLabels } from '@/lib/labels'
+import { stageDelayText } from '@/lib/format'
 
 /** Пояснение к итогу: тот же смысл, что на обзоре, — что за вывод и на чём он держится. */
 export const VERDICT_EXPLANATION: Record<
@@ -26,10 +27,7 @@ export function stampDate(iso: string): string {
 
 /** Строка «отставание 4 дн. · уверенность высокая» под статусом этапа. */
 export function stageBasis(row: StageStatus): string {
-  const delay =
-    row.delay_days !== null
-      ? `${row.status === 'ahead' ? 'опережение' : 'отставание'} ${row.delay_open ? 'от ' : ''}${row.delay_days} дн.`
-      : null
+  const delay = row.delay_days !== null ? stageDelayText(row) : null
   const confidence = row.confidence
     ? `уверенность ${levelLabels[row.confidence].toLowerCase()}`
     : null

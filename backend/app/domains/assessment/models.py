@@ -72,6 +72,9 @@ class StageStatus(Base):
     delay_open: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Сдвиг интервалом («14–74 дня», «до 63»): None — граница неизвестна
+    delay_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    delay_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
     confidence_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(
