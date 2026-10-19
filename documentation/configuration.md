@@ -133,6 +133,13 @@
 | `NOTIFY__TELEGRAM__BOT_USERNAME` | не задан | Имя бота без `@`. Из него собирается ссылка привязки `t.me/<бот>?start=<токен>`. Канал считается настроенным, только если заданы обе переменные; иначе `POST /api/users/me/channels/telegram/link` отвечает `409` |
 | `NOTIFY__TELEGRAM__POLL_TIMEOUT_S` | `25` | Таймаут long polling: сколько телеграм держит соединение, ожидая апдейт |
 | `NOTIFY__TELEGRAM__REQUEST_TIMEOUT_S` | `35.0` | Таймаут HTTP-запроса к Bot API. Должен быть больше таймаута опроса |
+| `NOTIFY__EMAIL__HOST` | не задан | SMTP-сервер. Почтовый канал считается настроенным, только если заданы `HOST` и `FROM_ADDR`; иначе письма пишутся в лог, а привязка почты отвечает `409` |
+| `NOTIFY__EMAIL__PORT` | `587` | Порт SMTP |
+| `NOTIFY__EMAIL__USERNAME` / `NOTIFY__EMAIL__PASSWORD` | не заданы | Логин и пароль SMTP. Без них письма уходят без авторизации. Пароль в логи не попадает |
+| `NOTIFY__EMAIL__FROM_ADDR` | не задан | Адрес отправителя (`From`) |
+| `NOTIFY__EMAIL__STARTTLS` | `true` | STARTTLS на обычном порту |
+| `NOTIFY__EMAIL__USE_SSL` | `false` | Неявный TLS (порт 465); STARTTLS при этом не используется |
+| `NOTIFY__EMAIL__TIMEOUT_S` | `15.0` | Таймаут SMTP-соединения |
 | `NOTIFY__PUBLIC_URL` | `http://localhost` | База для абсолютных ссылок в сообщениях: во внешнем канале относительный путь из `notifications.link` бесполезен. Завершающий слеш срезается |
 
 Без этих переменных уведомления работают полностью, но остаются только в интерфейсе.

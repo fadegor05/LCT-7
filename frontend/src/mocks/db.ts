@@ -25,6 +25,7 @@ import type {
   SiteSummary,
   UploadReport,
   UserChannel,
+  ChannelKind,
   AssistantAnswer,
   Zone,
 } from '@/api/schemas'
@@ -81,7 +82,8 @@ interface State {
   cameras: Map<string, Camera[]>
   notifications: Notification[]
   channels: UserChannel[]
-  pendingLink: 'telegram' | null
+  pendingLink: ChannelKind | null
+  pendingEmail: string | null
   fullName: string
   seq: number
   assistantScenario: AssistantScenario
@@ -1016,6 +1018,7 @@ export function resetDb(): void {
     notifications: [],
     channels: [],
     pendingLink: null,
+    pendingEmail: null,
     fullName: user.full_name,
     seq: 0,
     assistantScenario: initialScenario,
@@ -1078,6 +1081,11 @@ export function markAllRead(): { marked: number } {
 
 // ---------- Каналы доставки ----------
 
+function maskEmail(address: string | null): string {
+  const [local = '', domain = ''] = (address ?? '').split('@')
+  return `${local.slice(0, 1)}***@${domain}`
+}
+
 export function listChannels(): UserChannel[] {
   return state.channels.map((channel) => ({ ...channel }))
 }
@@ -1088,15 +1096,24 @@ export function listChannels(): UserChannel[] {
  * Подтверждает привязку отдельный confirmLink — его зовёт тест или кнопка в
  * мок-режиме, изображая пользователя, дошедшего до бота.
  */
-export function linkChannel(channel: 'telegram'): { url: string; expires_at: string } {
+export function linkChannel(
+  channel: ChannelKind,
+  address?: string,
+): { url: string | null; expires_at: string } {
   state.pendingLink = channel
+  if (channel === 'email') {
+    if (!address) throw new MockError(422, 'Не указан адрес почты')
+    // Письмо «уходит» на адрес; подтверждает его confirmLink, как переход по ссылке
+    state.pendingEmail = address
+    return { url: null, expires_at: new Date(Date.now() + 15 * 60_000).toISOString() }
+  }
   return {
     url: `https://t.me/lct7_mock_bot?start=mock-${++state.seq}`,
     expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
   }
 }
 
-export function confirmLink(channel: 'telegram'): UserChannel {
+export function confirmLink(channel: ChannelKind): UserChannel {
   const existing = state.channels.find((c) => c.channel === channel)
   if (existing) {
     existing.enabled = true
@@ -1104,7 +1121,7 @@ export function confirmLink(channel: 'telegram'): UserChannel {
   }
   const created: UserChannel = {
     channel,
-    address_masked: '…6789',
+    address_masked: channel === 'email' ? maskEmail(state.pendingEmail) : '…6789',
     enabled: true,
     linked_at: new Date().toISOString(),
   }
@@ -1112,14 +1129,14 @@ export function confirmLink(channel: 'telegram'): UserChannel {
   return created
 }
 
-export function toggleChannel(channel: 'telegram', enabled: boolean): UserChannel {
+export function toggleChannel(channel: ChannelKind, enabled: boolean): UserChannel {
   const existing = state.channels.find((c) => c.channel === channel)
   if (!existing) throw new MockError(404, 'Канал не привязан')
   existing.enabled = enabled
   return existing
 }
 
-export function unlinkChannel(channel: 'telegram'): void {
+export function unlinkChannel(channel: ChannelKind): void {
   const index = state.channels.findIndex((c) => c.channel === channel)
   if (index < 0) throw new MockError(404, 'Канал не привязан')
   state.channels.splice(index, 1)

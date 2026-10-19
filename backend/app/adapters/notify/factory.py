@@ -1,6 +1,7 @@
 """Сборка реестра каналов по настройкам."""
 
 from app.adapters.notify.base import NotificationChannel
+from app.adapters.notify.email import EmailChannel, SmtpClient
 from app.adapters.notify.log import LogChannel
 from app.adapters.notify.telegram import TelegramChannel, TelegramClient
 from app.core.settings import Settings
@@ -18,7 +19,7 @@ class ChannelRegistry:
 
 
 def create_channel_registry(settings: Settings) -> ChannelRegistry:
-    """Собрать реестр: настоящий телеграм при заданном токене, иначе лог."""
+    """Собрать реестр: настоящий телеграм и почта при заданных настройках, иначе лог."""
     telegram: NotificationChannel = LogChannel()
     if settings.notify.telegram.token:
         telegram = TelegramChannel(
@@ -28,5 +29,11 @@ def create_channel_registry(settings: Settings) -> ChannelRegistry:
                 proxy_url=settings.notify.telegram.proxy_url,
             )
         )
-    channels: dict[ChannelKind, NotificationChannel] = {ChannelKind.TELEGRAM: telegram}
+    email: NotificationChannel = LogChannel()
+    if settings.notify.email_configured and settings.notify.email.from_addr:
+        email = EmailChannel(SmtpClient(settings.notify.email), settings.notify.email.from_addr)
+    channels: dict[ChannelKind, NotificationChannel] = {
+        ChannelKind.TELEGRAM: telegram,
+        ChannelKind.EMAIL: email,
+    }
     return ChannelRegistry(channels)

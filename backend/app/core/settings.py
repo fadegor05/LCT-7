@@ -203,10 +203,26 @@ class TelegramSettings(BaseModel):
     proxy_url: str | None = None
 
 
+class EmailSettings(BaseModel):
+    """SMTP для почтового канала. Без host и from_addr канал деградирует в запись в лог."""
+
+    host: str | None = None
+    port: int = 587
+    username: str | None = None
+    password: str | None = None
+    # Адрес отправителя: From письма
+    from_addr: str | None = None
+    # STARTTLS на обычном порту (587); для неявного TLS (465) включите use_ssl
+    starttls: bool = True
+    use_ssl: bool = False
+    timeout_s: float = 15.0
+
+
 class NotifySettings(BaseModel):
     """Доставка уведомлений по каналам."""
 
     telegram: TelegramSettings = TelegramSettings()
+    email: EmailSettings = EmailSettings()
     # База для абсолютных ссылок в сообщениях: во внешнем канале относительный путь бесполезен
     public_url: str = "http://localhost"
 
@@ -218,6 +234,10 @@ class NotifySettings(BaseModel):
     @property
     def telegram_configured(self) -> bool:
         return bool(self.telegram.token and self.telegram.bot_username)
+
+    @property
+    def email_configured(self) -> bool:
+        return bool(self.email.host and self.email.from_addr)
 
 
 class Settings(BaseSettings):

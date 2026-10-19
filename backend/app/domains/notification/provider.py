@@ -44,8 +44,9 @@ class NotificationProvider(Provider):
         tokens: ChannelLinkTokenRepository,
         session: AsyncSession,
         settings: Settings,
+        registry: ChannelRegistry,
     ) -> ChannelLinkService:
-        return ChannelLinkService(channels, tokens, session, settings)
+        return ChannelLinkService(channels, tokens, session, settings, registry)
 
 
 class NullDispatcherProvider(Provider):

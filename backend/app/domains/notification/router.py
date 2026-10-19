@@ -6,11 +6,13 @@
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query
+from fastapi.responses import RedirectResponse
 
 from app.core.settings import Settings
 from app.domains.notification.channels import ChannelLinkService, mask_address
 from app.domains.notification.models import ChannelKind, UserChannel
 from app.domains.notification.schemas import (
+    ChannelLinkRequest,
     ChannelLinkResponse,
     ChannelToggle,
     MarkReadResponse,
@@ -21,6 +23,7 @@ from app.domains.notification.schemas import (
 )
 from app.domains.notification.service import NotificationService
 from app.domains.user.provider import CurrentUser
+from app.plugins.exceptions import AppError
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -98,9 +101,16 @@ async def link_channel(
     user: FromDishka[CurrentUser],
     service: FromDishka[ChannelLinkService],
     settings: FromDishka[Settings],
+    data: ChannelLinkRequest | None = None,
 ) -> ChannelLinkResponse:
-    """Выдать одноразовую ссылку привязки канала."""
-    token = await service.issue(user.id, channel)
+    """Выдать одноразовую ссылку привязки канала.
+
+    Почта: в теле адрес, на него уходит письмо со ссылкой подтверждения; url в ответе пуст.
+    """
+    address = data.address if data else None
+    token = await service.issue(user.id, channel, address=address)
+    if channel is ChannelKind.EMAIL:
+        return ChannelLinkResponse(url=None, expires_at=token.expires_at)
     bot = settings.notify.telegram.bot_username
     return ChannelLinkResponse(
         url=f"https://t.me/{bot}?start={token.token}", expires_at=token.expires_at
@@ -126,3 +136,24 @@ async def unlink_channel(
     service: FromDishka[ChannelLinkService],
 ) -> None:
     await service.unlink(user.id, channel)
+
+
+# Публичный роут: ссылку из письма открывают в браузере, где нет заголовка авторизации.
+# Защита — одноразовый непредсказуемый токен с коротким сроком жизни.
+email_confirm_router = APIRouter(prefix="/notifications/email", tags=["notifications"])
+
+
+@email_confirm_router.get("/confirm")
+@inject
+async def confirm_email(
+    token: str,
+    service: FromDishka[ChannelLinkService],
+    settings: FromDishka[Settings],
+) -> RedirectResponse:
+    """Погасить токен из письма и вернуть пользователя в профиль."""
+    try:
+        await service.redeem(token)
+        result = "confirmed"
+    except AppError:
+        result = "invalid"
+    return RedirectResponse(f"{settings.notify.public_url}/profile?email={result}", status_code=302)
