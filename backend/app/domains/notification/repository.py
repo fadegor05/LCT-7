@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import func, select, update
+from sqlalchemy.engine import CursorResult
 
 from app.core.repository import BaseRepository
 from app.domains.notification.models import (
@@ -47,6 +48,8 @@ class NotificationRepository(BaseRepository[Notification]):
             .values(read_at=now)
         )
         await self._session.flush()
+        # UPDATE отдаёт CursorResult, но execute() типизирован как общий Result
+        assert isinstance(result, CursorResult)
         return int(result.rowcount or 0)
 
 
