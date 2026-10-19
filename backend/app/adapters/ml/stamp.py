@@ -27,6 +27,10 @@ class _StampSchema(BaseModel):
     text: str | None = None
     roi: str | None = None
     profile: str | None = None
+    found: bool = False
+    captured_at: str | None = None
+    confidence: float = 0.0
+    method: str | None = None
 
     model_config = {"extra": "ignore"}
 
@@ -37,9 +41,38 @@ class StampReading:
 
     date: dt.date | None = None
     profile: str | None = None
+    # Контракт clean-mvp: штамп найден, его местное время, уверенность, способ чтения
+    found: bool = False
+    captured_at: dt.datetime | None = None
+    confidence: float = 0.0
+    method: str | None = None
 
 
 _NOTHING = StampReading()
+
+
+def _reading(parsed: _StampSchema) -> StampReading:
+    """Ответ /stamp → StampReading; неразборчивая дата или время — как их нет."""
+    day: dt.date | None = None
+    moment: dt.datetime | None = None
+    if parsed.date:
+        try:
+            day = date.fromisoformat(parsed.date)
+        except ValueError:
+            logger.warning("Stamp service returned unparseable date: %r", parsed.date)
+    if parsed.captured_at:
+        try:
+            moment = dt.datetime.fromisoformat(parsed.captured_at)
+        except ValueError:
+            logger.warning("Stamp service returned unparseable time: %r", parsed.captured_at)
+    return StampReading(
+        date=day,
+        profile=parsed.profile,
+        found=parsed.found or day is not None,
+        captured_at=moment,
+        confidence=parsed.confidence,
+        method=parsed.method,
+    )
 
 
 class HttpStampReader:
@@ -117,13 +150,7 @@ class HttpStampReader:
                     except Exception:
                         logger.warning("Stamp service: invalid response body")
                         return _NOTHING
-                    if not parsed.date:
-                        return StampReading(profile=parsed.profile)
-                    try:
-                        return StampReading(date.fromisoformat(parsed.date), parsed.profile)
-                    except ValueError:
-                        logger.warning("Stamp service returned unparseable date: %r", parsed.date)
-                        return StampReading(profile=parsed.profile)
+                    return _reading(parsed)
 
                 logger.warning("Stamp service unexpected HTTP %d", response.status_code)
                 return _NOTHING

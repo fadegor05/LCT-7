@@ -24,6 +24,11 @@ from app.plugins.exceptions import AppError
 logger = logging.getLogger(__name__)
 
 
+# Светлое время суток по местному времени кадра (clean-mvp, ObservationSettings)
+DAYLIGHT_FROM_HOUR = 7
+DAYLIGHT_TO_HOUR = 21
+
+
 class ObservationService:
     """Сведение фотографий и детекций за дату в наблюдение."""
 
@@ -92,7 +97,13 @@ class ObservationService:
             Observation если есть фото, None если фото нет.
         """
         # Шаг 1: Получить все фото по дате
-        all_photos = await self._photos.list_by_site(site_id)
+        all_photos = [
+            p
+            for p in await self._photos.list_by_site(site_id)
+            # Только светлое время суток (clean-mvp): ночью техника не видна и не работает.
+            # Снимки без времени (только дата) идут в наблюдения, как раньше
+            if p.captured_at is None or DAYLIGHT_FROM_HOUR <= p.captured_at.hour < DAYLIGHT_TO_HOUR
+        ]
         day_photos = [p for p in all_photos if p.captured_on == observed_on]
 
         # Шаг 2: Если нет фото, удалить существующее наблюдение

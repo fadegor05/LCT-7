@@ -157,3 +157,56 @@ async def test_photo_detail_marks_detection_inside_camera_zone(
 
     assert detail["camera_id"] == camera
     assert sorted(d["in_zone"] for d in detail["detections"]) == [False, True]
+
+
+async def test_camera_series_confirms_an_uncertain_stamp(
+    stand_client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Неуверенный штамп между уверенными соседями серии камеры — принимается (clean-mvp).
+
+    Имена файлов — порядок выгрузки регистратора; время по штампу.
+    """
+    from datetime import date, datetime
+
+    from app.adapters.ml.stamp import StampReading
+    from app.domains.photo.date_resolver import DateResolver
+
+    sure = dict(found=True, confidence=0.97, method="templates", profile="2592x1944")
+    readings = [
+        StampReading(date=date(2026, 8, 3), captured_at=datetime(2026, 8, 3, 10, 0), **sure),
+        StampReading(
+            captured_at=datetime(2026, 8, 3, 10, 30),
+            found=True,
+            confidence=0.6,
+            method="templates",
+            profile="2592x1944",
+        ),
+        StampReading(date=date(2026, 8, 3), captured_at=datetime(2026, 8, 3, 11, 0), **sure),
+    ]
+
+    class SeriesOcr:
+        async def read(self, content: bytes) -> StampReading:
+            return readings.pop(0)
+
+    resolver = await container.get(DateResolver)
+    resolver.ocr = SeriesOcr()
+    site = await _site(stand_client, "Объект")
+    camera = await _camera(stand_client, site)
+
+    r = await stand_client.post(
+        f"/sites/{site}/photos",
+        files=[("files", (f"{i:03}.jpg", _jpeg(), "image/jpeg")) for i in range(3)],
+        data={"camera_id": camera},
+    )
+
+    assert r.status_code == 201, r.text
+    photos = sorted(
+        (await stand_client.get(f"/sites/{site}/photos")).json(),
+        key=lambda p: p["original_name"],
+    )
+    assert [(p["captured_on"], p["date_source"]) for p in photos] == [("2026-08-03", "stamp")] * 3
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        middle = await session.get(Photo, uuid.UUID(photos[1]["id"]))
+        assert middle.captured_at == datetime(2026, 8, 3, 10, 30)
+        assert middle.time_check == "ok"

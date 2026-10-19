@@ -7,7 +7,7 @@ import os
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,7 @@ from app.domains.photo.schemas import (
     UploadItem,
     UploadReport,
 )
+from app.domains.photo.series import StampedFrame, check_series, confirm_uncertain
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
 
@@ -60,6 +61,10 @@ class AnnotatedImage:
     etag: str
     content: bytes | None
     content_type: str = "image/jpeg"
+
+
+# Соседи серии камеры не дальше этого — подтверждают неуверенный штамп (clean-mvp: 12 ч)
+SERIES_MAX_GAP = timedelta(hours=12)
 
 
 class PhotoService:
@@ -148,8 +153,14 @@ class PhotoService:
             if item.photo is not None:
                 batch_photo_ids.append(item.photo.id)
 
+        # Кадры камеры: неуверенный штамп подтверждает серия камеры, выбросы серии
+        # помечаются (clean-mvp). Соседей по пачке такому кадру не подставляем: дата
+        # соседнего снимка — не свидетель его времени
+        if batch_photo_ids and camera_id is not None:
+            await self._apply_camera_series(site_id, camera_id)
+            await self._session.commit()
         # Neighbour step: найти фото в батче без даты и проставить дату от соседей
-        if batch_photo_ids:
+        elif batch_photo_ids:
             await self._apply_neighbours_dating(site_id, batch_photo_ids)
             await self._session.flush()
             await self._session.commit()
@@ -317,6 +328,9 @@ class PhotoService:
             height=info.height,
             captured_on=resolved_date.captured_on,
             date_source=resolved_date.source.value if resolved_date.source else None,
+            captured_at=resolved_date.captured_at,
+            date_hint=resolved_date.hint,
+            uncertain_at=resolved_date.uncertain_at,
             processing_status=ProcessingStatus.PENDING.value,
             camera_id=camera_id,
         )
@@ -453,6 +467,51 @@ class PhotoService:
             return
 
         await self._apply_result(photo, result, keep_same_version=False)
+
+    async def _apply_camera_series(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> None:
+        """Серия штампов камеры (clean-mvp, observation/series.py).
+
+        Неуверенный штамп принимается, если его подтверждают уверенные соседи серии (не
+        дальше SERIES_MAX_GAP); у кадров со штампом помечается, выбивается ли время из
+        серии (time_check), — по нему движку видно, насколько надёжно время.
+        """
+        photos = [
+            p for p in await self._repository.list_by_site(site_id) if p.camera_id == camera_id
+        ]
+
+        def stamped(p: Photo, at: datetime) -> StampedFrame:
+            return StampedFrame(str(p.id), str(camera_id), p.original_name, p.uploaded_at, at)
+
+        confirmed = [
+            stamped(p, p.captured_at)
+            for p in photos
+            if p.date_source == DateSource.STAMP.value and p.captured_at is not None
+        ]
+        uncertain = [
+            stamped(p, p.uncertain_at)
+            for p in photos
+            if p.captured_on is None and p.uncertain_at is not None
+        ]
+        accepted = confirm_uncertain(confirmed, uncertain, SERIES_MAX_GAP)
+        by_id = {str(p.id): p for p in photos}
+        for photo_id in accepted:
+            photo = by_id[photo_id]
+            assert photo.uncertain_at is not None
+            photo.captured_at = photo.uncertain_at
+            photo.captured_on = photo.uncertain_at.date()
+            photo.date_source = DateSource.STAMP.value
+            photo.date_hint = None
+            photo.uncertain_at = None
+        checks = check_series(
+            [
+                stamped(p, p.captured_at)
+                for p in photos
+                if p.date_source == DateSource.STAMP.value and p.captured_at is not None
+            ]
+        )
+        for photo_id, check in checks.items():
+            by_id[photo_id].time_check = check
+        await self._session.flush()
 
     async def _apply_neighbours_dating(
         self, site_id: uuid.UUID, batch_photo_ids: list[uuid.UUID]
@@ -644,6 +703,11 @@ class PhotoService:
 
         photo.captured_on = captured_on
         photo.date_source = DateSource.MANUAL.value
+        # Ручная дата — без времени: прежние время, подсказка и проверка серии не про неё
+        photo.captured_at = None
+        photo.date_hint = None
+        photo.uncertain_at = None
+        photo.time_check = None
         await self._session.commit()
 
         # Build response BEFORE calling recalculator hook to avoid session poisoning

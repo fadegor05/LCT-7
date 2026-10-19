@@ -214,6 +214,12 @@ export const photoSchema = z.object({
   processing_status: processingStatusSchema,
   uploaded_at: isoDateTime,
   camera_id: z.string().nullable().optional(),
+  /** Местное время съёмки (без пояса), если источник его знает. */
+  captured_at: z.string().nullable().optional(),
+  /** Дата-подсказка для ручного ввода: неуверенный штамп, кадр камеры без штампа. */
+  date_hint: isoDate.nullable().optional(),
+  /** Проверка серии штампов камеры: ok | series_outlier. */
+  time_check: z.string().nullable().optional(),
 })
 
 export const photoDetailSchema = photoSchema.extend({

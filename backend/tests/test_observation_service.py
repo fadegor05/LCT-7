@@ -111,6 +111,42 @@ class TestObservationServiceRecompute:
         assert result.observability == "low"  # 1 фото при min_photos_medium=2 -> low
 
     @pytest.mark.asyncio
+    async def test_recompute_skips_night_frames(self, container) -> None:
+        """Только светлое время суток (clean-mvp): ночной кадр в наблюдение не идёт."""
+        from datetime import datetime
+
+        await seed_user(container)
+        site_id, owner_id, obs_date = uuid.uuid4(), uuid.uuid4(), date(2025, 1, 15)
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            session.add(User(id=owner_id, full_name="Owner"))
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner_id))
+            await seed_test_data(session, site_id, owner_id)
+            for hour in (3, 10, 22):
+                session.add(
+                    Photo(
+                        id=uuid.uuid4(),
+                        site_id=site_id,
+                        storage_key=f"{hour}.jpg",
+                        original_name=f"{hour}.jpg",
+                        width=100,
+                        height=100,
+                        captured_on=obs_date,
+                        captured_at=datetime(2025, 1, 15, hour, 0),
+                        date_source=DateSource.STAMP.value,
+                        processing_status=ProcessingStatus.DONE.value,
+                    )
+                )
+            await session.commit()
+
+        async with container() as request_container:
+            service = await self._create_service(request_container)
+            result = await service.recompute(site_id, obs_date)
+
+        assert result is not None
+        assert result.photo_count == 1  # только 10:00
+
+    @pytest.mark.asyncio
     async def test_recompute_is_idempotent_same_id(self, container) -> None:
         """Calling recompute twice → same Observation.id, no duplicate rows."""
         await seed_user(container)

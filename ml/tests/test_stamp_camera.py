@@ -54,8 +54,11 @@ def test_camera_read_returns_date_and_profile(store) -> None:
     reader._camera = store
     out = reader.read_camera(Image.fromarray(np.clip(frame(P, "13-08-2026 08:00:13", "sky", 4), 0, 255)
                                              .astype(np.uint8), "L"))
+    confidence = out.pop("confidence")
     assert out == {"date": "2026-08-13", "text": "13-08-2026 08:00:13",
-                   "roi": "camera", "profile": "2592x1944"}
+                   "roi": "camera", "profile": "2592x1944", "found": True,
+                   "captured_at": "2026-08-13T08:00:13", "method": "templates"}
+    assert confidence >= detector.CAMERA_MIN_CONFIDENCE
 
 
 def test_unknown_resolution_is_left_to_ocr(store) -> None:
@@ -79,25 +82,39 @@ def test_camera_frame_skips_ocr(store, monkeypatch) -> None:
     assert out["date"] == "2026-08-13" and out["profile"] == "2592x1944"
 
 
-def test_unsure_camera_read_falls_back_to_ocr(store, monkeypatch) -> None:
+def test_unsure_camera_read_is_a_hint_not_ocr(store, monkeypatch) -> None:
+    """Кадр камеры известного разрешения — только эталоны (clean-mvp): неуверенное время
+    приходит подсказкой (captured_at без date), OCR его не перебивает."""
     from tools import read_date_stamp
 
     calls = []
-
-    def fake_ocr_read(image, ocr):
-        calls.append(image.shape)
-        return {"date": None, "text": None, "roi": None}
-
+    monkeypatch.setattr(
+        read_date_stamp, "read_stamp_for_service", lambda image, ocr: calls.append(1) or {}
+    )
     monkeypatch.setenv("STAMP_CAMERA_READER", "1")
-    monkeypatch.setattr(read_date_stamp, "read_stamp_for_service", fake_ocr_read)
     monkeypatch.setattr(detector, "CAMERA_MIN_CONFIDENCE", 1.01)  # ни одно чтение не уверенно
     reader = StampReader()
     reader._camera = store
     reader._ocr = object()
     out = reader.read_bytes(_png(frame(P, "13-08-2026 08:00:13", "sky", seed=3)))
-    # Время не прочитано, но кадр — с камеры известного разрешения
-    assert out == {"date": None, "text": None, "roi": None, "profile": "2592x1944"}
-    assert calls, "неуверенное чтение камеры должно уступить OCR"
+    assert out["date"] is None and out["profile"] == "2592x1944"
+    assert out["found"] is True and out["method"] == "templates"
+    assert out["captured_at"] == "2026-08-13T08:00:13"
+    assert out["confidence"] < 1.01
+    assert calls == [], "кадр камеры известного разрешения OCR не читает"
+
+
+def test_ocr_time_is_capped_and_never_a_date() -> None:
+    """OCR без эталонов: время в подсказку с уверенностью не выше 0.5."""
+    out = detector.ocr_time({"date": "2024-04-24", "text": "24.04.2024 10:15:02", "roi": "right"})
+    assert out == {
+        "found": True,
+        "captured_at": "2024-04-24T10:15:02",
+        "confidence": 0.5,
+        "method": "ocr",
+    }
+    assert detector.ocr_time({"date": "2024-04-24", "text": "24.04.2024"})["captured_at"] is None
+    assert detector.ocr_time({"date": None, "text": None})["found"] is False
 
 
 @pytest.mark.parametrize("value", ["0", "false", "NO"])
@@ -119,7 +136,15 @@ def test_flag_off_uses_ocr_and_never_calls_camera_reader(store, monkeypatch, val
     reader._camera = store
     reader._ocr = object()
     out = reader.read_bytes(_png(frame(P, "13-08-2026 08:00:13", "sky", seed=8)))
-    assert out == {"date": None, "text": None, "roi": None}
+    assert out == {
+        "date": None,
+        "text": None,
+        "roi": None,
+        "found": False,
+        "captured_at": None,
+        "confidence": 0.0,
+        "method": "ocr",
+    }
     assert ocr_calls, "с выключенным флагом кадр идёт через OCR"
     assert camera_calls == [], "с выключенным флагом read_camera не вызывается"
 

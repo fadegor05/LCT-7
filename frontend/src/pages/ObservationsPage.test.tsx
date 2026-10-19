@@ -202,6 +202,38 @@ describe('ObservationsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Все снимки с датой' })).toBeInTheDocument()
   })
 
+  it('prefills the date from the stamp hint of an undated photo', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/photos', ({ request }) =>
+        new URL(request.url).searchParams.get('undated')
+          ? HttpResponse.json([
+              {
+                id: 'ph-hint',
+                site_id: 'site-berezniki',
+                original_name: '202609270106411790460401577.jpg',
+                width: 2592,
+                height: 1944,
+                captured_on: null,
+                date_source: null,
+                processing_status: 'done',
+                uploaded_at: '2026-09-27T01:06:41Z',
+                camera_id: null,
+                captured_at: null,
+                date_hint: '2026-08-03',
+                time_check: null,
+              },
+            ])
+          : HttpResponse.json([]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/observations')
+    const list = await screen.findByRole('list', { name: 'Снимки без даты' })
+    expect(within(list).getByLabelText('Дата съёмки 202609270106411790460401577.jpg')).toHaveValue(
+      '03.08.2026',
+    )
+    expect(within(list).getByText(/проверьте подсказку по снимку/)).toBeInTheDocument()
+  })
+
   it('asks to add a camera first when the site has none', async () => {
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))

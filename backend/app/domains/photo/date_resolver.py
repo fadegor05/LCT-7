@@ -40,7 +40,11 @@ class StampOcr(Protocol):
 
 
 class StampReadingLike(Protocol):
-    """Результат чтения штампа: дата и профиль камеры (кадр известного разрешения)."""
+    """Результат чтения штампа: дата и профиль камеры (кадр известного разрешения).
+
+    Необязательные поля контракта clean-mvp (`found`, `captured_at`, `confidence`,
+    `method`) читаются через getattr: фейки тестов знают только дату и профиль.
+    """
 
     @property
     def date(self) -> date | None: ...
@@ -73,10 +77,20 @@ class ImageInfo:
 
 @dataclass(frozen=True)
 class ResolvedDate:
-    """Разрешённая дата съёмки фотографии."""
+    """Разрешённая дата съёмки фотографии.
+
+    `captured_at` — местное время съёмки, если источник его знает (штамп, EXIF, имя
+    файла со временем). `hint` — дата-подсказка для ручного ввода, когда дату поставить
+    нельзя (неуверенный штамп, кадр камеры без штампа, имя без времени у такого кадра).
+    `uncertain_at` — неуверенно прочитанное время штампа: его может подтвердить серия
+    кадров камеры (clean-mvp, confirm_uncertain).
+    """
 
     captured_on: date | None
     source: DateSource | None
+    captured_at: datetime | None = None
+    hint: date | None = None
+    uncertain_at: datetime | None = None
 
 
 def parse_stamp_date(text: str) -> date | None:
@@ -233,6 +247,27 @@ def parse_filename_date(filename: str | None, today: date | None = None) -> date
     return candidates[0].date()
 
 
+def parse_filename_datetime(filename: str | None, today: date | None = None) -> datetime | None:
+    """Момент съёмки из имени файла, если в имени есть время (иначе None).
+
+    Те же санити-проверки, что у `parse_filename_date`. Время нужно наблюдениям (светлое
+    время суток) и подписям кадров; одной даты для этого мало.
+    """
+    if not filename or parse_filename_date(filename, today) is None:
+        return None
+    stem = os.path.splitext(os.path.basename(filename))[0]
+    for match in _FILENAME_DATE_RE.finditer(stem):
+        year, _, month, day, hh, mm, ss = match.groups()
+        if hh is None:
+            continue
+        try:
+            return datetime(int(year), int(month), int(day), int(hh), int(mm), int(ss))
+        except ValueError:
+            continue
+    timed = [c for c in _filename_candidates(stem) if c.time() != datetime.min.time()]
+    return timed[0] if timed else None
+
+
 def read_image_info(content: bytes) -> ImageInfo:
     """Прочитать размеры изображения из байтов.
 
@@ -334,26 +369,45 @@ class DateResolver:
         except Exception as e:
             raise InvalidImageError(f"Invalid or corrupt image: {e}") from e
 
-        # 2. EXIF metadata
-        exif_date = self._extract_exif_date(image)
-        if exif_date is not None:
-            return ResolvedDate(captured_on=exif_date, source=DateSource.METADATA)
-
-        # 3. Stamp OCR
+        # 2. Уверенный штамп важнее EXIF (clean-mvp, R9): это время, которое человек
+        # видит на кадре, а EXIF переписывается при пересохранении файла
         stamp = await self._read_stamp(content)
-        if stamp.date is not None:
-            return ResolvedDate(captured_on=stamp.date, source=DateSource.STAMP)
-        if stamp.profile is not None:
-            # Кадр камеры, а время со штампа не прочитано: имя файла у выгрузок с камер —
-            # момент выгрузки (49 кадров Березников «за 27.09» при съёмке в августе)
-            return ResolvedDate(captured_on=None, source=None)
+        stamp_at: datetime | None = getattr(stamp, "captured_at", None)
+        method = getattr(stamp, "method", None)
+        # OCR без эталонов уверенным не бывает: его дата — только подсказка
+        if stamp.date is not None and method != "ocr":
+            return ResolvedDate(
+                captured_on=stamp.date, source=DateSource.STAMP, captured_at=stamp_at
+            )
 
-        # 4. Имя файла
+        # 3. EXIF metadata
+        exif_at = self._extract_exif_datetime(image)
+        if exif_at is not None:
+            return ResolvedDate(
+                captured_on=exif_at.date(), source=DateSource.METADATA, captured_at=exif_at
+            )
+
+        # 4. Штамп есть, но не прочитан уверенно: даты нет, время — подсказка; его может
+        # подтвердить серия кадров камеры. Имя файла такому кадру не свидетель
+        if getattr(stamp, "found", False) or (stamp.date is not None and method == "ocr"):
+            hint = stamp_at.date() if stamp_at else stamp.date
+            uncertain = stamp_at if method == "templates" else None
+            return ResolvedDate(None, None, hint=hint, uncertain_at=uncertain)
+        filename_at = parse_filename_datetime(filename)
         filename_date = parse_filename_date(filename)
-        if filename_date is not None:
-            return ResolvedDate(captured_on=filename_date, source=DateSource.FILENAME)
+        if stamp.profile is not None:
+            # Кадр камеры, а строки штампа не нашлось: имя файла у выгрузок с камер —
+            # момент выгрузки (49 кадров Березников «за 27.09» при съёмке в августе),
+            # поэтому оно только подсказка для ручного ввода
+            return ResolvedDate(None, None, hint=filename_date)
 
-        # 5. Ничего не найдено
+        # 5. Имя файла
+        if filename_date is not None:
+            return ResolvedDate(
+                captured_on=filename_date, source=DateSource.FILENAME, captured_at=filename_at
+            )
+
+        # 6. Ничего не найдено
         return ResolvedDate(captured_on=None, source=None)
 
     @staticmethod
@@ -361,6 +415,25 @@ class DateResolver:
         image = Image.open(BytesIO(content))
         image.load()
         return image
+
+    def _extract_exif_datetime(self, image: Image.Image) -> datetime | None:
+        """Момент съёмки из EXIF (дата и время); без времени — полночь даты."""
+        exif_data = image.getexif()
+        if not exif_data:
+            return None
+        exif_ifd = exif_data.get_ifd(0x8769)
+        for raw in (exif_ifd.get(0x9003), exif_data.get(0x0132), exif_ifd.get(0x9004)):
+            if not raw:
+                continue
+            day = self._parse_exif_datetime(raw)
+            if day is None:
+                continue
+            text = raw.decode("utf-8", "ignore") if isinstance(raw, bytes) else str(raw)
+            try:
+                return datetime.strptime(text.strip()[:19], "%Y:%m:%d %H:%M:%S")
+            except ValueError:
+                return datetime(day.year, day.month, day.day)
+        return None
 
     def _extract_exif_date(self, image: Image.Image) -> date | None:
         """Извлечь дату из EXIF-метаданных изображения.

@@ -37,6 +37,10 @@ class PhotoRead(BaseModel):
     processing_status: str
     uploaded_at: datetime
     camera_id: uuid.UUID | None = None
+    # Местное время съёмки; дата-подсказка для ручного ввода; проверка серии штампов
+    captured_at: datetime | None = None
+    date_hint: date | None = None
+    time_check: str | None = None
 
 
 class PhotoDetail(PhotoRead):

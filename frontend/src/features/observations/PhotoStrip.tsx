@@ -35,6 +35,7 @@ export function PhotoStrip({ siteId, photos, withDate }: PhotoStripProps) {
               <>
                 <span className="sm">{p.original_name}</span>
                 {withDate && <span className="data">{formatDate(p.captured_on)}</span>}
+                {p.captured_at && <span className="data">{p.captured_at.slice(11, 16)}</span>}
                 {p.date_source && <DateSourceBadge source={p.date_source} />}
                 {p.processing_status !== 'done' && (
                   <>

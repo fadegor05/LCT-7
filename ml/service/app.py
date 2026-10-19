@@ -127,6 +127,12 @@ class StampResponse(BaseModel):
     profile: str | None = Field(
         None, description="«2592x1944» или «1920x1080» — кадр камеры с эталонами знаков; "
                           "при date=null время на таком кадре не прочитано")
+    # Контракт clean-mvp: штамп найден, его местное время, уверенность и способ чтения.
+    # `date` — только уверенное чтение по эталонам; неуверенное время — подсказка
+    found: bool = False
+    captured_at: str | None = Field(None, description="местное время штампа, без пояса")
+    confidence: float = 0.0
+    method: str | None = Field(None, description="templates | ocr")
 
 
 @asynccontextmanager
