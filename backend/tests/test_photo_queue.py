@@ -144,6 +144,22 @@ async def test_recover_requeues_interrupted_frames(
     assert photo.processing_status == "done"
 
 
+async def test_manual_date_set_while_queued_is_kept(
+    client: AsyncClient, container: AsyncContainer, background: PhotoQueue, maker
+) -> None:
+    site = await _site(client, container)
+    report = await _upload(client, site, "IMG_20260918_101500.jpg")
+    photo_id = report["items"][0]["photo"]["id"]
+    r = await client.patch(
+        f"/sites/{site}/photos/{photo_id}/date", json={"captured_on": "2026-09-20"}
+    )
+    assert r.status_code == 200, r.text
+    await background.run_once()
+    [photo] = await _photos(maker)
+    assert (photo.date_source, str(photo.captured_on)) == ("manual", "2026-09-20")
+    assert photo.processing_status == "done"
+
+
 async def test_progress_requires_site_access(client: AsyncClient, container: AsyncContainer):
     await seed_stand_user(container)
     response = await client.get(f"/sites/{uuid.uuid4()}/photos/progress")

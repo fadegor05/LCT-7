@@ -297,11 +297,13 @@ class PhotoService:
             photo.processing_status = ProcessingStatus.FAILED.value
             await self._session.commit()
             return photo.site_id
-        photo.captured_on = resolved.captured_on
-        photo.date_source = resolved.source.value if resolved.source else None
-        photo.captured_at = resolved.captured_at
-        photo.date_hint = resolved.hint
-        photo.uncertain_at = resolved.uncertain_at
+        # Дату, заданную инженером, пока кадр ждал очереди, прочитанная не перебивает
+        if photo.date_source != DateSource.MANUAL.value:
+            photo.captured_on = resolved.captured_on
+            photo.date_source = resolved.source.value if resolved.source else None
+            photo.captured_at = resolved.captured_at
+            photo.date_hint = resolved.hint
+            photo.uncertain_at = resolved.uncertain_at
         photo.processing_status = ProcessingStatus.PENDING.value
         await self._session.flush()
         content_type = self._get_content_type_from_key(photo.storage_key)
