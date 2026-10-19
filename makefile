@@ -14,6 +14,11 @@ PROD = $(COMPOSE) \
 TUNNEL = $(COMPOSE) \
 	-f $(DOCKER_FILES)/prod/tunnel.yaml
 
+# Прод с прокси для телеграма: в России api.telegram.org заблокирован.
+# Нужен XRAY__LINKS в .env, иначе xray-init упадёт с понятной ошибкой.
+PROXY = $(PROD) \
+	-f $(DOCKER_FILES)/common/proxy.yaml
+
 # Загрузка весов детектора из приватного репозитория HuggingFace
 # Требует переменной окружения HF_TOKEN (HuggingFace токен с доступом к Gatarez/lct7-construction-detector)
 ml-weights:
@@ -24,6 +29,35 @@ dev:
 	$(COMPOSE) \
 		-f $(DOCKER_FILES)/dev/core.yaml \
 		up --build -d
+
+# Локальная разработка с прокси для телеграма (профиль proxy).
+# Нужен XRAY__LINKS в .env — одна или несколько ссылок vless://.
+dev-proxy:
+	$(COMPOSE) \
+		-f $(DOCKER_FILES)/common/proxy.yaml \
+		-f $(DOCKER_FILES)/dev/core.yaml \
+		--profile proxy \
+		up --build -d
+
+# Прод с прокси для телеграма (профиль proxy), без сборки и без pull
+up-proxy:
+	$(PROXY) --profile proxy up -d --no-build
+
+# Тянем образы по тегам и поднимаем прод вместе с прокси — то же, что deploy, но с Xray
+deploy-proxy:
+	$(PROXY) --profile proxy pull
+	$(PROXY) --profile proxy up -d --no-build
+
+# То же за туннелем
+deploy-tunnel-proxy:
+	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy pull
+	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy up -d --no-build
+
+# Проверить, что из XRAY__LINKS собирается конфиг, который принимает сам Xray
+xray-check:
+	$(COMPOSE) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy run --rm --no-deps xray-init
+	docker run --rm -v lct-7_xray_config:/cfg:ro ghcr.io/xtls/xray-core:26.3.27 \
+		run -test -c /cfg/config.json
 
 # Локальная разработка с ML-детектором (включает профиль ml)
 dev-ml:
@@ -75,4 +109,4 @@ front-check:
 front-test:
 	cd frontend && pnpm run test:coverage
 
-.PHONY: ml-weights dev dev-ml up deploy deploy-tunnel down logs pretty check test front-pretty front-check front-test
+.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check deploy deploy-proxy deploy-tunnel deploy-tunnel-proxy down logs pretty check test front-pretty front-check front-test

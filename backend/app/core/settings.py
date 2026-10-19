@@ -198,6 +198,9 @@ class TelegramSettings(BaseModel):
     # Таймаут long polling; телеграм держит соединение до появления апдейта
     poll_timeout_s: int = 25
     request_timeout_s: float = 35.0
+    # HTTP-прокси для Bot API: в России api.telegram.org заблокирован. Пусто —
+    # бот ходит напрямую. В compose это http://xray:8080 (профиль proxy).
+    proxy_url: str | None = None
 
 
 class NotifySettings(BaseModel):

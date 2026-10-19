@@ -25,6 +25,7 @@ def create_channel_registry(settings: Settings) -> ChannelRegistry:
             TelegramClient(
                 token=settings.notify.telegram.token,
                 timeout_s=settings.notify.telegram.request_timeout_s,
+                proxy_url=settings.notify.telegram.proxy_url,
             )
         )
     channels: dict[ChannelKind, NotificationChannel] = {ChannelKind.TELEGRAM: telegram}

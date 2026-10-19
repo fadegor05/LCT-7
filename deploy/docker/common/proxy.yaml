@@ -1,0 +1,47 @@
+# Прокси для телеграм-бота: в России api.telegram.org заблокирован.
+#
+# Профиль `proxy`, поэтому обычные `make dev` и `make up` его не поднимают.
+# Включается явно: `make dev-proxy` / `make up-proxy` (см. makefile).
+#
+# Конфиг Xray собирает отдельный контейнер: официальный образ xray-core —
+# distroless, в нём нет ни shell, ни python, поэтому генерировать конфиг
+# внутри него нечем. Образ бэкенда для этого подходит: в нём лежит
+# backend/tools/xray_config.py (COPY . . в Dockerfile).
+services:
+  xray-init:
+    image: ${REGISTRY}/backend:${BACKEND_TAG:-latest}
+    build: ./backend
+    profiles: [proxy]
+    # Никаких перезапусков: контейнер делает конфиг один раз. При пустом или
+    # битом XRAY__LINKS он падает с понятной ошибкой, Xray не стартует из-за
+    # depends_on, и это видно в выводе `up`. on-failure здесь крутил бы цикл.
+    restart: 'no'
+    env_file: .env
+    environment:
+      XRAY__HTTP_PORT: ${XRAY__HTTP_PORT:-8080}
+    entrypoint: ['python', 'tools/xray_config.py', '--out', '/config/config.json']
+    volumes:
+      - xray_config:/config
+
+  xray:
+    image: ghcr.io/xtls/xray-core:26.3.27
+    profiles: [proxy]
+    restart: unless-stopped
+    depends_on:
+      xray-init:
+        condition: service_completed_successfully
+    # Образ сам читает -confdir /usr/local/etc/xray/, команду переопределять не нужно
+    volumes:
+      - xray_config:/usr/local/etc/xray:ro
+    networks:
+      - web
+    # Healthcheck'а нет намеренно: образ distroless, проверять соединение
+    # изнутри нечем. Готовность конфига гарантирует xray-init выше.
+
+  backend:
+    environment:
+      # Бот ходит в Bot API через Xray; остальной трафик приложения — напрямую
+      NOTIFY__TELEGRAM__PROXY_URL: http://xray:${XRAY__HTTP_PORT:-8080}
+
+volumes:
+  xray_config:

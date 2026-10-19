@@ -30,3 +30,14 @@ def test_public_url_strips_trailing_slash() -> None:
     settings = NotifySettings.model_validate({"public_url": "https://example.com/"})
 
     assert settings.public_url == "https://example.com"
+
+
+def test_telegram_proxy_is_empty_by_default() -> None:
+    """Прокси нужен не всем: по умолчанию бот ходит напрямую."""
+    assert NotifySettings().telegram.proxy_url is None
+
+
+def test_telegram_proxy_is_read_from_settings() -> None:
+    settings = NotifySettings.model_validate({"telegram": {"proxy_url": "http://xray:8080"}})
+
+    assert settings.telegram.proxy_url == "http://xray:8080"

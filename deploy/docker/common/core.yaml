@@ -12,6 +12,8 @@ services:
       LLM_MODEL: ""
       # Снимки со стрима по расписанию; включены по умолчанию, false выключает
       STREAM__ENABLED: ${STREAM__ENABLED:-true}
+      # Там же лежат учётные данные VLESS — приложению они незачем, их читает xray-init
+      XRAY__LINKS: ""
     networks:
       - web
     labels:
