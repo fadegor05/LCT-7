@@ -66,7 +66,10 @@ function VerdictCard({ siteId, summary }: { siteId: string; summary: SiteSummary
         {verdictText(summary)}
       </p>
       <p className="sm">
-        {summary.verdict === 'insufficient_data' ? (
+        {summary.reason && summary.verdict !== 'no_deviations' ? (
+          // Пояснение пересчёта: про тот же этап, что и интервал в итоге
+          summary.reason
+        ) : summary.verdict === 'insufficient_data' ? (
           <InsufficientReason siteId={siteId} />
         ) : (
           EXPLANATION[summary.verdict]

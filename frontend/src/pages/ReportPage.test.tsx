@@ -33,9 +33,9 @@ describe('ReportPage', () => {
 
     const deviations = await waitFor(() => rowsOf('Отклонения'))
     expect(deviations).toHaveLength(3)
-    // Первой идёт критичное; у каждого отклонения указана основа: что ожидали и что видно
+    // Первой идёт критичное; под заголовком — тип отклонения (clean-mvp)
     expect(deviations[0]).toHaveTextContent('Критично')
-    expect(screen.getByRole('table', { name: 'Отклонения' })).toHaveTextContent('Ожидалось')
+    expect(screen.getByRole('table', { name: 'Отклонения' })).not.toHaveTextContent('Ожидалось')
 
     const stages = await waitFor(() => rowsOf('Этапы'))
     const pit = stages.find((r) => /Разработка котлована/.test(r.textContent ?? ''))!

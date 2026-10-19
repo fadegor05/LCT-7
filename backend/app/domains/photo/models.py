@@ -59,6 +59,14 @@ class Photo(Base):
     height: Mapped[int] = mapped_column(Integer, nullable=False)
     captured_on: Mapped[date | None] = mapped_column(Date(), nullable=True)
     date_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Местное время съёмки, если источник его знает (штамп, EXIF, имя файла со временем)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    # Дата-подсказка для ручного ввода: неуверенный штамп, кадр камеры без штампа
+    date_hint: Mapped[date | None] = mapped_column(Date(), nullable=True)
+    # Неуверенно прочитанное время штампа: его может подтвердить серия кадров камеры
+    uncertain_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    # Проверка серии штампов камеры: ok | series_outlier; null — не проверялось
+    time_check: Mapped[str | None] = mapped_column(String(16), nullable=True)
     processing_status: Mapped[str] = mapped_column(
         String(16), default=ProcessingStatus.PENDING.value, nullable=False
     )

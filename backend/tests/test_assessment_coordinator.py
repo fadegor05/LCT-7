@@ -11,7 +11,7 @@ from app.adapters.ml.base import DetectorClient
 from app.core.settings import AsOfMode
 from app.domains.assessment.coordinator import AsOfConfig, RecomputeCoordinator
 from app.domains.assessment.engine import EngineConfig, RuleEngine
-from app.domains.assessment.models import DeviationType, StageStatusValue
+from app.domains.assessment.models import DeviationType, SiteSummary, StageStatusValue
 from app.domains.assessment.recalculator import LiveStatusRecalculator
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
@@ -243,6 +243,12 @@ class TestRecomputeCoordinator:
             basis_repo = StatusBasisRepository(await request_container.get(AsyncSession))
             basis_rows = await basis_repo.list_by_status(status.id)
             assert len(basis_rows) == 1
+
+            # Итог по объекту сохранён тем же пересчётом
+            summary = await (await request_container.get(AsyncSession)).get(SiteSummary, site_id)
+            assert summary is not None
+            assert summary.verdict == "no_deviations"
+            assert summary.reason == "Отклонений не выявлено."
 
     @pytest.mark.asyncio
     async def test_idempotency_same_data(self, container) -> None:
@@ -562,8 +568,8 @@ class TestRecomputeCoordinator:
         rule_id = uuid.uuid4()
         equipment_set_id = uuid.uuid4()
         equipment_type_id = uuid.uuid4()
-        today = date.today()
-        obs_date = today - timedelta(days=5)
+        # Три рабочих дня подряд без маркера: «Нет маркерной техники» — по окну дат
+        days = [date(2024, 1, 15), date(2024, 1, 16), date(2024, 1, 17)]
 
         async with container() as request_container:
             session = await request_container.get(AsyncSession)
@@ -580,8 +586,8 @@ class TestRecomputeCoordinator:
                 schedule_id=schedule.id,
                 name="Stage 1",
                 position=1,
-                planned_start=obs_date - timedelta(days=3),
-                planned_end=obs_date + timedelta(days=3),
+                planned_start=date(2024, 1, 8),
+                planned_end=date(2024, 1, 31),
             )
             session.add(stage)
 
@@ -613,16 +619,16 @@ class TestRecomputeCoordinator:
             )
             session.add(requirement)
 
-            # Наблюдение на другую дату (вызовет отклонение)
-            obs_other_date = obs_date + timedelta(days=3)
-            observation = Observation(
-                id=uuid.uuid4(),
-                site_id=site_id,
-                observed_on=obs_other_date,
-                photo_count=3,
-                observability="high",
-            )
-            session.add(observation)
+            for day in days:
+                session.add(
+                    Observation(
+                        id=uuid.uuid4(),
+                        site_id=site_id,
+                        observed_on=day,
+                        photo_count=3,
+                        observability="high",
+                    )
+                )
             await session.flush()
 
             # NO техника -> missing_equipment девиация
@@ -631,17 +637,19 @@ class TestRecomputeCoordinator:
         # Добавляем фотографию для девиации
         async with container() as request_container:
             session = await request_container.get(AsyncSession)
-            photo = Photo(
-                id=uuid.uuid4(),
-                site_id=site_id,
-                storage_key="test.jpg",
-                original_name="test.jpg",
-                width=100,
-                height=100,
-                captured_on=obs_other_date,
-                processing_status=ProcessingStatus.DONE.value,
-            )
-            session.add(photo)
+            for day in days:
+                session.add(
+                    Photo(
+                        id=uuid.uuid4(),
+                        site_id=site_id,
+                        storage_key=f"{day}.jpg",
+                        original_name=f"{day}.jpg",
+                        width=100,
+                        height=100,
+                        captured_on=day,
+                        processing_status=ProcessingStatus.DONE.value,
+                    )
+                )
             await session.commit()
 
         engine_config = EngineConfig(
@@ -651,7 +659,9 @@ class TestRecomputeCoordinator:
             min_confirming_observations=2,
         )
         async with container() as request_container:
-            coordinator = await create_coordinator(container, engine_config)
+            coordinator = await create_coordinator(
+                container, engine_config, AsOfConfig(mode=AsOfMode.FIXED, fixed_date=days[-1])
+            )
             await coordinator.recompute_site(site_id)
 
         # Проверяем DevationEvidence
@@ -669,7 +679,8 @@ class TestRecomputeCoordinator:
 
             evidence_repo = DeviationEvidenceRepository(await request_container.get(AsyncSession))
             evidence = await evidence_repo.list_by_deviation(missing_dev.id)
-            assert len(evidence) > 0
+            # Снимки всех трёх дат окна
+            assert len(evidence) == 3
 
     @pytest.mark.asyncio
     async def test_detector_never_called(self, container) -> None:

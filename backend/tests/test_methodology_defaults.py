@@ -131,10 +131,16 @@ class TestDefaultRuleSetMatchStage:
         assert matched.stage_key == "excavation"
 
     def test_no_match_returns_none(self):
-        """'Отделка фасада' -> None."""
+        """Работ без крупной техники в семействах нет -> None."""
         rule_set = DefaultRuleSet()
-        matched = rule_set.match_stage("Отделка фасада")
-        assert matched is None
+        assert rule_set.match_stage("Внутренние отделочные работы") is None
+
+    def test_facade_is_matched_as_not_checked(self):
+        """Фасад узнаётся, но по технике не проверяется — с причиной (как в clean-mvp)."""
+        matched = DefaultRuleSet().match_stage("Отделка фасада")
+        assert matched is not None and matched.stage_key == "facade"
+        assert matched.sets == ()
+        assert matched.unchecked_reason
 
     def test_match_case_insensitive(self):
         """Совпадение работает без учёта регистра."""
@@ -144,11 +150,12 @@ class TestDefaultRuleSetMatchStage:
         assert matched.stage_key == "piles"
 
     def test_match_earthworks_stage(self):
-        """'Земляные работы' -> 'earthworks'."""
+        """'Обратная засыпка' -> 'earthworks'; общие «Земляные работы» — котлован, как в clean."""
         rule_set = DefaultRuleSet()
-        matched = rule_set.match_stage("Земляные работы")
+        matched = rule_set.match_stage("Обратная засыпка пазух")
         assert matched is not None
         assert matched.stage_key == "earthworks"
+        assert rule_set.match_stage("Земляные работы").stage_key == "excavation"
 
     def test_match_monolith_stage(self):
         """'Монолитные работы ниже нуля' -> 'monolith'."""
@@ -163,3 +170,17 @@ class TestDefaultRuleSetMatchStage:
         matched = rule_set.match_stage("Возведение каркаса")
         assert matched is not None
         assert matched.stage_key == "frame"
+
+
+def test_general_stage_is_matched_by_its_works() -> None:
+    """Общее название этапа — семейство по работам: котельная с фундаментом (clean-mvp)."""
+    rules = DefaultRuleSet()
+    found = rules.match_stage_or_works(
+        "Работы по устройству котельной", ["Устройство фундамента", "Монтаж дымовой трубы"]
+    )
+    assert found is not None and found.stage_key == "monolith"
+    # Название этапа важнее работ
+    assert rules.match_stage_or_works("Устройство свай", ["Устройство фундамента"]).stage_key == (
+        "piles"
+    )
+    assert rules.match_stage_or_works("Строительные работы", None) is None

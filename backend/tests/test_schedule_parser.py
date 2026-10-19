@@ -779,3 +779,15 @@ class TestScheduleParserIntegration:
         # Только из первого листа
         assert len(result.rows) == 1
         assert result.rows[0].name == "Работа 1"
+
+
+def test_number_column_is_read_for_grouping() -> None:
+    """Колонка «№ п/п» — номер пункта: по нему работы собираются в этапы."""
+    content = (
+        "№ п/п;Наименование;Начало;Окончание\n"
+        "2;Земляные работы.;;\n"
+        "2.1;Устройство основания;15.05.2026;30.11.2026\n"
+        "10.1;Сети;01.06.2026;01.07.2026\n"
+    ).encode()
+    result = ScheduleParser().parse("g.csv", content)
+    assert [r.number for r in result.rows] == ["2", "2.1", "10.1"]

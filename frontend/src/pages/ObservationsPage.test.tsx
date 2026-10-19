@@ -1,9 +1,12 @@
 import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
+import { createCamera, uploadPhotos } from '@/mocks/db'
 import { server } from '@/mocks/server'
 import { renderRoute } from '@/test/render'
 
 const photos = () => screen.findAllByRole('img', { name: /Снимок / })
+const addCamera = (name = 'К-1 · въезд') =>
+  createCamera('site-berezniki', { name, stream_url: null, capture_every_s: null, zone: null })
 
 describe('ObservationsPage', () => {
   it('shows the latest day by default and switches to all days', async () => {
@@ -19,8 +22,22 @@ describe('ObservationsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Все снимки с датой' })).toBeInTheDocument()
     expect(router.state.location.search).toBe('?date=all')
     expect(screen.queryByRole('heading', { name: 'Техника на площадке' })).not.toBeInTheDocument()
+    // Дни одной строкой слева направо по времени
+    const dayButtons = within(screen.getByRole('group', { name: 'Дни наблюдений' }))
+      .getAllByRole('button')
+      .slice(1)
+      .map((b) => b.textContent ?? '')
+    const dates = dayButtons.map((t) =>
+      t
+        .match(/(\d\d)\.(\d\d)\.(\d{4})/)!
+        .slice(1)
+        .reverse()
+        .join(''),
+    )
+    expect(dates).toEqual([...dates].sort())
     expect(await photos()).toHaveLength(12)
-    expect(screen.getAllByText('ПН 14.09.2026', { selector: 'figcaption span' })).toHaveLength(2)
+    // «Все дни»: у кадра день недели и дата, время — если источник его знает
+    expect(screen.getAllByText('ПН 14.09', { selector: 'figcaption span' })).toHaveLength(2)
 
     await user.click(screen.getByRole('button', { name: /17\.09/ }))
     expect(
@@ -99,9 +116,10 @@ describe('ObservationsPage', () => {
   })
 
   it('uploads photos and reports files that failed', async () => {
+    addCamera()
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
     const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
     expect(upload).toBeDisabled()
     await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [
@@ -133,9 +151,10 @@ describe('ObservationsPage', () => {
   })
 
   it('closes the dialog after a clean upload and shows request errors', async () => {
+    addCamera()
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    let dialog = screen.getByRole('dialog')
+    let dialog = await screen.findByRole('dialog')
     await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [
       new File(['1'], 'a.jpg', { type: 'image/jpeg' }),
     ])
@@ -148,7 +167,7 @@ describe('ObservationsPage', () => {
       ),
     )
     await user.click(screen.getByRole('button', { name: 'Добавить снимки' }))
-    dialog = screen.getByRole('dialog')
+    dialog = await screen.findByRole('dialog')
     await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [
       new File(['1'], 'a.jpg', { type: 'image/jpeg' }),
     ])
@@ -158,10 +177,118 @@ describe('ObservationsPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('shows error and disables upload when batch exceeds size limit (200 MB)', async () => {
+  it('shows photos in a strip per camera', async () => {
+    const gate = addCamera('К-1 · въезд')
+    const pit = addCamera('К-2 · котлован')
+    const jpeg = (name: string) => ({ name, type: 'image/jpeg' })
+    uploadPhotos('site-berezniki', [jpeg('2026-09-18-a.jpg'), jpeg('2026-09-18-b.jpg')], gate.id)
+    uploadPhotos('site-berezniki', [jpeg('2026-09-18-c.jpg')], pit.id)
+
+    renderRoute('/sites/site-berezniki/observations')
+
+    const gateStrip = await screen.findByRole('region', { name: 'Снимки: К-1 · въезд' })
+    expect(within(gateStrip).getAllByRole('img', { name: /Снимок 2026-09-18/ })).toHaveLength(2)
+    expect(within(gateStrip).getByText('· 2 снимка')).toBeInTheDocument()
+    const pitStrip = screen.getByRole('region', { name: 'Снимки: К-2 · котлован' })
+    expect(within(pitStrip).getAllByRole('img', { name: /Снимок/ })).toHaveLength(1)
+    // Снимки фикстуры загружены без камеры — своей лентой
+    expect(screen.getByRole('region', { name: 'Снимки: Без камеры' })).toBeInTheDocument()
+  })
+
+  it('opens all days when the latest day has fewer than three photos', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/observations', () =>
+        HttpResponse.json([
+          {
+            id: 'obs-1',
+            site_id: 'site-berezniki',
+            observed_on: '2026-09-18',
+            photo_count: 1,
+            observability: 'low',
+            observability_notes: null,
+            recomputed_at: '2026-09-18T12:00:00Z',
+            equipment: [],
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/observations')
+    expect(await screen.findByRole('heading', { name: 'Все снимки с датой' })).toBeInTheDocument()
+  })
+
+  it('prefills the date from the stamp hint of an undated photo', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/photos', ({ request }) =>
+        new URL(request.url).searchParams.get('undated')
+          ? HttpResponse.json([
+              {
+                id: 'ph-hint',
+                site_id: 'site-berezniki',
+                original_name: '202609270106411790460401577.jpg',
+                width: 2592,
+                height: 1944,
+                captured_on: null,
+                date_source: null,
+                processing_status: 'done',
+                uploaded_at: '2026-09-27T01:06:41Z',
+                camera_id: null,
+                captured_at: null,
+                date_hint: '2026-08-03',
+                time_check: null,
+              },
+            ])
+          : HttpResponse.json([]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki/observations')
+    const list = await screen.findByRole('list', { name: 'Снимки без даты' })
+    expect(within(list).getByLabelText('Дата съёмки 202609270106411790460401577.jpg')).toHaveValue(
+      '03.08.2026',
+    )
+    expect(within(list).getByText(/проверьте подсказку по снимку/)).toBeInTheDocument()
+  })
+
+  it('asks to add a camera first when the site has none', async () => {
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
+    expect(within(dialog).getByText('Сначала добавьте камеру')).toBeInTheDocument()
+    expect(within(dialog).getByRole('link', { name: 'Перейти к камерам' })).toHaveAttribute(
+      'href',
+      '/sites/site-berezniki/cameras',
+    )
+    expect(within(dialog).queryByRole('button', { name: 'Загрузить' })).not.toBeInTheDocument()
+  })
+
+  it('sends the chosen camera with the batch', async () => {
+    addCamera('К-1 · въезд')
+    const second = addCamera('К-2 · котлован')
+    let sent: FormDataEntryValue | null = null
+    server.use(
+      http.post('/api/sites/:siteId/photos', async ({ request }) => {
+        sent = (await request.formData()).get('camera_id')
+        return HttpResponse.json({ items: [], uploaded: 1, failed: 0 }, { status: 201 })
+      }),
+    )
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
+    await user.upload(within(dialog).getByLabelText('Выбрать файлы'), [
+      new File(['1'], 'a.jpg', { type: 'image/jpeg' }),
+    ])
+    const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
+    // Камер две: без выбора не загрузить
+    expect(upload).toBeDisabled()
+    await user.selectOptions(within(dialog).getByLabelText('Камера'), second.id)
+    await user.click(upload)
+    await vi.waitFor(() => expect(sent).toBe(second.id))
+  })
+
+  it('shows error and disables upload when batch exceeds size limit (200 MB)', async () => {
+    addCamera()
+    const { user } = renderRoute('/sites/site-berezniki/observations')
+    await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
     const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
 
     // Create a file with size > 200 MB (201 MB)
@@ -177,9 +304,10 @@ describe('ObservationsPage', () => {
   })
 
   it('allows upload when batch is under size limit', async () => {
+    addCamera()
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
     const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
 
     // Create files with combined size < 200 MB (100 MB + 50 MB)
@@ -196,9 +324,10 @@ describe('ObservationsPage', () => {
   })
 
   it('clears error message when files are changed to under the limit', async () => {
+    addCamera()
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
 
     // First, upload a file that exceeds the limit
     const largeFile = new File(['x'], 'large.jpg', { type: 'image/jpeg' })
@@ -221,9 +350,10 @@ describe('ObservationsPage', () => {
   })
 
   it('does not call upload endpoint when batch exceeds size limit', async () => {
+    addCamera()
     const { user } = renderRoute('/sites/site-berezniki/observations')
     await user.click(await screen.findByRole('button', { name: 'Добавить снимки' }))
-    const dialog = screen.getByRole('dialog', { name: 'Добавить снимки' })
+    const dialog = await screen.findByRole('dialog', { name: 'Добавить снимки' })
     const upload = within(dialog).getByRole('button', { name: 'Загрузить' })
 
     const largeFile = new File(['x'], 'large.jpg', { type: 'image/jpeg' })

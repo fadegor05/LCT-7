@@ -24,6 +24,9 @@ RUN pip install --no-cache-dir \
 
 COPY service/ /app/service/
 COPY tools/ /app/tools/
+# Эталоны знаков штампа камеры (stamp/profiles) и их чтение: без них /stamp отвечает 422,
+# и кадры камер датируются по имени файла — моменту выгрузки, а не съёмки
+COPY stamp/ /app/stamp/
 COPY configs/ /app/configs/
 
 # Веса не копируем в образ: 42 МБ и лицензия AGPL на них же. Монтируются томом.

@@ -206,13 +206,25 @@ class TestKitConfirmation:
             original_compute_site = coordinator._engine.compute_site
 
             def spy_compute_site(
-                stages, rules_by_stage, observations, reference_date, equipment_names
+                stages,
+                rules_by_stage,
+                observations,
+                reference_date,
+                equipment_names,
+                coarse,
+                stationary,
             ):
                 # Capture the rules_by_stage
                 captured_rules_by_stage.update(rules_by_stage)
                 # Call original with same arguments
                 return original_compute_site(
-                    stages, rules_by_stage, observations, reference_date, equipment_names
+                    stages,
+                    rules_by_stage,
+                    observations,
+                    reference_date,
+                    equipment_names,
+                    coarse,
+                    stationary,
                 )
 
             coordinator._engine.compute_site = spy_compute_site

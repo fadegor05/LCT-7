@@ -791,6 +791,23 @@ class TestHttpStampReader:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_http_stamp_reader_camera_profile_without_date(self):
+        """read: кадр камеры с непрочитанным временем -> профиль без даты."""
+        response_data = {"date": None, "text": None, "roi": None, "profile": "2592x1944"}
+
+        mock_client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=response_data))
+        )
+        reader = HttpStampReader(
+            base_url="http://ml:8000",
+            client=mock_client,
+            settings=DetectorSettings(),
+        )
+        result = await reader.read(b"image_bytes")
+        assert result.date is None
+        assert result.profile == "2592x1944"
+
+    @pytest.mark.asyncio
     async def test_http_stamp_reader_422_no_retry(self):
         """HttpStampReader.read_date с 422 -> None, no retry."""
         call_count = 0

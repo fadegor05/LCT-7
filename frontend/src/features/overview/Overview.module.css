@@ -110,3 +110,35 @@
     min-width: 160px;
   }
 }
+
+.legend > summary {
+  cursor: pointer;
+  color: var(--link);
+}
+
+.legend > p {
+  margin: var(--space-2) 0;
+}
+
+.legendList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendRow {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+@media (width <= 720px) {
+  .legendRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}

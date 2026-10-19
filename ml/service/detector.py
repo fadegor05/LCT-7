@@ -23,6 +23,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -153,13 +154,13 @@ class Detector:
 # Время, которое знакогенератор камеры впечатал слева сверху (ml/stamp/).
 # Порог — как у бэкенда (FRAMES__STAMP_MIN_CONFIDENCE, см. ml/stamp/eval.py).
 CAMERA_MIN_CONFIDENCE = 0.9
-# Включается переменной окружения STAMP_CAMERA_READER=1 (true/yes). По умолчанию выключено:
-# точность на настоящих кадрах не проверена, а /stamp кормит даты фото в проде.
+# Включено по умолчанию; STAMP_CAMERA_READER=0 (false/no) выключает и оставляет только OCR.
+# Без него кадры камер Березников датировались по имени файла — моменту выгрузки, а не съёмки.
 
 
 def camera_reader_enabled() -> bool:
     """Читается при каждом вызове, а не при импорте: тесты могут подменить окружение."""
-    return os.environ.get("STAMP_CAMERA_READER", "").strip().lower() in ("1", "true", "yes")
+    return os.environ.get("STAMP_CAMERA_READER", "").strip().lower() not in ("0", "false", "no")
 
 
 @dataclass
@@ -194,7 +195,13 @@ class StampReader:
         read_stamp_array(np.zeros((200, 200, 3), dtype="uint8"), self.ocr)
 
     def read_camera(self, img) -> dict | None:
-        """Время камеры по эталонам; None — не прочитано уверенно, решает OCR."""
+        """Время камеры по эталонам (clean-mvp, `/stamp`): для известного разрешения —
+        результат эталонов, уверенный или нет; None — разрешение неизвестно, решает OCR.
+
+        `date` — только у уверенного чтения (порог CAMERA_MIN_CONFIDENCE): прежние
+        потребители ставят её сразу. Неуверенное время приходит в `captured_at` с
+        `confidence` — бэкенд подставит его подсказкой, а не датой.
+        """
         import numpy as np
         from stamp.reader import read_gray
         gray = np.asarray(img.convert("L"), dtype=np.float32)
@@ -202,10 +209,17 @@ class StampReader:
         if out is None:
             return None
         read, profile = out
-        if read.captured_at is None or read.confidence < CAMERA_MIN_CONFIDENCE:
-            return None
-        return {"date": read.captured_at.date().isoformat(),
-                "text": read.text, "roi": "camera", "profile": profile.name}
+        sure = read.captured_at is not None and read.confidence >= CAMERA_MIN_CONFIDENCE
+        return {
+            "date": read.captured_at.date().isoformat() if sure else None,
+            "text": read.text,
+            "roi": "camera",
+            "profile": profile.name,
+            "found": read.found,
+            "captured_at": read.captured_at.isoformat() if read.captured_at else None,
+            "confidence": read.confidence,
+            "method": "templates",
+        }
 
     def read_bytes(self, data: bytes) -> dict:
         from PIL import Image, ImageOps
@@ -213,12 +227,47 @@ class StampReader:
         img = Image.open(io.BytesIO(data))
         img = ImageOps.exif_transpose(img)
         if camera_reader_enabled():
-            camera = self.read_camera(img)
+            try:
+                camera = self.read_camera(img)
+            except Exception:
+                # Сбой эталонов не должен превращаться в «штампа нет» для всей камеры:
+                # тогда бэкенд взял бы время из имени файла. Запасной OCR даёт подсказку
+                camera = None
             if camera is not None:
+                # Известное разрешение — только эталоны: OCR на кадре камеры не угадывает
                 return camera
-        arr = np.asarray(img.convert("RGB"))
-        return read_stamp_for_service(arr, self.ocr)
+        out = read_stamp_for_service(np.asarray(img.convert("RGB")), self.ocr)
+        return {**out, **ocr_time(out)}
 
+    def camera_profile(self, width: int, height: int) -> str | None:
+        """Профиль камеры, если для этого разрешения есть эталоны знаков."""
+        from stamp.layout import profile_for
+        profile = profile_for(width, height)
+        return profile.name if profile and profile.name in self.camera_templates else None
+
+
+# Время в строке штампа «ДД-ММ-ГГГГ ЧЧ:ММ:СС»
+_STAMP_TIME = re.compile(r"(?<!\d)([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?!\d)")
+# Штамп, прочитанный только OCR (без эталонов знаков и профиля разрешения), уверенным не
+# бывает: бэкенд не ставит такое время сам, а подставляет его подсказкой (clean-mvp)
+OCR_CONFIDENCE_CAP = 0.5
+
+
+def ocr_time(out: dict) -> dict:
+    """Поля clean-mvp для ответа OCR: штамп найден, его время и уверенность не выше 0.5.
+    `date` у OCR остаётся в ответе для прежних потребителей, бэкенд её не ставит."""
+    if not out.get("date"):
+        return {"found": False, "captured_at": None, "confidence": 0.0, "method": "ocr"}
+    m = _STAMP_TIME.search(out.get("text") or "")
+    if m is None:
+        # Дата без часов — не время кадра: штамп есть, но не прочитан
+        return {"found": True, "captured_at": None, "confidence": 0.0, "method": "ocr"}
+    return {
+        "found": True,
+        "captured_at": f"{out['date']}T{':'.join(m.groups())}",
+        "confidence": OCR_CONFIDENCE_CAP,
+        "method": "ocr",
+    }
 
 def main() -> int:
     """Проверка обёртки без бэкенда: python -m service.detector <кадр>"""

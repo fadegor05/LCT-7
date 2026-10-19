@@ -70,6 +70,7 @@ async def test_observed_equipment_columns(engine: AsyncEngine) -> None:
             "equipment_type_id",
             "count_min",
             "activity",
+            "activity_basis",
             "confidence",
         }
 

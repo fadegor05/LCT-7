@@ -45,13 +45,50 @@ describe('CamerasPage: «Снять кадр сейчас» и интервал'
     expect(within(row).getByText('1 кадр')).toBeInTheDocument()
   })
 
-  it('keeps the capture button disabled for a camera without a saved stream', async () => {
+  it('keeps the capture button disabled until there is a stream link', async () => {
     const { user } = renderRoute(URL_CAMERAS)
     const dialog = await openNewCamera(user)
     expect(within(dialog).getByRole('button', { name: 'Снять кадр сейчас' })).toBeDisabled()
     expect(
-      within(dialog).getByText('Сохраните камеру со ссылкой, чтобы снять кадр'),
+      within(dialog).getByText('Укажите ссылку на стрим, чтобы снять кадр'),
     ).toBeInTheDocument()
+  })
+
+  it('takes a preview frame for the zone before the camera is saved', async () => {
+    let previewed: unknown = null
+    server.use(
+      http.post(`${env.apiBaseUrl}/sites/:siteId/cameras/preview`, async ({ request }) => {
+        previewed = await request.json()
+        return HttpResponse.json({ image: 'data:image/png;base64,AA==', width: 1600, height: 900 })
+      }),
+    )
+    const { user } = renderRoute(URL_CAMERAS)
+    const dialog = await openNewCamera(user)
+    await user.type(
+      within(dialog).getByLabelText('Ссылка на стрим (необязательно)'),
+      'rtsp://cam/new',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Снять кадр сейчас' }))
+
+    expect(
+      await within(dialog).findByText(
+        'Пробный кадр снят: он только ориентир для зоны, в ленту не попадает',
+      ),
+    ).toBeInTheDocument()
+    expect(previewed).toEqual({ stream_url: 'rtsp://cam/new', camera_id: null })
+    expect(within(dialog).getByText(/Ориентир — пробный кадр со стрима/)).toBeInTheDocument()
+  })
+
+  it('explains why the preview frame failed', async () => {
+    const { user } = renderRoute(URL_CAMERAS)
+    const dialog = await openNewCamera(user)
+    await user.type(
+      within(dialog).getByLabelText('Ссылка на стрим (необязательно)'),
+      'rtsp://cam/offline',
+    )
+    await user.click(within(dialog).getByRole('button', { name: 'Снять кадр сейчас' }))
+    expect(await within(dialog).findByText('Кадр со стрима не снят')).toBeInTheDocument()
+    expect(within(dialog).getByText('Камера не ответила за 15 с')).toBeInTheDocument()
   })
 
   it('shows the reason when the grab fails and marks the stream in the list', async () => {

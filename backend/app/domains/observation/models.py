@@ -79,6 +79,8 @@ class ObservedEquipment(Base):
     )
     count_min: Mapped[int] = mapped_column(Integer, nullable=False)
     activity: Mapped[str] = mapped_column(String(16), nullable=False)
+    # Почему такая активность: движение по серии кадров и зона (clean-mvp)
+    activity_basis: Mapped[str | None] = mapped_column(Text, nullable=True)
     confidence: Mapped[str] = mapped_column(String(16), nullable=False)
 
     __table_args__ = (

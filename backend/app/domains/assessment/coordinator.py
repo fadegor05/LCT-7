@@ -21,7 +21,19 @@ from app.domains.assessment.engine import (
     RuleInput,
     StageInput,
 )
-from app.domains.assessment.models import Deviation, DeviationEvidence, StageStatus, StatusBasis
+from app.domains.assessment.evidence import (
+    CameraFacts,
+    DetectionFacts,
+    PhotoFacts,
+    select_evidence,
+)
+from app.domains.assessment.models import (
+    Deviation,
+    DeviationEvidence,
+    SiteSummary,
+    StageStatus,
+    StatusBasis,
+)
 from app.domains.assessment.repository import (
     DeviationEvidenceRepository,
     DeviationRepository,
@@ -31,7 +43,9 @@ from app.domains.assessment.repository import (
 from app.domains.camera.models import Camera
 from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import (
+    COARSE_TO_SPECIFIC,
     SPECIFIC_EQUIPMENT_CODES,
+    STATIONARY_EQUIPMENT_CODES,
     EquipmentCatalog,
 )
 from app.domains.methodology.materializer import RuleMaterializer
@@ -44,6 +58,11 @@ from app.domains.photo.models import Photo, ProcessingStatus
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.schedule.repository import ScheduleRepository
 from app.plugins.exceptions import AppError
+
+
+def _names(ids: frozenset[uuid.UUID], names: dict[uuid.UUID, str]) -> list[str]:
+    """Маркеры этапа — названиями техники по алфавиту."""
+    return sorted(names.get(i, str(i)) for i in ids)
 
 
 class Clock(Protocol):
@@ -311,6 +330,7 @@ class RecomputeCoordinator:
                             obligation=req.obligation,
                             min_count=req.min_count,
                             is_specific=is_specific,
+                            group=req.group_code,
                         )
 
                         # Добавить в kit и flat список
@@ -368,8 +388,23 @@ class RecomputeCoordinator:
             reference_date = self._resolve_as_of(observations)
             # Переиспользовать equipment_catalog_items загруженный при построении kits
             equipment_names = {item.id: item.title for item in equipment_catalog_items}
+            id_by_code = {item.code: item.id for item in equipment_catalog_items}
+            coarse = {
+                id_by_code[code]: frozenset(id_by_code[c] for c in specific if c in id_by_code)
+                for code, specific in COARSE_TO_SPECIFIC.items()
+                if code in id_by_code
+            }
+            stationary = frozenset(
+                id_by_code[c] for c in STATIONARY_EQUIPMENT_CODES if c in id_by_code
+            )
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, reference_date, equipment_names
+                stages,
+                rules_by_stage,
+                observations,
+                reference_date,
+                equipment_names,
+                coarse,
+                stationary,
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)
@@ -379,6 +414,11 @@ class RecomputeCoordinator:
                     # Обновить in-place
                     existing.status = result.status.value
                     existing.delay_days = result.delay_days
+                    existing.delay_open = result.delay_open
+                    existing.delay_min = result.delay_min
+                    existing.delay_max = result.delay_max
+                    existing.start_fact = result.start_fact
+                    existing.marker_names = _names(result.markers, equipment_names)
                     existing.confidence = result.confidence.value
                     existing.confidence_reason = result.confidence_reason
                 else:
@@ -388,6 +428,11 @@ class RecomputeCoordinator:
                         stage_id=result.stage_id,
                         status=result.status.value,
                         delay_days=result.delay_days,
+                        delay_open=result.delay_open,
+                        delay_min=result.delay_min,
+                        delay_max=result.delay_max,
+                        start_fact=result.start_fact,
+                        marker_names=_names(result.markers, equipment_names),
                         confidence=result.confidence.value,
                         confidence_reason=result.confidence_reason,
                     )
@@ -452,37 +497,70 @@ class RecomputeCoordinator:
                     observed=dev_result.observed,
                     limits_text=dev_result.limits_text,
                     rule_id=dev_result.rule_id,
+                    title=dev_result.title or None,
+                    equipment_type_id=dev_result.equipment_type_id,
+                    cause_stage_id=dev_result.cause_stage_id,
                 )
                 await self._deviation_repo.add(dev)
                 deviations.append(dev)
 
-            # Шаг 9: Персистировать DeviationEvidence
-            # Построить dict фото по captured_on (all_photos загружены на шаге 4)
-            photos_by_date: dict[date, list] = {}
-            for photo in all_photos:
-                if photo.captured_on is not None:
-                    if photo.captured_on not in photos_by_date:
-                        photos_by_date[photo.captured_on] = []
-                    photos_by_date[photo.captured_on].append(photo)
+            # Шаг 9: Персистировать DeviationEvidence — до трёх снимков с подписями
+            # (clean-mvp, assessment/evidence.py), а не все снимки дат отклонения
+            done = [
+                p
+                for p in all_photos
+                if p.captured_on is not None and p.processing_status == ProcessingStatus.DONE.value
+            ]
+            dets_by_photo: dict[uuid.UUID, list[DetectionFacts]] = {}
+            for det in await self._detection_repo.list_by_photos([p.id for p in done]):
+                dets_by_photo.setdefault(det.photo_id, []).append(
+                    DetectionFacts(det.id, det.equipment_type_id, det.bbox, det.score)
+                )
+            facts = [
+                PhotoFacts(
+                    id=p.id,
+                    camera_id=p.camera_id,
+                    day=p.captured_on,
+                    at=p.captured_at,
+                    name=p.original_name,
+                    detections=dets_by_photo.get(p.id, []),
+                )
+                for p in done
+                if p.captured_on is not None
+            ]
+            camera_rows = await self._session.execute(
+                select(Camera.id, Camera.name, Camera.zone).where(Camera.site_id == site_id)
+            )
+            cameras = {cid: CameraFacts(name, zone) for cid, name, zone in camera_rows.all()}
 
             evidence_rows: list[DeviationEvidence] = []
             for dev, dev_result in zip(deviations, computation.deviations, strict=True):
-                # Найти фото, которые подходят по дате и статусу обработки
-                for evidence_date in dev_result.evidence_dates:
-                    matching_photos = photos_by_date.get(evidence_date, [])
-                    for photo in matching_photos:
-                        if photo.processing_status == ProcessingStatus.DONE.value:
-                            evidence_rows.append(
-                                DeviationEvidence(
-                                    id=uuid.uuid4(),
-                                    deviation_id=dev.id,
-                                    photo_id=photo.id,
-                                    detection_id=None,
-                                )
-                            )
+                for shot in select_evidence(dev_result, facts, cameras, equipment_names):
+                    evidence_rows.append(
+                        DeviationEvidence(
+                            id=uuid.uuid4(),
+                            deviation_id=dev.id,
+                            photo_id=shot.photo_id,
+                            detection_id=shot.detection_id,
+                            caption=shot.caption,
+                        )
+                    )
 
             if evidence_rows:
                 await self._deviation_evidence_repo.add_many(evidence_rows)
+
+            # Шаг 9b: Итог по объекту — по той же опорной дате, что статусы
+            summary = computation.summary
+            row = await self._session.get(SiteSummary, site_id)
+            if row is None:
+                row = SiteSummary(site_id=site_id)
+                self._session.add(row)
+            row.verdict = summary.verdict.value
+            row.delay_days_min = summary.delay_days_min
+            row.delay_days_max = summary.delay_days_max
+            row.stage_id = summary.stage_id
+            row.reason = summary.reason
+            row.as_of = summary.as_of
 
             # Шаг 10: Коммитить
             await self._session.commit()

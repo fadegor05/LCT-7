@@ -84,6 +84,7 @@ async def test_schedule_stages_columns(engine: AsyncEngine) -> None:
             "planned_start",
             "planned_end",
             "dates_source",
+            "work_names",
         }
 
 

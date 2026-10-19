@@ -7,8 +7,9 @@ import os
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.base import (
@@ -18,6 +19,7 @@ from app.adapters.ml.base import (
 )
 from app.adapters.storage.base import FileStorage, StorageError
 from app.core.settings import Settings
+from app.domains.assessment.models import DeviationEvidence
 from app.domains.camera.models import Camera
 from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import EquipmentCatalog
@@ -28,7 +30,7 @@ from app.domains.photo.date_resolver import (
 )
 from app.domains.photo.models import DateSource, Detection, Photo, ProcessingStatus
 from app.domains.photo.recalculator import ObservationRecalculator
-from app.domains.photo.render import RENDER_VERSION, render_annotated
+from app.domains.photo.render import MAX_SIDE, RENDER_VERSION, THUMB_SIDE, render_annotated
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
 from app.domains.photo.schemas import (
     DetectBacklogReport,
@@ -38,6 +40,7 @@ from app.domains.photo.schemas import (
     UploadItem,
     UploadReport,
 )
+from app.domains.photo.series import StampedFrame, check_series, confirm_uncertain
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
 
@@ -60,6 +63,10 @@ class AnnotatedImage:
     etag: str
     content: bytes | None
     content_type: str = "image/jpeg"
+
+
+# Соседи серии камеры не дальше этого — подтверждают неуверенный штамп (clean-mvp: 12 ч)
+SERIES_MAX_GAP = timedelta(hours=12)
 
 
 class PhotoService:
@@ -148,8 +155,14 @@ class PhotoService:
             if item.photo is not None:
                 batch_photo_ids.append(item.photo.id)
 
+        # Кадры камеры: неуверенный штамп подтверждает серия камеры, выбросы серии
+        # помечаются (clean-mvp). Соседей по пачке такому кадру не подставляем: дата
+        # соседнего снимка — не свидетель его времени
+        if batch_photo_ids and camera_id is not None:
+            await self._apply_camera_series(site_id, camera_id)
+            await self._session.commit()
         # Neighbour step: найти фото в батче без даты и проставить дату от соседей
-        if batch_photo_ids:
+        elif batch_photo_ids:
             await self._apply_neighbours_dating(site_id, batch_photo_ids)
             await self._session.flush()
             await self._session.commit()
@@ -193,9 +206,10 @@ class PhotoService:
         camera_id: uuid.UUID,
         content: bytes,
         filename: str,
-        captured_on: date,
+        captured_at: datetime,
     ) -> UploadItem:
-        """Принять кадр, снятый со стрима камеры: дата — из момента снимка, без штампа.
+        """Принять кадр, снятый со стрима камеры: дата и время — момент снимка (местное время
+        стройки), без штампа.
 
         Доступ к стройке проверяет вызывающий (HTTP-роут или фоновый планировщик), поэтому
         здесь гварда нет. Камера обязана принадлежать этой стройке.
@@ -205,11 +219,11 @@ class PhotoService:
             site_id,
             UploadInput(filename=filename, content=content, content_type="image/jpeg"),
             camera_id,
-            channel_date=captured_on,
+            channel_date=captured_at,
         )
         if item.photo is not None:
             try:
-                await self._recalculator.recompute(site_id, captured_on)
+                await self._recalculator.recompute(site_id, captured_at.date())
             except Exception:
                 logger.exception("Ошибка при пересчёте наблюдений после кадра со стрима")
                 await self._session.rollback()
@@ -317,6 +331,9 @@ class PhotoService:
             height=info.height,
             captured_on=resolved_date.captured_on,
             date_source=resolved_date.source.value if resolved_date.source else None,
+            captured_at=resolved_date.captured_at,
+            date_hint=resolved_date.hint,
+            uncertain_at=resolved_date.uncertain_at,
             processing_status=ProcessingStatus.PENDING.value,
             camera_id=camera_id,
         )
@@ -454,6 +471,51 @@ class PhotoService:
 
         await self._apply_result(photo, result, keep_same_version=False)
 
+    async def _apply_camera_series(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> None:
+        """Серия штампов камеры (clean-mvp, observation/series.py).
+
+        Неуверенный штамп принимается, если его подтверждают уверенные соседи серии (не
+        дальше SERIES_MAX_GAP); у кадров со штампом помечается, выбивается ли время из
+        серии (time_check), — по нему движку видно, насколько надёжно время.
+        """
+        photos = [
+            p for p in await self._repository.list_by_site(site_id) if p.camera_id == camera_id
+        ]
+
+        def stamped(p: Photo, at: datetime) -> StampedFrame:
+            return StampedFrame(str(p.id), str(camera_id), p.original_name, p.uploaded_at, at)
+
+        confirmed = [
+            stamped(p, p.captured_at)
+            for p in photos
+            if p.date_source == DateSource.STAMP.value and p.captured_at is not None
+        ]
+        uncertain = [
+            stamped(p, p.uncertain_at)
+            for p in photos
+            if p.captured_on is None and p.uncertain_at is not None
+        ]
+        accepted = confirm_uncertain(confirmed, uncertain, SERIES_MAX_GAP)
+        by_id = {str(p.id): p for p in photos}
+        for photo_id in accepted:
+            photo = by_id[photo_id]
+            assert photo.uncertain_at is not None
+            photo.captured_at = photo.uncertain_at
+            photo.captured_on = photo.uncertain_at.date()
+            photo.date_source = DateSource.STAMP.value
+            photo.date_hint = None
+            photo.uncertain_at = None
+        checks = check_series(
+            [
+                stamped(p, p.captured_at)
+                for p in photos
+                if p.date_source == DateSource.STAMP.value and p.captured_at is not None
+            ]
+        )
+        for photo_id, check in checks.items():
+            by_id[photo_id].time_check = check
+        await self._session.flush()
+
     async def _apply_neighbours_dating(
         self, site_id: uuid.UUID, batch_photo_ids: list[uuid.UUID]
     ) -> None:
@@ -535,7 +597,44 @@ class PhotoService:
         """
         await self._site_guard.require(site_id)
         photos = await self._repository.list_by_site(site_id, undated=undated)
-        return [PhotoRead.model_validate(p) for p in photos]
+        if not photos:
+            return []
+        ids = [p.id for p in photos]
+        by_photo: dict[uuid.UUID, list[Detection]] = {}
+        for det in await self._detections.list_by_photos(ids):
+            by_photo.setdefault(det.photo_id, []).append(det)
+        camera_ids = {p.camera_id for p in photos if p.camera_id is not None}
+        zones: dict[uuid.UUID, list[list[float]] | None] = {}
+        if camera_ids:
+            rows = await self._session.execute(
+                select(Camera.id, Camera.zone).where(Camera.id.in_(camera_ids))
+            )
+            zones = {cid: zone for cid, zone in rows.all()}
+        evidence = set(
+            (
+                await self._session.execute(
+                    select(DeviationEvidence.photo_id).where(DeviationEvidence.photo_id.in_(ids))
+                )
+            ).scalars()
+        )
+        titles: dict[uuid.UUID, str] = {}
+        result = []
+        for p in photos:
+            dets = by_photo.get(p.id, [])
+            for det in dets:
+                if det.equipment_type_id not in titles:
+                    item = await self._catalog.by_id(det.equipment_type_id)
+                    titles[det.equipment_type_id] = (
+                        item.title if item is not None else "Неизвестная техника"
+                    )
+            zone = zones.get(p.camera_id) if p.camera_id is not None else None
+            read = PhotoRead.model_validate(p)
+            # Порядок — как машины встречаются на кадре, без повторов
+            read.machines = list(dict.fromkeys(titles[d.equipment_type_id] for d in dets))
+            read.out_of_zone = any(bbox_in_zone(d.bbox, zone) is False for d in dets)
+            read.evidence = p.id in evidence
+            result.append(read)
+        return result
 
     async def get_photo(self, site_id: uuid.UUID, photo_id: uuid.UUID) -> PhotoDetail:
         """Получить фотографию с детекциями.
@@ -644,6 +743,11 @@ class PhotoService:
 
         photo.captured_on = captured_on
         photo.date_source = DateSource.MANUAL.value
+        # Ручная дата — без времени: прежние время, подсказка и проверка серии не про неё
+        photo.captured_at = None
+        photo.date_hint = None
+        photo.uncertain_at = None
+        photo.time_check = None
         await self._session.commit()
 
         # Build response BEFORE calling recalculator hook to avoid session poisoning
@@ -694,6 +798,7 @@ class PhotoService:
         site_id: uuid.UUID,
         photo_id: uuid.UUID,
         if_none_match: str | None = None,
+        thumb: bool = False,
     ) -> AnnotatedImage:
         """Получить снимок с нарисованными рамками детекций.
 
@@ -707,6 +812,7 @@ class PhotoService:
             site_id: ID стройки
             photo_id: ID фотографии
             if_none_match: Значение заголовка If-None-Match от клиента
+            thumb: миниатюра для ленты — меньше и только рамки, без подписей (clean-mvp)
 
         Returns:
             AnnotatedImage (content=None, если у клиента актуальная версия)
@@ -719,7 +825,7 @@ class PhotoService:
 
         fingerprint = hashlib.sha256(
             "|".join(
-                [RENDER_VERSION, storage_key]
+                [RENDER_VERSION, storage_key, "thumb" if thumb else "full"]
                 + sorted(
                     f"{d.equipment_code}:{','.join(f'{v:.6f}' for v in d.bbox)}:{d.score:.4f}"
                     for d in photo.detections
@@ -744,7 +850,11 @@ class PhotoService:
 
         try:
             content, content_type = await asyncio.to_thread(
-                render_annotated, original, photo.detections
+                render_annotated,
+                original,
+                photo.detections,
+                THUMB_SIDE if thumb else MAX_SIDE,
+                labels=not thumb,
             )
         except InvalidImageError as e:
             raise AppError("Файл снимка недоступен", status_code=404) from e

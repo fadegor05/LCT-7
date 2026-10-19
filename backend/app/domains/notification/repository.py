@@ -3,8 +3,9 @@
 import uuid
 from collections.abc import Sequence
 from datetime import datetime
+from typing import cast
 
-from sqlalchemy import func, select, update
+from sqlalchemy import CursorResult, func, select, update
 
 from app.core.repository import BaseRepository
 from app.domains.notification.models import (
@@ -41,10 +42,14 @@ class NotificationRepository(BaseRepository[Notification]):
 
     async def mark_all_read(self, user_id: uuid.UUID, now: datetime) -> int:
         """Пометить прочитанными все непрочитанные этого пользователя; сколько тронули."""
-        result = await self._session.execute(
-            update(Notification)
-            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
-            .values(read_at=now)
+        # UPDATE возвращает CursorResult: у него есть rowcount, у общего Result — нет
+        result = cast(
+            CursorResult,
+            await self._session.execute(
+                update(Notification)
+                .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+                .values(read_at=now)
+            ),
         )
         await self._session.flush()
         return int(result.rowcount or 0)

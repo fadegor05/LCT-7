@@ -23,6 +23,21 @@ SPECIFIC_EQUIPMENT_CODES: frozenset[str] = frozenset(
     }
 )
 
+# Неподвижная техника: стоит на площадке весь срок и о том, какой этап идёт, не говорит
+# ничего — маркером этапа не бывает (как в clean-mvp, EngineConfig.stationary_classes)
+STATIONARY_EQUIPMENT_CODES: frozenset[str] = frozenset({"tower_crane"})
+
+# Класс «тип не определён» → конкретные классы, с которыми он совместим (как в clean-mvp,
+# catalog/equipment.py): «Экскаватор (тип не определён)» подходит этапу с гусеничным
+# экскаватором и не делает его «несоответствием этапу».
+COARSE_TO_SPECIFIC: dict[str, frozenset[str]] = {
+    "excavator_unknown": frozenset({"excavator_crawler", "excavator_wheeled", "backhoe_loader"}),
+    "crane_unknown": frozenset({"tower_crane", "truck_crane", "crawler_crane", "loader_crane"}),
+    "drilling_unknown": frozenset({"drilling_rig", "pile_driver", "dwall_rig"}),
+    "truck_unknown": frozenset({"dump_truck", "flatbed_truck"}),
+    "loader_unknown": frozenset({"wheel_loader", "backhoe_loader", "telehandler"}),
+}
+
 
 @dataclass(frozen=True)
 class EquipmentTypeInfo:

@@ -1,12 +1,16 @@
 """HTTP-клиент для чтения даты со штампа через ML-сервис (LCT-13).
 
 Контракт: POST {base}/stamp, multipart/form-data, поле `file`.
-Ответ: {"date": "2024-04-24" | null, "text": "...", "roi": "right"|"left"|null}.
+Ответ: {"date": "2024-04-24" | null, "text": "...", "roi": "right"|"left"|"camera"|null,
+"profile": "2592x1944" | null}. `profile` при `date: null` — кадр камеры известного
+разрешения, на котором время не прочитано.
 Ошибки как у /detect: 400/413/422 не повторяются, 503 — retry с backoff.
 """
 
 import asyncio
+import datetime as dt
 import logging
+from dataclasses import dataclass
 from datetime import date
 
 import httpx
@@ -22,8 +26,53 @@ class _StampSchema(BaseModel):
     date: str | None = None
     text: str | None = None
     roi: str | None = None
+    profile: str | None = None
+    found: bool = False
+    captured_at: str | None = None
+    confidence: float = 0.0
+    method: str | None = None
 
     model_config = {"extra": "ignore"}
+
+
+@dataclass(frozen=True)
+class StampReading:
+    """Дата со штампа и профиль камеры; оба None — штамп не прочитан, сервис недоступен."""
+
+    date: dt.date | None = None
+    profile: str | None = None
+    # Контракт clean-mvp: штамп найден, его местное время, уверенность, способ чтения
+    found: bool = False
+    captured_at: dt.datetime | None = None
+    confidence: float = 0.0
+    method: str | None = None
+
+
+_NOTHING = StampReading()
+
+
+def _reading(parsed: _StampSchema) -> StampReading:
+    """Ответ /stamp → StampReading; неразборчивая дата или время — как их нет."""
+    day: dt.date | None = None
+    moment: dt.datetime | None = None
+    if parsed.date:
+        try:
+            day = date.fromisoformat(parsed.date)
+        except ValueError:
+            logger.warning("Stamp service returned unparseable date: %r", parsed.date)
+    if parsed.captured_at:
+        try:
+            moment = dt.datetime.fromisoformat(parsed.captured_at)
+        except ValueError:
+            logger.warning("Stamp service returned unparseable time: %r", parsed.captured_at)
+    return StampReading(
+        date=day,
+        profile=parsed.profile,
+        found=parsed.found or day is not None,
+        captured_at=moment,
+        confidence=parsed.confidence,
+        method=parsed.method,
+    )
 
 
 class HttpStampReader:
@@ -51,6 +100,9 @@ class HttpStampReader:
         return None
 
     async def read_date(self, content: bytes) -> date | None:
+        return (await self.read(content)).date
+
+    async def read(self, content: bytes) -> StampReading:
         url = f"{self.base_url}/stamp"
         timeout = httpx.Timeout(self.settings.timeout_s, connect=self.settings.connect_timeout_s)
 
@@ -75,11 +127,11 @@ class HttpStampReader:
                             total_sleep = new_spent
                             continue
                     logger.warning("Stamp service 503, retries exhausted")
-                    return None
+                    return _NOTHING
 
                 if 400 <= response.status_code < 500:
                     logger.warning("Stamp service HTTP %d, no retry", response.status_code)
-                    return None
+                    return _NOTHING
 
                 if response.status_code >= 500:
                     if retry_other_count < self.settings.retry_other:
@@ -89,7 +141,7 @@ class HttpStampReader:
                             total_sleep = new_spent
                             continue
                     logger.warning("Stamp service HTTP %d, retries exhausted", response.status_code)
-                    return None
+                    return _NOTHING
 
                 if response.status_code == 200:
                     try:
@@ -97,17 +149,11 @@ class HttpStampReader:
                         parsed = _StampSchema(**data)
                     except Exception:
                         logger.warning("Stamp service: invalid response body")
-                        return None
-                    if not parsed.date:
-                        return None
-                    try:
-                        return date.fromisoformat(parsed.date)
-                    except ValueError:
-                        logger.warning("Stamp service returned unparseable date: %r", parsed.date)
-                        return None
+                        return _NOTHING
+                    return _reading(parsed)
 
                 logger.warning("Stamp service unexpected HTTP %d", response.status_code)
-                return None
+                return _NOTHING
 
             except httpx.TimeoutException:
                 if retry_other_count < self.settings.retry_other:
@@ -117,7 +163,7 @@ class HttpStampReader:
                         total_sleep = new_spent
                         continue
                 logger.warning("Stamp service timeout, retries exhausted")
-                return None
+                return _NOTHING
             except httpx.TransportError:
                 if retry_other_count < self.settings.retry_other:
                     retry_other_count += 1
@@ -126,4 +172,4 @@ class HttpStampReader:
                         total_sleep = new_spent
                         continue
                 logger.warning("Stamp service connection error, retries exhausted")
-                return None
+                return _NOTHING

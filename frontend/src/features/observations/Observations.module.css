@@ -1,7 +1,10 @@
+/* Дни — одной строкой с прокруткой (clean-mvp): десятки дней не съедают экран */
 .days {
   display: flex;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
 }
 
 .day {
@@ -10,6 +13,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  flex-shrink: 0;
   min-width: 112px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
@@ -48,6 +52,13 @@
   align-items: center;
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--line);
+}
+
+/* Основание активности — под строкой во всю ширину */
+.basis {
+  grid-column: 1 / -1;
+  margin: 0;
+  white-space: pre-line;
 }
 
 .equipmentRow:last-child {
@@ -143,4 +154,45 @@
   display: flex;
   gap: var(--space-2);
   align-items: center;
+}
+
+.cameraStrip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Имя камеры слева, кнопки ‹ › ленты справа */
+.stripHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stripHead > :first-child {
+  flex-grow: 1;
+}
+
+/* Зона — зелёным пунктиром: рамки техники другого цвета, их не спутать */
+.zone {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.zone polygon {
+  fill: rgb(11 122 99 / 10%);
+  stroke: var(--status-ontrack);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.zone polygon.zoneHalo {
+  fill: none;
+  stroke: rgb(255 255 255 / 85%);
+  stroke-width: 4;
+  stroke-dasharray: none;
 }

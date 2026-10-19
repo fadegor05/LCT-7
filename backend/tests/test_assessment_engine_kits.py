@@ -13,7 +13,7 @@ from app.domains.assessment.engine import (
     RuleInput,
     StageInput,
 )
-from app.domains.assessment.models import DeviationType, StageStatusValue
+from app.domains.assessment.models import DeviationType, Severity, StageStatusValue
 from app.domains.observation.models import Confidence
 
 
@@ -317,9 +317,10 @@ class TestKitConfirmation3:
             )
         }
 
+        # Три даты подряд: экскаватор есть, самосвала нет
         observations = [
             ObservationInput(
-                observed_on=date(2024, 1, 16),
+                observed_on=day,
                 photo_count=10,
                 observability="high",
                 equipment=[
@@ -330,7 +331,8 @@ class TestKitConfirmation3:
                         confidence="high",
                     )
                 ],
-            ),
+            )
+            for day in (date(2024, 1, 16), date(2024, 1, 17), date(2024, 1, 18))
         ]
 
         equipment_names = {
@@ -348,16 +350,17 @@ class TestKitConfirmation3:
         assert status.confidence == Confidence.LOW
         assert status.confidence_reason == "подтверждено только универсальной техникой"
 
-        # Должно быть отклонение missing_logical_equipment
-        missing_logical = [
-            d for d in result.deviations if d.type == DeviationType.MISSING_LOGICAL_EQUIPMENT
-        ]
-        assert len(missing_logical) == 1
-        deviation = missing_logical[0]
-        # В observed должно быть имя самосвала
-        assert "Самосвал" in deviation.observed
-        # evidence_dates должны содержать дату наблюдения
-        assert date(2024, 1, 16) in deviation.evidence_dates
+        # «Неполный комплект» (clean-mvp): маркер виден, логического самосвала нет три даты
+        incomplete = [d for d in result.deviations if d.type == DeviationType.INCOMPLETE_KIT]
+        assert len(incomplete) == 1
+        deviation = incomplete[0]
+        assert deviation.is_hypothesis is False
+        assert deviation.severity == Severity.ATTENTION
+        assert deviation.expected == "Самосвал — логическая техника этапа «Excavation»."
+        assert "самосвал — нет ни на одном снимке за 3 даты: 16.01, 17.01, 18.01" in (
+            deviation.observed
+        )
+        assert deviation.evidence_dates == (date(2024, 1, 16), date(2024, 1, 17), date(2024, 1, 18))
 
 
 class TestKitConfirmation4:
@@ -623,7 +626,11 @@ class TestMissingEquipmentDeviation:
     """Тест: MISSING_EQUIPMENT для двухмашинного набора с только одной машиной."""
 
     def test_missing_equipment_when_kit_not_fulfilled(self):
-        """Высокая observability, ни один набор не выполнен -> MISSING_EQUIPMENT."""
+        """Три дня с высокой observability, ни один набор не выполнен -> MISSING_EQUIPMENT.
+
+        «Нет маркерной техники» — по окну из window_dates дат после допуска от начала,
+        а не по одному дню.
+        """
         config = EngineConfig(
             tolerance_days=5,
             stale_data_days=30,
@@ -643,7 +650,7 @@ class TestMissingEquipmentDeviation:
                 stage_id=stage_id,
                 name="Excavation",
                 position=1,
-                planned_start=date(2024, 1, 15),
+                planned_start=date(2024, 1, 8),
                 planned_end=date(2024, 1, 25),
             )
         ]
@@ -679,6 +686,19 @@ class TestMissingEquipmentDeviation:
         observations = [
             ObservationInput(
                 observed_on=date(2024, 1, 16),
+                photo_count=10,
+                observability="high",
+                equipment=[
+                    ObservedEquipmentInput(
+                        equipment_type_id=excavator_id,
+                        count_min=1,
+                        activity="works",
+                        confidence="high",
+                    )
+                ],
+            ),
+            ObservationInput(
+                observed_on=date(2024, 1, 17),
                 photo_count=10,
                 observability="high",
                 equipment=[

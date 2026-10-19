@@ -16,6 +16,7 @@ class ObservedEquipmentRead(BaseModel):
     equipment_title: str
     count_min: int
     activity: str
+    activity_basis: str | None = None
     confidence: str
 
 

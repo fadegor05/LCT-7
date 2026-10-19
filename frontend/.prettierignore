@@ -5,3 +5,4 @@ node_modules
 .pnpm-store
 pnpm-lock.yaml
 public/mockServiceWorker.js
+.pnpm-store

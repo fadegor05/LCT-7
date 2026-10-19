@@ -46,6 +46,7 @@ export const deviationTypeLabels: Record<DeviationType, string> = {
   out_of_zone: 'Вне рабочей зоны',
   no_progress: 'Нет прогресса',
   behind_schedule: 'Отставание от графика',
+  incomplete_kit: 'Неполный комплект',
 }
 
 export const severityLabels: Record<Severity, string> = {

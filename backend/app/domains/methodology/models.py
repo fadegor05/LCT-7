@@ -123,6 +123,9 @@ class EquipmentRequirement(Base):
     obligation: Mapped[str] = mapped_column(String(16), nullable=False)
     gesn_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Группа взаимозаменяемой техники («piling» — буровая, копёр или грейфер): для
+    # «Неполного комплекта» нехватка группы — когда нет ни одной её машины (clean-mvp)
+    group_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     __table_args__ = (
         CheckConstraint("min_count >= 1", name="ck_equipment_requirements_min_count"),

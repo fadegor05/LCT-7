@@ -7,7 +7,8 @@ describe('SitesPage', () => {
   it('lists sites with their summary and the cross-site deviations', async () => {
     renderRoute('/sites')
     const list = await screen.findByRole('region', { name: 'Список строек' })
-    expect(screen.getByText('2 объекта')).toBeInTheDocument()
+    // Как в clean-mvp: число объектов и дата данных — последняя среди объектов
+    expect(await screen.findByText(/^2 объекта · данные на \d\d\.\d\d\.\d{4}$/)).toBeInTheDocument()
     const berezniki = within(list).getByRole('link', { name: /Жилой дом · Березники/ })
     expect(await within(berezniki).findByText('Отставание 4 дней')).toBeInTheDocument()
     expect(within(berezniki).getByLabelText('Критично')).toHaveTextContent('1')

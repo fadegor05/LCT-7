@@ -426,7 +426,13 @@ export function applyDefaultKits(siteId: string): {
 
 // ---------- Снимки и наблюдения ----------
 
-const toPhoto = ({ detections: _, ...photo }: StoredPhoto): Photo => photo
+/** Список снимков, как у бэкенда: сводка кадра для подписи в ленте. */
+const toPhoto = ({ detections: dets, ...photo }: StoredPhoto): Photo => ({
+  ...photo,
+  machines: [...new Set(dets.map((d) => d.equipment_title))],
+  out_of_zone: false, // у моков нет зон камер
+  evidence: photo.evidence ?? false,
+})
 
 function detections(photoId: string, codes: readonly string[]): Detection[] {
   return codes.map((code, i) => {
@@ -479,6 +485,10 @@ function recompute(siteId: string, date: string): void {
           equipment_title: type.title,
           count_min: count,
           activity: code === 'excavator_crawler' ? 'works' : 'unknown',
+          activity_basis:
+            code === 'excavator_crawler'
+              ? 'Движение: машина сместилась между 10:05 и 10:15\nЗона: внутри зоны'
+              : 'Движение: пары кадров для сравнения нет (один кадр)\nЗона: внутри зоны',
           confidence: photos.some((p) => p.date_source === 'manual') ? 'medium' : 'high',
         }
       }),
@@ -520,9 +530,11 @@ export function findPhoto(siteId: string, photoId: string): StoredPhoto {
 export function uploadPhotos(
   siteId: string,
   files: readonly { name: string; type: string }[],
+  cameraId: string | null = null,
 ): UploadReport {
   getSite(siteId)
   if (files.length === 0) throw new MockError(422, 'Нет файлов')
+  if (cameraId) findCamera(siteId, cameraId)
   const touched = new Set<string>()
   const items = files.map((file) => {
     if (!file.type.startsWith('image/')) {
@@ -540,6 +552,7 @@ export function uploadPhotos(
       date_source: date ? 'metadata' : null,
       processing_status: 'done',
       uploaded_at: now(),
+      camera_id: cameraId,
       detections: detections(id, ['dump_truck']),
     }
     state.photos.push(photo)
@@ -615,6 +628,7 @@ export function listStageStatuses(siteId: string): StageStatus[] {
       position: stage.position,
       status: s?.status ?? null,
       delay_days: s?.delay_days ?? null,
+      delay_open: s?.delay_open ?? false,
       confidence: s?.confidence ?? null,
       confidence_reason: s?.confidence_reason ?? null,
       computed_at: s?.computed_at ?? null,
@@ -634,8 +648,17 @@ export function getDeviation(siteId: string, id: string): DeviationDetail {
   return deviation
 }
 
-/** Как AssessmentService.get_summary. */
+/** Как AssessmentService.get_summary; as_of — дата последнего наблюдения (last_observation). */
 export function getSummary(siteId: string): SiteSummary {
+  const as_of =
+    listObservations(siteId)
+      .map((o) => o.observed_on)
+      .sort()
+      .at(-1) ?? null
+  return { ...summaryOf(siteId), as_of }
+}
+
+function summaryOf(siteId: string): SiteSummary {
   const deviations = listDeviations(siteId)
   const counts = {
     critical_count: deviations.filter((d) => d.severity === 'critical').length,
@@ -647,17 +670,34 @@ export function getSummary(siteId: string): SiteSummary {
     return { ...insufficient, ...counts } as SiteSummary
   const meaningful = statuses.filter((s) => !['not_observed', 'not_checked'].includes(s.status!))
   if (meaningful.length === 0) return { ...insufficient, ...counts } as SiteSummary
-  const behind = statuses.filter((s) => s.status === 'behind')
-  if (behind.length > 0) {
-    const delays = behind.map((s) => s.delay_days).filter((d): d is number => d !== null)
+  // Худший этап с отставанием (engine.summarize): «Не начат» — отставание «от N дней»
+  const lagging = [...(state.statuses.get(siteId)?.entries() ?? [])].filter(
+    ([, s]) => (s.status === 'behind' || s.status === 'not_started') && s.delay_days,
+  )
+  if (lagging.length > 0) {
+    const [stageId, worst] = lagging.reduce((a, b) =>
+      b[1].delay_days! > a[1].delay_days! ||
+      (b[1].delay_days === a[1].delay_days && b[1].delay_open && !a[1].delay_open)
+        ? b
+        : a,
+    )
+    const name = state.schedules.get(siteId)?.stages.find((st) => st.id === stageId)?.name
     return {
       verdict: 'behind',
-      delay_days_min: delays.length ? Math.min(...delays) : null,
-      delay_days_max: delays.length ? Math.max(...delays) : null,
+      delay_days_min: worst.delay_days,
+      delay_days_max: worst.delay_open ? null : worst.delay_days,
+      stage_id: stageId,
+      reason: `Измерено по этапу «${name}». Точность не выше частоты съёмки.`,
       ...counts,
     }
   }
-  return { verdict: 'no_deviations', delay_days_min: null, delay_days_max: null, ...counts }
+  return {
+    verdict: 'no_deviations',
+    delay_days_min: null,
+    delay_days_max: null,
+    reason: 'Отклонений не выявлено.',
+    ...counts,
+  }
 }
 
 // ---------- Ассистент ----------
@@ -897,6 +937,23 @@ export function updateCamera(siteId: string, cameraId: string, data: Partial<Cam
  * источником «channel», итог попытки — у камеры. В моках сбой даёт ссылка с «offline», занятый
  * стрим — ссылка с «busy» (это не попытка, поэтому статус камеры не меняется).
  */
+// 1×1 PNG: пробный кадр моков — содержимое не важно, важны размеры для пропорций зоны
+const PREVIEW_PIXEL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII='
+
+/** Как CameraCaptureService.preview: кадр по ссылке, ничего не пишет. */
+export function previewFrame(
+  siteId: string,
+  streamUrl: string,
+): { image: string; width: number; height: number } {
+  getSite(siteId)
+  const url = checkStreamUrl(streamUrl)
+  if (!url) throw new MockError(422, 'Укажите ссылку на стрим')
+  if (url.includes('busy')) throw new MockError(409, 'Снимок уже идёт, подождите')
+  if (url.includes('offline')) throw new MockError(422, 'Камера не ответила за 15 с')
+  return { image: PREVIEW_PIXEL, width: 1920, height: 1080 }
+}
+
 export function captureCamera(siteId: string, cameraId: string): Photo {
   const camera = findCamera(siteId, cameraId)
   if (!camera.stream_url) throw new MockError(422, 'У камеры нет ссылки на стрим')
