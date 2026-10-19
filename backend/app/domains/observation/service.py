@@ -23,6 +23,7 @@ from app.domains.observation.policies import (
 from app.domains.observation.repository import ObservationRepository, ObservedEquipmentRepository
 from app.domains.observation.schemas import ObservationRead, ObservedEquipmentRead
 from app.domains.photo.repository import DetectionRepository, PhotoRepository
+from app.domains.photo.series import SERIES_OUTLIER
 from app.domains.site.guard import SiteAccessGuard
 from app.plugins.exceptions import AppError
 
@@ -125,7 +126,11 @@ class ObservationService:
             for p in await self._photos.list_by_site(site_id)
             # Только светлое время суток (clean-mvp): ночью техника не видна и не работает.
             # Снимки без времени (только дата) идут в наблюдения, как раньше
-            if p.captured_at is None or DAYLIGHT_FROM_HOUR <= p.captured_at.hour < DAYLIGHT_TO_HOUR
+            if (
+                p.captured_at is None or DAYLIGHT_FROM_HOUR <= p.captured_at.hour < DAYLIGHT_TO_HOUR
+            )
+            # Время выбилось из серии камеры — кадр ждёт подтверждения (clean-mvp)
+            and p.time_check != SERIES_OUTLIER
         ]
         day_photos = [p for p in all_photos if p.captured_on == observed_on]
 

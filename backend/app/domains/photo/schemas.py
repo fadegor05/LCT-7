@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class DetectionRead(BaseModel):
@@ -41,6 +41,8 @@ class PhotoRead(BaseModel):
     captured_at: datetime | None = None
     date_hint: date | None = None
     time_check: str | None = None
+    # Неуверенно прочитанное время штампа — подсказка «дд.мм.гггг чч:мм» для ввода
+    uncertain_at: datetime | None = None
     # Сводка кадра для подписи в ленте (clean-mvp): какая техника на нём, есть ли машина
     # за контуром зоны камеры, служит ли он снимком-доказательством отклонения
     machines: list[str] = []
@@ -84,7 +86,23 @@ class DateUpdate(BaseModel):
     интерфейса. Проверка в схеме отдавала бы пользователю сообщение pydantic.
     """
 
-    captured_on: date
+    captured_on: date | None = None
+    # Дата и время (местное время стройки) — как в clean-mvp «дд.мм.гггг чч:мм»
+    captured_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def _one_of(self) -> "DateUpdate":
+        if self.captured_on is None and self.captured_at is None:
+            raise ValueError("нужна дата (captured_on) или дата и время (captured_at)")
+        return self
+
+
+class TimeBatch(BaseModel):
+    """Пакетный ввод времени кадров одной камеры: первый кадр и шаг (clean-mvp)."""
+
+    photo_ids: list[uuid.UUID] = Field(min_length=1, max_length=1000)
+    first: datetime
+    step_minutes: float = Field(gt=0, le=24 * 60)
 
 
 class DetectBacklogReport(BaseModel):
