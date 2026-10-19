@@ -98,6 +98,9 @@ class EngineConfig:
     # «Критично» — не раньше стольких дней от начала этапа и, у отклонений по замеченной
     # машине, только когда она видна столько дат подряд: один случайный день — «Внимание»
     critical_days: int = 3
+    # Вне своего окна этап сравнивается с этапами, закончившимися или начинающимися в
+    # пределах стольких дней: техника недавно закончившегося этапа скорее его, чем чужая
+    lookback_days: int = 14
 
 
 @dataclass(frozen=True)
@@ -152,6 +155,59 @@ class SummaryResult:
 
 
 @dataclass(frozen=True)
+class _Plan:
+    """Этапы с методикой и общие для расчёта справочники (маркеры на дату, как в clean)."""
+
+    stages: Sequence[StageInput]
+    rules: Mapping[uuid.UUID, RuleInput]
+    stationary: frozenset[uuid.UUID]
+    tolerance_days: int
+    lookback_days: int
+
+    @staticmethod
+    def normative(rule: RuleInput) -> frozenset[uuid.UUID]:
+        return frozenset(
+            r.equipment_type_id
+            for kit in rule.effective_kits
+            for r in kit.requirements
+            if r.obligation == "normative"
+        )
+
+    @staticmethod
+    def classes(rule: RuleInput) -> frozenset[uuid.UUID]:
+        ids = {r.equipment_type_id for r in rule.requirements}
+        for kit in rule.effective_kits:
+            ids.update(r.equipment_type_id for r in kit.requirements)
+        return frozenset(ids)
+
+    @staticmethod
+    def in_window(stage: StageInput, day: date, margin: int) -> bool:
+        if stage.planned_start is None or stage.planned_end is None:
+            return False
+        t = timedelta(days=margin)
+        return stage.planned_start - t <= day <= stage.planned_end + t
+
+    def markers_on(self, stage: StageInput, day: date) -> frozenset[uuid.UUID]:
+        """Маркеры этапа на дату: нормативная техника, которой нет у этапов, идущих в этот
+        день. Неподвижная (башенный кран) о том, какой этап идёт, не говорит ничего."""
+        rule = self.rules.get(stage.stage_id)
+        if rule is None or not rule.is_verifiable:
+            return frozenset()
+        own_window = self.in_window(stage, day, self.tolerance_days)
+        margin = self.tolerance_days if own_window else self.lookback_days
+        shared: set[uuid.UUID] = set()
+        for other in self.stages:
+            other_rule = self.rules.get(other.stage_id)
+            if other.stage_id == stage.stage_id or other_rule is None:
+                continue
+            if not other_rule.is_verifiable:
+                continue
+            if self.in_window(other, day, margin):
+                shared |= self.classes(other_rule)
+        return self.normative(rule) - shared - self.stationary
+
+
+@dataclass(frozen=True)
 class SiteComputation:
     """Результат расчёта для объекта."""
 
@@ -175,6 +231,7 @@ class RuleEngine:
         today: date,
         equipment_names: Mapping[uuid.UUID, str] | None = None,
         coarse: Mapping[uuid.UUID, frozenset[uuid.UUID]] | None = None,
+        stationary: frozenset[uuid.UUID] = frozenset(),
     ) -> SiteComputation:
         """Рассчитать статусы и отклонения для объекта.
 
@@ -190,6 +247,7 @@ class RuleEngine:
             coarse: Класс «тип не определён» → конкретные классы, с которыми он
                 совместим («Экскаватор (тип не определён)» подходит этапу с
                 гусеничным экскаватором).
+            stationary: Неподвижная техника (башенный кран): маркером этапа не бывает.
 
         Returns:
             SiteComputation с статусами и отклонениями.
@@ -200,11 +258,18 @@ class RuleEngine:
 
         # Наблюдения отсортированы по дате
         sorted_observations = sorted(observations, key=lambda o: o.observed_on)
+        plan = _Plan(
+            stages=stages,
+            rules=rules_by_stage,
+            stationary=stationary,
+            tolerance_days=self.config.tolerance_days,
+            lookback_days=self.config.lookback_days,
+        )
 
         # Расчёт статусов этапов
         for stage in stages:
             status = self._compute_stage_status(
-                stage, rules_by_stage.get(stage.stage_id), sorted_observations, today
+                stage, rules_by_stage.get(stage.stage_id), sorted_observations, today, plan
             )
             if status is not None:
                 statuses.append(status)
@@ -227,7 +292,13 @@ class RuleEngine:
             if stage_status is not None and stage_status.status != StageStatusValue.NOT_CHECKED:
                 deviations.extend(
                     self._check_stage_deviations(
-                        stage, rule, sorted_observations, today, stage_status.basis_dates, names
+                        stage,
+                        rule,
+                        sorted_observations,
+                        today,
+                        stage_status.basis_dates,
+                        names,
+                        plan,
                     )
                 )
                 deviations.extend(
@@ -252,6 +323,7 @@ class RuleEngine:
         rule: RuleInput | None,
         observations: Sequence[ObservationInput],
         today: date,
+        plan: _Plan,
     ) -> StageStatusResult | None:
         """Рассчитать статус одного этапа.
 
@@ -299,9 +371,17 @@ class RuleEngine:
             # Окно ещё не началось, этап не оценивается
             return None
 
-        # Шаг 3: Вычисляем маркерные даты (даты, когда хотя бы один набор выполнен)
-        marker_dates = self._extract_marker_dates_for_kits(observations, kits_with_normative)
-        first_marker = marker_dates[0] if marker_dates else None
+        # Шаг 3: Маркерные даты — набор выполнен и в нём есть машина, отличающая этап
+        # в этот день от идущих одновременно (иначе экскаватор свай «начинал» котлован)
+        # Снизу — как у поиска начала: технику задолго до окна объясняют отклонения. Сверху
+        # не ограничено: машины этапа после конца — это и есть затянувшийся этап
+        since, _ = self._search_window(stage)
+        marker_dates = [
+            o.observed_on
+            for o in observations
+            if since <= o.observed_on and self._is_marker_day(stage, kits_with_normative, o, plan)
+        ]
+        first_marker = self._find_start(stage, kits_with_normative, observations, plan)
         latest_obs_on = observations[-1].observed_on if observations else None
         markers_active_now = latest_obs_on is not None and latest_obs_on in marker_dates
 
@@ -318,6 +398,24 @@ class RuleEngine:
             delay_days = (today - (stage.planned_end or today)).days
             confidence, reason = self._compute_confidence_for_status(
                 marker_dates, first_marker, observations, kits_with_normative
+            )
+        elif (
+            stage.planned_start is not None
+            and first_marker is not None
+            and first_marker > stage.planned_start + timedelta(days=self.config.tolerance_days)
+            and not any(stage.planned_start <= o.observed_on < first_marker for o in observations)
+        ):
+            # b0. Маркер позже плана, но снимков до него нет: позднее начало не доказано —
+            # этап мог идти с планового начала, просто съёмка началась позже
+            status = StageStatusValue.ON_TRACK
+            delay_days = None
+            confidence, _ = self._compute_confidence_for_status(
+                marker_dates, first_marker, observations, kits_with_normative
+            )
+            confidence = self._min_confidence(confidence, Confidence.MEDIUM)
+            reason = (
+                f"маркерная техника видна с {first_marker:%d.%m} — с первых снимков: "
+                "начало могло быть по плану"
             )
         elif (
             stage.planned_start is not None
@@ -350,7 +448,7 @@ class RuleEngine:
             )
         else:
             # e. Маркер никогда не видели
-            return self._check_not_started_vs_not_observed(stage, observations, today)
+            return self._check_not_started_vs_not_observed(stage, observations, today, plan)
 
         # Шаг 6-8: Возвращаем результат для a/b/c/d
         return StageStatusResult(
@@ -361,6 +459,100 @@ class RuleEngine:
             confidence_reason=reason,
             basis_dates=tuple(marker_dates),
         )
+
+    @staticmethod
+    def _countable(eq: ObservedEquipmentInput, stationary: frozenset[uuid.UUID]) -> bool:
+        """Машина, которую можно предъявлять основанием: не слабая и не неподвижная."""
+        return (
+            eq.count_min >= 1 and eq.confidence != "low" and eq.equipment_type_id not in stationary
+        )
+
+    def _is_marker_day(
+        self,
+        stage: StageInput,
+        kits: Sequence[KitInput],
+        observation: ObservationInput,
+        plan: _Plan,
+    ) -> bool:
+        """День говорит, что идёт именно этот этап.
+
+        Выполнен набор, и в нём есть нормативная машина, которой в этот день нет у идущих
+        одновременно этапов (маркер, как в clean-mvp). Если этап в этот день по технике не
+        отличить, нужен весь набор сразу — нормативная и логическая техника: одна общая
+        машина ничего не говорит.
+        """
+        markers = plan.markers_on(stage, observation.observed_on)
+        present = {
+            eq.equipment_type_id
+            for eq in observation.equipment
+            if self._countable(eq, plan.stationary)
+        }
+        for kit in kits:
+            if not self._is_kit_fulfilled(kit, observation):
+                continue
+            normative = {
+                r.equipment_type_id for r in kit.requirements if r.obligation == "normative"
+            }
+            if markers:
+                if normative & markers & present:
+                    return True
+                continue
+            # Набор из одной неподвижной техники о ходе этапа не говорит ничего
+            movable = normative - plan.stationary
+            if (
+                movable
+                and movable <= present
+                and all(
+                    self._has_equipment(observation, r)
+                    for r in kit.requirements
+                    if r.obligation == "logical"
+                )
+            ):
+                return True
+        return False
+
+    def _search_window(self, stage: StageInput) -> tuple[date, date]:
+        """От «плановое начало − lookback» до «конец окна + lookback»: технику задолго до
+        или после окна объясняют отклонения, а не этот этап."""
+        lookback = timedelta(days=self.config.lookback_days)
+        tolerance = timedelta(days=self.config.tolerance_days)
+        since = stage.planned_start - lookback if stage.planned_start else date.min
+        until = stage.planned_end + tolerance + lookback if stage.planned_end else date.max
+        return since, until
+
+    def _find_start(
+        self,
+        stage: StageInput,
+        kits: Sequence[KitInput],
+        observations: Sequence[ObservationInput],
+        plan: _Plan,
+    ) -> date | None:
+        """Начало этапа (clean-mvp, find_start_fact): первая маркерная дата.
+
+        Ищется от «плановое начало − lookback» до «конец окна + lookback»: технику,
+        замеченную много раньше или позже, объясняют отклонения, а не старт этапа. Одной
+        даты хватает, если машина уверенная и работает; иначе маркер должен быть виден и на
+        следующей дате наблюдения.
+        """
+        since, until = self._search_window(stage)
+        relevant = [o for o in observations if since <= o.observed_on <= until]
+        for i, current in enumerate(relevant):
+            if not self._is_marker_day(stage, kits, current, plan):
+                continue
+            markers = plan.markers_on(stage, current.observed_on)
+            sure = any(
+                eq.confidence == "high"
+                and eq.activity == "works"
+                and (not markers or eq.equipment_type_id in markers)
+                for eq in current.equipment
+                if self._countable(eq, plan.stationary)
+            )
+            following = relevant[i + 1] if i + 1 < len(relevant) else None
+            if sure or (
+                following is not None and self._is_marker_day(stage, kits, following, plan)
+            ):
+                return current.observed_on
+        return None
 
     def _has_equipment(
         self, observation: ObservationInput, requirement: EquipmentRequirementInput
@@ -482,7 +674,11 @@ class RuleEngine:
         return final_confidence, reason
 
     def _check_not_started_vs_not_observed(
-        self, stage: StageInput, observations: Sequence[ObservationInput], today: date
+        self,
+        stage: StageInput,
+        observations: Sequence[ObservationInput],
+        today: date,
+        plan: _Plan,
     ) -> StageStatusResult | None:
         """Маркер этапа ни разу не виден: «Не начат», «Не наблюдалось» или ещё рано.
 
@@ -495,12 +691,15 @@ class RuleEngine:
         window_start = stage.planned_start or (
             observations[0].observed_on if observations else today
         )
-        window = [
+        in_window = [
             o
             for o in observations
             if window_start <= o.observed_on <= today
             and o.observed_on.weekday() in self.config.workdays
         ]
+        # Только дни, когда этап отличим по технике: в остальные отсутствие маркера ничего
+        # не говорит о том, начат ли этап
+        window = [o for o in in_window if plan.markers_on(stage, o.observed_on)]
         basis_dates = tuple(o.observed_on for o in window)
 
         def result(
@@ -541,6 +740,14 @@ class RuleEngine:
                 Confidence.MEDIUM,
                 "наблюдаемость в окне этапа не высокая или дней с кадрами меньше "
                 f"{self.config.window_dates}",
+            )
+        if in_window:
+            # Снимки в окне есть, а отличить этап не по чему: он идёт одновременно с этапами
+            # с той же техникой. «Мало снимков» здесь было бы неправдой
+            return result(
+                StageStatusValue.NOT_OBSERVED,
+                Confidence.LOW,
+                "не отличить по технике от этапов, идущих одновременно",
             )
         return result(StageStatusValue.NOT_OBSERVED, Confidence.LOW, "в окне этапа нет кадров")
 
@@ -653,6 +860,7 @@ class RuleEngine:
         today: date,
         status_basis_dates: tuple[date, ...],
         equipment_names: Mapping[uuid.UUID, str],
+        plan: _Plan,
     ) -> list[DeviationResult]:
         """Проверить отклонения по одному верифицируемому этапу."""
         deviations: list[DeviationResult] = []
@@ -680,7 +888,7 @@ class RuleEngine:
             return deviations
 
         # 2. missing_equipment — по окну последних дат, а не по одному дню
-        deviations.extend(self._check_missing_equipment(stage, observations, rule))
+        deviations.extend(self._check_missing_equipment(stage, observations, rule, plan))
 
         # 2b. missing_logical_equipment (LCT-15) — мягкое предупреждение по
         # "логической" технике методики: ожидаемой на этапе, но не
@@ -759,6 +967,7 @@ class RuleEngine:
         stage: StageInput,
         observations: Sequence[ObservationInput],
         rule: RuleInput,
+        plan: _Plan,
     ) -> list[DeviationResult]:
         """«Нет маркерной техники» (как в clean-mvp): по окну дат, а не по одному дню.
 
@@ -786,17 +995,19 @@ class RuleEngine:
         tail = observations[-self.config.window_dates :]
         if len(tail) < self.config.window_dates:
             return []
+        # Каждый день окна должен отличать этап: иначе отсутствие маркера ничего не значит
         if any(
             o.observed_on < stage.planned_start
             or o.observability != Observability.HIGH.value
-            or any(self._is_kit_fulfilled(kit, o) for kit in kits)
+            or not plan.markers_on(stage, o.observed_on)
+            or self._is_marker_day(stage, kits, o, plan)
             for o in tail
         ):
             return []
 
         def no_marker(o: ObservationInput) -> bool:
-            return o.observed_on >= (stage.planned_start or o.observed_on) and not any(
-                self._is_kit_fulfilled(kit, o) for kit in kits
+            return o.observed_on >= (stage.planned_start or o.observed_on) and not (
+                self._is_marker_day(stage, kits, o, plan)
             )
 
         days = (day - stage.planned_start).days

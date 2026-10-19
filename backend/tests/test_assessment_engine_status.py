@@ -204,6 +204,13 @@ class TestStageStatusBehindStartShift:
 
         # Маркер после 1/15 + 5 дней = 1/20
         observations = [
+            # Снимок до первого маркера: позднее начало доказано
+            ObservationInput(
+                observed_on=date(2024, 1, 17),
+                photo_count=10,
+                observability="high",
+                equipment=[],
+            ),
             ObservationInput(
                 observed_on=date(2024, 1, 22),
                 photo_count=5,
@@ -216,7 +223,7 @@ class TestStageStatusBehindStartShift:
                         confidence="high",
                     )
                 ],
-            )
+            ),
         ]
 
         result = engine.compute_site(stages, rules, observations, today)
@@ -873,3 +880,104 @@ class TestConfidenceComputation:
         assert len(result.statuses) == 1
         status = result.statuses[0]
         assert status.confidence == Confidence.HIGH
+
+
+def _rule(stage_id: uuid.UUID, *normative: uuid.UUID, logical: tuple = ()) -> RuleInput:
+    return RuleInput(
+        stage_id=stage_id,
+        rule_id=uuid.uuid4(),
+        is_verifiable=True,
+        unverifiable_reason=None,
+        requirements=[
+            *(
+                EquipmentRequirementInput(equipment_type_id=e, obligation="normative", min_count=1)
+                for e in normative
+            ),
+            *(
+                EquipmentRequirementInput(equipment_type_id=e, obligation="logical", min_count=1)
+                for e in logical
+            ),
+        ],
+    )
+
+
+def _seen(day: date, *equipment: uuid.UUID) -> ObservationInput:
+    return ObservationInput(
+        observed_on=day,
+        photo_count=10,
+        observability="high",
+        equipment=[
+            ObservedEquipmentInput(
+                equipment_type_id=e, count_min=1, activity="works", confidence="high"
+            )
+            for e in equipment
+        ],
+    )
+
+
+_CONFIG = EngineConfig(
+    tolerance_days=3, stale_data_days=60, no_progress_window_days=5, min_confirming_observations=2
+)
+
+
+class TestMarkersAgainstConcurrentStages:
+    """Маркер этапа на дату — техника, которой нет у идущих одновременно (clean-mvp)."""
+
+    def test_shared_machine_does_not_start_later_stage_early(self):
+        """Экскаватор свай не «начинает» котлован на два месяца раньше (Москва, стенд)."""
+        drill, excavator, truck = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
+        piles = StageInput(uuid.uuid4(), "Сваи", 1, date(2023, 5, 15), date(2023, 7, 31))
+        pit = StageInput(uuid.uuid4(), "Котлован", 2, date(2023, 8, 15), date(2023, 10, 31))
+        rules = {
+            piles.stage_id: _rule(piles.stage_id, drill, logical=(excavator,)),
+            pit.stage_id: _rule(pit.stage_id, excavator),
+        }
+        observations = [
+            _seen(date(2023, 6, 19), drill, excavator),
+            _seen(date(2023, 7, 16), drill, excavator),
+            _seen(date(2023, 8, 16), excavator, truck),
+            _seen(date(2023, 9, 14), excavator, truck),
+        ]
+
+        result = RuleEngine(_CONFIG).compute_site(
+            [piles, pit], rules, observations, date(2023, 9, 15)
+        )
+
+        status = next(s for s in result.statuses if s.stage_id == pit.stage_id)
+        assert status.status == StageStatusValue.ON_TRACK
+        assert status.basis_dates == (date(2023, 8, 16), date(2023, 9, 14))
+
+    def test_tower_crane_is_never_a_marker(self):
+        crane, excavator = uuid.uuid4(), uuid.uuid4()
+        stage = StageInput(uuid.uuid4(), "Каркас", 1, date(2024, 1, 10), date(2024, 3, 1))
+        rules = {stage.stage_id: _rule(stage.stage_id, crane)}
+        observations = [_seen(date(2024, 1, 2), crane), _seen(date(2024, 1, 3), crane)]
+
+        result = RuleEngine(_CONFIG).compute_site(
+            [stage], rules, observations, date(2024, 1, 12), stationary=frozenset({crane})
+        )
+
+        # Кран стоит до начала каркаса — это не «опережение» и не начало этапа
+        assert result.statuses[0].status == StageStatusValue.NOT_OBSERVED
+        del excavator
+
+
+class TestLateStartNotProven:
+    """Позднее начало без снимков до первого маркера не доказано (clean-mvp, план 5.13)."""
+
+    def test_first_photos_already_show_the_stage(self):
+        drill = uuid.uuid4()
+        piles = StageInput(uuid.uuid4(), "Сваи", 1, date(2023, 5, 15), date(2023, 7, 31))
+        rules = {piles.stage_id: _rule(piles.stage_id, drill)}
+        observations = [_seen(date(2023, 6, 19), drill), _seen(date(2023, 7, 16), drill)]
+
+        result = RuleEngine(_CONFIG).compute_site([piles], rules, observations, date(2023, 7, 17))
+
+        status = result.statuses[0]
+        assert status.status == StageStatusValue.ON_TRACK
+        assert status.delay_days is None
+        assert status.confidence != Confidence.HIGH
+        assert status.confidence_reason == (
+            "маркерная техника видна с 19.06 — с первых снимков: начало могло быть по плану"
+        )
+        assert not [d for d in result.deviations if d.type.value == "behind_schedule"]

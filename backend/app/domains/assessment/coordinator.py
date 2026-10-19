@@ -39,6 +39,7 @@ from app.domains.camera.zone import bbox_in_zone
 from app.domains.methodology.catalog import (
     COARSE_TO_SPECIFIC,
     SPECIFIC_EQUIPMENT_CODES,
+    STATIONARY_EQUIPMENT_CODES,
     EquipmentCatalog,
 )
 from app.domains.methodology.materializer import RuleMaterializer
@@ -381,8 +382,17 @@ class RecomputeCoordinator:
                 for code, specific in COARSE_TO_SPECIFIC.items()
                 if code in id_by_code
             }
+            stationary = frozenset(
+                id_by_code[c] for c in STATIONARY_EQUIPMENT_CODES if c in id_by_code
+            )
             computation = self._engine.compute_site(
-                stages, rules_by_stage, observations, reference_date, equipment_names, coarse
+                stages,
+                rules_by_stage,
+                observations,
+                reference_date,
+                equipment_names,
+                coarse,
+                stationary,
             )
 
             # Шаг 6: Персистировать StageStatus (upsert + delete_missing)
