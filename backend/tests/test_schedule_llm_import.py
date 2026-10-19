@@ -201,9 +201,8 @@ async def test_builtin_long_multiline_name_is_saved_cleaned(client, container) -
     csv = f'Название;Начало;Окончание\n"{LONG_NAME}";01.01.2026;10.01.2026\n'.encode()
     response = await _import(client, site_id, csv, "builtin")
     assert response.status_code == 201
-    name = response.json()["stages"][0]["name"]
-    assert len(name) <= 500 and name.endswith("…")
-    assert "\n" not in name and name.startswith("Работы подготовительного периода: - пункт 0")
+    # Перечень работ после двоеточия в название этапа не идёт (как в clean-mvp)
+    assert response.json()["stages"][0]["name"] == "Работы подготовительного периода"
 
 
 async def test_llm_long_name_is_saved_cleaned(client, container) -> None:
