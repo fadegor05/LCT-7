@@ -1,5 +1,11 @@
 /** Снимки (домен photo) и наблюдения за дату (домен observation). */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { z } from 'zod'
 import { env } from '@/lib/env'
 import { request } from './client'
@@ -28,9 +34,10 @@ export const framesApi = {
       schema: z.array(photoSchema),
     }),
   /** Пачка снимков (multipart `files`); ошибка одного файла не прерывает остальные. */
-  upload: (siteId: string, files: readonly File[]) => {
+  upload: (siteId: string, files: readonly File[], cameraId: string | null = null) => {
     const form = new FormData()
     files.forEach((file) => form.append('files', file))
+    if (cameraId) form.append('camera_id', cameraId)
     return request(`/sites/${siteId}/photos`, {
       method: 'POST',
       body: form,
@@ -72,6 +79,11 @@ export function annotatedImageUrl(siteId: string, photoId: string): string {
   return `${env.apiBaseUrl}/sites/${siteId}/photos/${photoId}/annotated`
 }
 
+/** Миниатюра для ленты: меньше, только рамки, без подписей (`?thumb=true`). */
+export function annotatedThumbUrl(siteId: string, photoId: string): string {
+  return `${annotatedImageUrl(siteId, photoId)}?thumb=true`
+}
+
 export function useObservations(siteId: string) {
   return useQuery({
     queryKey: keys.observations(siteId),
@@ -79,11 +91,17 @@ export function useObservations(siteId: string) {
   })
 }
 
+/** Наблюдение за день; пока грузится другой день, виден прежний (приглушённым на экране). */
 export function useObservation(siteId: string, date: string | null) {
-  return useQuery({
+  return useQuery(observationQuery(siteId, date))
+}
+
+export function observationQuery(siteId: string, date: string | null) {
+  return queryOptions({
     queryKey: keys.observation(siteId, date ?? ''),
     queryFn: () => framesApi.observation(siteId, date!),
     enabled: Boolean(date),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -116,7 +134,11 @@ function useSiteMutation<TArgs, TResult>(siteId: string, fn: (args: TArgs) => Pr
 }
 
 export function useUploadPhotos(siteId: string) {
-  return useSiteMutation(siteId, (files: readonly File[]) => framesApi.upload(siteId, files))
+  return useSiteMutation(
+    siteId,
+    ({ files, cameraId }: { files: readonly File[]; cameraId: string | null }) =>
+      framesApi.upload(siteId, files, cameraId),
+  )
 }
 
 export function useSetPhotoDate(siteId: string) {

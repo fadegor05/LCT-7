@@ -1,11 +1,14 @@
 """Тесты для политик наблюдения: агрегация, наблюдаемость, активность."""
 
 import uuid
+from datetime import datetime
 
+from app.domains.observation.activity import ActivityParams, Box, Shot
 from app.domains.observation.models import Activity, Confidence, Observability
 from app.domains.observation.policies import (
     ActivityPolicy,
     AggregationPolicy,
+    CameraSeries,
     FrameEquipment,
     ObservabilityPolicy,
 )
@@ -332,125 +335,81 @@ class TestObservabilityPolicy:
 
 
 class TestActivityPolicy:
-    """Тесты ActivityPolicy.assess()."""
+    """Активность по серии кадров одной камеры за день (clean-mvp, D-018)."""
 
-    def test_activity_previous_none_returns_unknown(self):
-        """previous_bboxes=None -> UNKNOWN."""
-        policy = ActivityPolicy(movement_threshold=0.05)
+    EXC = uuid.uuid4()
+    ZONE = [[0.0, 0.0], [0.5, 0.0], [0.5, 1.0], [0.0, 1.0]]  # левая половина кадра
 
-        current = [[0.0, 0.0, 0.1, 0.1]]
-        result = policy.assess(current, None)
+    @staticmethod
+    def _shot(minute: int, *boxes: tuple[uuid.UUID, list[float]]) -> Shot:
+        return Shot(datetime(2026, 9, 9, 10, minute), tuple(Box(k, b) for k, b in boxes))
 
-        assert result == Activity.UNKNOWN
+    def _day(self, *shots: Shot, zone=None, present=None):
+        policy = ActivityPolicy(ActivityParams())
+        series = [CameraSeries("Север", zone, shots)]
+        return policy.assess_day(series, present or [self.EXC])[self.EXC]
 
-    def test_activity_previous_empty_returns_unknown(self):
-        """previous_bboxes=[] -> UNKNOWN."""
-        policy = ActivityPolicy(movement_threshold=0.05)
+    def test_single_shot_is_unknown_not_works(self):
+        """По одному снимку работа не видна — главное отличие от прежнего правила."""
+        got = self._day(self._shot(0, (self.EXC, [0.1, 0.1, 0.2, 0.2])))
+        assert got.activity is Activity.UNKNOWN
+        assert "один кадр" in got.basis
+        assert "не задана" in got.basis
 
-        current = [[0.0, 0.0, 0.1, 0.1]]
-        previous: list[list[float]] = []
-        result = policy.assess(current, previous)
+    def test_moved_between_adjacent_shots_is_works(self):
+        got = self._day(
+            self._shot(0, (self.EXC, [0.1, 0.1, 0.2, 0.2])),
+            self._shot(5, (self.EXC, [0.16, 0.1, 0.26, 0.2])),  # сдвиг 0.6 размера рамки
+        )
+        assert got.activity is Activity.WORKS
+        assert got.basis.startswith("Движение: машина сместилась между 10:00 и 10:05")
 
-        assert result == Activity.UNKNOWN
+    def test_long_gap_does_not_pair(self):
+        """За разрыв больше 10 минут машина успеет уехать и вернуться — пары нет."""
+        got = self._day(
+            self._shot(0, (self.EXC, [0.1, 0.1, 0.2, 0.2])),
+            self._shot(30, (self.EXC, [0.16, 0.1, 0.26, 0.2])),
+        )
+        assert got.activity is Activity.UNKNOWN
 
-    def test_activity_current_empty_returns_unknown(self):
-        """current_bboxes=[] -> UNKNOWN даже если previous не пуст."""
-        policy = ActivityPolicy(movement_threshold=0.05)
+    def test_still_series_out_of_zone_is_idle_hypothesis(self):
+        box = (self.EXC, [0.7, 0.1, 0.8, 0.2])
+        got = self._day(*(self._shot(m, box) for m in (0, 5, 10, 15)), zone=self.ZONE)
+        assert got.activity is Activity.IDLE
+        assert got.basis.startswith("Гипотеза. Движение: нет на 4 кадрах подряд (10:00–10:15)")
+        assert got.basis.endswith("Зона: вне зоны")
 
-        current: list[list[float]] = []
-        previous = [[0.0, 0.0, 0.1, 0.1]]
-        result = policy.assess(current, previous)
+    def test_still_series_in_zone_stays_unknown(self):
+        box = (self.EXC, [0.1, 0.1, 0.2, 0.2])
+        got = self._day(*(self._shot(m, box) for m in (0, 5, 10, 15)), zone=self.ZONE)
+        assert got.activity is Activity.UNKNOWN
+        assert got.basis.endswith("Зона: внутри зоны")
 
-        assert result == Activity.UNKNOWN
+    def test_camera_moved_pair_is_ignored(self):
+        """Все три машины сдвинулись разом — подвинули камеру, а не машины поехали."""
+        boxes = [[0.1, 0.1, 0.2, 0.2], [0.4, 0.4, 0.5, 0.5], [0.7, 0.7, 0.8, 0.8]]
+        first = self._shot(0, *((self.EXC, b) for b in boxes))
+        moved = self._shot(5, *((self.EXC, [b[0] + 0.06, b[1], b[2] + 0.06, b[3]]) for b in boxes))
+        assert self._day(first, moved).activity is Activity.UNKNOWN
 
-    def test_activity_large_shift_below_threshold_returns_works(self):
-        """Большой сдвиг >= threshold -> WORKS."""
-        policy = ActivityPolicy(movement_threshold=0.05)
+    def test_type_without_series_is_unknown(self):
+        other = uuid.uuid4()
+        policy = ActivityPolicy(ActivityParams())
+        got = policy.assess_day([], [other])[other]
+        assert got.activity is Activity.UNKNOWN
+        assert "нет серии кадров" in got.basis
 
-        # Центр текущего: (0.45, 0.45)
-        current = [[0.4, 0.4, 0.5, 0.5]]
-        # Центр предыдущего: (0.05, 0.05)
-        previous = [[0.0, 0.0, 0.1, 0.1]]
-
-        # Расстояние: sqrt((0.45-0.05)^2 + (0.45-0.05)^2) = sqrt(0.32) ≈ 0.566 >> 0.05
-        result = policy.assess(current, previous)
-
-        assert result == Activity.WORKS
-
-    def test_activity_small_shift_below_threshold_returns_unknown(self):
-        """Маленький сдвиг < threshold -> UNKNOWN."""
-        policy = ActivityPolicy(movement_threshold=0.05)
-
-        # Центр текущего: (0.55, 0.55)
-        current = [[0.5, 0.5, 0.6, 0.6]]
-        # Центр предыдущего: (0.55, 0.55)
-        previous = [[0.5, 0.5, 0.6, 0.6]]
-
-        # Расстояние: 0
-        result = policy.assess(current, previous)
-
-        assert result == Activity.UNKNOWN
-
-    def test_activity_multiple_bboxes_averaging(self):
-        """Множество bbox'ов в одной стороне -> усреднение центров."""
-        policy = ActivityPolicy(movement_threshold=0.05)
-
-        # Два bbox'а: центры (0.25, 0.25) и (0.35, 0.35), в среднем (0.3, 0.3)
-        current = [[0.2, 0.2, 0.3, 0.3], [0.3, 0.3, 0.4, 0.4]]
-        # Один bbox: центр (0.05, 0.05)
-        previous = [[0.0, 0.0, 0.1, 0.1]]
-
-        # Расстояние: sqrt((0.3-0.05)^2 + (0.3-0.05)^2) = sqrt(0.125) ≈ 0.354 >> 0.05
-        result = policy.assess(current, previous)
-
-        assert result == Activity.WORKS
-
-    def test_activity_threshold_boundary(self):
-        """Расстояние ровно на границе threshold."""
-        policy = ActivityPolicy(movement_threshold=0.1)
-
-        # Центр текущего: (0.15, 0.15)
-        current = [[0.1, 0.1, 0.2, 0.2]]
-        # Центр предыдущего: (0.05, 0.05)
-        previous = [[0.0, 0.0, 0.1, 0.1]]
-
-        # Расстояние: sqrt((0.15-0.05)^2 + (0.15-0.05)^2) = sqrt(0.02) ≈ 0.1414...
-        # Это >= 0.1, поэтому должно быть WORKS
-        result = policy.assess(current, previous)
-
-        assert result == Activity.WORKS
-
-    def test_activity_never_returns_idle(self):
-        """Политика никогда не возвращает IDLE для источника фото."""
-        policy = ActivityPolicy(movement_threshold=0.05)
-
-        # Проверяем, что даже при нулевом movement_threshold не получится IDLE
-        # (хотя это не очень реалистично, но убеждаемся в коде)
-
-        # Легкий сдвиг
-        current = [[0.15, 0.15, 0.25, 0.25]]
-        previous = [[0.1, 0.1, 0.2, 0.2]]
-
-        result = policy.assess(current, previous)
-        assert result in (Activity.WORKS, Activity.UNKNOWN)
-        assert result != Activity.IDLE
-
-    def test_activity_three_previous_bboxes_averaging(self):
-        """Три предыдущих bbox'а с усреднением."""
-        policy = ActivityPolicy(movement_threshold=0.05)
-
-        # Текущий: один bbox с центром (0.5, 0.5)
-        current = [[0.45, 0.45, 0.55, 0.55]]
-
-        # Три предыдущих: центры (0.0, 0.0), (0.1, 0.1), (0.2, 0.2)
-        # Средний центр: (0.1, 0.1)
-        previous = [
-            [0.0, 0.0, 0.0, 0.0],
-            [0.05, 0.05, 0.15, 0.15],
-            [0.15, 0.15, 0.25, 0.25],
-        ]
-
-        # Расстояние: sqrt((0.5-0.1)^2 + (0.5-0.1)^2) = sqrt(0.32) ≈ 0.566 >> 0.05
-        result = policy.assess(current, previous)
-
-        assert result == Activity.WORKS
+    def test_works_wins_over_idle_across_cameras(self):
+        policy = ActivityPolicy(ActivityParams())
+        still = (self.EXC, [0.7, 0.1, 0.8, 0.2])
+        idle_cam = CameraSeries("Юг", self.ZONE, [self._shot(m, still) for m in (0, 5, 10, 15)])
+        works_cam = CameraSeries(
+            "Север",
+            None,
+            [
+                self._shot(0, (self.EXC, [0.1, 0.1, 0.2, 0.2])),
+                self._shot(5, (self.EXC, [0.16, 0.1, 0.26, 0.2])),
+            ],
+        )
+        got = policy.assess_day([idle_cam, works_cam], [self.EXC])[self.EXC]
+        assert got.activity is Activity.WORKS

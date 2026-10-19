@@ -1,13 +1,18 @@
-import { useAllDeviations } from '@/api/deviations'
+import { useQueries } from '@tanstack/react-query'
+import { deviationsApi, useAllDeviations } from '@/api/deviations'
+import { framesApi } from '@/api/frames'
+import { keys } from '@/api/keys'
 import type { Site } from '@/api/schemas'
 import { useSites } from '@/api/sites'
 import { PageHeader, SectionHeader } from '@/components/layout/PageHeader'
 import { ButtonLink } from '@/components/ui/Button'
 import { QueryState } from '@/components/ui/QueryState'
 import { DeviationList } from '@/features/deviations/DeviationList'
+import { stampDate } from '@/features/report/reportText'
 import { SiteTable } from '@/features/sites/SiteTable'
 import { sortDeviations } from '@/lib/deviations'
 import { plural } from '@/lib/labels'
+import { settled } from '@/lib/settled'
 
 const NO_SITES: Site[] = []
 
@@ -29,6 +34,26 @@ function AllDeviations({ sites }: { sites: readonly Site[] }) {
 /** Экран 1 · Стройки (UC-9): список строек и сквозной список отклонений. */
 export function SitesPage() {
   const sites = useSites()
+  const list = sites.data ?? NO_SITES
+  // Итог и последнее наблюдение строк — показываем таблицу, когда готово всё: строки,
+  // догружавшие свои плашки, сдвигали список отклонений под таблицей. Сами отклонения внизу
+  // страницы и ничего не сдвигают — их не ждём
+  const rows = useQueries({
+    queries: list.flatMap((site) => [
+      { queryKey: keys.summary(site.id), queryFn: () => deviationsApi.summary(site.id) },
+      { queryKey: keys.observations(site.id), queryFn: () => framesApi.observations(site.id) },
+    ]),
+    combine: (results) => ({
+      ready: settled(...results),
+      // «данные на» — самая поздняя опорная дата расчёта среди объектов (clean-mvp)
+      asOf: results
+        .map((r) => (r.data && 'as_of' in r.data ? r.data.as_of : null))
+        .filter((d): d is string => !!d)
+        .sort()
+        .at(-1),
+    }),
+  })
+  const ready = rows.ready
 
   return (
     <>
@@ -36,7 +61,12 @@ export function SitesPage() {
         title="Стройки"
         subtitle={
           sites.data &&
-          `${sites.data.length} ${plural(sites.data.length, ['объект', 'объекта', 'объектов'])}`
+          [
+            `${sites.data.length} ${plural(sites.data.length, ['объект', 'объекта', 'объектов'])}`,
+            rows.asOf && `данные на ${stampDate(rows.asOf)}`,
+          ]
+            .filter(Boolean)
+            .join(' · ')
         }
         actions={
           <ButtonLink to="/sites/new" icon="plus">
@@ -46,14 +76,23 @@ export function SitesPage() {
       />
       <QueryState query={sites}>
         {(data) =>
-          data.length > 0 ? (
-            <SiteTable sites={data} />
+          !ready ? (
+            <p className="muted" role="status">
+              Загрузка…
+            </p>
+          ) : data.length > 0 ? (
+            <>
+              <SiteTable sites={data} />
+              <AllDeviations sites={data} />
+            </>
           ) : (
-            <p className="muted">Строек пока нет. Заведите первую.</p>
+            <>
+              <p className="muted">Строек пока нет. Заведите первую.</p>
+              <AllDeviations sites={data} />
+            </>
           )
         }
       </QueryState>
-      <AllDeviations sites={sites.data ?? NO_SITES} />
     </>
   )
 }

@@ -19,22 +19,28 @@ const STATUS: Record<Status, { label: string; icon: IconName; tone: PillTone }> 
   not_assessed: { label: 'Не оценён', icon: 'dashed', tone: 'unobserved' },
 }
 
-function resolve(status: StageStatusValue | null, plannedStart: string | null | undefined): Status {
+function resolve(
+  status: StageStatusValue | null,
+  plannedStart: string | null | undefined,
+  asOf: string,
+): Status {
   if (status) return status
   // Сервер не оценивает этап, пока его окно не наступило. Если окно уже идёт (или дат нет),
   // null значит «оценки ещё нет», а не «не начата».
   if (plannedStart === undefined) return 'not_due'
-  return plannedStart === null || plannedStart <= todayIso() ? 'not_assessed' : 'not_due'
+  return plannedStart === null || plannedStart <= asOf ? 'not_assessed' : 'not_due'
 }
 
 interface StatusBadgeProps {
   status: StageStatusValue | null
   /** Плановое начало этапа (YYYY-MM-DD) — чтобы отличить «окно не наступило» от «не оценён». */
   plannedStart?: string | null
+  /** Дата данных объекта (опорная дата расчёта); без неё — сегодня. */
+  asOf?: string | null
 }
 
-export function StatusBadge({ status, plannedStart }: StatusBadgeProps) {
-  const s = STATUS[resolve(status, plannedStart)]
+export function StatusBadge({ status, plannedStart, asOf }: StatusBadgeProps) {
+  const s = STATUS[resolve(status, plannedStart, asOf ?? todayIso())]
   return (
     <Pill tone={s.tone} icon={s.icon}>
       {s.label}

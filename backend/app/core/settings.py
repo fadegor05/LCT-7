@@ -67,10 +67,11 @@ class DetectorSettings(BaseModel):
 
 
 class StreamSettings(BaseModel):
-    """Снимки со стрима камеры (STREAM__*). Выключены по умолчанию: прод не меняется."""
+    """Снимки со стрима камеры (STREAM__*). Включены по умолчанию, как в clean-mvp."""
 
-    # Фоновый планировщик и сам захват; «Снять кадр сейчас» работает только при включении
-    enabled: bool = False
+    # Фоновый планировщик снимков; STREAM__ENABLED=false выключает его на стенде, где
+    # ffmpeg нет или камеры недоступны. «Снять кадр сейчас» и пробный кадр — всегда
+    enabled: bool = True
     # Часы съёмки по поясу стройки, конец не включается: «8-20» — с 8:00 до 19:59
     hours: str = "8-20"
     timezone: str = "Europe/Moscow"
@@ -128,7 +129,12 @@ class ObservationSettings(BaseModel):
     min_photos_high: int = 3
     min_score_high: float = 0.7
     min_score_medium: float = 0.4
-    movement_threshold: float = 0.05
+    # Активность по серии кадров одной камеры (clean-mvp, D-018): сдвиг центра рамки в
+    # долях её размера между соседними кадрами не дальше pair_max_gap_min минут
+    pair_max_gap_min: float = 10.0
+    still_shift: float = 0.15
+    moved_shift: float = 0.35
+    idle_min_pairs: int = 3
 
 
 class AsOfMode(StrEnum):

@@ -261,6 +261,7 @@ async def get_annotated_image(
     photo_id: uuid.UUID,
     service: FromDishka[PhotoService],
     if_none_match: str | None = Header(default=None),
+    thumb: bool = False,
 ) -> Response:
     """Получить изображение с аннотациями детекций.
 
@@ -282,7 +283,7 @@ async def get_annotated_image(
         404: Сайт не найден, не принадлежит пользователю, фотография не найдена
              или файл недоступен/повреждён
     """
-    image = await service.get_annotated(site_id, photo_id, if_none_match)
+    image = await service.get_annotated(site_id, photo_id, if_none_match, thumb=thumb)
     headers = {
         "ETag": image.etag,
         "Cache-Control": "private, no-cache",

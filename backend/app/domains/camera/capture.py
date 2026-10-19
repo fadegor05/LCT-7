@@ -5,11 +5,13 @@
 причина неудачи, сбои подряд. Учётные данные из ссылки в ответах и записях не появляются.
 """
 
+import io
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
+from PIL import Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.ml.base import DetectorClient
@@ -18,6 +20,7 @@ from app.adapters.stream.base import StreamBusy, StreamError, StreamGrabber, mas
 from app.core.settings import Settings
 from app.domains.camera.models import Camera
 from app.domains.camera.repository import CameraRepository
+from app.domains.camera.service import resolve_stream_url
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.photo.date_resolver import DateResolver
 from app.domains.photo.recalculator import ObservationRecalculator
@@ -96,7 +99,7 @@ class CameraFrameIngest:
             camera.id,
             content,
             filename=f"stream-{local:%Y%m%d-%H%M%S}.jpg",
-            captured_on=local.date(),
+            captured_at=local,
         )
 
 
@@ -168,6 +171,33 @@ class CameraCaptureService:
         if result.photo is None:
             raise AppError(result.error or "Кадр не принят", status_code=422)
         return result.photo
+
+    async def preview(
+        self, site_id: uuid.UUID, url: str, camera_id: uuid.UUID | None = None
+    ) -> tuple[bytes, int, int]:
+        """Пробный кадр по ссылке — ориентир для зоны до сохранения камеры (clean-mvp).
+
+        Ничего не пишет: ни снимка в ленту, ни попытки у камеры (её может ещё не быть).
+        """
+        await self._guard.require(site_id)
+        stored = (await self._camera(site_id, camera_id)).stream_url if camera_id else None
+        checked = resolve_stream_url(url, stored)
+        if checked is None:
+            raise AppError("Укажите ссылку на стрим", status_code=422)
+        # Камеру ждём до таймаута: транзакцию закрываем, чтобы не держать соединение с базой
+        await self._session.commit()
+        try:
+            grabbed = await grab_frame(self._grabber, checked)
+        except StreamBusy as e:
+            raise AppError(str(e), status_code=409) from e
+        if isinstance(grabbed, str):
+            raise AppError(grabbed, status_code=422)
+        try:
+            with Image.open(io.BytesIO(grabbed)) as im:
+                width, height = im.size
+        except OSError as e:
+            raise AppError("Стрим отдал не изображение", status_code=422) from e
+        return grabbed, width, height
 
     async def _camera(self, site_id: uuid.UUID, camera_id: uuid.UUID) -> Camera:
         camera = await self._repository.get(camera_id)

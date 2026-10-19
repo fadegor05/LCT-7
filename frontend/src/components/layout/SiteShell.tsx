@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router'
+import { type SiteTab, usePrefetchSite } from '@/api/prefetch'
 import type { Site } from '@/api/schemas'
 import { Breadcrumbs, type Crumb } from '@/components/ui/Breadcrumbs'
 import { PageHeader } from './PageHeader'
@@ -17,11 +18,11 @@ interface SiteShellProps {
   children: ReactNode
 }
 
-const TABS = [
-  { to: '', label: 'Обзор', end: true },
-  { to: 'observations', label: 'Наблюдения' },
-  { to: 'methodology', label: 'Методика' },
-  { to: 'cameras', label: 'Камеры' },
+const TABS: { to: string; label: string; end?: boolean; tab: SiteTab }[] = [
+  { to: '', label: 'Обзор', end: true, tab: 'overview' },
+  { to: 'observations', label: 'Наблюдения', tab: 'observations' },
+  { to: 'methodology', label: 'Методика', tab: 'methodology' },
+  { to: 'cameras', label: 'Камеры', tab: 'cameras' },
 ]
 
 /**
@@ -38,6 +39,8 @@ export function SiteShell({
   children,
 }: SiteShellProps) {
   const base = `/sites/${site.id}`
+  // Данные вкладки грузятся по наведению: переход открывает готовый экран
+  const prefetch = usePrefetchSite()
   const crumbs: Crumb[] = [{ label: 'Стройки', to: '/sites' }]
   crumbs.push(crumb ? { label: site.name, to: base } : { label: site.name })
   if (crumb) crumbs.push({ label: crumb })
@@ -53,6 +56,7 @@ export function SiteShell({
             to={tab.to ? `${base}/${tab.to}` : base}
             end={tab.end}
             className={styles.tab}
+            {...prefetch(site.id, tab.tab)}
           >
             {tab.label}
           </NavLink>

@@ -7,6 +7,7 @@ from app.domains.methodology.recalculator import (
     NoopStatusRecalculator,
     StatusRecalculator,
 )
+from app.domains.observation.activity import ActivityParams
 from app.domains.observation.policies import (
     ActivityPolicy,
     AggregationPolicy,
@@ -43,7 +44,15 @@ class ObservationProvider(Provider):
     @provide(scope=Scope.APP)
     def activity_policy(self, settings: Settings) -> ActivityPolicy:
         """Создать ActivityPolicy."""
-        return ActivityPolicy(movement_threshold=settings.observation.movement_threshold)
+        cfg = settings.observation
+        return ActivityPolicy(
+            ActivityParams(
+                still_shift=cfg.still_shift,
+                moved_shift=cfg.moved_shift,
+                max_gap_min=cfg.pair_max_gap_min,
+                idle_min_pairs=cfg.idle_min_pairs,
+            )
+        )
 
     @provide(scope=Scope.APP, provides=StatusRecalculator)
     def status_recalculator(self) -> StatusRecalculator:

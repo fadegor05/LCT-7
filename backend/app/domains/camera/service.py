@@ -52,7 +52,7 @@ class CameraService:
         camera = Camera(
             site_id=site_id,
             name=data.name,
-            stream_url=_stream_url(data.stream_url),
+            stream_url=resolve_stream_url(data.stream_url),
             zone=data.zone,
         )
         camera.capture_every_s = _interval(camera.stream_url, data.capture_every_s)
@@ -67,7 +67,9 @@ class CameraService:
         camera = await self._get(site_id, camera_id)
         changes = data.model_dump(exclude_unset=True)
         if "stream_url" in changes:
-            changes["stream_url"] = _stream_url(changes["stream_url"], stored=camera.stream_url)
+            changes["stream_url"] = resolve_stream_url(
+                changes["stream_url"], stored=camera.stream_url
+            )
         stream_changed = "stream_url" in changes and changes["stream_url"] != camera.stream_url
         for field, value in changes.items():
             setattr(camera, field, value)
@@ -98,7 +100,7 @@ class CameraService:
         return [CameraView(c, counts.get(c.id, 0)) for c in cameras]
 
 
-def _stream_url(value: str | None, stored: str | None = None) -> str | None:
+def resolve_stream_url(value: str | None, stored: str | None = None) -> str | None:
     """Проверить ссылку на стрим; пустая — None.
 
     API отдаёт ссылку с паролем замаскированным (`rtsp://***@host`). Если такую ссылку прислали

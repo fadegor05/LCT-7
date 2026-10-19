@@ -10,7 +10,7 @@ services:
       LLM_BASE_URL: ""
       LLM_API_KEY: ""
       LLM_MODEL: ""
-      # Снимки со стрима по расписанию; на стенде включены (по умолчанию выключено в настройках)
+      # Снимки со стрима по расписанию; включены по умолчанию, false выключает
       STREAM__ENABLED: ${STREAM__ENABLED:-true}
     networks:
       - web

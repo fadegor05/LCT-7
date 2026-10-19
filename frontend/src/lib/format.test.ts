@@ -10,6 +10,7 @@ import {
   formatTime,
   formatWindow,
   parseRuDate,
+  stageDelayText,
   parseRuDateTime,
   todayIso,
 } from './format'
@@ -115,5 +116,19 @@ describe('latestObservation', () => {
     expect(latestObservation([...list].reverse())?.observed_on).toBe('2023-10-13')
     expect(latestObservation([])).toBeUndefined()
     expect(latestObservation(undefined)).toBeUndefined()
+  })
+})
+
+describe('stageDelayText', () => {
+  it('shows the interval of a stage delay', () => {
+    const row = { status: 'behind', delay_days: 74 }
+    expect(stageDelayText({ ...row, delay_min: 14, delay_max: 74 })).toBe('отставание 14–74 дн.')
+    expect(stageDelayText({ ...row, delay_min: null, delay_max: 63 })).toBe('отставание до 63 дн.')
+    expect(stageDelayText({ ...row, delay_min: 60, delay_max: null })).toBe('отставание от 60 дн.')
+    expect(stageDelayText({ status: 'ahead', delay_days: 12, delay_min: 12, delay_max: 12 })).toBe(
+      'опережение 12 дн.',
+    )
+    // Прежний ответ без интервала
+    expect(stageDelayText(row)).toBe('отставание 74 дн.')
   })
 })

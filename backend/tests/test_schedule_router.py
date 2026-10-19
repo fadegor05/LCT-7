@@ -655,3 +655,33 @@ async def test_import_computes_stage_statuses_without_observations(
 
     summary = (await client.get(f"/sites/{site_id}/assessment/summary")).json()
     assert summary["verdict"] == "insufficient_data"
+
+
+async def test_import_groups_works_and_keeps_their_names(
+    client: AsyncClient, container: AsyncContainer
+) -> None:
+    """Работы одного пункта — один этап; названия работ сохраняются для подбора комплекта."""
+    await seed_stand_user(container)
+    site_id = (await client.post("/sites", json={"name": "Котельная"})).json()["id"]
+    csv_content = make_csv_bytes(
+        "№;Наименование;Начало;Окончание\n"
+        "9;Работы по устройству котельной;;\n"
+        "9.1;Устройство фундамента;01.06.2026;30.06.2026\n"
+        "9.2;Монтаж дымовой трубы;01.07.2026;31.07.2026\n"
+    )
+
+    response = await client.post(
+        f"/sites/{site_id}/schedule/import",
+        files={"file": ("g.csv", csv_content, "text/csv")},
+        data={"mode": "builtin"},
+    )
+
+    assert response.status_code == 201
+    stages = response.json()["stages"]
+    assert [(s["name"], s["planned_start"], s["planned_end"]) for s in stages] == [
+        ("Работы по устройству котельной", "2026-06-01", "2026-07-31")
+    ]
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        stage = await session.get(ScheduleStage, uuid.UUID(stages[0]["id"]))
+        assert stage.work_names == ["Устройство фундамента", "Монтаж дымовой трубы"]

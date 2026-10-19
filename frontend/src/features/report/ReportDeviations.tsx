@@ -15,7 +15,6 @@ export function ReportDeviations({ items }: { items: readonly DeviationItem[] })
           <th scope="col">Отклонение</th>
           <th scope="col">Этап</th>
           <th scope="col">Период</th>
-          <th scope="col">Основание</th>
           <th scope="col">Уверенность</th>
         </tr>
       </thead>
@@ -28,17 +27,15 @@ export function ReportDeviations({ items }: { items: readonly DeviationItem[] })
               </span>
             </td>
             <td>
-              <strong>{deviationTypeLabels[d.type]}</strong>
-              {d.is_hypothesis && <span className={styles.sub}>Гипотеза: проверьте снимки</span>}
+              {/* Заголовок по машине, под ним тип — как в clean-mvp */}
+              <strong>{d.title ?? deviationTypeLabels[d.type]}</strong>
+              <span className={styles.sub}>
+                {deviationTypeLabels[d.type]}
+                {d.is_hypothesis && ' (гипотеза)'}
+              </span>
             </td>
             <td>{d.stage_name ?? 'Все этапы'}</td>
             <td className={styles.nowrap}>{formatWindow(d.period_start, d.period_end, '–')}</td>
-            <td>
-              <span>Ожидалось: {d.expected}</span>
-              <span className={styles.sub}>
-                Наблюдается: {d.observed}. {d.limits_text}
-              </span>
-            </td>
             <td>{levelLabels[d.confidence]}</td>
           </tr>
         ))}

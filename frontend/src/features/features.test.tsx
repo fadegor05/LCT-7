@@ -276,6 +276,7 @@ describe('observations', () => {
       equipment_title: 'Гусеничный экскаватор',
       count_min: 2,
       activity: 'works',
+      activity_basis: 'Движение: машина сместилась между 10:05 и 10:15\nЗона: внутри зоны',
       confidence: 'high',
     },
     {
@@ -312,6 +313,20 @@ describe('observations', () => {
     expect(screen.getByText('Простаивает')).toBeInTheDocument()
     expect(screen.getByText('Неизвестно')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Уверенность: низкая' })).toBeInTheDocument()
+    // Основание активности — под строкой машины
+    expect(screen.getByText(/машина сместилась между 10:05 и 10:15/)).toBeInTheDocument()
+  })
+
+  it('EquipmentList shows a shared activity basis once', () => {
+    const basis = 'Движение: нет серии кадров одной камеры со временем — по одному снимку не видно'
+    render(
+      <EquipmentList
+        observation={observation({
+          equipment: equipment.map((e) => ({ ...e, activity_basis: basis })),
+        })}
+      />,
+    )
+    expect(screen.getAllByText(basis)).toHaveLength(1)
   })
 
   it('EquipmentList has an empty state', () => {

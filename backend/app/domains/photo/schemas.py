@@ -37,6 +37,15 @@ class PhotoRead(BaseModel):
     processing_status: str
     uploaded_at: datetime
     camera_id: uuid.UUID | None = None
+    # Местное время съёмки; дата-подсказка для ручного ввода; проверка серии штампов
+    captured_at: datetime | None = None
+    date_hint: date | None = None
+    time_check: str | None = None
+    # Сводка кадра для подписи в ленте (clean-mvp): какая техника на нём, есть ли машина
+    # за контуром зоны камеры, служит ли он снимком-доказательством отклонения
+    machines: list[str] = []
+    out_of_zone: bool = False
+    evidence: bool = False
 
 
 class PhotoDetail(PhotoRead):

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { ApiError, request } from './client'
 import { keys } from './keys'
-import { siteSchema, userSchema, type SiteCreate } from './schemas'
+import { siteSchema, userSchema, type Site, type SiteCreate } from './schemas'
 
 /** Пустой адрес в форме — это «нет адреса» (null) на бэкенде. */
 const toBody = (data: Partial<SiteCreate>) =>
@@ -39,7 +39,14 @@ export function useSites() {
 }
 
 export function useSite(siteId: string) {
-  return useQuery({ queryKey: keys.site(siteId), queryFn: () => sitesApi.get(siteId) })
+  const qc = useQueryClient()
+  return useQuery({
+    queryKey: keys.site(siteId),
+    queryFn: () => sitesApi.get(siteId),
+    // Шапка объекта сразу из списка строек: переход со «Строек» не ждёт запроса
+    initialData: () => qc.getQueryData<Site[]>(keys.sites)?.find((s) => s.id === siteId),
+    initialDataUpdatedAt: () => qc.getQueryState(keys.sites)?.dataUpdatedAt,
+  })
 }
 
 export function useCreateSite() {

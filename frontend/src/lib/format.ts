@@ -82,7 +82,7 @@ export function formatWindow(start: string | null, end: string | null, sep = ' �
 
 /** Отставание: «от 4 дн.» или «4–6 дн.» */
 export function formatDelay(min: number | null, max: number | null): string | null {
-  if (min === null) return null
+  if (min === null) return max === null ? null : `до ${max} дн.`
   if (max === null) return `от ${min} дн.`
   if (max === min) return `${min} дн.`
   return `${min}–${max} дн.`
@@ -139,4 +139,22 @@ export function latestObservation<T extends { observed_on: string }>(
     (best, o) => (!best || o.observed_on > best.observed_on ? o : best),
     undefined,
   )
+}
+
+/** Сдвиг этапа: «отставание 14–74 дн.», «опережение 12 дн.»; без сдвига — null. */
+export function stageDelayText(row: {
+  status: string | null
+  delay_days: number | null
+  delay_open?: boolean
+  delay_min?: number | null
+  delay_max?: number | null
+}): string | null {
+  if (row.delay_days === null) return null
+  const word = row.status === 'ahead' ? 'опережение' : 'отставание'
+  const interval =
+    row.delay_min !== undefined || row.delay_max !== undefined
+      ? formatDelay(row.delay_min ?? null, row.delay_max ?? null)
+      : null
+  if (interval) return `${word} ${interval}`
+  return `${word} ${row.delay_open ? 'от ' : ''}${row.delay_days} дн.`
 }

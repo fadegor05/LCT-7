@@ -181,6 +181,8 @@ async def test_scheduler_captures_due_cameras_with_a_link(
     async with maker() as session:
         photos = (await session.execute(select(Photo))).scalars().all()
     assert [(str(p.camera_id), p.captured_on) for p in photos] == [(live, date(2026, 9, 18))]
+    # Момент снимка — местное время стройки: без него не сложится серия кадров камеры
+    assert photos[0].captured_at == FRIDAY_10.astimezone(MSK).replace(tzinfo=None, microsecond=0)
     assert (await _stored(maker, failing)).capture_failures == 1
 
     # Через минуту никому не пора; через 5 минут — снова обеим
@@ -245,8 +247,62 @@ async def test_lifespan_does_not_capture_unless_enabled(
     assert started == ["start"] and stopped == ["stop"]
 
 
-def test_stream_is_off_in_the_default_settings() -> None:
-    assert Settings().stream.enabled is False
+def test_stream_is_on_in_the_default_settings() -> None:
+    assert Settings().stream.enabled is True
+
+
+async def test_preview_returns_a_frame_and_stores_nothing(
+    stand_client: AsyncClient, grabber: FakeGrabber, maker
+) -> None:
+    """Пробный кадр до сохранения камеры: фон для зоны, в ленту не попадает (clean-mvp)."""
+    site = await _site(stand_client)
+    r = await stand_client.post(
+        f"/sites/{site}/cameras/preview", json={"stream_url": "rtsp://cam/new"}
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["image"].startswith("data:image/jpeg;base64,")
+    assert body["width"] > 0 and body["height"] > 0
+    assert grabber.calls == ["rtsp://cam/new"]
+    photos = (await stand_client.get(f"/sites/{site}/photos")).json()
+    assert photos == []
+
+
+async def test_preview_of_an_edited_camera_uses_its_stored_password(
+    stand_client: AsyncClient, grabber: FakeGrabber
+) -> None:
+    site = await _site(stand_client)
+    camera = await _camera(stand_client, site, stream_url="rtsp://user:secret@cam/live")
+    masked = (await stand_client.get(f"/sites/{site}/cameras")).json()[0]["stream_url"]
+    assert "secret" not in masked
+
+    r = await stand_client.post(
+        f"/sites/{site}/cameras/preview", json={"stream_url": masked, "camera_id": camera}
+    )
+
+    assert r.status_code == 200, r.text
+    assert grabber.calls == ["rtsp://user:secret@cam/live"]
+
+
+async def test_preview_reports_why_without_the_password(
+    stand_client: AsyncClient, grabber: FakeGrabber
+) -> None:
+    site = await _site(stand_client)
+    grabber.errors["rtsp://user:secret@cam/down"] = "камера rtsp://user:secret@cam/down не ответила"
+    r = await stand_client.post(
+        f"/sites/{site}/cameras/preview", json={"stream_url": "rtsp://user:secret@cam/down"}
+    )
+    assert r.status_code == 422
+    assert "secret" not in r.text
+
+
+async def test_preview_checks_the_link(stand_client: AsyncClient) -> None:
+    site = await _site(stand_client)
+    r = await stand_client.post(
+        f"/sites/{site}/cameras/preview", json={"stream_url": "ftp://user:secret@cam"}
+    )
+    assert r.status_code == 422
+    assert "secret" not in r.text
 
 
 async def test_production_container_wires_the_grabber_and_the_scheduler() -> None:

@@ -7,6 +7,9 @@ import { Callout } from '@/components/ui/Callout'
 import { Pill } from '@/components/ui/Pill'
 import { QueryState } from '@/components/ui/QueryState'
 import { parseRuDate, todayIso } from '@/lib/format'
+
+/** 2026-08-03 → 03.08.2026 — формат поля ввода. */
+const formatShortRuDate = (iso: string) => iso.split('-').reverse().join('.')
 import { pluralPhotos, processingStatusLabels } from '@/lib/labels'
 import styles from './Observations.module.css'
 
@@ -14,7 +17,8 @@ const FORMAT_ERROR = 'Формат: дд.мм.гггг'
 const FUTURE_ERROR = 'Дата не может быть позже сегодняшней'
 
 function PhotoDateRow({ photo, siteId }: { photo: Photo; siteId: string }) {
-  const [value, setValue] = useState('')
+  // Подсказка со штампа или из имени файла — в поле сразу: подтвердить, а не набирать
+  const [value, setValue] = useState(photo.date_hint ? formatShortRuDate(photo.date_hint) : '')
   const [error, setError] = useState<string | null>(null)
   const setDate = useSetPhotoDate(siteId)
   const submit = () => {
@@ -35,7 +39,9 @@ function PhotoDateRow({ photo, siteId }: { photo: Photo; siteId: string }) {
         {processingStatusLabels[photo.processing_status]}
       </span>
       <span className={`sm muted ${styles.reviewHint}`}>
-        Даты нет ни в метаданных, ни в имени файла, ни у соседних снимков
+        {photo.date_hint
+          ? 'Штамп прочитан неуверенно или его нет: проверьте подсказку по снимку'
+          : 'Даты нет ни в метаданных, ни в имени файла, ни у соседних снимков'}
       </span>
       <span className={styles.dateField}>
         <input

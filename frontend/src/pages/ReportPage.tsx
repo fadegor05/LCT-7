@@ -89,7 +89,12 @@ export function ReportPage() {
             <div className={styles.head}>
               <h1>Отчёт: {s.name}</h1>
               <p>
-                {[s.address, last && `последнее наблюдение ${formatDate(last.observed_on)}`]
+                {[
+                  s.address,
+                  summary.data?.as_of
+                    ? `данные на ${stampDate(summary.data.as_of)}`
+                    : last && `последнее наблюдение ${formatDate(last.observed_on)}`,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </p>
@@ -103,9 +108,12 @@ export function ReportPage() {
                   <>
                     <p className={styles.verdict}>{verdictText(o)}</p>
                     <p>
-                      {o.verdict === 'insufficient_data'
-                        ? INSUFFICIENT_EXPLANATION
-                        : VERDICT_EXPLANATION[o.verdict]}
+                      {/* Пояснение пересчёта — про тот же этап, что интервал в итоге */}
+                      {o.reason && o.verdict !== 'no_deviations'
+                        ? o.reason
+                        : o.verdict === 'insufficient_data'
+                          ? INSUFFICIENT_EXPLANATION
+                          : VERDICT_EXPLANATION[o.verdict]}
                     </p>
                   </>
                 )}

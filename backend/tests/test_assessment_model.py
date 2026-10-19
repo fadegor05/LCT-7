@@ -597,7 +597,7 @@ async def test_unique_constraint_status_basis(container) -> None:
 async def test_stage_status_fk_stage_cascade_delete() -> None:
     """FK stage_statuses.stage_id -> schedule_stages.id имеет ondelete=CASCADE."""
     table = StageStatus.__table__
-    fk_constraints = [fk for fk in table.foreign_keys if "stage_id" in fk.parent.name]
+    fk_constraints = [fk for fk in table.foreign_keys if fk.parent.name == "stage_id"]
     assert len(fk_constraints) == 1
     assert fk_constraints[0].ondelete == "CASCADE"
 
@@ -615,7 +615,7 @@ async def test_deviation_fk_site_cascade_delete() -> None:
 async def test_deviation_fk_stage_cascade_delete() -> None:
     """FK deviations.stage_id -> schedule_stages.id имеет ondelete=CASCADE."""
     table = Deviation.__table__
-    fk_constraints = [fk for fk in table.foreign_keys if "stage_id" in fk.parent.name]
+    fk_constraints = [fk for fk in table.foreign_keys if fk.parent.name == "stage_id"]
     assert len(fk_constraints) == 1
     assert fk_constraints[0].ondelete == "CASCADE"
 

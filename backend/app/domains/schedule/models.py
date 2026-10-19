@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from enum import StrEnum
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, Uuid, func
+from sqlalchemy import JSON, Date, DateTime, ForeignKey, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -75,6 +75,9 @@ class ScheduleStage(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False)
     planned_start: Mapped[date | None] = mapped_column(Date(), nullable=True)
     planned_end: Mapped[date | None] = mapped_column(Date(), nullable=True)
+    # Названия работ этапа из графика («4.1 …», «4.2 …»): по ним подбирается комплект, если
+    # название этапа общее («Строительные работы», «Работы по устройству котельной»)
+    work_names: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     dates_source: Mapped[str] = mapped_column(
         String(16), default=DatesSource.FILE.value, nullable=False
     )

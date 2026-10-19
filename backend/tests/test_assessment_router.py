@@ -8,7 +8,13 @@ from dishka import AsyncContainer
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domains.assessment.models import Deviation, DeviationEvidence, Severity, StageStatus
+from app.domains.assessment.models import (
+    Deviation,
+    DeviationEvidence,
+    Severity,
+    SiteSummary,
+    StageStatus,
+)
 from app.domains.schedule.models import DatesSource, Schedule, ScheduleStage
 from app.domains.site.models import Site
 from app.domains.user.service import STAND_USER_ID, UserService
@@ -98,6 +104,30 @@ async def create_stage_status(
             confidence_reason="Test reason",
         )
         session.add(stage_status)
+        await session.commit()
+
+
+async def create_site_summary(
+    container: AsyncContainer,
+    site_id: uuid.UUID,
+    verdict: str,
+    delay: tuple[int | None, int | None] = (None, None),
+    stage_id: uuid.UUID | None = None,
+    reason: str = "Test reason",
+) -> None:
+    """Кладёт итог объекта, как его оставляет пересчёт (engine.summarize)."""
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        session.add(
+            SiteSummary(
+                site_id=site_id,
+                verdict=verdict,
+                delay_days_min=delay[0],
+                delay_days_max=delay[1],
+                stage_id=stage_id,
+                reason=reason,
+            )
+        )
         await session.commit()
 
 
@@ -379,9 +409,7 @@ class TestAssessmentRouter:
 
         site_id, _, stage_ids = await create_site_with_schedule(container)
 
-        # Создаём statuses для этапов, но без behind
-        await create_stage_status(container, stage_ids[0], "on_track", delay_days=0)
-        await create_stage_status(container, stage_ids[1], "ahead", delay_days=-1)
+        await create_site_summary(container, site_id, "no_deviations")
 
         response = await client.get(f"/sites/{site_id}/assessment/summary")
 
@@ -397,24 +425,40 @@ class TestAssessmentRouter:
     async def test_get_summary_behind_status_with_200(
         self, client: AsyncClient, container: AsyncContainer
     ) -> None:
-        """GET /assessment/summary возвращает behind с интервалом дней отставания."""
+        """GET /assessment/summary — итог пересчёта: худший этап, его интервал и пояснение."""
         await seed_stand_user(container)
 
         site_id, _, stage_ids = await create_site_with_schedule(container)
-
-        # Создаём statuses: один behind, один ahead
-        await create_stage_status(container, stage_ids[0], "behind", delay_days=3)
-        await create_stage_status(container, stage_ids[1], "behind", delay_days=5)
+        # «Не начат»: отставание «от 5 дней», верхней границы нет
+        await create_site_summary(
+            container, site_id, "behind", (5, None), stage_ids[1], "Измерено по этапу «B»"
+        )
 
         response = await client.get(f"/sites/{site_id}/assessment/summary")
 
         assert response.status_code == 200
         data = response.json()
         assert data["verdict"] == "behind"
-        assert data["delay_days_min"] == 3
-        assert data["delay_days_max"] == 5
+        assert data["delay_days_min"] == 5
+        assert data["delay_days_max"] is None
+        assert data["stage_id"] == str(stage_ids[1])
+        assert data["reason"] == "Измерено по этапу «B»"
         assert data["critical_count"] == 0
         assert data["attention_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_summary_not_recomputed_is_insufficient(
+        self, client: AsyncClient, container: AsyncContainer
+    ) -> None:
+        """Объект с графиком, но ещё не пересчитанный — «Недостаточно данных» без причины."""
+        await seed_stand_user(container)
+        site_id, _, stage_ids = await create_site_with_schedule(container)
+        await create_stage_status(container, stage_ids[0], "behind", delay_days=3)
+
+        data = (await client.get(f"/sites/{site_id}/assessment/summary")).json()
+
+        assert data["verdict"] == "insufficient_data"
+        assert data["reason"] is None
 
     @pytest.mark.asyncio
     async def test_get_summary_with_deviations_and_behind_with_200(
@@ -425,8 +469,7 @@ class TestAssessmentRouter:
 
         site_id, _, stage_ids = await create_site_with_schedule(container)
 
-        # Создаём statuses with behind
-        await create_stage_status(container, stage_ids[0], "behind", delay_days=2)
+        await create_site_summary(container, site_id, "behind", (2, 2), stage_ids[0])
 
         # Создаём отклонения
         await create_deviation(container, site_id, Severity.CRITICAL.value)

@@ -9,11 +9,12 @@
 """
 
 import io
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 from PIL import Image
 
+from app.adapters.ml.stamp import StampReading
 from app.domains.photo.date_resolver import (
     DateResolver,
     ImageInfo,
@@ -566,8 +567,9 @@ class TestDateResolver:
         assert result.source == DateSource.CHANNEL
 
     @pytest.mark.asyncio
-    async def test_date_resolver_full_chain_exif_beats_stamp(self) -> None:
-        """EXIF выигрывает у stamp."""
+    async def test_date_resolver_full_chain_stamp_beats_exif(self) -> None:
+        """Уверенный штамп выигрывает у EXIF (clean-mvp, R9): EXIF переписывается при
+        пересохранении файла, а штамп — время, которое человек видит на кадре."""
 
         class FakeAsyncOcr:
             async def read_date(self, content: bytes) -> date | None:
@@ -584,8 +586,8 @@ class TestDateResolver:
 
         result = await resolver.resolve(content)
 
-        assert result.captured_on == date(2026, 2, 14)
-        assert result.source == DateSource.METADATA
+        assert result.captured_on == date(2025, 6, 1)
+        assert result.source == DateSource.STAMP
 
     @pytest.mark.asyncio
     async def test_date_resolver_full_chain_stamp_fallback(self) -> None:
@@ -691,8 +693,8 @@ class TestDateResolverAsync:
         assert result.source is None
 
     @pytest.mark.asyncio
-    async def test_date_resolver_async_exif_priority_over_stamp(self) -> None:
-        """EXIF имеет приоритет над async stamp OCR."""
+    async def test_date_resolver_async_stamp_priority_over_exif(self) -> None:
+        """Уверенный штамп имеет приоритет над EXIF (clean-mvp, R9)."""
 
         class FakeAsyncOcr:
             async def read_date(self, content: bytes) -> date | None:
@@ -709,9 +711,9 @@ class TestDateResolverAsync:
         content = buffer.getvalue()
 
         result = await resolver.resolve(content)
-        # EXIF дата должна быть выбрана
-        assert result.captured_on == date(2026, 3, 25)
-        assert result.source == DateSource.METADATA
+        # Уверенный штамп важнее EXIF (clean-mvp, R9)
+        assert result.captured_on == date(2010, 1, 1)
+        assert result.source == DateSource.STAMP
 
     @pytest.mark.asyncio
     async def test_date_resolver_async_channel_priority_over_stamp(self) -> None:
@@ -800,7 +802,11 @@ class TestDateResolverFilename:
     @pytest.mark.asyncio
     async def test_filename_used_when_no_exif_and_no_stamp(self) -> None:
         result = await DateResolver().resolve(self._plain_png(), filename="IMG_20260915_143012.jpg")
-        assert result == ResolvedDate(captured_on=date(2026, 9, 15), source=DateSource.FILENAME)
+        assert result == ResolvedDate(
+            captured_on=date(2026, 9, 15),
+            source=DateSource.FILENAME,
+            captured_at=datetime(2026, 9, 15, 14, 30, 12),
+        )
 
     @pytest.mark.asyncio
     async def test_stamp_wins_over_filename(self) -> None:
@@ -817,3 +823,123 @@ class TestDateResolverFilename:
     async def test_filename_without_date_leaves_photo_undated(self) -> None:
         result = await DateResolver().resolve(self._plain_png(), filename="photo.jpg")
         assert result == ResolvedDate(captured_on=None, source=None)
+
+
+class TestCameraFrameFilename:
+    """Кадр камеры известного разрешения: имя файла — момент выгрузки, а не съёмки."""
+
+    @staticmethod
+    def _png() -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (100, 100), color="white").save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    @pytest.mark.asyncio
+    async def test_unread_camera_stamp_ignores_filename(self) -> None:
+        class CameraOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(None, "2592x1944")
+
+        result = await DateResolver(ocr=CameraOcr()).resolve(
+            self._png(), filename="202609272307241790539644116.jpg"
+        )
+        assert result.captured_on is None
+        assert result.source is None
+
+    @pytest.mark.asyncio
+    async def test_read_camera_stamp_wins(self) -> None:
+        class CameraOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(date(2026, 8, 13), "2592x1944")
+
+        result = await DateResolver(ocr=CameraOcr()).resolve(
+            self._png(), filename="202609272307241790539644116.jpg"
+        )
+        assert result.captured_on == date(2026, 8, 13)
+        assert result.source == DateSource.STAMP
+
+    @pytest.mark.asyncio
+    async def test_frame_of_unknown_camera_keeps_filename(self) -> None:
+        class PlainOcr:
+            async def read(self, content: bytes) -> StampReading:
+                return StampReading(None, None)
+
+        result = await DateResolver(ocr=PlainOcr()).resolve(
+            self._png(), filename="IMG_20260927_020037.jpg"
+        )
+        assert result.captured_on == date(2026, 9, 27)
+        assert result.source == DateSource.FILENAME
+
+
+class TestStampContract:
+    """Поля контракта clean-mvp: неуверенный штамп — подсказка, OCR сам дату не ставит."""
+
+    @staticmethod
+    def _png() -> bytes:
+        buffer = io.BytesIO()
+        Image.new("RGB", (100, 100), color="white").save(buffer, format="PNG")
+        return buffer.getvalue()
+
+    @staticmethod
+    def _ocr(**fields):
+        reading = StampReading(**fields)
+
+        class Ocr:
+            async def read(self, content: bytes) -> StampReading:
+                return reading
+
+        return Ocr()
+
+    @pytest.mark.asyncio
+    async def test_confident_templates_give_date_and_time(self) -> None:
+        ocr = self._ocr(
+            date=date(2026, 8, 3),
+            profile="2592x1944",
+            found=True,
+            captured_at=datetime(2026, 8, 3, 10, 30, 41),
+            confidence=0.97,
+            method="templates",
+        )
+        result = await DateResolver(ocr=ocr).resolve(self._png(), filename="x.jpg")
+        assert result.source == DateSource.STAMP
+        assert result.captured_at == datetime(2026, 8, 3, 10, 30, 41)
+
+    @pytest.mark.asyncio
+    async def test_uncertain_templates_give_a_hint_and_series_candidate(self) -> None:
+        ocr = self._ocr(
+            profile="2592x1944",
+            found=True,
+            captured_at=datetime(2026, 8, 3, 10, 30, 41),
+            confidence=0.6,
+            method="templates",
+        )
+        result = await DateResolver(ocr=ocr).resolve(
+            self._png(), filename="202609270106411790460401577.jpg"
+        )
+        assert (result.captured_on, result.source) == (None, None)
+        assert result.hint == date(2026, 8, 3)
+        assert result.uncertain_at == datetime(2026, 8, 3, 10, 30, 41)
+
+    @pytest.mark.asyncio
+    async def test_ocr_date_is_only_a_hint(self) -> None:
+        ocr = self._ocr(
+            date=date(2023, 4, 14),
+            found=True,
+            captured_at=datetime(2023, 4, 14, 11, 0, 0),
+            confidence=0.5,
+            method="ocr",
+        )
+        result = await DateResolver(ocr=ocr).resolve(
+            self._png(), filename="IMG_20260915_143012.jpg"
+        )
+        assert (result.captured_on, result.source) == (None, None)
+        assert result.hint == date(2023, 4, 14)
+        assert result.uncertain_at is None
+
+    @pytest.mark.asyncio
+    async def test_camera_frame_without_stamp_gets_filename_as_hint(self) -> None:
+        ocr = self._ocr(profile="2592x1944")
+        result = await DateResolver(ocr=ocr).resolve(
+            self._png(), filename="IMG_20260927_010641.jpg"
+        )
+        assert (result.captured_on, result.hint) == (None, date(2026, 9, 27))

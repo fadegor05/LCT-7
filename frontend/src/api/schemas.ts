@@ -50,6 +50,7 @@ export const deviationTypeSchema = z.enum([
   'out_of_zone',
   'no_progress',
   'behind_schedule',
+  'incomplete_kit',
 ])
 /** assessment.models.Severity */
 export const severitySchema = z.enum(['critical', 'attention'])
@@ -212,6 +213,17 @@ export const photoSchema = z.object({
   date_source: dateSourceSchema.nullable(),
   processing_status: processingStatusSchema,
   uploaded_at: isoDateTime,
+  camera_id: z.string().nullable().optional(),
+  /** Местное время съёмки (без пояса), если источник его знает. */
+  captured_at: z.string().nullable().optional(),
+  /** Дата-подсказка для ручного ввода: неуверенный штамп, кадр камеры без штампа. */
+  date_hint: isoDate.nullable().optional(),
+  /** Проверка серии штампов камеры: ok | series_outlier. */
+  time_check: z.string().nullable().optional(),
+  /** Сводка для подписи в ленте: техника на кадре, машина вне зоны, снимок-доказательство. */
+  machines: z.array(z.string()).optional(),
+  out_of_zone: z.boolean().optional(),
+  evidence: z.boolean().optional(),
 })
 
 export const photoDetailSchema = photoSchema.extend({
@@ -245,6 +257,8 @@ export const observedEquipmentSchema = z.object({
   equipment_title: z.string(),
   count_min: z.number(),
   activity: activitySchema,
+  // Основание активности: движение по серии кадров камеры и зона (clean-mvp)
+  activity_basis: z.string().nullish(),
   confidence: levelSchema,
 })
 
@@ -268,6 +282,15 @@ export const stageStatusSchema = z.object({
   /** null — статус ещё не рассчитан (этап не наступил или нет данных). */
   status: stageStatusValueSchema.nullable(),
   delay_days: z.number().nullable(),
+  /** delay_days — нижняя граница («от N дней»): этап не начат. */
+  delay_open: z.boolean().optional(),
+  /** Сдвиг интервалом: null — граница неизвестна («до N», «от N»). */
+  delay_min: z.number().nullable().optional(),
+  delay_max: z.number().nullable().optional(),
+  /** Факт по маркеру: первая подтверждённая маркерная дата. */
+  start_fact: isoDate.nullable().optional(),
+  /** Маркеры этапа: техника, которая отличает его от идущих одновременно. */
+  marker_names: z.array(z.string()).optional(),
   confidence: levelSchema.nullable(),
   confidence_reason: z.string().nullable(),
   computed_at: isoDateTime.nullable(),
@@ -287,10 +310,21 @@ export const deviationSchema = z.object({
   limits_text: z.string(),
   rule_id: z.string().nullable(),
   created_at: isoDateTime,
+  /** Заголовок по машине («Буровая установка: техника этапа «Сваи»»). */
+  title: z.string().nullable().optional(),
+  equipment_type_id: z.string().nullable().optional(),
+  /** Возможная причина: отстающий этап, чья техника ещё на площадке. */
+  cause_stage_id: z.string().nullable().optional(),
 })
 
 export const deviationDetailSchema = deviationSchema.extend({
-  evidence: z.array(z.object({ photo_id: z.string(), detection_id: z.string().nullable() })),
+  evidence: z.array(
+    z.object({
+      photo_id: z.string(),
+      detection_id: z.string().nullable(),
+      caption: z.string().nullable().optional(),
+    }),
+  ),
 })
 
 export const siteSummarySchema = z.object({
@@ -299,6 +333,11 @@ export const siteSummarySchema = z.object({
   delay_days_max: z.number().nullable(),
   critical_count: z.number(),
   attention_count: z.number(),
+  /** Почему такой итог: этап с наибольшим отставанием или причина «Недостаточно данных». */
+  reason: z.string().nullable().optional(),
+  stage_id: z.string().nullable().optional(),
+  /** Опорная дата расчёта: «данные на». */
+  as_of: isoDate.nullable().optional(),
 })
 
 // ---------- Ассистент (assistant) ----------

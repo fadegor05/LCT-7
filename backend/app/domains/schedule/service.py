@@ -12,6 +12,7 @@ from app.adapters.ml.schedule_llm import LlmScheduleResult, ScheduleLlmClient
 from app.domains.methodology.materializer import NO_KIT_REASON
 from app.domains.methodology.models import MethodologyRule
 from app.domains.methodology.recalculator import StatusRecalculator
+from app.domains.schedule.grouping import group_works
 from app.domains.schedule.models import (
     DatesSource,
     ParseMethod,
@@ -212,17 +213,19 @@ class ScheduleService:
         )
         await self._repository.add(schedule)
 
-        # Добавляем этапы (с positions 1..N, dates_source='file')
+        # Добавляем этапы (с positions 1..N, dates_source='file'): работы одного пункта
+        # графика («2.1», «2.2») — один этап с окном от первой до последней работы
         stages = [
             ScheduleStage(
                 schedule_id=schedule.id,
-                name=row.name,
+                name=group.name,
                 position=idx + 1,
-                planned_start=row.start,
-                planned_end=row.end,
+                planned_start=group.start,
+                planned_end=group.end,
+                work_names=[w.name for w in group.works],
                 dates_source=DatesSource.FILE.value,
             )
-            for idx, row in enumerate(parse_result.rows)
+            for idx, group in enumerate(group_works(parse_result.rows))
         ]
         if stages:
             await self._repository.add_stages(stages)
@@ -473,6 +476,7 @@ class ScheduleService:
         target.planned_end = max((s.planned_end for s in chosen if s.planned_end), default=None)
         if any(s.dates_source == DatesSource.MANUAL.value for s in chosen):
             target.dates_source = DatesSource.MANUAL.value
+        target.work_names = [name for s in chosen for name in (s.work_names or [s.name])]
         for stage in rest:
             await self._session.delete(stage)
         for number, stage in enumerate((s for s in stages if s.id not in rest_ids), start=1):

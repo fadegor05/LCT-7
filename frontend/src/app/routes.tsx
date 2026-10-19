@@ -24,6 +24,11 @@ export const routes: RouteObject[] = [
   { index: true, element: <LandingPage /> },
   { path: 'login', element: <LoginPage /> },
   { path: 'register', element: <RegisterPage /> },
+  // Отчёт A4 — отдельный документ без шапки приложения (clean-mvp)
+  {
+    element: <RequireAuth bare />,
+    children: [{ path: 'sites/:siteId/report', element: <ReportPage /> }],
+  },
   {
     element: <RequireAuth />,
     children: [
@@ -35,7 +40,6 @@ export const routes: RouteObject[] = [
       { path: 'sites/:siteId/observations', element: <ObservationsPage /> },
       { path: 'sites/:siteId/methodology', element: <MethodologyPage /> },
       { path: 'sites/:siteId/cameras', element: <CamerasPage /> },
-      { path: 'sites/:siteId/report', element: <ReportPage /> },
       { path: 'sites/:siteId/deviations/:deviationId', element: <DeviationPage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: '*', element: <NotFoundPage /> },

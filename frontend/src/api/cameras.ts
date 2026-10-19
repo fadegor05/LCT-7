@@ -59,6 +59,24 @@ export function useCaptureNow(siteId: string, cameraId: string | null) {
   })
 }
 
+const previewSchema = z.object({ image: z.string(), width: z.number(), height: z.number() })
+export type StreamPreview = z.infer<typeof previewSchema>
+
+/**
+ * Пробный кадр по ссылке до сохранения камеры — ориентир для зоны, в ленту не попадает.
+ * `cameraId` — камера, ссылку которой правят: сервер подставит её сохранённый пароль.
+ */
+export function usePreviewFrame(siteId: string) {
+  return useMutation({
+    mutationFn: ({ streamUrl, cameraId }: { streamUrl: string; cameraId: string | null }) =>
+      request(`/sites/${siteId}/cameras/preview`, {
+        method: 'POST',
+        body: { stream_url: streamUrl, camera_id: cameraId },
+        schema: previewSchema,
+      }),
+  })
+}
+
 export function useDeleteCamera(siteId: string) {
   const client = useQueryClient()
   return useMutation({

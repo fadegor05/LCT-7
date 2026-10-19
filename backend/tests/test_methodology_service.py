@@ -92,7 +92,7 @@ async def site_and_schedule(container, db_setup):
             ScheduleStage(
                 id=uuid.uuid4(),
                 schedule_id=schedule_id,
-                name="Отделка фасада",
+                name="Внутренние отделочные работы",
                 position=3,
             ),
         ]
@@ -196,7 +196,7 @@ class TestMethodologyServiceListRules:
         assert [r.stage_name for r in rules] == [
             "Устройство свай",
             "Разработка котлована",
-            "Отделка фасада",
+            "Внутренние отделочные работы",
         ]
         for rule in rules:
             assert rule.rule.is_verifiable is False
@@ -229,7 +229,7 @@ class TestMethodologyServiceListRules:
         assert len(rules) == 3
         assert rules[0].stage_name == "Устройство свай"  # position 1
         assert rules[1].stage_name == "Разработка котлована"  # position 2
-        assert rules[2].stage_name == "Отделка фасада"  # position 3
+        assert rules[2].stage_name == "Внутренние отделочные работы"  # position 3
 
     @pytest.mark.asyncio
     async def test_list_rules_no_schedule_404(self, container, db_setup):
@@ -898,16 +898,19 @@ class TestMethodologyServiceListRulesStructure:
 
         assert piles_rule.stage_name == "Устройство свай"
         assert piles_rule.rule.is_verifiable is True
-        assert len(piles_rule.sets) == 2
+        # Буровая, копёр, грейфер СВГ — каждая своим набором (как в clean-mvp)
+        assert len(piles_rule.sets) == 3
 
-        # Check first set has 4 requirements
+        # Нормативная машина, гусеничный кран и бетоносмеситель
         first_set = piles_rule.sets[0]
-        assert len(first_set.requirements) == 4
+        assert len(first_set.requirements) == 3
 
         # Check for gesn_code
         reqs_with_gesn = [r for r in first_set.requirements if r.requirement.gesn_code]
         assert len(reqs_with_gesn) > 0
-        assert any(r.requirement.gesn_code == "05-01-079-01" for r in first_set.requirements)
+        assert any(
+            r.requirement.gesn_code == "05-01-028-01, 05-01-001-01" for r in first_set.requirements
+        )
 
         # Check for logical concrete_mixer
         logical_reqs = [
@@ -927,7 +930,7 @@ class TestMethodologyServiceListRulesStructure:
         rules = await service.list_rules(site_and_schedule["site_id"])
         facade_rule = rules[2]
 
-        assert facade_rule.stage_name == "Отделка фасада"
+        assert facade_rule.stage_name == "Внутренние отделочные работы"
         assert facade_rule.rule.is_verifiable is False
         assert facade_rule.rule.unverifiable_reason is not None
         assert len(facade_rule.rule.unverifiable_reason) > 0
@@ -982,7 +985,7 @@ class TestMethodologyServiceListRulesStructure:
         assert [r.stage_name for r in rules] == [
             "Устройство свай",
             "Разработка котлована",
-            "Отделка фасада",
+            "Внутренние отделочные работы",
         ]
         result = await session.execute(
             select(MethodologyRule).where(MethodologyRule.site_id == site_id)
@@ -1101,7 +1104,7 @@ class TestMethodologyServiceApplyDefaults:
         # Verify results
         # Устройство свай (piles) - should match
         # Разработка котлована (excavation) - should match
-        # Отделка фасада (facade) - should NOT match
+        # Внутренние отделочные работы (facade) - should NOT match
         assert result.eligible == 3  # All three were empty
         assert result.applied == 2  # Two matched
         assert result.unmatched == 1  # One didn't match
@@ -1129,7 +1132,7 @@ class TestMethodologyServiceApplyDefaults:
 
         # Facade rule should still be unverifiable
         facade_rule = rules_after[2]
-        assert facade_rule.stage_name == "Отделка фасада"
+        assert facade_rule.stage_name == "Внутренние отделочные работы"
         assert facade_rule.rule.is_verifiable is False
         assert facade_rule.rule.unverifiable_reason is not None
         assert len(facade_rule.sets) == 0
@@ -1164,8 +1167,8 @@ class TestMethodologyServiceApplyDefaults:
                 elif ":" in req.requirement.source_note:
                     has_marker_with_note = True
 
-        # Verify we have at least one of each form (defaults have mix of no-note and with-note)
-        assert has_marker_only, "Should have at least one requirement with just 'базовая методика'"
+        # У каждого требования базовой методики есть пояснение, откуда оно
+        assert not has_marker_only, "Требование без пояснения: 'базовая методика'"
         assert has_marker_with_note, (
             "Should have at least one requirement with 'базовая методика: ...'"
         )
@@ -1265,8 +1268,8 @@ class TestMethodologyServiceApplyDefaults:
         piles_rule = rules[0]
         excavation_rule = rules[1]
 
-        assert len(piles_rule.sets) == 2  # Same as before
-        assert len(excavation_rule.sets) == 1  # Same as before
+        assert len(piles_rule.sets) == 3  # Same as before
+        assert len(excavation_rule.sets) == 2  # Same as before: экскаватор, бульдозер
 
     @pytest.mark.asyncio
     async def test_apply_defaults_foreign_owner_404(

@@ -10,10 +10,17 @@ from app.domains.assessment.models import (
     Deviation,
     DeviationEvidence,
     Severity,
+    SiteSummary,
     StageStatus,
     StatusBasis,
 )
 from app.domains.schedule.models import Schedule, ScheduleStage
+
+
+class SiteSummaryRepository(BaseRepository[SiteSummary]):
+    """Итог по объекту из последнего пересчёта (ключ — site_id)."""
+
+    model = SiteSummary
 
 
 class StageStatusRepository(BaseRepository[StageStatus]):

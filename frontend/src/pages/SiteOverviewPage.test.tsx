@@ -19,8 +19,17 @@ describe('SiteOverviewPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Жилой дом · Березники' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Березники, [адрес объекта]')).toBeInTheDocument()
+    // Адрес и дата данных — последнее наблюдение (моки считают as_of как last_observation)
+    expect(
+      await screen.findByText('Березники, [адрес объекта] · данные на 18.09.2026'),
+    ).toBeInTheDocument()
     expect(await screen.findByText('Отставание 4 дней')).toBeInTheDocument()
+    // Пояснение итога — про тот же этап, что интервал
+    expect(
+      screen.getByText(
+        'Измерено по этапу «Разработка котлована». Точность не выше частоты съёмки.',
+      ),
+    ).toBeInTheDocument()
     expect(await screen.findByText('Наблюдаемость высокая')).toBeInTheDocument()
     expect(screen.getByText('Всего снимков').nextSibling).toHaveTextContent('14')
     expect(await screen.findByText('Без даты')).toBeInTheDocument()
@@ -56,11 +65,90 @@ describe('SiteOverviewPage', () => {
     await waitFor(() => expect(photos[0]).toHaveStyle({ backgroundImage: 'url(blob:test)' }))
   })
 
-  it('prints the report', async () => {
-    const print = vi.spyOn(window, 'print').mockImplementation(() => {})
-    const { user } = renderRoute('/sites/site-berezniki')
-    await user.click(await screen.findByRole('button', { name: 'Печатная версия' }))
-    expect(print).toHaveBeenCalled()
+  it('shows an open-ended delay for a stage that has not started', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/assessment/summary', () =>
+        HttpResponse.json({
+          verdict: 'behind',
+          delay_days_min: 12,
+          delay_days_max: null,
+          critical_count: 0,
+          attention_count: 0,
+          stage_id: 'site-berezniki-stage-2',
+          reason: 'Измерено по этапу «Разработка котлована»: это нижняя граница.',
+        }),
+      ),
+      http.get('/api/sites/:siteId/assessment/stages', () =>
+        HttpResponse.json([
+          {
+            stage_id: 'site-berezniki-stage-2',
+            stage_name: 'Разработка котлована',
+            position: 2,
+            status: 'not_started',
+            delay_days: 12,
+            delay_open: true,
+            confidence: 'high',
+            confidence_reason: null,
+            computed_at: '2026-09-18T12:00:00Z',
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki')
+    expect(await screen.findByText('Отставание от 12 дней')).toBeInTheDocument()
+    expect(
+      screen.getByText('Измерено по этапу «Разработка котлована»: это нижняя граница.'),
+    ).toBeInTheDocument()
+    const table = await screen.findByRole('table', { name: 'Статусы этапов' })
+    expect(
+      within(table).getByText('отставание от 12 дн. · уверенность высокая'),
+    ).toBeInTheDocument()
+  })
+
+  it('offers one report button — the A4 report for PDF', async () => {
+    renderRoute('/sites/site-berezniki')
+    expect(await screen.findByRole('link', { name: 'Скачать отчёт PDF' })).toHaveAttribute(
+      'href',
+      '/sites/site-berezniki/report?print=1',
+    )
+    expect(screen.queryByRole('button', { name: 'Печатная версия' })).not.toBeInTheDocument()
+  })
+
+  it('shows the marker fact, markers and the data date', async () => {
+    server.use(
+      http.get('/api/sites/:siteId/assessment/summary', () =>
+        HttpResponse.json({
+          verdict: 'behind',
+          delay_days_min: 7,
+          delay_days_max: 7,
+          critical_count: 0,
+          attention_count: 0,
+          as_of: '2026-09-18',
+        }),
+      ),
+      http.get('/api/sites/:siteId/assessment/stages', () =>
+        HttpResponse.json([
+          {
+            stage_id: 'site-berezniki-stage-2',
+            stage_name: 'Разработка котлована',
+            position: 2,
+            status: 'on_track',
+            delay_days: null,
+            confidence: 'high',
+            confidence_reason: null,
+            computed_at: '2026-09-18T12:00:00Z',
+            start_fact: '2026-09-09',
+            marker_names: ['Бульдозер', 'Гусеничный экскаватор'],
+          },
+        ]),
+      ),
+    )
+    renderRoute('/sites/site-berezniki')
+    const table = await screen.findByRole('table', { name: 'Статусы этапов' })
+    expect(within(table).getByText('с 09.09')).toBeInTheDocument()
+    expect(within(table).getByText('Маркер: бульдозер, гусеничный экскаватор')).toBeInTheDocument()
+    expect(screen.getByText(/данные на 18\.09\.2026/)).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Как выбирается статус этапа' })).toBeInTheDocument()
   })
 
   it('handles a site without photos or deviations', async () => {
@@ -90,7 +178,8 @@ describe('SiteOverviewPage', () => {
     )
     renderRoute('/sites/site-synthetic')
     expect(await screen.findByText('График не загружен')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Загрузить график' })).toHaveAttribute(
+    // Загрузить график предлагают и итог, и раздел «Этапы»
+    expect(screen.getAllByRole('link', { name: 'Загрузить график' })[0]).toHaveAttribute(
       'href',
       '/sites/site-synthetic/setup',
     )

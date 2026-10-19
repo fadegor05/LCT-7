@@ -4,6 +4,7 @@
 """
 
 import csv
+import re
 import zipfile
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -44,6 +45,8 @@ class ParsedRow:
     name: str
     start: date | None
     end: date | None
+    # Номер пункта графика «2.1» — по нему работы собираются в этапы (grouping.py)
+    number: str | None = None
 
 
 @dataclass(frozen=True)
@@ -76,6 +79,10 @@ class ScheduleParser:
     # слишком общие сами по себе (например, "№ этапа" — это номер, а не
     # название работы). См. docstring _find_header.
     WEAK_NAME_SYNONYMS = {"этап"}
+
+    # Номер пункта: N, N.M или N.M.K и не длиннее 32 символов
+    _NUMBER_VALUE = re.compile(r"^\d+(\.\d+){0,2}$")
+    MAX_NUMBER_LENGTH = 32
 
     # Ширина таблицы, отдаваемой LLM: Gantt-выгрузки бывают на сотни колонок-недель
     MAX_GRID_COLUMNS = 40
@@ -277,7 +284,9 @@ class ScheduleParser:
             cell_str = str(cell).lower().strip()
             if not cell_str:
                 continue
-            if "start" not in result and any(syn in cell_str for syn in self.START_HEADERS):
+            if "number" not in result and self._is_number_header(cell_str):
+                result["number"] = idx
+            elif "start" not in result and any(syn in cell_str for syn in self.START_HEADERS):
                 result["start"] = idx
             elif "end" not in result and any(syn in cell_str for syn in self.END_HEADERS):
                 result["end"] = idx
@@ -285,6 +294,21 @@ class ScheduleParser:
                 result["name"] = idx
 
         return result
+
+    @staticmethod
+    def _is_number_header(cell: str) -> bool:
+        return cell.startswith("№") or cell.startswith("номер") or "п/п" in cell
+
+    def _number(self, value: object) -> str | None:
+        """Номер пункта как текст «2.1». Дата (Excel превратил «10.1» в 10.01) — не номер."""
+        if value is None or isinstance(value, (datetime, date)):
+            return None
+        if isinstance(value, float) and value.is_integer():
+            value = int(value)
+        text = str(value).strip().rstrip(".")
+        if len(text) > self.MAX_NUMBER_LENGTH or not self._NUMBER_VALUE.match(text):
+            return None
+        return text
 
     def _row_has_date_value(self, row: Sequence[object]) -> bool:
         """Похожа ли строка на строку ДАННЫХ, а не на шапку.
@@ -472,7 +496,13 @@ class ScheduleParser:
                 continue
 
             # Успешно распарсена строка
-            rows.append(ParsedRow(name=name, start=start, end=end))
+            number_idx = header.get("number")
+            number = (
+                self._number(row_data[number_idx])
+                if number_idx is not None and number_idx < len(row_data)
+                else None
+            )
+            rows.append(ParsedRow(name=name, start=start, end=end, number=number))
 
         return ParseResult(rows=rows, issues=issues, rows_total=rows_total)
 

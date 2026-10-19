@@ -266,7 +266,8 @@ erDiagram
 | `observation_id` | uuid | FK CASCADE, индекс | |
 | `equipment_type_id` | uuid | FK `equipment_types.id` | |
 | `count_min` | integer | `CHECK count_min >= 1` | Максимум одноимённых детекций на одном снимке, не сумма |
-| `activity` | varchar(16) | | `works`, `idle`, `unknown`. Значение `idle` в коде не выводится |
+| `activity` | varchar(16) | | `works`, `idle`, `unknown`. По серии кадров одной камеры за день: `works` — машина сместилась между соседними кадрами (не дальше 10 мин); `idle` — гипотеза для неподвижной машины вне зоны камеры; по одному снимку — `unknown` |
+| `activity_basis` | text | null | Основание активности: «Движение: …» и «Зона: …» |
 | `confidence` | varchar(16) | | `high`, `medium`, `low` |
 
 Уникальна пара `(observation_id, equipment_type_id)`.
