@@ -21,6 +21,7 @@ describe('CameraList stream status', () => {
       <CameraList
         cameras={[camera({ last_capture_error: 'нет связи', capture_failures: 3 })]}
         onEdit={() => {}}
+        onUploadVideo={() => {}}
       />,
     )
     expect(screen.getByText('Стрим недоступен: нет связи')).toBeInTheDocument()
@@ -32,6 +33,7 @@ describe('CameraList stream status', () => {
       <CameraList
         cameras={[camera({ last_capture_error: 'нет связи', capture_failures: 2 })]}
         onEdit={() => {}}
+        onUploadVideo={() => {}}
       />,
     )
     expect(screen.getByText('Стрим недоступен: нет связи')).toBeInTheDocument()

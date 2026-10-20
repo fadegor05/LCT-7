@@ -8,10 +8,14 @@ import styles from './Cameras.module.css'
 interface CameraListProps {
   cameras: Camera[]
   onEdit: (camera: Camera) => void
+  onUploadVideo: (camera: Camera) => void
 }
 
-/** Камеры строками-карточками: стрим, зона и число кадров; «Настроить» открывает окно камеры. */
-export function CameraList({ cameras, onEdit }: CameraListProps) {
+/**
+ * Камеры строками-карточками: стрим, зона и число кадров; «Загрузить видео» открывает окно
+ * загрузки записи, «Настроить» — окно камеры.
+ */
+export function CameraList({ cameras, onEdit, onUploadVideo }: CameraListProps) {
   return (
     <ul className={styles.list} aria-label="Камеры">
       {cameras.map((camera) => (
@@ -34,14 +38,24 @@ export function CameraList({ cameras, onEdit }: CameraListProps) {
           <span className="data">
             {camera.frames_count} {framesWord(camera.frames_count)}
           </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label={`Настроить камеру ${camera.name}`}
-            onClick={() => onEdit(camera)}
-          >
-            Настроить
-          </Button>
+          <span className={styles.actions}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={`Загрузить видео камеры ${camera.name}`}
+              onClick={() => onUploadVideo(camera)}
+            >
+              Загрузить видео
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label={`Настроить камеру ${camera.name}`}
+              onClick={() => onEdit(camera)}
+            >
+              Настроить
+            </Button>
+          </span>
         </li>
       ))}
     </ul>

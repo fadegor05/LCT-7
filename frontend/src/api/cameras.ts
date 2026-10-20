@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { request } from './client'
 import { keys } from './keys'
-import { cameraSchema, photoSchema, type Zone } from './schemas'
+import { cameraSchema, photoSchema, videoUploadReportSchema, type Zone } from './schemas'
 
 export interface CameraInput {
   name: string
@@ -84,5 +84,47 @@ export function useDeleteCamera(siteId: string) {
     mutationFn: (cameraId: string) =>
       request(`/sites/${siteId}/cameras/${cameraId}`, { method: 'DELETE' }),
     onSuccess: () => client.invalidateQueries({ queryKey: keys.site(siteId) }),
+  })
+}
+
+export interface CameraVideoInput {
+  file: File
+  /** Местное время начала записи: «2026-10-20T09:30» или с секундами. */
+  recordedAt: string
+  /** Шаг кадров, секунды. */
+  stepS: number
+}
+
+/** Видео камеры: сервер нарежет его кадрами с заданным шагом (multipart `file`, `recorded_at`, `step_s`). */
+export function uploadCameraVideo(siteId: string, cameraId: string, input: CameraVideoInput) {
+  const form = new FormData()
+  form.append('file', input.file)
+  // Секунды всегда явные: время уходит в одном формате, как «2026-10-20T09:30:00»
+  form.append(
+    'recorded_at',
+    input.recordedAt.length === 16 ? `${input.recordedAt}:00` : input.recordedAt,
+  )
+  form.append('step_s', String(input.stepS))
+  return request(`/sites/${siteId}/cameras/${cameraId}/video`, {
+    method: 'POST',
+    body: form,
+    schema: videoUploadReportSchema,
+  })
+}
+
+/**
+ * Загрузка видео камеры. Кадры разбирает фоновая обработка, поэтому после отправки
+ * обновляются стройка и очередь: баннер «обрабатывается» появится сразу.
+ */
+export function useUploadCameraVideo(siteId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ cameraId, ...input }: CameraVideoInput & { cameraId: string }) =>
+      uploadCameraVideo(siteId, cameraId, input),
+    onSuccess: () =>
+      Promise.all([
+        client.invalidateQueries({ queryKey: keys.site(siteId) }),
+        client.invalidateQueries({ queryKey: keys.photoQueue(siteId) }),
+      ]),
   })
 }

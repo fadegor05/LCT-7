@@ -1,5 +1,7 @@
 """Fake implementations для тестирования."""
 
+from pathlib import Path
+
 from app.adapters.ml.assistant import AssistantAnswer, AssistantError
 from app.adapters.ml.base import DetectionResult, DetectorInfo
 from app.adapters.ml.schedule_llm import GridRow, LlmScheduleResult
@@ -245,3 +247,31 @@ class FakeGrabber:
             raise StreamError(self.errors[url])
         shade = len(self.calls) * 37 % 250
         return jpeg_bytes(color=(shade, 120, 150))
+
+
+class FakeFrameExtractor:
+    """Кадры из видео без ffmpeg: длительность и кадры задают тесты, `error` — VideoError.
+
+    `calls` — (имя файла, шаг, лимит кадров) для каждого извлечения.
+    """
+
+    def __init__(self) -> None:
+        self.duration = 180.0
+        self.frames: list[bytes] = [
+            jpeg_bytes(color=(40, 40, 40)),
+            jpeg_bytes(color=(90, 90, 90)),
+            jpeg_bytes(color=(140, 140, 140)),
+        ]
+        self.error: Exception | None = None
+        self.calls: list[tuple[str, int, int]] = []
+
+    async def duration_s(self, path: Path) -> float:
+        if self.error is not None:
+            raise self.error
+        return self.duration
+
+    async def extract(self, path: Path, step_s: int, max_frames: int) -> list[bytes]:
+        self.calls.append((path.name, step_s, max_frames))
+        if self.error is not None:
+            raise self.error
+        return list(self.frames)

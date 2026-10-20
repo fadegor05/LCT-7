@@ -2,11 +2,14 @@
 
 import base64
 import uuid
+from datetime import datetime
+from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Form, Response, UploadFile
 
 from app.adapters.stream.base import mask_credentials
+from app.core.settings import Settings
 from app.domains.camera.capture import CameraCaptureService
 from app.domains.camera.schemas import (
     CameraIn,
@@ -14,8 +17,11 @@ from app.domains.camera.schemas import (
     CameraUpdate,
     StreamPreviewIn,
     StreamPreviewOut,
+    VideoUploadReport,
 )
 from app.domains.camera.service import CameraService, CameraView
+from app.domains.camera.video import CameraVideoService, spool_upload
+from app.domains.photo.queue import PhotoQueue
 from app.domains.photo.schemas import PhotoRead
 
 router = APIRouter(prefix="/sites/{site_id}/cameras", tags=["cameras"])
@@ -86,6 +92,41 @@ async def capture_camera(
 ) -> PhotoRead:
     """«Снять кадр сейчас» со стрима камеры: кадр сразу в ленту, либо 422 с причиной."""
     return await service.capture_now(site_id, camera_id)
+
+
+@router.post("/{camera_id}/video", status_code=201, response_model=VideoUploadReport)
+@inject
+async def upload_video(
+    site_id: uuid.UUID,
+    camera_id: uuid.UUID,
+    file: UploadFile,
+    recorded_at: Annotated[datetime, Form()],
+    service: FromDishka[CameraVideoService],
+    settings: FromDishka[Settings],
+    queue: FromDishka[PhotoQueue],
+    step_s: Annotated[int | None, Form()] = None,
+) -> VideoUploadReport:
+    """Видео с камеры: кадры через каждые `step_s` секунд — в ленту, время кадра — из видео.
+
+    recorded_at — момент начала отрывка (с поясом пересчитаем в местное время стройки).
+    Без step_s — VIDEO__DEFAULT_STEP_S.
+    """
+    path = await spool_upload(file, settings.video.max_bytes, settings.video.max_mb)
+    try:
+        report = await service.upload(
+            site_id,
+            camera_id,
+            path,
+            file.filename or "video",
+            recorded_at,
+            settings.video.default_step_s if step_s is None else step_s,
+        )
+    finally:
+        path.unlink(missing_ok=True)
+    # Кадры приняты — очередь не ждёт своего тика
+    if settings.upload.background and report.uploaded:
+        queue.wake()
+    return report
 
 
 @router.delete("/{camera_id}", status_code=204)

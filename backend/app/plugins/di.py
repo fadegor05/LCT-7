@@ -17,7 +17,12 @@ from sqlalchemy.ext.asyncio import (
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
 from app.domains.assistant.provider import AssistantClientProvider, AssistantProvider
-from app.domains.camera.provider import CameraProvider, StreamCaptureProvider, StreamGrabberProvider
+from app.domains.camera.provider import (
+    CameraProvider,
+    StreamCaptureProvider,
+    StreamGrabberProvider,
+    VideoExtractorProvider,
+)
 from app.domains.methodology.provider import MethodologyProvider
 from app.domains.notification.provider import (
     ChannelsProvider,
@@ -68,6 +73,7 @@ def create_container() -> AsyncContainer:
         SiteProvider(),
         CameraProvider(),
         StreamGrabberProvider(),
+        VideoExtractorProvider(),
         StreamCaptureProvider(),
         PhotoQueueProvider(),
         ScheduleProvider(),
