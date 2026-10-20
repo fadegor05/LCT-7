@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Ошибка при проверке классов детектора при запуске: {e}")
 
-    # Фоновые снимки со стрима — только при STREAM__ENABLED=true (по умолчанию выключены)
+    # Фоновые снимки со стрима — STREAM__ENABLED (по умолчанию включено)
     stream_capture = await start_stream_capture(app.state.dishka_container, settings)
 
     # Фоновая обработка загруженных снимков — при UPLOAD__BACKGROUND=true (по умолчанию)

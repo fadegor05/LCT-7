@@ -9,7 +9,7 @@ LCT-7 is a hackathon monorepo for an automated construction-site violation detec
 
 - `backend/` — FastAPI + Dishka (DI) + Granian (ASGI) + SQLAlchemy async + PostgreSQL, Alembic migrations.
 - `frontend/` — React 19 + Vite 6 + TypeScript, React Router, TanStack Query, Zod, CSS Modules; MSW mocks; served by nginx in prod.
-- `ml/` — research + CLI tools for the vision/scheduling pipeline (YOLOE zero-shot detection). Standalone; not yet wired into the backend.
+- `ml/` — vision/LLM service (YOLO26-m detector, stamp reader, assistant, schedule parsing) plus research and CLI tools. The backend calls it over HTTP via `DETECTOR__URL`; with the URL empty the detector is off and photos stay `pending`.
 
 Orchestration is Docker Compose with layered files (`common` / `dev` / `prod`) behind Traefik.
 `makefile` at the root is the entry point. Much of the code documentation is in Russian.
@@ -52,7 +52,7 @@ In `frontend/`: `pnpm dev` (mocks on by default via `.env.development`), `pnpm d
 - `app/models.py` — single import point for ORM models, so Alembic autogenerate sees them.
 - DI: `Scope.APP` — settings, engine, sessionmaker, external clients, stateless parsers, reference caches. `Scope.REQUEST` — session, repositories, services.
 
-Full convention: docs/architecture.md §6.
+Full convention: `.claude/rules/backend/architecture.md`.
 
 ## Frontend structure
 
@@ -62,9 +62,9 @@ Full convention: docs/architecture.md §6.
 - `src/mocks/` — MSW handlers over an in-memory db (`db.ts`); toggled by `VITE_USE_MOCKS`. Same handlers run in tests (`src/test/setup.ts`).
 - Tests sit next to code (`*.test.tsx`); pages are tested through `renderRoute(url)`. Every new component needs a test; coverage thresholds live in `vite.config.ts`.
 
-Full description: docs/architecture-frontend.md.
+Frontend architecture is described in the structure list above and in `documentation/architecture.md`.
 
 ## Documentation
 
 `documentation/` describes what is implemented (architecture, data model, API, business logic, install/run,
-configuration, limitations). `docs/architecture.md` and `docs/DataModel.md` are the target design and are wider than the code.
+configuration, limitations). `docs/superpowers/` holds design specs and plans for individual features.
