@@ -21,11 +21,14 @@
 .section {
   display: flex;
   align-items: flex-end;
-  gap: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
 }
 
+/* В узкой колонке заголовок не сжимается в столбик, а действия переносятся под него */
 .section > div:first-child {
   flex-grow: 1;
+  min-width: 14rem;
 }
 
 /* На телефоне действия уходят под заголовок, а не наезжают на него. */

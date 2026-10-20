@@ -130,7 +130,7 @@
 
 .legendRow {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: 250px minmax(0, 1fr);
   gap: var(--space-3);
   align-items: start;
 }
