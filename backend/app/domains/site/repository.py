@@ -20,3 +20,8 @@ class SiteRepository(BaseRepository[Site]):
             .order_by(self.model.created_at.desc())
         )
         return result.scalars().all()
+
+    async def list_owner_ids(self) -> Sequence[uuid.UUID]:
+        """Владельцы, у которых есть хотя бы один объект."""
+        result = await self._session.execute(select(self.model.owner_id).distinct())
+        return result.scalars().all()

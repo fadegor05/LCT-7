@@ -29,6 +29,8 @@ class NotificationType(StrEnum):
     """Тип уведомления. Домены-источники добавляют свои значения сюда."""
 
     SYSTEM = "system"
+    # Периодическая сводка по объектам пользователя
+    DIGEST = "digest"
 
 
 class ChannelKind(StrEnum):

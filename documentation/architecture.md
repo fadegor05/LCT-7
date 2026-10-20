@@ -145,7 +145,7 @@ flowchart LR
 
 ### Уведомления
 
-Домен `notification` хранит ленту и привязки каналов. Доменам-источникам доступен один метод, `NotificationService.notify(user_id, type, title, body, link)`: про каналы и телеграм они ничего не знают. Источников событий пока нет — отклонения и сбои камер к этому шву не подключены, лента наполняется только служебным `POST /api/notifications/test`.
+Домен `notification` хранит ленту и привязки каналов. Доменам-источникам доступен один метод, `NotificationService.notify(user_id, type, title, body, link)`: про каналы и телеграм они ничего не знают. Источник один — сводка по объектам (`domains/notification/digest.py`): `DigestService` собирает из итога объекта, отклонений и статусов этапов текст и вызывает `notify()`; `DigestScheduler` (запускается в lifespan, `NOTIFY__DIGEST__*`) раз в неделю рассылает её владельцам объектов, а `POST /api/notifications/digest` отправляет по кнопке. Отклонения вне сводки и сбои камер к этому шву не подключены; служебный `POST /api/notifications/test` остаётся для ручной проверки.
 
 Доставка идёт через реестр каналов (`ChannelRegistry`, `Scope.APP`). Реализованы телеграм и почта (`EmailChannel` поверх `SmtpClient`, стандартный `smtplib` в потоке); без `NOTIFY__TELEGRAM__TOKEN` или `NOTIFY__EMAIL__HOST` + `FROM_ADDR` на месте канала `LogChannel`, который только пишет в лог приложения. СМС не реализованы: интерфейс `NotificationChannel` на них рассчитан, файлов нет. Привязка почты идёт через письмо: адрес хранится в `channel_link_tokens.address` и становится привязкой после перехода по ссылке на `GET /api/notifications/email/confirm`.
 

@@ -25,6 +25,8 @@ export const notificationsApi = {
   markAllRead: () => request('/notifications/read', { method: 'POST', schema: markReadSchema }),
   createTest: (body: TestNotification) =>
     request('/notifications/test', { method: 'POST', body, schema: notificationSchema }),
+  sendDigest: () =>
+    request('/notifications/digest', { method: 'POST', schema: notificationSchema }),
   listChannels: () => request('/users/me/channels', { schema: z.array(userChannelSchema) }),
   link: (channel: ChannelKind, address?: string) =>
     request(`/users/me/channels/${channel}/link`, {
@@ -62,6 +64,15 @@ export function useCreateTestNotification() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: TestNotification) => notificationsApi.createTest(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications }),
+  })
+}
+
+/** «Отправить сводку сейчас»: сводка по объектам уходит в ленту и привязанные каналы. */
+export function useSendDigest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: notificationsApi.sendDigest,
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications }),
   })
 }

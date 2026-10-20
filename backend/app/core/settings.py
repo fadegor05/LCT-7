@@ -250,11 +250,21 @@ class EmailSettings(BaseModel):
     timeout_s: float = 15.0
 
 
+class DigestSettings(BaseModel):
+    """Еженедельная сводка по объектам: когда уходит автоматически."""
+
+    enabled: bool = True
+    # День недели, date.weekday(): пн=0…вс=6; время — UTC (06:00 UTC = 09:00 по Москве)
+    weekday: int = Field(default=0, ge=0, le=6)
+    hour_utc: int = Field(default=6, ge=0, le=23)
+
+
 class NotifySettings(BaseModel):
     """Доставка уведомлений по каналам."""
 
     telegram: TelegramSettings = TelegramSettings()
     email: EmailSettings = EmailSettings()
+    digest: DigestSettings = DigestSettings()
     # База для абсолютных ссылок в сообщениях: во внешнем канале относительный путь бесполезен
     public_url: str = "http://localhost"
 
