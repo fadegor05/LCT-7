@@ -734,4 +734,42 @@ describe('AssistantPanel', () => {
       expect(section).toBeInTheDocument()
     })
   })
+
+  describe('Развёрнутый чат', () => {
+    it('«Развернуть» открывает чат в широком окне, не дублируя поле вопроса', async () => {
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      await user.click(screen.getByRole('button', { name: 'Развернуть' }))
+
+      const dialog = screen.getByRole('dialog', { name: 'Ассистент по отчёту' })
+      expect(within(dialog).getByRole('textbox', { name: 'Вопрос по отчёту' })).toBeInTheDocument()
+      expect(within(dialog).getByRole('log', { name: 'Переписка с ассистентом' })).toBeVisible()
+      // Чат один: в колонке остаётся только заголовок с пояснением
+      expect(screen.getAllByRole('textbox')).toHaveLength(1)
+      expect(screen.getByText('Чат открыт в отдельном окне')).toBeInTheDocument()
+    })
+
+    it('вопрос из развёрнутого окна получает ответ, а после закрытия переписка в колонке', async () => {
+      countingAsk()
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+      await user.click(screen.getByRole('button', { name: 'Развернуть' }))
+      const dialog = screen.getByRole('dialog', { name: 'Ассистент по отчёту' })
+
+      await user.type(
+        within(dialog).getByRole('textbox', { name: 'Вопрос по отчёту' }),
+        'где отставание',
+      )
+      await user.click(within(dialog).getByRole('button', { name: 'Спросить' }))
+      expect(await within(dialog).findByText(/отстаёт на 3 дня/)).toBeInTheDocument()
+
+      await user.click(within(dialog).getByRole('button', { name: 'Закрыть' }))
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      const log = screen.getByRole('log', { name: 'Переписка с ассистентом' })
+      expect(within(log).getByText(/отстаёт на 3 дня/)).toBeInTheDocument()
+      expect(screen.queryByText('Чат открыт в отдельном окне')).not.toBeInTheDocument()
+    })
+  })
 })
