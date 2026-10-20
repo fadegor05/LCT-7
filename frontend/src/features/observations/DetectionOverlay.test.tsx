@@ -61,4 +61,33 @@ describe('DetectionOverlay', () => {
 
     expect(onActive).toHaveBeenLastCalledWith(null)
   })
+
+  it('без наведения подпись показана у детекции с наибольшей уверенностью', () => {
+    render(<DetectionOverlay detections={detections} activeId={null} onActive={() => {}} />)
+
+    expect(screen.getByText('Кран · 91%')).toBeInTheDocument()
+    expect(screen.queryByText('Экскаватор · 50%')).not.toBeInTheDocument()
+  })
+
+  it('без наведения остальные рамки не приглушены', () => {
+    render(<DetectionOverlay detections={detections} activeId={null} onActive={() => {}} />)
+
+    expect(screen.getByLabelText('Кран, 91%')).not.toHaveClass('muted')
+    expect(screen.getByLabelText('Экскаватор, 50%')).not.toHaveClass('muted')
+  })
+
+  it('у каждой рамки есть светлая подложка, чтобы контур был виден на любом фоне', () => {
+    const { container } = render(
+      <DetectionOverlay detections={detections} activeId={null} onActive={() => {}} />,
+    )
+
+    expect(container.querySelectorAll('rect.halo')).toHaveLength(detections.length)
+  })
+
+  it('при наведении подпись переходит к активной рамке', () => {
+    render(<DetectionOverlay detections={detections} activeId="d2" onActive={() => {}} />)
+
+    expect(screen.getByText('Экскаватор · 50%')).toBeInTheDocument()
+    expect(screen.queryByText('Кран · 91%')).not.toBeInTheDocument()
+  })
 })
