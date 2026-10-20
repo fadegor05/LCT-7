@@ -13,11 +13,20 @@
   overflow: visible;
 }
 
+.halo {
+  fill: none;
+  stroke: rgb(255 255 255 / 85%);
+  stroke-width: 4.5px;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
 .box {
   pointer-events: all;
-  fill: transparent;
-  stroke: var(--line-control);
-  stroke-width: 1.5px;
+  fill: var(--accent);
+  fill-opacity: 0.06;
+  stroke: var(--accent);
+  stroke-width: 2px;
   cursor: pointer;
   transition: opacity 120ms ease;
 }
@@ -27,10 +36,8 @@
 }
 
 .active {
-  fill: var(--accent);
   fill-opacity: 0.18;
-  stroke: var(--accent);
-  stroke-width: 2.5px;
+  stroke-width: 3px;
 }
 
 .muted {
