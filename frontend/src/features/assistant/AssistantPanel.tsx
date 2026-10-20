@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AssistantFailureKind } from '@/api/assistant'
 import { useAskAssistant, useAssistantStatus } from '@/api/assistant'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
+import { Dialog } from '@/components/ui/Dialog'
 import { SectionHeader } from '@/components/layout/PageHeader'
 import { AssistantAnswerView } from './AssistantAnswer'
 import { AssistantQuestionForm } from './AssistantQuestionForm'
@@ -50,6 +51,10 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
   const { send, cancel, isPending } = useAskAssistant(siteId)
   const { messages, append, remove, clear } = useChatHistory(siteId)
   const logRef = useRef<HTMLDivElement>(null)
+  // Переписка в колонке тесная: «Развернуть» показывает тот же чат в широком окне
+  const [expanded, setExpanded] = useState(false)
+  // Черновик вопроса живёт здесь: форма пересоздаётся при развороте, а недописанное не теряется
+  const [draft, setDraft] = useState('')
   // Стройка, на которой открыт чат сейчас: ответ, пришедший после смены стройки, в чужую
   // переписку не пишется.
   const siteRef = useRef(siteId)
@@ -61,7 +66,7 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
   useEffect(() => {
     const log = logRef.current
     if (log) log.scrollTop = log.scrollHeight
-  }, [messages.length, isPending])
+  }, [messages.length, isPending, expanded])
 
   const ask = async (question: string) => {
     const askedFor = siteId
@@ -97,21 +102,9 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
 
   const last = messages.at(-1)
 
-  return (
-    <section className={styles.section} aria-label="Ассистент по отчёту">
-      <SectionHeader
-        level={3}
-        title="Ассистент по отчёту"
-        description="Пересказывает отчёт по запросу. Источник истины — сам отчёт."
-        actions={
-          messages.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clear} disabled={isPending}>
-              Очистить
-            </Button>
-          )
-        }
-      />
-
+  // Один и тот же чат: в колонке или в развёрнутом окне — одновременно виден только один
+  const chat = (
+    <>
       {disabled && (
         <Callout tone="caution" title="Ассистент не подключён">
           Языковая модель на сервере не настроена или недоступна. Отчёт, отклонения и остальной
@@ -158,8 +151,41 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
           onCancel={cancel}
           showExamples={messages.length === 0}
           disabled={disabled}
+          draft={draft}
+          onDraftChange={setDraft}
         />
       </div>
+    </>
+  )
+
+  return (
+    <section className={styles.section} aria-label="Ассистент по отчёту">
+      <SectionHeader
+        level={3}
+        title="Ассистент по отчёту"
+        description="Пересказывает отчёт по запросу. Источник истины — сам отчёт."
+        actions={
+          <div className={styles.headActions}>
+            {!expanded && (
+              <Button variant="ghost" size="sm" onClick={() => setExpanded(true)}>
+                Развернуть
+              </Button>
+            )}
+            {messages.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={clear} disabled={isPending}>
+                Очистить
+              </Button>
+            )}
+          </div>
+        }
+      />
+
+      {expanded ? <p className="sm muted">Чат открыт в отдельном окне</p> : chat}
+      {expanded && (
+        <Dialog wide title="Ассистент по отчёту" onClose={() => setExpanded(false)}>
+          <div className={styles.expanded}>{chat}</div>
+        </Dialog>
+      )}
     </section>
   )
 }

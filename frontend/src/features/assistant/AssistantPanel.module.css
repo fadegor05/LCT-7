@@ -12,6 +12,23 @@
   background: var(--surface);
 }
 
+.headActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Развёрнутое окно: переписка занимает почти весь экран, поле вопроса остаётся внизу */
+.expanded {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: min(72vh, 760px);
+}
+
+.expanded .log {
+  min-height: 0;
+}
+
 .log {
   flex: 1 1 0;
   min-height: 160px;
