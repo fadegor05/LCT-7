@@ -34,7 +34,7 @@ describe('CameraList', () => {
       }),
       camera({ id: 'c', name: 'Кран', last_capture_error: 'нет связи' }),
     ]
-    render(<CameraList cameras={list} onEdit={onEdit} />)
+    render(<CameraList cameras={list} onEdit={onEdit} onUploadVideo={() => {}} />)
 
     const first = screen.getByText('Въезд').closest('li')!
     expect(first).toHaveTextContent('Стрим · снимок')
@@ -57,6 +57,7 @@ describe('CameraList', () => {
       <CameraList
         cameras={[camera({ last_capture_at: '2026-09-18T07:24:00+00:00' })]}
         onEdit={() => {}}
+        onUploadVideo={() => {}}
       />,
     )
     expect(screen.getByText('Въезд').closest('li')!).toHaveTextContent(
@@ -79,6 +80,7 @@ describe('CameraList', () => {
           }),
         ]}
         onEdit={() => {}}
+        onUploadVideo={() => {}}
       />,
     )
     const row = screen.getByText('Въезд').closest('li')!
@@ -100,6 +102,7 @@ describe('CameraList', () => {
           }),
         ]}
         onEdit={() => {}}
+        onUploadVideo={() => {}}
       />,
     )
     const row = screen.getByText('Въезд').closest('li')!
@@ -107,8 +110,20 @@ describe('CameraList', () => {
     expect(row).not.toHaveTextContent('Зона «')
   })
 
+  it('opens the video upload of the camera from its row', async () => {
+    const onUploadVideo = vi.fn()
+    const list = [camera({ id: 'a', name: 'Въезд' }), camera({ id: 'b', name: 'Склад' })]
+    render(<CameraList cameras={list} onEdit={() => {}} onUploadVideo={onUploadVideo} />)
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Загрузить видео камеры Склад' }))
+    expect(onUploadVideo).toHaveBeenCalledWith(list[1])
+    expect(screen.getAllByRole('button', { name: /Загрузить видео камеры/ })).toHaveLength(2)
+  })
+
   it('shows a stream without a capture yet as set', () => {
-    render(<CameraList cameras={[camera({})]} onEdit={() => {}} />)
+    render(<CameraList cameras={[camera({})]} onEdit={() => {}} onUploadVideo={() => {}} />)
     expect(screen.getByText('Стрим задан')).toBeInTheDocument()
   })
 })

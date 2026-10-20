@@ -5,6 +5,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.domains.photo.schemas import UploadReport
+
 # Вершин больше этого редактор не ставит; защита от мусора в запросе
 MAX_ZONE_POINTS = 100
 # Площадь зоны в долях кадра: меньше — вершины почти на одной линии, зона пустая
@@ -123,3 +125,10 @@ class CameraRead(BaseModel):
     zone_name: str | None = None
     frames_count: int
     created_at: datetime
+
+
+class VideoUploadReport(UploadReport):
+    """Отчёт о загрузке видео: кадры — как пачка фотографий, плюс длительность и шаг."""
+
+    duration_s: float
+    step_s: int

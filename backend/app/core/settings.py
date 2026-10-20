@@ -136,6 +136,24 @@ class StreamSettings(BaseModel):
         return int(start), int(end)
 
 
+class VideoSettings(BaseModel):
+    """Ручная загрузка видео (VIDEO__*): отрывок режется на кадры через ffmpeg."""
+
+    max_mb: float = 500
+    # Сколько кадров получится из одного видео; больше — инженер увеличивает шаг
+    max_frames: int = Field(default=200, ge=2)
+    default_step_s: int = 30
+    min_step_s: int = 5
+    max_step_s: int = 3600
+    # Сколько ждать обработку одного видео (ffprobe и ffmpeg вместе)
+    timeout_s: float = 300
+
+    @property
+    def max_bytes(self) -> int:
+        """Максимальный размер видео в байтах."""
+        return int(self.max_mb * 1024 * 1024)
+
+
 class ObservationSettings(BaseModel):
     """Пороги для расчёта наблюдаемости, уверенности и активности."""
 
@@ -275,6 +293,7 @@ class Settings(BaseSettings):
     upload: UploadSettings = UploadSettings()
     detector: DetectorSettings = DetectorSettings()
     stream: StreamSettings = StreamSettings()
+    video: VideoSettings = VideoSettings()
     observation: ObservationSettings = ObservationSettings()
     assessment: AssessmentSettings = AssessmentSettings()
     assistant: AssistantSettings = AssistantSettings()

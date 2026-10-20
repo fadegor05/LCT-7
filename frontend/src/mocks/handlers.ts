@@ -338,6 +338,26 @@ export const handlers = [
     api('/sites/:siteId/cameras/:cameraId/capture'),
     ({ params }) => handle(() => db.captureCamera(params.siteId, params.cameraId), 201),
   ),
+  // Видео: отчёт правдоподобный, в базу мока кадры не добавляются
+  http.post<{ siteId: string; cameraId: string }>(
+    api('/sites/:siteId/cameras/:cameraId/video'),
+    async ({ request }) => {
+      const form = await request.formData()
+      const file = form.get('file')
+      if (!isFile(file)) return HttpResponse.json({ detail: 'Нет файла' }, { status: 422 })
+      const stepS = Number(form.get('step_s')) || 30
+      const base = file.name.replace(/\.[^.]+$/, '')
+      const items = [1, 2, 3].map((n) => ({
+        filename: `${base}_${String(n).padStart(3, '0')}.jpg`,
+        photo: null,
+        error: null,
+      }))
+      return HttpResponse.json(
+        { items, uploaded: 3, failed: 0, duration_s: 60, step_s: stepS },
+        { status: 201 },
+      )
+    },
+  ),
   http.delete<{ siteId: string; cameraId: string }>(
     api('/sites/:siteId/cameras/:cameraId'),
     ({ params }) => handle(() => db.deleteCamera(params.siteId, params.cameraId)),

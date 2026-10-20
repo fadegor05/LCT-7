@@ -56,6 +56,8 @@ class UploadInput:
     filename: str
     content: bytes
     content_type: str | None
+    # Момент съёмки из канала (кадр видео камеры), местное время; None — дату определяем по файлу
+    captured_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -147,6 +149,43 @@ class PhotoService:
         if camera_id is not None:
             await self._require_camera(site_id, camera_id)
 
+        return await self._run_batch(site_id, files, camera_id)
+
+    async def upload_video_frames(
+        self,
+        site_id: uuid.UUID,
+        camera_id: uuid.UUID,
+        frames: Sequence[tuple[str, bytes, datetime]],
+    ) -> UploadReport:
+        """Кадры видео камеры в её ленту: время каждого кадра — из видео, а не из файла.
+
+        Кадры идут тем же путём, что пачка: очередь (фон) или обработка внутри запроса.
+        Лимит файлов в пачке не действует: число кадров ограничивает VIDEO__MAX_FRAMES.
+
+        Args:
+            site_id: ID стройки
+            camera_id: Камера, с которой снято видео
+            frames: (имя кадра, JPEG, местное время съёмки) по порядку
+
+        Raises:
+            AppError(404) если сайт не принадлежит пользователю
+            AppError(404) если камера не найдена на этом объекте
+        """
+        await self._site_guard.require(site_id)
+        await self._require_camera(site_id, camera_id)
+        inputs = [
+            UploadInput(filename=name, content=content, content_type="image/jpeg", captured_at=at)
+            for name, content, at in frames
+        ]
+        return await self._run_batch(site_id, inputs, camera_id)
+
+    async def _run_batch(
+        self,
+        site_id: uuid.UUID,
+        files: Sequence[UploadInput],
+        camera_id: uuid.UUID | None,
+    ) -> UploadReport:
+        """Пачка по режиму загрузки: очередь (фон) или обработка внутри запроса."""
         # Фоновая обработка: запрос только принимает файлы, дату и технику ставит очередь
         if self._settings.upload.background:
             return await self._accept_batch(site_id, files, camera_id)
@@ -156,7 +195,9 @@ class PhotoService:
 
         # Обрабатываем файлы в порядке
         for file_input in files:
-            item = await self._process_single_file(site_id, file_input, camera_id)
+            item = await self._process_single_file(
+                site_id, file_input, camera_id, channel_date=file_input.captured_at
+            )
             items.append(item)
             if item.photo is not None:
                 batch_photo_ids.append(item.photo.id)
@@ -258,6 +299,11 @@ class PhotoService:
             upload_batch_id=batch_id,
             upload_batch_pos=pos,
         )
+        if file_input.captured_at is not None:
+            # Кадр видео: время съёмки известно из видео, очередь дату из файла уже не возьмёт
+            photo.captured_on = file_input.captured_at.date()
+            photo.captured_at = file_input.captured_at.replace(microsecond=0)
+            photo.date_source = DateSource.CHANNEL.value
         self._session.add(photo)
         try:
             await self._session.commit()
@@ -298,8 +344,8 @@ class PhotoService:
             photo.processing_status = ProcessingStatus.FAILED.value
             await self._session.commit()
             return photo.site_id
-        # Дату, заданную инженером, пока кадр ждал очереди, прочитанная не перебивает
-        if photo.date_source != DateSource.MANUAL.value:
+        # Дату, заданную инженером, и время из видео (канал), пока кадр ждал очереди, не перебивает
+        if photo.date_source not in (DateSource.MANUAL.value, DateSource.CHANNEL.value):
             photo.captured_on = resolved.captured_on
             photo.date_source = resolved.source.value if resolved.source else None
             photo.captured_at = resolved.captured_at

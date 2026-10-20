@@ -11,6 +11,7 @@ import { QueryState } from '@/components/ui/QueryState'
 import { CameraDialog } from '@/features/cameras/CameraDialog'
 import { CameraList } from '@/features/cameras/CameraList'
 import { camerasWord } from '@/features/cameras/plural'
+import { VideoUploadDialog } from '@/features/cameras/VideoUploadDialog'
 import { useRequiredParam } from '@/lib/useParam'
 
 /** Вкладка «Камеры»: список камер стройки и настройка стрима и рабочей зоны каждой. */
@@ -28,6 +29,8 @@ function CamerasContent({ site, siteId }: { site: Site; siteId: string }) {
   const cameras = useCameras(siteId)
   // undefined — окно закрыто, null — новая камера
   const [editing, setEditing] = useState<Camera | null | undefined>(undefined)
+  // Камера, для которой открыто окно загрузки видео
+  const [uploading, setUploading] = useState<Camera | undefined>(undefined)
   const n = cameras.data?.length
   return (
     <SiteShell
@@ -50,13 +53,20 @@ function CamerasContent({ site, siteId }: { site: Site; siteId: string }) {
             data.length === 0 ? (
               <p className="muted">Камер пока нет. Добавьте первую, чтобы настроить стрим.</p>
             ) : (
-              <CameraList cameras={data} onEdit={setEditing} />
+              <CameraList cameras={data} onEdit={setEditing} onUploadVideo={setUploading} />
             )
           }
         </QueryState>
       </Card>
       {editing !== undefined && (
         <CameraDialog siteId={siteId} camera={editing} onClose={() => setEditing(undefined)} />
+      )}
+      {uploading && (
+        <VideoUploadDialog
+          siteId={siteId}
+          camera={uploading}
+          onClose={() => setUploading(undefined)}
+        />
       )}
     </SiteShell>
   )

@@ -27,6 +27,7 @@ from app.adapters.notify.factory import ChannelRegistry
 from app.adapters.storage.base import FileStorage
 from app.adapters.storage.local import LocalFileStorage
 from app.adapters.stream.base import StreamGrabber
+from app.adapters.video.base import FrameExtractor
 from app.core.rate_limit import SlidingWindowRateLimiter
 from app.core.settings import Settings, get_settings
 from app.domains.assessment.provider import AssessmentProvider
@@ -52,7 +53,13 @@ from app.domains.utility.provider import UtilityProvider
 from app.main import create_app
 from app.models import Base
 from app.plugins.exceptions import AppError
-from tests.fakes import FakeAssistantClient, FakeDetector, FakeGrabber, FakeScheduleLlmClient
+from tests.fakes import (
+    FakeAssistantClient,
+    FakeDetector,
+    FakeFrameExtractor,
+    FakeGrabber,
+    FakeScheduleLlmClient,
+)
 
 
 class TestAppProvider(Provider):
@@ -299,6 +306,14 @@ class TestStreamGrabberProvider(Provider):
         return FakeGrabber()
 
 
+class TestFrameExtractorProvider(Provider):
+    """Кадры из видео без ffmpeg: FakeFrameExtractor вместо FfmpegFrameExtractor."""
+
+    @provide(scope=Scope.APP)
+    def extractor(self) -> FrameExtractor:
+        return FakeFrameExtractor()
+
+
 def _make_container(
     tmp_path: Path, *, foreign_keys: bool = False, user_provider: Provider | None = None
 ) -> AsyncContainer:
@@ -314,6 +329,7 @@ def _make_container(
         StreamCaptureProvider(),
         PhotoQueueProvider(),
         TestStreamGrabberProvider(),
+        TestFrameExtractorProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),
@@ -367,6 +383,7 @@ async def container(tmp_path: Path) -> AsyncIterator[AsyncContainer]:
         StreamCaptureProvider(),
         PhotoQueueProvider(),
         TestStreamGrabberProvider(),
+        TestFrameExtractorProvider(),
         ScheduleProvider(),
         TestScheduleLlmClientProvider(),
         MethodologyProvider(),

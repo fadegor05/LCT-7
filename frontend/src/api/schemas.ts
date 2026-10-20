@@ -252,6 +252,12 @@ export const uploadReportSchema = z.object({
   failed: z.number(),
 })
 
+/** Отчёт о видео камеры: тот же состав, что у пачки снимков, плюс длина видео и шаг кадров. */
+export const videoUploadReportSchema = uploadReportSchema.extend({
+  duration_s: z.number(),
+  step_s: z.number().int(),
+})
+
 /** Фоновая обработка снимков объекта (`GET /photos/progress`). */
 export const queueProgressSchema = z.object({
   queued: z.number().int(),
@@ -463,6 +469,7 @@ export type Detection = z.infer<typeof detectionSchema>
 export type Photo = z.infer<typeof photoSchema>
 export type PhotoDetail = z.infer<typeof photoDetailSchema>
 export type UploadReport = z.infer<typeof uploadReportSchema>
+export type VideoUploadReport = z.infer<typeof videoUploadReportSchema>
 export type ObservedEquipment = z.infer<typeof observedEquipmentSchema>
 export type Observation = z.infer<typeof observationSchema>
 export type StageStatus = z.infer<typeof stageStatusSchema>
