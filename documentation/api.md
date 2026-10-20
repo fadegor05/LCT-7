@@ -1,6 +1,6 @@
 # API
 
-Бэкенд отдаёт 51 эндпоинт под префиксом `/api` (настройка `API_PREFIX`). Интерактивная документация OpenAPI открывается на `/api/docs`, схема на `/api/openapi.json`.
+Бэкенд отдаёт 58 эндпоинтов под префиксом `/api` (настройка `API_PREFIX`). Интерактивная документация OpenAPI открывается на `/api/docs`, схема на `/api/openapi.json` и описывает все эндпоинты и схемы. Ниже подробно описаны аутентификация, камеры, объединение этапов и уведомления. Остальные перечислены в разделе [«Остальные эндпоинты»](#остальные-эндпоинты).
 
 ## Аутентификация
 
@@ -290,3 +290,32 @@ JWT подписан алгоритмом HS256, содержит claims `sub` (
 Снимает привязку. Историю уведомлений не трогает.
 
 **Ответ 204.** **Ошибки:** `404 Канал не привязан`.
+
+## Остальные эндпоинты
+
+Подробности по схемам запросов и ответов смотрите в OpenAPI. Все они, кроме служебных, требуют `Authorization: Bearer <jwt>` и работают только со стройками текущего пользователя.
+
+| Метод и путь | Что делает |
+|---|---|
+| `GET /health`, `GET /ready`, `GET /version` | Живость, готовность (база и детектор, `503` при недоступной базе), версия сервиса и модели. Без авторизации |
+| `GET /users/me`, `PATCH /users/me` | Профиль текущего пользователя, смена имени |
+| `POST /sites`, `GET /sites`, `GET /sites/{site_id}`, `PATCH /sites/{site_id}`, `DELETE /sites/{site_id}` | Стройки: название, адрес, тип объекта, рабочие дни |
+| `POST /sites/{site_id}/schedule/import` | Загрузка графика (CSV или Excel), режим разбора `auto`, `llm` или `builtin` |
+| `GET /sites/{site_id}/schedule` | График, этапы и ошибки разбора |
+| `PATCH /sites/{site_id}/schedule/stages/{stage_id}` | Ручная правка плановых дат этапа |
+| `GET /sites/{site_id}/methodology`, `PATCH .../methodology/rules/{rule_id}` | Методика стройки, включение и отключение проверки этапа |
+| `POST .../methodology/rules/{rule_id}/sets`, `PUT`, `DELETE .../methodology/sets/{set_id}` | Комплекты техники этапа |
+| `POST .../methodology/apply-defaults` | Подставить базовые комплекты в пустые правила |
+| `GET /equipment-types` | Справочник типов техники |
+| `POST /sites/{site_id}/photos` | Загрузка пачки снимков (`multipart`, необязательное поле `camera_id`), ответ сразу после сохранения, обработка в очереди |
+| `GET .../photos/progress` | Ход обработки очереди загрузок |
+| `GET .../photos`, `GET .../photos/{photo_id}` | Лента снимков и один снимок |
+| `PATCH .../photos/{photo_id}/date`, `POST .../photos/time-batch` | Ручной ввод даты и пакетный ввод времени кадров |
+| `GET .../photos/{photo_id}/image`, `GET .../photos/{photo_id}/annotated` | Оригинал и снимок с рамками |
+| `POST .../photos/detect`, `POST .../photos/{photo_id}/detect` | Повторное распознавание: всех необработанных снимков или одного |
+| `GET /sites/{site_id}/observations`, `GET .../observations/{observed_on}` | Наблюдения по дням |
+| `GET /sites/{site_id}/assessment/stages`, `GET .../summary` | Статусы этапов и итог по объекту |
+| `GET .../assessment/deviations`, `GET .../deviations/{deviation_id}` | Список отклонений и карточка отклонения |
+| `PUT .../assessment/deviations/{deviation_id}/decision` | Решение инженера по гипотезе: подтвердить, отклонить или снять (`decision: null`) |
+| `POST .../cameras/preview` | Пробный кадр по ссылке на стрим без сохранения камеры |
+| `POST /sites/{site_id}/assistant/ask`, `GET /assistant/status` | Вопрос ассистенту по отчёту и признак, подключена ли модель |

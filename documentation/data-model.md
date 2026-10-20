@@ -7,10 +7,13 @@
 | Техника за день | `observed_equipment` | Тип, «не менее N», активность, уверенность. Часть наблюдения за дату |
 | Техника, которую ждёт методика | `equipment_requirements` внутри `equipment_sets` внутри `methodology_rules` | Минимум, обязательность, источник требования |
 | Этапы работ | `schedules`, `schedule_stages`, `schedule_import_issues` | Этап это строка графика. Ошибки разбора файла хранятся отдельно |
-| Статус этапа | `stage_statuses`, `status_basis` | Статус, дни отставания, уверенность и её причина. `status_basis` хранит, какие наблюдения легли в основу |
-| Отклонения (нарушения) | `deviations`, `deviation_evidence` | Тип, важность, уверенность, период, тексты «ожидалось», «наблюдается», «границы вывода», ссылка на правило, снимки-доказательства |
-| Снимки | `photos` | Метаданные, источник даты, статус распознавания, камера (необязательно). Файл лежит в хранилище, в базе только ключ |
-| Камеры стройки | `cameras` | Название, ссылка на стрим, интервал съёмки, состояние последней попытки, рабочая зона |
+| Статус этапа | `stage_statuses`, `status_basis` | Статус, дни отставания (интервалом), уверенность и её причина, факт начала, маркерная техника и её периоды. `status_basis` хранит, какие наблюдения легли в основу |
+| Итог по объекту | `site_summaries` | Одна строка на стройку: «отставание», «отклонений нет» или «недостаточно данных», интервал дней, пояснение, опорная дата |
+| Отклонения (нарушения) | `deviations`, `deviation_evidence` | Тип, важность, уверенность, период, заголовок, тексты «ожидалось», «наблюдается», «границы вывода», ссылка на правило, снимки-доказательства с подписями |
+| Решения по гипотезам | `hypothesis_decisions` | Подтверждение или отклонение гипотезы инженером. Переживает пересчёт |
+| Снимки | `photos` | Метаданные, источник даты и время съёмки, статус распознавания и место в очереди загрузки, камера (необязательно). Файл лежит в хранилище, в базе только ключ |
+| Камеры стройки | `cameras` | Название, ссылка на стрим, интервал съёмки, состояние последней попытки, рабочая зона и её название |
+| Уведомления | `notifications`, `user_channels`, `channel_link_tokens` | Лента, привязанные каналы доставки (телеграм, почта), одноразовые токены привязки |
 
 ## Диаграмма связей
 
@@ -38,6 +41,9 @@ erDiagram
   observations ||--o{ status_basis : "observation_id"
   sites ||--o{ deviations : "site_id"
   schedule_stages ||--o{ deviations : "stage_id"
+  sites ||--o| site_summaries : "site_id"
+  schedule_stages ||--o{ site_summaries : "stage_id, при удалении NULL"
+  sites ||--o{ hypothesis_decisions : "site_id"
   methodology_rules ||--o{ deviations : "rule_id"
   deviations ||--o{ deviation_evidence : "deviation_id"
   photos ||--o{ deviation_evidence : "photo_id"
@@ -92,6 +98,7 @@ erDiagram
 | `name` | varchar(500) | | Очищенное название: переносы и повторные пробелы свёрнуты, длинное обрезано с многоточием |
 | `position` | integer | | Порядок в файле, с единицы |
 | `planned_start`, `planned_end` | date | могут быть пусто | Плановые даты |
+| `work_names` | json | список строк, может быть пусто | Названия работ этапа из графика («4.1 …»). По ним подбирается комплект, когда название этапа общее |
 | `dates_source` | varchar(16) | `file` или `manual` | Ручная правка меняет источник |
 
 `schedule_import_issues`. Строки, которые не удалось разобрать.
@@ -149,6 +156,7 @@ erDiagram
 | `obligation` | varchar(16) | | `normative`, `logical` или `auxiliary` |
 | `gesn_code` | varchar(64) | | Номер расценки ГЭСН |
 | `source_note` | varchar(500) | | Пометка об источнике |
+| `group_code` | varchar(32) | может быть пусто | Группа взаимозаменяемой техники (например, `piling`: буровая, копёр или грейфер). Для «Неполного комплекта» хватает любой машины группы |
 
 `CHECK`: заполнен `gesn_code` или `source_note`. Требование без источника не сохраняется.
 
@@ -232,6 +240,10 @@ erDiagram
 | `width`, `height` | integer | | Размеры после применения EXIF-ориентации |
 | `captured_on` | date | может быть пусто | Дата съёмки. Пусто, пока дата не определена |
 | `date_source` | varchar(16) | | `channel`, `metadata`, `stamp`, `filename`, `neighbours`, `manual`. Пусто вместе с датой |
+| `captured_at` | timestamp | может быть пусто | Местное время съёмки, если источник его знает (штамп, EXIF, имя файла, момент снимка со стрима) |
+| `date_hint` | date | может быть пусто | Подсказка даты для ручного ввода: неуверенный штамп или кадр камеры без штампа |
+| `uncertain_at` | timestamp | может быть пусто | Неуверенно прочитанное время штампа, его может подтвердить серия кадров камеры |
+| `time_check` | varchar(16) | может быть пусто | Проверка серии штампов камеры: `ok` или `series_outlier`. Пусто, если не проверялось |
 | `processing_status` | varchar(16) | по умолчанию `pending`, индекс | `queued` — принят, ждёт фоновой обработки; `processing` — обрабатывается; `pending` — детектор выключен или не ответил; `done`, `failed` |
 | `upload_batch_id`, `upload_batch_pos` | uuid, integer | может быть пусто | Пачка загрузки и место кадра в ней — пока пачка в обработке; по ним ставится дата по соседям. После обработки пусто |
 | `uploaded_at` | timestamptz | | |
@@ -295,12 +307,29 @@ erDiagram
 | `id` | uuid | PK | |
 | `stage_id` | uuid | FK CASCADE, уникально | |
 | `status` | varchar(16) | | `ahead`, `on_track`, `behind`, `not_started`, `not_observed`, `not_checked` |
-| `delay_days` | integer | может быть пусто | Для `behind` дни отставания, для `ahead` дни опережения |
+| `delay_days` | integer | может быть пусто | Для `behind` дни отставания (верхняя граница), для `ahead` дни опережения |
+| `delay_open` | boolean | по умолчанию `false` | `delay_days` — нижняя граница («от N дней»): этап не начат, конец сдвига неизвестен |
+| `delay_min`, `delay_max` | integer | может быть пусто | Сдвиг интервалом («14–74 дня», «до 63»). Пусто — граница неизвестна |
+| `start_fact` | date | может быть пусто | Первая маркерная дата, факт начала этапа |
+| `marker_names` | json | список строк | Названия маркерной техники этапа |
+| `marker_periods` | json | список объектов | Периоды, когда машина — маркер этапа: `{equipment_type_id, name, start, end}`. Показывает методика |
 | `confidence` | varchar(16) | | |
 | `confidence_reason` | text | | Почему уровень именно такой |
 | `computed_at` | timestamptz | | |
 
 Для этапов, окно которых ещё не наступило (плановое начало минус допуск в будущем), строки нет, интерфейс показывает такие этапы как «Не начата».
+
+`site_summaries`. Итог по объекту из последнего пересчёта, считается вместе со статусами по той же опорной дате.
+
+| Столбец | Тип | Ограничения | Смысл |
+|---|---|---|---|
+| `site_id` | uuid | PK, FK `sites.id` CASCADE | |
+| `verdict` | varchar(24) | | `behind`, `no_deviations`, `insufficient_data` |
+| `delay_days_min`, `delay_days_max` | integer | может быть пусто | Интервал отставания у самого отстающего этапа |
+| `stage_id` | uuid | FK `schedule_stages.id` SET NULL, может быть пусто | Этап, по которому считан итог |
+| `reason` | text | | Пояснение под итогом |
+| `as_of` | date | может быть пусто | Опорная дата расчёта: «данные на» на экранах |
+| `computed_at` | timestamptz | обновляется при изменении | |
 
 `status_basis`. Наблюдения, на которых основан статус. Уникальна пара `(status_id, observation_id)`, оба внешних ключа с `CASCADE`.
 
@@ -311,31 +340,36 @@ erDiagram
 | `id` | uuid | PK | Меняется при каждом пересчёте |
 | `site_id` | uuid | FK CASCADE, индекс | |
 | `stage_id` | uuid | FK `schedule_stages.id` CASCADE, может быть пусто | Пусто у отклонения «Данные устарели» |
-| `type` | varchar(32) | | Один из восьми типов |
+| `type` | varchar(32) | | Один из десяти типов, см. «Справочники значений» |
 | `is_hypothesis` | boolean | | Признак гипотезы |
 | `severity` | varchar(16) | | `critical` или `attention` |
 | `confidence` | varchar(16) | | |
 | `period_start`, `period_end` | date | | Период отклонения |
 | `expected`, `observed`, `limits_text` | text | | Шаблонные тексты: ожидалось, найдено, чего вывод не доказывает |
+| `title` | varchar(300) | может быть пусто | Заголовок строки списка |
+| `equipment_type_id` | uuid | может быть пусто | Машина отклонения: по её рамкам выбраны доказательства |
+| `cause_stage_id` | uuid | FK `schedule_stages.id` SET NULL, может быть пусто | Возможная причина: отстающий этап, чья техника ещё на площадке |
 | `rule_id` | uuid | FK `methodology_rules.id` SET NULL | Сработавшее правило |
 | `created_at` | timestamptz | | Время последнего пересчёта |
 
-`deviation_evidence`. Снимки-доказательства. `deviation_id` и `photo_id` с `CASCADE`, `detection_id` с `SET NULL`. Уникальна тройка `(deviation_id, photo_id, detection_id)`. Сейчас `detection_id` всегда пуст: в доказательство попадают все обработанные снимки нужной даты.
+`deviation_evidence`. Снимки-доказательства. `deviation_id` и `photo_id` с `CASCADE`, `detection_id` с `SET NULL`. Столбец `caption` (varchar(300), может быть пусто) — подпись под снимком («К-2 · свайное поле: Буровая установка»). Уникальна тройка `(deviation_id, photo_id, detection_id)`. Сейчас `detection_id` всегда пуст: в доказательство попадают все обработанные снимки нужной даты.
 
 ## Справочники значений
 
 | Перечисление | Значения | Где определено |
 |---|---|---|
 | Статус этапа | `ahead` опережение, `on_track` в графике, `behind` отставание, `not_started` не начат, `not_observed` не наблюдалось, `not_checked` не проверяется по технике | `assessment/models.py` |
-| Тип отклонения | `missing_equipment` нет нужной техники, `missing_logical_equipment` нет логической техники, `stage_mismatch` несоответствие этапу, `stale_data` данные устарели, `idle` простой, `extra_equipment` лишняя техника, `out_of_zone` вне рабочей зоны, `no_progress` нет прогресса, `behind_schedule` отставание от графика | `assessment/models.py` |
+| Тип отклонения | `missing_equipment` нет нужной техники, `missing_logical_equipment` нет логической техники, `stage_mismatch` несоответствие этапу, `stale_data` данные устарели, `idle` простой, `extra_equipment` лишняя техника, `out_of_zone` вне рабочей зоны, `no_progress` нет прогресса, `behind_schedule` отставание от графика, `incomplete_kit` неполный комплект. Тип `missing_logical_equipment` в перечислении остался, но движок его не создаёт | `assessment/models.py` |
 | Важность | `critical`, `attention` | `assessment/models.py` |
 | Уверенность | `high`, `medium`, `low` | `observation/models.py` |
 | Наблюдаемость | `high`, `medium`, `low` | `observation/models.py` |
 | Активность | `works`, `idle`, `unknown` | `observation/models.py` |
 | Обязательность | `normative`, `logical`, `auxiliary` | `methodology/models.py` |
 | Источник даты снимка | `channel`, `metadata`, `stamp`, `filename`, `neighbours`, `manual` | `photo/models.py` |
-| Статус распознавания | `pending`, `done`, `failed` | `photo/models.py` |
+| Статус распознавания | `queued`, `processing`, `pending`, `done`, `failed` | `photo/models.py` |
 | Режим разбора графика | `auto`, `llm`, `builtin` | `schedule/models.py` |
+| Решение по гипотезе | `confirmed`, `rejected` | `assessment/models.py` |
+| Тип объекта | `housing`, `education`, `health`, `other` | `site/schemas.py` |
 | Итог по объекту | `behind`, `no_deviations`, `insufficient_data` | `assessment/schemas.py`, вычисляется |
 
 Значения хранятся строками, а не типами `ENUM` PostgreSQL. Допустимость значений проверяет код. Ограничений `CHECK` на них в схеме нет.
@@ -374,6 +408,20 @@ erDiagram
 | `0011` | 16.10.2026 | `app_user.login` (уникально), `app_user.password_hash` (argon2) для аутентификации |
 | `0012` | 18.10.2026 | `cameras` и `photos.camera_id` (необязательная связь, при удалении камеры `SET NULL`) |
 | `0013` | 18.10.2026 | `notifications`, `user_channels`, `channel_link_tokens` |
+| `0014` | 19.10.2026 | `site_summaries`, `stage_statuses.delay_open` |
+| `0015` | 19.10.2026 | `schedule_stages.work_names` |
+| `0016` | 19.10.2026 | `stage_statuses.delay_min`, `delay_max` |
+| `0017` | 19.10.2026 | `equipment_requirements.group_code` |
+| `0018` | 19.10.2026 | `photos.captured_at`, `date_hint`, `uncertain_at`, `time_check` |
+| `0019` | 19.10.2026 | `deviations.title`, `equipment_type_id`, `cause_stage_id`, `deviation_evidence.caption` |
+| `0020` | 19.10.2026 | `stage_statuses.start_fact`, `marker_names`, `site_summaries.as_of` |
+| `0021` | 19.10.2026 | `observed_equipment.activity_basis` |
+| `0022` | 19.10.2026 | `channel_link_tokens.address` |
+| `0023` | 19.10.2026 | `photos.upload_batch_id`, `upload_batch_pos`, индексы по пачке и статусу |
+| `0024` | 19.10.2026 | `sites.object_type`, `sites.workdays` |
+| `0025` | 19.10.2026 | `hypothesis_decisions` |
+| `0026` | 19.10.2026 | `stage_statuses.marker_periods` |
+| `0027` | 20.10.2026 | `cameras.zone_name` |
 
 Начальные данные миграции вставляют своим кодом, не импортируя код приложения, поэтому старые миграции не ломаются от правки `seed.py`. Базовый набор правил методики в базу не пишется миграцией: он лежит в `backend/app/domains/methodology/defaults.py`. При первом чтении методики или первом пересчёте для каждого этапа создаётся пустое правило без комплектов. Комплекты из базового набора копируются в правила стройки только по запросу `POST /api/sites/{id}/methodology/apply-defaults`.
 
