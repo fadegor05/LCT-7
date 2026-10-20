@@ -18,6 +18,7 @@
   stroke: rgb(255 255 255 / 85%);
   stroke-width: 4.5px;
   pointer-events: none;
+  transition: opacity 120ms ease;
 }
 
 .box {

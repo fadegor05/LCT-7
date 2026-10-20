@@ -26,10 +26,12 @@ export function DetectionOverlay({ detections, activeId, onActive }: Props) {
         {/* Светлая подложка под рамкой: контур виден и на небе, и на земле */}
         {detections.map((d) => {
           const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = d.bbox
+          // Подложка гаснет вместе со своей рамкой, иначе у приглушённой рамки остаётся яркая обводка
+          const isMuted = activeId !== null && d.id !== activeId
           return (
             <rect
               key={`halo-${d.id}`}
-              className={styles.halo}
+              className={[styles.halo, isMuted && styles.muted].filter(Boolean).join(' ')}
               x={x1}
               y={y1}
               width={x2 - x1}

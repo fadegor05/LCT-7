@@ -84,6 +84,16 @@ describe('DetectionOverlay', () => {
     expect(container.querySelectorAll('rect.halo')).toHaveLength(detections.length)
   })
 
+  it('при наведении подложка чужой рамки приглушается вместе с ней', () => {
+    const { container } = render(
+      <DetectionOverlay detections={detections} activeId="d2" onActive={() => {}} />,
+    )
+
+    const halos = container.querySelectorAll('rect.halo')
+    expect(halos[0]).toHaveClass('muted')
+    expect(halos[1]).not.toHaveClass('muted')
+  })
+
   it('при наведении подпись переходит к активной рамке', () => {
     render(<DetectionOverlay detections={detections} activeId="d2" onActive={() => {}} />)
 
