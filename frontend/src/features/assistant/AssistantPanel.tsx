@@ -53,6 +53,8 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
   const logRef = useRef<HTMLDivElement>(null)
   // Переписка в колонке тесная: «Развернуть» показывает тот же чат в широком окне
   const [expanded, setExpanded] = useState(false)
+  // Черновик вопроса живёт здесь: форма пересоздаётся при развороте, а недописанное не теряется
+  const [draft, setDraft] = useState('')
   // Стройка, на которой открыт чат сейчас: ответ, пришедший после смены стройки, в чужую
   // переписку не пишется.
   const siteRef = useRef(siteId)
@@ -149,6 +151,8 @@ function AssistantChat({ siteId, disabled }: AssistantPanelProps & { disabled: b
           onCancel={cancel}
           showExamples={messages.length === 0}
           disabled={disabled}
+          draft={draft}
+          onDraftChange={setDraft}
         />
       </div>
     </>

@@ -29,4 +29,26 @@ describe('Dialog', () => {
     await userEvent.click(screen.getByText('тело'))
     expect(onClose).toHaveBeenCalledTimes(3)
   })
+
+  it('keeps focus in a field when the parent re-renders with a new onClose', async () => {
+    const first = vi.fn()
+    const { rerender } = render(
+      <Dialog title="Окно" onClose={first}>
+        <input aria-label="Поле" />
+      </Dialog>,
+    )
+    await userEvent.click(screen.getByRole('textbox', { name: 'Поле' }))
+
+    const second = vi.fn()
+    rerender(
+      <Dialog title="Окно" onClose={second}>
+        <input aria-label="Поле" />
+      </Dialog>,
+    )
+
+    expect(screen.getByRole('textbox', { name: 'Поле' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(first).not.toHaveBeenCalled()
+  })
 })

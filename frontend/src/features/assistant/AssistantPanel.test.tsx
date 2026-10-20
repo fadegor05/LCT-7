@@ -771,5 +771,24 @@ describe('AssistantPanel', () => {
       expect(within(log).getByText(/отстаёт на 3 дня/)).toBeInTheDocument()
       expect(screen.queryByText('Чат открыт в отдельном окне')).not.toBeInTheDocument()
     })
+
+    it('недописанный вопрос не теряется ни при развороте, ни при закрытии окна по Escape', async () => {
+      const { user } = renderWithProviders(<AssistantPanel siteId={BEREZNIKI} />)
+      await screen.findByRole('heading', { name: 'Ассистент по отчёту' })
+
+      await user.type(screen.getByRole('textbox', { name: 'Вопрос по отчёту' }), 'где отст')
+      await user.click(screen.getByRole('button', { name: 'Развернуть' }))
+
+      const dialog = screen.getByRole('dialog', { name: 'Ассистент по отчёту' })
+      const field = within(dialog).getByRole('textbox', { name: 'Вопрос по отчёту' })
+      expect(field).toHaveValue('где отст')
+
+      await user.type(field, 'авание{Escape}')
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: 'Вопрос по отчёту' })).toHaveValue(
+        'где отставание',
+      )
+    })
   })
 })

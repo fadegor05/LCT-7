@@ -13,6 +13,9 @@ interface AssistantQuestionFormProps {
   showExamples?: boolean
   /** Ассистент не подключён: форма видна, но спросить нельзя. */
   disabled?: boolean
+  /** Текст поля снаружи: черновик переживает пересоздание формы. Без него форма хранит текст сама. */
+  draft?: string
+  onDraftChange?(this: void, value: string): void
 }
 
 const EXAMPLES = ['где отставание и на сколько', 'что с этой площадкой']
@@ -25,9 +28,13 @@ export function AssistantQuestionForm({
   onCancel,
   showExamples = true,
   disabled = false,
+  draft,
+  onDraftChange,
 }: AssistantQuestionFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [fieldValue, setFieldValue] = useState('')
+  const [ownValue, setOwnValue] = useState('')
+  const fieldValue = draft ?? ownValue
+  const setFieldValue = onDraftChange ?? setOwnValue
   const [fieldError, setFieldError] = useState<string>()
 
   const trimmedLength = fieldValue.trim().length
