@@ -52,7 +52,7 @@ describe('VideoUploadDialog', () => {
     expect(within(dialog).getByRole('combobox', { name: 'Шаг кадров' })).toHaveValue('30')
     expect(within(dialog).getByLabelText('Начало записи')).toHaveValue('')
 
-    await user.upload(within(dialog).getByLabelText('Видео'), videoFile())
+    await user.upload(within(dialog).getByLabelText('Выбрать видео'), videoFile())
     expect(within(dialog).getByLabelText('Начало записи')).toHaveValue('2026-10-20T09:30')
   })
 
@@ -70,7 +70,7 @@ describe('VideoUploadDialog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Загрузить' }))
     expect(within(dialog).getByText('Выберите видеофайл')).toBeInTheDocument()
 
-    await user.upload(within(dialog).getByLabelText('Видео'), videoFile())
+    await user.upload(within(dialog).getByLabelText('Выбрать видео'), videoFile())
     await user.clear(within(dialog).getByLabelText('Начало записи'))
     await user.click(within(dialog).getByRole('button', { name: 'Загрузить' }))
     expect(within(dialog).getByText('Укажите начало записи')).toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('VideoUploadDialog', () => {
     const { user } = renderRoute(URL_CAMERAS)
     const dialog = await openVideoDialog(user)
 
-    await user.upload(within(dialog).getByLabelText('Видео'), videoFile())
+    await user.upload(within(dialog).getByLabelText('Выбрать видео'), videoFile())
     await user.click(within(dialog).getByRole('button', { name: 'Загрузить' }))
     expect(
       await within(dialog).findByText('Принято 3 кадра, они обрабатываются'),
@@ -101,7 +101,7 @@ describe('VideoUploadDialog', () => {
     const { user } = renderRoute(URL_CAMERAS)
     const dialog = await openVideoDialog(user)
 
-    await user.upload(within(dialog).getByLabelText('Видео'), videoFile())
+    await user.upload(within(dialog).getByLabelText('Выбрать видео'), videoFile())
     await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Шаг кадров' }), '60')
     await user.click(within(dialog).getByRole('button', { name: 'Загрузить' }))
     await within(dialog).findByText('Принято 3 кадра, они обрабатываются')
@@ -123,7 +123,7 @@ describe('VideoUploadDialog', () => {
     const { user } = renderRoute(URL_CAMERAS)
     const dialog = await openVideoDialog(user)
 
-    await user.upload(within(dialog).getByLabelText('Видео'), videoFile())
+    await user.upload(within(dialog).getByLabelText('Выбрать видео'), videoFile())
     await user.click(within(dialog).getByRole('button', { name: 'Загрузить' }))
     expect(await within(dialog).findByText('Видео не удалось прочитать')).toBeInTheDocument()
   })

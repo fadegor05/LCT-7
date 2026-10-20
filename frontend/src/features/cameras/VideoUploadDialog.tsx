@@ -4,6 +4,7 @@ import type { Camera } from '@/api/schemas'
 import { Button } from '@/components/ui/Button'
 import { Callout } from '@/components/ui/Callout'
 import { Dialog } from '@/components/ui/Dialog'
+import { FileDrop } from '@/components/ui/FileDrop'
 import { SelectField } from '@/components/ui/SelectField'
 import { TextField } from '@/components/ui/TextField'
 import { framesWord } from './plural'
@@ -46,11 +47,10 @@ export function VideoUploadDialog({ siteId, camera, onClose }: VideoUploadDialog
   const [timeError, setTimeError] = useState<string>()
   const report = upload.data
 
-  const chooseFile = (list: FileList | null) => {
-    const picked = list?.[0] ?? null
+  const chooseFile = (picked: File) => {
     setFile(picked)
     setFileError(undefined)
-    if (picked) setRecordedAt(localDateTimeValue(picked.lastModified))
+    setRecordedAt(localDateTimeValue(picked.lastModified))
   }
 
   const submit = () => {
@@ -78,14 +78,20 @@ export function VideoUploadDialog({ siteId, camera, onClose }: VideoUploadDialog
       }
     >
       <p className="sm muted">Камера «{camera.name}»</p>
-      <TextField
-        label="Видео"
-        type="file"
+      <FileDrop
+        title="Перетащите видео"
+        hint="Запись с камеры: MP4, MOV, AVI, MKV или WEBM. Сервер нарежет её кадрами и обработает как снимки."
         accept="video/*"
-        hint={file ? `Выбрано: ${file.name}` : 'Файл записи с камеры'}
-        error={fileError}
-        onChange={(event) => chooseFile(event.target.files)}
+        buttonLabel="Выбрать видео"
+        disabled={upload.isPending}
+        onFiles={([picked]) => picked && chooseFile(picked)}
       />
+      {file && (
+        <p className="sm" role="status">
+          Выбрано: {file.name}
+        </p>
+      )}
+      {fileError && <Callout tone="behind" title={fileError} />}
       <TextField
         label="Начало записи"
         type="datetime-local"
