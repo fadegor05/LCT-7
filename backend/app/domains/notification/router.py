@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 
 from app.core.settings import Settings
 from app.domains.notification.channels import ChannelLinkService, mask_address
+from app.domains.notification.digest import DigestService
 from app.domains.notification.models import ChannelKind, UserChannel
 from app.domains.notification.schemas import (
     ChannelLinkRequest,
@@ -60,7 +61,7 @@ async def create_test_notification(
     user: FromDishka[CurrentUser],
     service: FromDishka[NotificationService],
 ) -> NotificationRead:
-    """Служебное создание уведомления себе: источников событий пока нет."""
+    """Служебное создание произвольного уведомления себе — для демо и ручной проверки."""
     created = await service.notify(
         user_id=user.id,
         type=data.type,
@@ -69,6 +70,16 @@ async def create_test_notification(
         link=data.link,
     )
     return NotificationRead.model_validate(created)
+
+
+@router.post("/digest", status_code=201)
+@inject
+async def send_digest(
+    user: FromDishka[CurrentUser],
+    service: FromDishka[DigestService],
+) -> NotificationRead:
+    """Отправить себе сводку по объектам сейчас: лента и привязанные каналы."""
+    return NotificationRead.model_validate(await service.send_to_me(user.id))
 
 
 channels_router = APIRouter(prefix="/users/me/channels", tags=["notifications"])

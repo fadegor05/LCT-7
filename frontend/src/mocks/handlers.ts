@@ -149,6 +149,7 @@ export const handlers = [
   // ---------- Уведомления ----------
   http.get(api('/notifications'), () => handle(db.listNotifications)),
   http.post(api('/notifications/read'), () => handle(db.markAllRead)),
+  http.post(api('/notifications/digest'), () => handle(db.sendDigest, 201)),
   http.post(api('/notifications/test'), async ({ request }) => {
     const data = await json<{ title?: string; body?: string; link?: string | null }>(request)
     return handle(() => db.createTestNotification(data), 201)

@@ -1146,6 +1146,23 @@ export function createTestNotification(body: {
   return created
 }
 
+export function sendDigest(): Notification {
+  if (state.sites.length === 0) throw new MockError(409, 'Нет объектов для сводки')
+  const created: Notification = {
+    id: `notification-${++state.seq}`,
+    type: 'digest',
+    title: `Сводка по объектам на ${new Date().toLocaleDateString('ru-RU')}`,
+    body: `Объектов: ${state.sites.length}.\n\n${state.sites
+      .map((site, index) => `${index + 1}. ${site.name}`)
+      .join('\n')}`,
+    link: '/sites',
+    read_at: null,
+    created_at: new Date().toISOString(),
+  }
+  state.notifications.push(created)
+  return created
+}
+
 export function markAllRead(): { marked: number } {
   const now = new Date().toISOString()
   let marked = 0

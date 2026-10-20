@@ -7,6 +7,7 @@ from app.adapters.notify.factory import ChannelRegistry, create_channel_registry
 from app.adapters.notify.telegram import TelegramClient
 from app.core.settings import Settings
 from app.domains.notification.channels import ChannelLinkService
+from app.domains.notification.digest import DigestService
 from app.domains.notification.dispatcher import (
     BackgroundDispatcher,
     NotificationDispatcher,
@@ -27,6 +28,7 @@ class NotificationProvider(Provider):
     notifications = provide(NotificationRepository)
     channels = provide(UserChannelRepository)
     tokens = provide(ChannelLinkTokenRepository)
+    digest = provide(DigestService)
 
     @provide(scope=Scope.REQUEST)
     def service(

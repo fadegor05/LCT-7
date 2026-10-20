@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Drawer } from '@/components/ui/Drawer'
 import { QueryState } from '@/components/ui/QueryState'
-import { useMarkAllRead, useNotifications } from '@/api/notifications'
+import { Button } from '@/components/ui/Button'
+import { useMarkAllRead, useNotifications, useSendDigest } from '@/api/notifications'
 import { NotificationItem } from './NotificationItem'
 import styles from './NotificationDrawer.module.css'
 
@@ -12,6 +13,7 @@ interface NotificationDrawerProps {
 export function NotificationDrawer({ onClose }: NotificationDrawerProps) {
   const feed = useNotifications()
   const markAllRead = useMarkAllRead()
+  const sendDigest = useSendDigest()
   // Снимок непрочитанных на момент открытия: пометки «новое» должны дожить
   // до закрытия шторки, хотя на сервере всё уже прочитано
   const snapshot = useRef<Set<string> | null>(null)
@@ -64,6 +66,21 @@ export function NotificationDrawer({ onClose }: NotificationDrawerProps) {
           )
         }
       </QueryState>
+      <div className={styles.actions}>
+        <Button
+          variant="secondary"
+          icon="bell"
+          disabled={sendDigest.isPending}
+          onClick={() => sendDigest.mutate()}
+        >
+          Отправить сводку сейчас
+        </Button>
+        {sendDigest.isError && (
+          <p className={styles.error} role="alert">
+            {sendDigest.error.message}
+          </p>
+        )}
+      </div>
     </Drawer>
   )
 }
