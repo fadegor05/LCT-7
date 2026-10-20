@@ -53,6 +53,22 @@ deploy-tunnel-proxy:
 	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy pull
 	$(TUNNEL) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy up -d --no-build
 
+# Применить изменённый XRAY__LINKS: пересобрать конфиг и перечитать его.
+# Одного `up -d` мало: он пересоздаёт xray-init и пишет в том новые ссылки,
+# но сам xray остаётся Running со старым конфигом в памяти — Xray читает
+# конфиг только при старте. Поэтому нужен явный restart.
+xray-reload:
+	$(PROXY) --profile proxy up -d --no-build --force-recreate xray-init
+	$(PROXY) --profile proxy restart xray
+	$(PROXY) --profile proxy logs --tail 20 xray
+
+# То же для локальной разработки
+dev-xray-reload:
+	$(COMPOSE) -f $(DOCKER_FILES)/common/proxy.yaml -f $(DOCKER_FILES)/dev/core.yaml \
+		--profile proxy up -d --force-recreate xray-init
+	$(COMPOSE) -f $(DOCKER_FILES)/common/proxy.yaml -f $(DOCKER_FILES)/dev/core.yaml \
+		--profile proxy restart xray
+
 # Проверить, что из XRAY__LINKS собирается конфиг, который принимает сам Xray
 xray-check:
 	$(COMPOSE) -f $(DOCKER_FILES)/common/proxy.yaml --profile proxy run --rm --no-deps xray-init
@@ -109,4 +125,4 @@ front-check:
 front-test:
 	cd frontend && pnpm run test:coverage
 
-.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check deploy deploy-proxy deploy-tunnel deploy-tunnel-proxy down logs pretty check test front-pretty front-check front-test
+.PHONY: ml-weights dev dev-ml dev-proxy up up-proxy xray-check xray-reload dev-xray-reload deploy deploy-proxy deploy-tunnel deploy-tunnel-proxy down logs pretty check test front-pretty front-check front-test
