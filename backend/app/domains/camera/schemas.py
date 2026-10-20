@@ -35,6 +35,13 @@ def _check_zone(value: list[list[float]] | None) -> list[list[float]] | None:
     return [[float(x), float(y)] for x, y in value]
 
 
+def _blank_zone_name(value: str | None) -> str | None:
+    """Пустое или из одних пробелов название — то же, что его нет: в базе null."""
+    if value is None:
+        return None
+    return value.strip() or None
+
+
 class StreamPreviewIn(BaseModel):
     """Пробный кадр по ссылке — ориентир для зоны до сохранения камеры, в ленту не попадает.
 
@@ -66,14 +73,17 @@ class CameraIn(BaseModel):
         default=None, ge=MIN_CAPTURE_EVERY_S, le=MAX_CAPTURE_EVERY_S
     )
     zone: list[list[float]] | None = None
+    zone_name: str | None = Field(default=None, max_length=100)
 
     _zone = field_validator("zone")(_check_zone)
+    _zone_name = field_validator("zone_name")(_blank_zone_name)
 
 
 class CameraUpdate(BaseModel):
     """Частичная правка: поля, которых нет в запросе, не меняются.
 
-    `zone: null` — убрать зону, `stream_url: null` — убрать ссылку.
+    `zone: null` — убрать зону, `stream_url: null` — убрать ссылку, `zone_name: null` — убрать
+    название зоны.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -84,6 +94,7 @@ class CameraUpdate(BaseModel):
         default=None, ge=MIN_CAPTURE_EVERY_S, le=MAX_CAPTURE_EVERY_S
     )
     zone: list[list[float]] | None = None
+    zone_name: str | None = Field(default=None, max_length=100)
 
     @field_validator("name", mode="before")
     @classmethod
@@ -93,6 +104,7 @@ class CameraUpdate(BaseModel):
         return value
 
     _zone = field_validator("zone")(_check_zone)
+    _zone_name = field_validator("zone_name")(_blank_zone_name)
 
 
 class CameraRead(BaseModel):
@@ -108,5 +120,6 @@ class CameraRead(BaseModel):
     last_capture_attempt_at: datetime | None = None
     capture_failures: int = 0
     zone: list[list[float]] | None
+    zone_name: str | None = None
     frames_count: int
     created_at: datetime

@@ -64,6 +64,49 @@ describe('CameraList', () => {
     )
   })
 
+  it('shows the zone name next to the zone indicator', () => {
+    render(
+      <CameraList
+        cameras={[
+          camera({
+            name: 'Въезд',
+            zone: [
+              [0, 0],
+              [1, 0],
+              [0, 1],
+            ],
+            zone_name: 'Склад',
+          }),
+        ]}
+        onEdit={() => {}}
+      />,
+    )
+    const row = screen.getByText('Въезд').closest('li')!
+    expect(row).toHaveTextContent('Зона «Склад»')
+    expect(row).not.toHaveTextContent('Зона задана')
+  })
+
+  it('keeps the plain zone indicator when the zone has no name', () => {
+    render(
+      <CameraList
+        cameras={[
+          camera({
+            zone: [
+              [0, 0],
+              [1, 0],
+              [0, 1],
+            ],
+            zone_name: null,
+          }),
+        ]}
+        onEdit={() => {}}
+      />,
+    )
+    const row = screen.getByText('Въезд').closest('li')!
+    expect(row).toHaveTextContent('Зона задана')
+    expect(row).not.toHaveTextContent('Зона «')
+  })
+
   it('shows a stream without a capture yet as set', () => {
     render(<CameraList cameras={[camera({})]} onEdit={() => {}} />)
     expect(screen.getByText('Стрим задан')).toBeInTheDocument()

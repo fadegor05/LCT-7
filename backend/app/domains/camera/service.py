@@ -54,6 +54,7 @@ class CameraService:
             name=data.name,
             stream_url=resolve_stream_url(data.stream_url),
             zone=data.zone,
+            zone_name=data.zone_name,
         )
         camera.capture_every_s = _interval(camera.stream_url, data.capture_every_s)
         await self._repository.add(camera)

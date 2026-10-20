@@ -106,6 +106,49 @@ describe('CamerasPage', () => {
     expect(await within(dialog).findByText('Камера не сохранена на сервере')).toBeInTheDocument()
   })
 
+  it('names the zone: trims the name, shows it in the list and fills it on edit', async () => {
+    const bodies: Record<string, unknown>[] = []
+    server.events.on('request:start', async ({ request }) => {
+      if (['POST', 'PATCH'].includes(request.method) && request.url.includes('/cameras')) {
+        bodies.push((await request.clone().json()) as Record<string, unknown>)
+      }
+    })
+    const { user } = renderRoute(URL_CAMERAS)
+    const dialog = await openNewCamera(user)
+    await user.type(within(dialog).getByLabelText('Название'), 'Въезд')
+    const zoneName = within(dialog).getByLabelText('Название зоны')
+    expect(zoneName).toHaveAttribute('maxLength', '100')
+    expect(zoneName).toHaveAttribute('placeholder', 'Например, Въезд или Склад')
+    await user.type(zoneName, '  Склад  ')
+
+    const area = within(dialog).getByRole('application', { name: 'Рабочая зона' })
+    click(area, 40, 30)
+    click(area, 360, 30)
+    click(area, 200, 270)
+    click(within(dialog).getByRole('button', { name: 'Вершина 1' }), 40, 30)
+    await user.click(within(dialog).getByRole('button', { name: 'Сохранить' }))
+
+    const list = await screen.findByRole('list', { name: 'Камеры' })
+    expect(within(list).getByText('Зона «Склад»')).toBeInTheDocument()
+    expect(bodies.at(-1)).toMatchObject({ zone_name: 'Склад' })
+
+    await user.click(screen.getByRole('button', { name: 'Настроить камеру Въезд' }))
+    const again = screen.getByRole('dialog', { name: 'Камера Въезд' })
+    expect(within(again).getByLabelText('Название зоны')).toHaveValue('Склад')
+
+    // Пустое название зоны уходит как null, и в списке остаётся обычный индикатор
+    await user.clear(within(again).getByLabelText('Название зоны'))
+    await user.click(within(again).getByRole('button', { name: 'Сохранить' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const row = within(screen.getByRole('list', { name: 'Камеры' }))
+      .getByText('Въезд')
+      .closest('li')!
+    expect(row).toHaveTextContent('Зона задана')
+    expect(row).not.toHaveTextContent('Зона «')
+    expect(bodies.at(-1)).toMatchObject({ zone_name: null })
+    server.events.removeAllListeners()
+  })
+
   it('edits a camera, clears its zone and deletes it', async () => {
     const { user } = renderRoute(URL_CAMERAS)
     const dialog0 = await openNewCamera(user)

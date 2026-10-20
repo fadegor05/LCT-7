@@ -143,6 +143,10 @@ def main() -> None:
         body: dict = {"name": name}
         if zone := ZONES.get(site_name, {}).get(name):
             body["zone"] = zone
+            # «К-1 · вход и здание» → зона «Вход и здание»
+            if " · " in name:
+                label = name.split(" · ", 1)[1]
+                body["zone_name"] = label[:1].upper() + label[1:]
         return ok(api.post(f"/sites/{sid}/cameras", json=body)).json()["id"]
 
     def upload(sid: str, cam: str, paths: list[Path]) -> dict[str, dict]:

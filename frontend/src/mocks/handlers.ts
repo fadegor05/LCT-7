@@ -87,6 +87,7 @@ interface CameraBody {
   stream_url: string | null
   capture_every_s: number | null
   zone: Zone | null
+  zone_name?: string | null
 }
 
 const cameraWrite = (body: CameraBody): db.CameraWrite => ({
@@ -94,6 +95,7 @@ const cameraWrite = (body: CameraBody): db.CameraWrite => ({
   stream_url: body.stream_url ?? null,
   capture_every_s: body.capture_every_s ?? null,
   zone: body.zone ?? null,
+  zone_name: body.zone_name ?? null,
 })
 
 export const handlers = [

@@ -168,6 +168,7 @@ class CameraSeries:
     name: str
     zone: Sequence[Sequence[float]] | None
     shots: Sequence[Shot]
+    zone_name: str | None = None
 
 
 class ActivityPolicy:
@@ -195,7 +196,11 @@ class ActivityPolicy:
         machines: dict[uuid.UUID, list[MachineActivity]] = {}
         for cam in series:
             for m in camera_activity(
-                cam.shots, zone=cam.zone, camera=cam.name, params=self._params
+                cam.shots,
+                zone=cam.zone,
+                camera=cam.name,
+                params=self._params,
+                zone_name=cam.zone_name,
             ):
                 machines.setdefault(m.equipment_type_id, []).append(m)
         result: dict[uuid.UUID, MachineActivity] = {}

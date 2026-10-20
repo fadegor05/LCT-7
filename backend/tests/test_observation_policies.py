@@ -344,9 +344,9 @@ class TestActivityPolicy:
     def _shot(minute: int, *boxes: tuple[uuid.UUID, list[float]]) -> Shot:
         return Shot(datetime(2026, 9, 9, 10, minute), tuple(Box(k, b) for k, b in boxes))
 
-    def _day(self, *shots: Shot, zone=None, present=None):
+    def _day(self, *shots: Shot, zone=None, zone_name=None, present=None):
         policy = ActivityPolicy(ActivityParams())
-        series = [CameraSeries("Север", zone, shots)]
+        series = [CameraSeries("Север", zone, shots, zone_name=zone_name)]
         return policy.assess_day(series, present or [self.EXC])[self.EXC]
 
     def test_single_shot_is_unknown_not_works(self):
@@ -393,6 +393,28 @@ class TestActivityPolicy:
         got = self._day(*(self._shot(m, box) for m in (0, 5, 10, 15)), zone=self.ZONE)
         assert got.activity is Activity.UNKNOWN
         assert got.basis.endswith("Зона: внутри зоны")
+
+    def test_still_series_out_of_zone_names_zone_in_basis(self):
+        box = (self.EXC, [0.7, 0.1, 0.8, 0.2])
+        got = self._day(
+            *(self._shot(m, box) for m in (0, 5, 10, 15)), zone=self.ZONE, zone_name="Въезд"
+        )
+        assert got.activity is Activity.IDLE
+        assert got.basis.endswith("Зона «Въезд»: вне зоны")
+
+    def test_still_series_in_zone_names_zone_in_basis(self):
+        box = (self.EXC, [0.1, 0.1, 0.2, 0.2])
+        got = self._day(
+            *(self._shot(m, box) for m in (0, 5, 10, 15)), zone=self.ZONE, zone_name="Въезд"
+        )
+        assert got.activity is Activity.UNKNOWN
+        assert got.basis.endswith("Зона «Въезд»: внутри зоны")
+
+    def test_zone_name_without_zone_keeps_not_set_text(self):
+        """Название есть, зоны нет — текст «не задана» прежний, название в нём не нужно."""
+        got = self._day(self._shot(0, (self.EXC, [0.1, 0.1, 0.2, 0.2])), zone_name="Въезд")
+        assert "Зона: у камеры «Север» не задана" in got.basis
+        assert "Въезд" not in got.basis
 
     def test_camera_moved_pair_is_ignored(self):
         """Все три машины сдвинулись разом — подвинули камеру, а не машины поехали."""

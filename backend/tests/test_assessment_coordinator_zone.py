@@ -19,6 +19,7 @@ from app.domains.methodology.models import (
 )
 from app.domains.observation.models import Observation, ObservedEquipment
 from app.domains.photo.models import Detection, Photo, ProcessingStatus
+from app.domains.photo.repository import PhotoRepository
 from app.domains.schedule.models import Schedule, ScheduleStage
 from app.domains.site.models import Site
 from tests.test_assessment_coordinator import create_coordinator, seed_user
@@ -41,6 +42,7 @@ async def _seed_site(
     camera_zone: list[list[float]] | None,
     with_camera: bool,
     bboxes: list[list[float]],
+    zone_name: str | None = None,
 ) -> uuid.UUID:
     """Сайт с этапом, методикой «кран», наблюдением за сегодня и фото с рамками крана."""
     user = await seed_user(container)
@@ -115,7 +117,9 @@ async def _seed_site(
 
         camera_id = None
         if with_camera:
-            camera = Camera(id=uuid.uuid4(), site_id=site_id, name="К-1", zone=camera_zone)
+            camera = Camera(
+                id=uuid.uuid4(), site_id=site_id, name="К-1", zone=camera_zone, zone_name=zone_name
+            )
             session.add(camera)
             await session.flush()
             camera_id = camera.id
@@ -155,6 +159,74 @@ async def _out_of_zone_count(container, site_id: uuid.UUID) -> int:
         session = await request_container.get(AsyncSession)
         deviations = await DeviationRepository(session).list_by_site(site_id)
         return sum(1 for d in deviations if d.type == DeviationType.OUT_OF_ZONE.value)
+
+
+async def _out_of_zone_deviation(container, site_id: uuid.UUID):
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        deviations = await DeviationRepository(session).list_by_site(site_id)
+        (deviation,) = [d for d in deviations if d.type == DeviationType.OUT_OF_ZONE.value]
+        return deviation
+
+
+async def _seed_zoned_cameras(container) -> tuple[uuid.UUID, uuid.UUID]:
+    """Сайт с четырьмя камерами и фото двух дат; у каждой рамка крана.
+
+    День 1: «Въезд» — снаружи, без названия — снаружи, «Склад» — внутри.
+    День 2: без названия — снаружи, «Склад» — снаружи.
+    Возвращает (site_id, equipment_type_id).
+    """
+    user = await seed_user(container)
+    site_id = uuid.uuid4()
+    equipment_type_id = uuid.uuid4()
+    day1 = date.today() - timedelta(days=3)
+    day2 = date.today() - timedelta(days=2)
+    layout = [
+        ("К-1", "Въезд", OUTSIDE, day1),
+        ("К-2", None, OUTSIDE, day1),
+        ("К-3", "Склад", INSIDE, day1),
+        ("К-4", None, OUTSIDE, day2),
+        ("К-5", "Склад", OUTSIDE, day2),
+    ]
+
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        session.add(Site(id=site_id, name="Объект", owner_id=user.id))
+        session.add(EquipmentType(id=equipment_type_id, code="crane", title="Кран", synonyms=[]))
+        await session.flush()
+        for name, zone_name, bbox, day in layout:
+            camera = Camera(
+                id=uuid.uuid4(), site_id=site_id, name=name, zone=SQUARE, zone_name=zone_name
+            )
+            session.add(camera)
+            await session.flush()
+            photo_id = uuid.uuid4()
+            session.add(
+                Photo(
+                    id=photo_id,
+                    site_id=site_id,
+                    storage_key=f"sites/{site_id}/photos/{photo_id}.jpg",
+                    original_name="a.jpg",
+                    width=200,
+                    height=200,
+                    captured_on=day,
+                    processing_status=ProcessingStatus.DONE.value,
+                    camera_id=camera.id,
+                )
+            )
+            await session.flush()
+            session.add(
+                Detection(
+                    id=uuid.uuid4(),
+                    photo_id=photo_id,
+                    equipment_type_id=equipment_type_id,
+                    bbox=bbox,
+                    score=0.9,
+                    model_version="test",
+                )
+            )
+        await session.commit()
+    return site_id, equipment_type_id
 
 
 async def _recompute(container, site_id: uuid.UUID) -> None:
@@ -208,3 +280,47 @@ async def test_camera_without_zone_keeps_old_behaviour(container) -> None:
     await _recompute(container, site_id)
 
     assert await _out_of_zone_count(container, site_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_out_of_zone_text_names_camera_zone(container) -> None:
+    site_id = await _seed_site(
+        container, camera_zone=SQUARE, with_camera=True, bboxes=[OUTSIDE], zone_name="Въезд"
+    )
+
+    await _recompute(container, site_id)
+
+    deviation = await _out_of_zone_deviation(container, site_id)
+    assert deviation.observed == "Техника вне рабочей зоны «Въезд»: Кран"
+    assert deviation.title == "Вне зоны «Въезд»: Кран"
+
+
+@pytest.mark.asyncio
+async def test_out_of_zone_text_without_zone_name_keeps_old_text(container) -> None:
+    site_id = await _seed_site(container, camera_zone=SQUARE, with_camera=True, bboxes=[OUTSIDE])
+
+    await _recompute(container, site_id)
+
+    deviation = await _out_of_zone_deviation(container, site_id)
+    assert deviation.observed == "Техника вне рабочей зоны: Кран"
+    assert deviation.title == "Вне зоны: Кран"
+
+
+@pytest.mark.asyncio
+async def test_zone_flags_collect_names_of_outside_boxes_of_named_cameras(container) -> None:
+    site_id, crane_id = await _seed_zoned_cameras(container)
+    day1 = date.today() - timedelta(days=3)
+    day2 = date.today() - timedelta(days=2)
+    async with container() as request_container:
+        session = await request_container.get(AsyncSession)
+        photos = await PhotoRepository(session).list_by_site(site_id)
+    coordinator = await create_coordinator(container, ENGINE_CONFIG)
+
+    flags, names = await coordinator._zone_flags(photos)
+
+    # День 1: одна рамка внутри — техника в зоне, имена снаружи не собираются
+    assert flags[(day1, crane_id)] is True
+    assert names[(day1, crane_id)] == ("Въезд",)
+    # День 2: все рамки снаружи — вне зоны; безымянная камера в названиях не участвует
+    assert flags[(day2, crane_id)] is False
+    assert names[(day2, crane_id)] == ("Склад",)

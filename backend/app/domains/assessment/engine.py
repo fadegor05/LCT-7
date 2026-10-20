@@ -73,6 +73,8 @@ class ObservedEquipmentInput:
     activity: str  # "works" | "idle" | "unknown"
     confidence: str  # "high" | "medium" | "low"
     in_zone: bool | None = None
+    # Названия рабочих зон камер, где техника снаружи (для текста «вне зоны»)
+    out_zone_names: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1031,6 +1033,18 @@ class RuleEngine:
             out_zone_names = self._format_equipment_names(
                 [eq.equipment_type_id for eq in out_zone_eq], equipment_names
             )
+            zone_names = sorted({n for eq in out_zone_eq for n in eq.out_zone_names if n})
+            zone_label = ", ".join(f"«{n}»" for n in zone_names)
+            observed_text = (
+                f"Техника вне рабочей зоны {zone_label}: {out_zone_names}"
+                if zone_names
+                else f"Техника вне рабочей зоны: {out_zone_names}"
+            )
+            title_text = (
+                f"Вне зоны {zone_label}: {out_zone_names}"
+                if zone_names
+                else f"Вне зоны: {out_zone_names}"
+            )
             deviations.append(
                 DeviationResult(
                     stage_id=stage.stage_id,
@@ -1043,14 +1057,14 @@ class RuleEngine:
                     period_start=latest_obs_on,
                     period_end=latest_obs_on,
                     expected="Работа техники в пределах рабочей зоны",
-                    observed=f"Техника вне рабочей зоны: {out_zone_names}",
+                    observed=observed_text,
                     limits_text=(
                         "Гипотеза — не доказывает нарушение, "
                         "зона могла быть некорректно задана или техника выезжала временно."
                     ),
                     rule_id=rule.rule_id,
                     evidence_dates=(latest_obs_on,),
-                    title=f"Вне зоны: {out_zone_names}",
+                    title=title_text,
                     equipment_type_id=out_zone_eq[0].equipment_type_id,
                 )
             )

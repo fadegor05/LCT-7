@@ -37,6 +37,7 @@ def _read(view: CameraView) -> CameraRead:
         last_capture_attempt_at=c.last_capture_attempt_at,
         capture_failures=c.capture_failures,
         zone=c.zone,
+        zone_name=c.zone_name,
         frames_count=view.frames_count,
         created_at=c.created_at,
     )

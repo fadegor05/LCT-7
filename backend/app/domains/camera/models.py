@@ -39,6 +39,8 @@ class Camera(Base):
     capture_failures: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     # Рабочая зона: точки [x, y] в долях кадра 0–1, не меньше трёх; null — зоны нет
     zone: Mapped[list[list[float]] | None] = mapped_column(JSON, nullable=True)
+    # Название рабочей зоны для текстов отклонений; null — названия нет
+    zone_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
