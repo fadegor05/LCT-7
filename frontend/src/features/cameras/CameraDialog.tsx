@@ -42,6 +42,7 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
   const [nameError, setNameError] = useState<string>()
   const [everyError, setEveryError] = useState<string>()
   const [zone, setZone] = useState<Zone | null>(camera?.zone ?? null)
+  const [zoneName, setZoneName] = useState(camera?.zone_name ?? '')
   // Начат, но не замкнут контур: сохранять такую зону нельзя
   const [openContour, setOpenContour] = useState(false)
   // Что не так с зоной — показываем после «Сохранить», а не пока контур рисуют
@@ -120,6 +121,7 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
           stream_url: link || null,
           capture_every_s: link && hasEvery ? minutes * 60 : null,
           zone,
+          zone_name: zoneName.trim() || null,
         },
       },
       { onSuccess: onClose },
@@ -223,6 +225,13 @@ export function CameraDialog({ siteId, camera, onClose }: CameraDialogProps) {
             </Pill>
           )}
         </div>
+        <TextField
+          label="Название зоны"
+          placeholder="Например, Въезд или Склад"
+          maxLength={100}
+          value={zoneName}
+          onChange={(e) => setZoneName(e.target.value)}
+        />
         {frameFailed && (
           <Callout tone="caution" title="Снимок не загрузился">
             Зона рисуется на пустом поле: снимок нужен только как ориентир.

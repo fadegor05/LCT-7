@@ -468,6 +468,123 @@ class TestDeviationOutOfZone:
         assert deviation.is_hypothesis is True
         assert len(deviation.limits_text) > 0
 
+    @staticmethod
+    def _out_of_zone(
+        equipment: list[ObservedEquipmentInput], equipment_names: dict[uuid.UUID, str]
+    ) -> list:
+        """Прогон движка на одном наблюдении: только отклонения out_of_zone."""
+        config = EngineConfig(
+            tolerance_days=5,
+            stale_data_days=30,
+            no_progress_window_days=7,
+            min_confirming_observations=2,
+        )
+        stage_id = uuid.uuid4()
+        stages = [
+            StageInput(
+                stage_id=stage_id,
+                name="Foundation",
+                position=1,
+                planned_start=date(2024, 1, 10),
+                planned_end=date(2024, 1, 25),
+            )
+        ]
+        rules = {
+            stage_id: RuleInput(
+                stage_id=stage_id,
+                rule_id=uuid.uuid4(),
+                is_verifiable=True,
+                unverifiable_reason=None,
+                requirements=[
+                    EquipmentRequirementInput(
+                        equipment_type_id=eq.equipment_type_id,
+                        obligation="normative",
+                        min_count=1,
+                    )
+                    for eq in equipment
+                ],
+            )
+        }
+        observations = [
+            ObservationInput(
+                observed_on=date(2024, 1, 18),
+                photo_count=10,
+                observability="high",
+                equipment=equipment,
+            )
+        ]
+        result = RuleEngine(config).compute_site(
+            stages,
+            rules,
+            observations,
+            date(2024, 1, 20),
+            equipment_names=equipment_names,
+        )
+        return [d for d in result.deviations if d.type == DeviationType.OUT_OF_ZONE]
+
+    def test_out_of_zone_one_zone_name_in_text(self):
+        """Название зоны камеры — в основании и заголовке, в кавычках-«ёлочках»."""
+        crane = uuid.uuid4()
+        (deviation,) = self._out_of_zone(
+            [
+                ObservedEquipmentInput(
+                    crane, 1, "works", "high", in_zone=False, out_zone_names=("Въезд",)
+                )
+            ],
+            {crane: "Кран"},
+        )
+        assert deviation.observed == "Техника вне рабочей зоны «Въезд»: Кран"
+        assert deviation.title == "Вне зоны «Въезд»: Кран"
+
+    def test_out_of_zone_two_zone_names_sorted_unique_non_empty(self):
+        """Имена зон из всех вне-зонных позиций: уникальные, отсортированные, без пустых."""
+        crane, excavator = uuid.uuid4(), uuid.uuid4()
+        (deviation,) = self._out_of_zone(
+            [
+                ObservedEquipmentInput(
+                    crane, 1, "works", "high", in_zone=False, out_zone_names=("Склад",)
+                ),
+                ObservedEquipmentInput(
+                    excavator,
+                    1,
+                    "works",
+                    "high",
+                    in_zone=False,
+                    out_zone_names=("Склад", "", "Въезд", "Склад"),
+                ),
+            ],
+            {crane: "Кран", excavator: "Экскаватор"},
+        )
+        assert deviation.observed == ("Техника вне рабочей зоны «Въезд», «Склад»: Кран, Экскаватор")
+        assert deviation.title == "Вне зоны «Въезд», «Склад»: Кран, Экскаватор"
+
+    def test_out_of_zone_names_only_from_out_of_zone_equipment(self):
+        """Название зоны у технику, которая не вне зоны, в текст не попадает."""
+        crane, excavator = uuid.uuid4(), uuid.uuid4()
+        (deviation,) = self._out_of_zone(
+            [
+                ObservedEquipmentInput(
+                    crane, 1, "works", "high", in_zone=False, out_zone_names=("Въезд",)
+                ),
+                ObservedEquipmentInput(
+                    excavator, 1, "works", "high", in_zone=True, out_zone_names=("Склад",)
+                ),
+            ],
+            {crane: "Кран", excavator: "Экскаватор"},
+        )
+        assert deviation.observed == "Техника вне рабочей зоны «Въезд»: Кран"
+        assert deviation.title == "Вне зоны «Въезд»: Кран"
+
+    def test_out_of_zone_without_zone_names_keeps_old_text(self):
+        """Без названий зон тексты прежние — без кавычек и без названия зоны."""
+        crane = uuid.uuid4()
+        (deviation,) = self._out_of_zone(
+            [ObservedEquipmentInput(crane, 1, "works", "high", in_zone=False)],
+            {crane: "Кран"},
+        )
+        assert deviation.observed == "Техника вне рабочей зоны: Кран"
+        assert deviation.title == "Вне зоны: Кран"
+
 
 class TestDeviationNoProgress:
     """Тесты отклонения no_progress."""

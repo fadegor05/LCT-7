@@ -23,7 +23,7 @@ export function CameraList({ cameras, onEdit }: CameraListProps) {
           <span>
             {camera.zone ? (
               <Pill tone="ontrack" icon="check" size="sm">
-                Зона задана
+                {camera.zone_name ? `Зона «${camera.zone_name}»` : 'Зона задана'}
               </Pill>
             ) : (
               <Pill tone="dashed" size="sm">

@@ -10,6 +10,7 @@ export interface CameraInput {
   stream_url: string | null
   capture_every_s: number | null
   zone: Zone | null
+  zone_name?: string | null
 }
 
 export function useCameras(siteId: string) {

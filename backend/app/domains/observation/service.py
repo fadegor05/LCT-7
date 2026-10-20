@@ -181,13 +181,11 @@ class ObservationService:
 
         # Шаг 6: Активность по сериям кадров каждой камеры за день
         cameras = await self._cameras(shots_by_camera)
-        activity = self._activity.assess_day(
-            [
-                CameraSeries(*cameras.get(cid, ("без имени", None)), shots)
-                for cid, shots in shots_by_camera.items()
-            ],
-            aggregated.keys(),
-        )
+        series = []
+        for cid, shots in shots_by_camera.items():
+            name, zone, zone_name = cameras.get(cid, ("без имени", None, None))
+            series.append(CameraSeries(name, zone, shots, zone_name=zone_name))
+        activity = self._activity.assess_day(series, aggregated.keys())
 
         # Шаг 8: Создать или обновить Observation
         observation = await self._repository.get_by_site_and_date(site_id, observed_on)
@@ -226,15 +224,15 @@ class ObservationService:
 
     async def _cameras(
         self, ids: Iterable[uuid.UUID]
-    ) -> dict[uuid.UUID, tuple[str, list[list[float]] | None]]:
-        """Имя и зона камер серий — для основания активности."""
+    ) -> dict[uuid.UUID, tuple[str, list[list[float]] | None, str | None]]:
+        """Имя, зона и название зоны камер серий — для основания активности."""
         ids = set(ids)
         if not ids:
             return {}
         result = await self._session.execute(
-            select(Camera.id, Camera.name, Camera.zone).where(Camera.id.in_(ids))
+            select(Camera.id, Camera.name, Camera.zone, Camera.zone_name).where(Camera.id.in_(ids))
         )
-        return {cid: (name, zone) for cid, name, zone in result.all()}
+        return {cid: (name, zone, zone_name) for cid, name, zone, zone_name in result.all()}
 
     async def list_observations(self, site_id: uuid.UUID) -> list[ObservationRead]:
         """Получить список наблюдений по сайту.

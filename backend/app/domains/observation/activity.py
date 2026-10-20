@@ -203,15 +203,20 @@ def _still_run(steps: Sequence[Step]) -> list[Step]:
 
 
 def _judge(
-    track: _Track, zone: Sequence[Sequence[float]] | None, camera: str, p: ActivityParams
+    track: _Track,
+    zone: Sequence[Sequence[float]] | None,
+    camera: str,
+    p: ActivityParams,
+    zone_name: str | None = None,
 ) -> MachineActivity:
     in_zone = bbox_in_zone(track.boxes[-1][1].bbox, zone)
+    label = f"Зона «{zone_name}»" if zone_name else "Зона"
     zone_text = (
         f"Зона: у камеры «{camera}» не задана"
         if in_zone is None
-        else "Зона: внутри зоны"
+        else f"{label}: внутри зоны"
         if in_zone
-        else "Зона: вне зоны"
+        else f"{label}: вне зоны"
     )
     kind = track.equipment_type_id
     moved = next((s for s in track.steps if s.verdict is Verdict.MOVED), None)
@@ -240,9 +245,10 @@ def camera_activity(
     zone: Sequence[Sequence[float]] | None,
     camera: str,
     params: ActivityParams,
+    zone_name: str | None = None,
 ) -> list[MachineActivity]:
     """Активность каждой машины на кадрах одной камеры за день."""
-    return [_judge(t, zone, camera, params) for t in _tracks(shots, params)]
+    return [_judge(t, zone, camera, params, zone_name) for t in _tracks(shots, params)]
 
 
 _RANK = {Activity.WORKS: 0, Activity.IDLE: 1, Activity.UNKNOWN: 2}

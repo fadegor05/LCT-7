@@ -950,6 +950,7 @@ export interface CameraWrite {
   stream_url: string | null
   capture_every_s: number | null
   zone: Zone | null
+  zone_name?: string | null
 }
 
 export function listCameras(siteId: string): Camera[] {
@@ -988,6 +989,7 @@ export function createCamera(siteId: string, data: CameraWrite): Camera {
     last_capture_attempt_at: null,
     capture_failures: 0,
     zone: data.zone ?? null,
+    zone_name: data.zone_name ?? null,
     frames_count: 0,
     created_at: now(),
   }
@@ -1001,6 +1003,7 @@ export function updateCamera(siteId: string, cameraId: string, data: Partial<Cam
   if (data.name !== undefined) camera.name = data.name
   if (data.stream_url !== undefined) camera.stream_url = checkStreamUrl(data.stream_url)
   if (data.zone !== undefined) camera.zone = data.zone
+  if (data.zone_name !== undefined) camera.zone_name = data.zone_name
   if (data.stream_url !== undefined || data.capture_every_s !== undefined) {
     camera.capture_every_s = intervalFor(
       camera.stream_url,

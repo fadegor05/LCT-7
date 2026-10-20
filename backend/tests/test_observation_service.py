@@ -1,12 +1,14 @@
 """ObservationService тесты: recompute, list_observations, get_observation."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import Settings
+from app.domains.camera.models import Camera
 from app.domains.methodology.catalog import EquipmentCatalog
 from app.domains.methodology.models import EquipmentType
 from app.domains.methodology.recalculator import NoopStatusRecalculator
@@ -110,6 +112,84 @@ class TestObservationServiceRecompute:
         assert result.observed_on == obs_date
         assert result.photo_count == 1
         assert result.observability == "low"  # 1 фото при min_photos_medium=2 -> low
+
+    @pytest.mark.asyncio
+    async def test_recompute_activity_basis_names_camera_zone(self, container) -> None:
+        """Название зоны камеры доходит через сервис до основания активности техники."""
+        await seed_user(container)
+
+        site_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        camera_id = uuid.uuid4()
+        obs_date = date(2025, 1, 15)
+        left_half = [[0.0, 0.0], [0.5, 0.0], [0.5, 1.0], [0.0, 1.0]]
+
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            session.add(User(id=owner_id, full_name="Owner"))
+            session.add(Site(id=site_id, name="Test Site", owner_id=owner_id))
+            equipment_ids = await seed_test_data(session, site_id, owner_id)
+            session.add(
+                Camera(
+                    id=camera_id,
+                    site_id=site_id,
+                    name="Север",
+                    zone=left_half,
+                    zone_name="Въезд",
+                )
+            )
+            await session.flush()
+            # Два кадра одной камеры: машина стоит правее зоны, то есть вне неё
+            for minute in (0, 5):
+                photo = Photo(
+                    id=uuid.uuid4(),
+                    site_id=site_id,
+                    storage_key=f"test-{minute}.jpg",
+                    original_name=f"test-{minute}.jpg",
+                    width=100,
+                    height=100,
+                    captured_on=obs_date,
+                    captured_at=datetime(2025, 1, 15, 10, minute),
+                    camera_id=camera_id,
+                    date_source=DateSource.MANUAL.value,
+                    processing_status=ProcessingStatus.DONE.value,
+                )
+                session.add(photo)
+                await session.flush()
+                session.add(
+                    Detection(
+                        id=uuid.uuid4(),
+                        photo_id=photo.id,
+                        equipment_type_id=equipment_ids["crane"],
+                        bbox=[0.7, 0.1, 0.8, 0.2],
+                        score=0.9,
+                        model_version="v1",
+                    )
+                )
+            await session.commit()
+
+        async with container() as request_container:
+            service = await self._create_service(request_container)
+            result = await service.recompute(site_id, obs_date)
+
+        assert result is not None
+        async with container() as request_container:
+            session = await request_container.get(AsyncSession)
+            rows = (
+                (
+                    await session.execute(
+                        select(ObservedEquipment).where(
+                            ObservedEquipment.observation_id == result.id
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+
+        (row,) = rows
+        assert row.activity_basis is not None
+        assert row.activity_basis.endswith("Зона «Въезд»: вне зоны")
 
     @pytest.mark.asyncio
     async def test_recompute_skips_night_frames(self, container) -> None:

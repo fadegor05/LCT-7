@@ -170,13 +170,18 @@ class RecomputeCoordinator:
         self._today = today
         self._as_of_config = as_of_config
 
-    async def _zone_flags(self, photos: Sequence[Photo]) -> dict[tuple[date, uuid.UUID], bool]:
+    async def _zone_flags(
+        self, photos: Sequence[Photo]
+    ) -> tuple[dict[tuple[date, uuid.UUID], bool], dict[tuple[date, uuid.UUID], tuple[str, ...]]]:
         """Положение техники относительно рабочей зоны камеры за дату.
 
         Ключ — (дата наблюдения, тип техники). Берутся те же фото и рамки, что сводятся в
         наблюдение: обработанные, с датой съёмки и камерой, у которой есть зона. True — хотя
         бы одна рамка типа внутри зоны; False — все рамки типа на зонированных камерах снаружи.
         Ключа нет, если зонированных рамок типа нет: правило «вне зоны» тогда не срабатывает.
+
+        Вторая часть — названия рабочих зон камер, где рамка типа снаружи (отсортированные,
+        без повторов); камеры без названия в них не попадают.
         """
         zoned = [
             p
@@ -186,29 +191,39 @@ class RecomputeCoordinator:
             and p.processing_status == ProcessingStatus.DONE.value
         ]
         if not zoned:
-            return {}
+            return {}, {}
         result = await self._session.execute(
-            select(Camera.id, Camera.zone).where(Camera.id.in_({p.camera_id for p in zoned}))
+            select(Camera.id, Camera.zone, Camera.zone_name).where(
+                Camera.id.in_({p.camera_id for p in zoned})
+            )
         )
-        zone_by_camera = {camera_id: zone for camera_id, zone in result.all() if zone is not None}
+        zone_by_camera = {
+            camera_id: (zone, zone_name)
+            for camera_id, zone, zone_name in result.all()
+            if zone is not None
+        }
         day_zone_by_photo = {
-            p.id: (p.captured_on, zone_by_camera[p.camera_id])
+            p.id: (p.captured_on, *zone_by_camera[p.camera_id])
             for p in zoned
             if p.camera_id in zone_by_camera and p.captured_on is not None
         }
         if not day_zone_by_photo:
-            return {}
+            return {}, {}
 
         flags: dict[tuple[date, uuid.UUID], bool] = {}
+        outside_names: dict[tuple[date, uuid.UUID], set[str]] = {}
         detections = await self._detection_repo.list_by_photos(list(day_zone_by_photo))
         for det in detections:
-            day, zone = day_zone_by_photo[det.photo_id]
+            day, zone, zone_name = day_zone_by_photo[det.photo_id]
             inside = bbox_in_zone(det.bbox, zone)
             if inside is None:
                 continue
             key = (day, det.equipment_type_id)
             flags[key] = flags.get(key, False) or inside
-        return flags
+            if not inside and zone_name:
+                outside_names.setdefault(key, set()).add(zone_name)
+        names = {key: tuple(sorted(found)) for key, found in outside_names.items()}
+        return flags, names
 
     def _resolve_as_of(self, observations: Sequence[ObservationInput]) -> date:
         """Определить опорную дату расчёта для площадки (LCT-14).
@@ -377,21 +392,25 @@ class RecomputeCoordinator:
 
             # Фото сайта одним запросом: нужны для зон здесь и для доказательств на шаге 9
             all_photos = await self._photo_repo.list_by_site(site_id)
-            zone_flags = await self._zone_flags(all_photos)
+            zone_flags, zone_names = await self._zone_flags(all_photos)
 
             observations: list[ObservationInput] = []
             for obs in observations_orm:
                 equipment_orm = await self._observed_equipment_repo.list_by_observation(obs.id)
-                equipment: list[ObservedEquipmentInput] = [
-                    ObservedEquipmentInput(
-                        equipment_type_id=e.equipment_type_id,
-                        count_min=e.count_min,
-                        activity=e.activity,
-                        confidence=e.confidence,
-                        in_zone=zone_flags.get((obs.observed_on, e.equipment_type_id)),
+                equipment: list[ObservedEquipmentInput] = []
+                for e in equipment_orm:
+                    zone_key = (obs.observed_on, e.equipment_type_id)
+                    in_zone = zone_flags.get(zone_key)
+                    equipment.append(
+                        ObservedEquipmentInput(
+                            equipment_type_id=e.equipment_type_id,
+                            count_min=e.count_min,
+                            activity=e.activity,
+                            confidence=e.confidence,
+                            in_zone=in_zone,
+                            out_zone_names=zone_names.get(zone_key, ()) if in_zone is False else (),
+                        )
                     )
-                    for e in equipment_orm
-                ]
                 observations.append(
                     ObservationInput(
                         observed_on=obs.observed_on,
